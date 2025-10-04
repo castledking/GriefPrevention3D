@@ -22,6 +22,7 @@ import com.google.common.io.Files;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.configuration.file.YamlConfiguration;
 
@@ -37,9 +38,11 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
@@ -47,6 +50,7 @@ import java.util.regex.Matcher;
 //manages data stored in the file system
 public class FlatFileDataStore extends DataStore
 {
+    private final Set<Long> claimsNeedingRewrite = new HashSet<>();
     private final static String claimDataFolderPath = dataLayerFolderPath + File.separator + "ClaimData";
     private final static String nextClaimIdFilePath = claimDataFolderPath + File.separator + "_nextClaimID";
     private final static String schemaVersionFilePath = dataLayerFolderPath + File.separator + "_schemaVersion";
@@ -529,21 +533,129 @@ public class FlatFileDataStore extends DataStore
         claim.modifiedDate = new Date(lastModifiedDate);
         claim.id = claimID;
 
+        ConfigurationSection childrenSection = yaml.getConfigurationSection("Children");
+        if (childrenSection != null)
+        {
+            for (String childKey : childrenSection.getKeys(false))
+            {
+                ConfigurationSection childYaml = childrenSection.getConfigurationSection(childKey);
+                if (childYaml == null) continue;
+
+                Claim child = deserializeChild(childYaml, claim, validWorlds);
+                if (child != null)
+                {
+                    claim.children.add(child);
+                }
+            }
+        }
+
+        if (claim.parent == null && claim.id != null && this.claimsNeedingRewrite.remove(claim.id))
+        {
+            this.writeClaimToStorage(claim);
+        }
+
         return claim;
+    }
+
+    private Claim deserializeChild(ConfigurationSection section, Claim parent, List<World> validWorlds) throws Exception
+    {
+        String lesserString = section.getString("Lesser Boundary Corner");
+        String greaterString = section.getString("Greater Boundary Corner");
+        if (lesserString == null || greaterString == null)
+        {
+            return null;
+        }
+
+        Location lesserBoundaryCorner = this.locationFromString(lesserString, validWorlds);
+        Location greaterBoundaryCorner = this.locationFromString(greaterString, validWorlds);
+
+        String ownerIdentifier = section.getString("Owner", "");
+        UUID ownerID = null;
+        if (!ownerIdentifier.isEmpty())
+        {
+            try
+            {
+                ownerID = UUID.fromString(ownerIdentifier);
+            }
+            catch (IllegalArgumentException ignored) {}
+        }
+
+        List<String> builders = section.getStringList("Builders");
+        List<String> containers = section.getStringList("Containers");
+        List<String> accessors = section.getStringList("Accessors");
+        List<String> managers = section.getStringList("Managers");
+
+        boolean inheritNothing = section.getBoolean("inheritNothing");
+        boolean is3D = section.getBoolean("Is3D", false);
+
+        Long childID = null;
+        if (section.contains("Claim ID"))
+        {
+            String idString = section.getString("Claim ID");
+            if (idString != null && !idString.isEmpty())
+            {
+                try
+                {
+                    childID = Long.parseLong(idString);
+                }
+                catch (NumberFormatException ignored) {}
+            }
+        }
+
+        Claim child = new Claim(lesserBoundaryCorner, greaterBoundaryCorner, ownerID, builders, containers, accessors, managers, inheritNothing, childID, is3D);
+        child.parent = parent;
+        child.inDataStore = true;
+
+        if (!child.getSubclaimRestrictions())
+        {
+            Claim root = parent;
+            while (root != null && root.parent != null)
+            {
+                root = root.parent;
+            }
+            if (root != null && root.id != null)
+            {
+                this.claimsNeedingRewrite.add(root.id);
+            }
+        }
+
+        long modifiedTime = section.getLong("Modified Date", parent.modifiedDate != null ? parent.modifiedDate.getTime() : System.currentTimeMillis());
+        child.modifiedDate = new Date(modifiedTime);
+
+        ConfigurationSection grandchildrenSection = section.getConfigurationSection("Children");
+        if (grandchildrenSection != null)
+        {
+            for (String grandChildKey : grandchildrenSection.getKeys(false))
+            {
+                ConfigurationSection grandChildYaml = grandchildrenSection.getConfigurationSection(grandChildKey);
+                if (grandChildYaml == null) continue;
+
+                Claim grandChild = deserializeChild(grandChildYaml, child, validWorlds);
+                if (grandChild != null)
+                {
+                    child.children.add(grandChild);
+                }
+            }
+        }
+
+        return child;
     }
 
     String getYamlForClaim(Claim claim)
     {
         YamlConfiguration yaml = new YamlConfiguration();
+        populateYamlForClaim(claim, yaml);
+        return yaml.saveToString();
+    }
 
-        //boundaries
-        yaml.set("Lesser Boundary Corner", this.locationToString(claim.lesserBoundaryCorner));
-        yaml.set("Greater Boundary Corner", this.locationToString(claim.greaterBoundaryCorner));
+    private void populateYamlForClaim(Claim claim, ConfigurationSection section)
+    {
+        section.set("Claim ID", claim.id == null ? null : String.valueOf(claim.id));
+        section.set("Lesser Boundary Corner", this.locationToString(claim.lesserBoundaryCorner));
+        section.set("Greater Boundary Corner", this.locationToString(claim.greaterBoundaryCorner));
 
-        //owner
-        String ownerID = "";
-        if (claim.ownerID != null) ownerID = claim.ownerID.toString();
-        yaml.set("Owner", ownerID);
+        String ownerID = claim.ownerID == null ? "" : claim.ownerID.toString();
+        section.set("Owner", ownerID);
 
         ArrayList<String> builders = new ArrayList<>();
         ArrayList<String> containers = new ArrayList<>();
@@ -551,25 +663,36 @@ public class FlatFileDataStore extends DataStore
         ArrayList<String> managers = new ArrayList<>();
         claim.getPermissions(builders, containers, accessors, managers);
 
-        yaml.set("Builders", builders);
-        yaml.set("Containers", containers);
-        yaml.set("Accessors", accessors);
-        yaml.set("Managers", managers);
+        section.set("Builders", builders);
+        section.set("Containers", containers);
+        section.set("Accessors", accessors);
+        section.set("Managers", managers);
 
-        Long parentID = -1L;
-        if (claim.parent != null)
+        section.set("Parent Claim ID", claim.parent == null ? -1L : claim.parent.id);
+        section.set("inheritNothing", claim.getSubclaimRestrictions());
+        section.set("Is3D", claim.is3D());
+        section.set("Modified Date", claim.modifiedDate != null ? claim.modifiedDate.getTime() : System.currentTimeMillis());
+
+        ArrayList<Claim> persistedChildren = new ArrayList<>();
+        for (Claim child : claim.children)
         {
-            parentID = claim.parent.id;
+            if (child != null && child.inDataStore)
+            {
+                persistedChildren.add(child);
+            }
         }
 
-        yaml.set("Parent Claim ID", parentID);
-
-        yaml.set("inheritNothing", claim.getSubclaimRestrictions());
-
-        // Add is3D flag
-        yaml.set("Is3D", claim.is3D());
-
-        return yaml.saveToString();
+        if (!persistedChildren.isEmpty())
+        {
+            ConfigurationSection childrenSection = section.createSection("Children");
+            int index = 0;
+            for (Claim child : persistedChildren)
+            {
+                String key = child.id != null ? String.valueOf(child.id) : String.valueOf(index++);
+                ConfigurationSection childSection = childrenSection.createSection(key);
+                populateYamlForClaim(child, childSection);
+            }
+        }
     }
 
     @Override
@@ -600,6 +723,21 @@ public class FlatFileDataStore extends DataStore
     @Override
     synchronized void deleteClaimFromSecondaryStorage(Claim claim)
     {
+        // Subdivisions are persisted inside their top-level parent's YAML file. When one is removed,
+        // rewrite the parent file so the child entry disappears instead of leaving a stale record that
+        // resurrects on restart.
+        if (claim.parent != null)
+        {
+            Claim root = claim.parent;
+            while (root.parent != null)
+            {
+                root = root.parent;
+            }
+
+            this.writeClaimToStorage(root);
+            return;
+        }
+
         String claimID = String.valueOf(claim.id);
 
         //remove from disk

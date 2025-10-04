@@ -16,46 +16,49 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
- package me.ryanhamshire.GriefPrevention;
+package me.ryanhamshire.GriefPrevention;
 
- import me.ryanhamshire.GriefPrevention.events.ClaimPermissionCheckEvent;
- import me.ryanhamshire.GriefPrevention.util.BoundingBox;
- import org.bukkit.Bukkit;
- import org.bukkit.Chunk;
- import org.bukkit.Location;
- import org.bukkit.Material;
- import org.bukkit.World;
- import org.bukkit.entity.Player;
- import org.bukkit.event.Event;
- import org.bukkit.event.HandlerList;
- import org.bukkit.event.block.BlockBreakEvent;
- import org.bukkit.event.block.BlockEvent;
- import org.bukkit.event.block.BlockPlaceEvent;
- import org.jetbrains.annotations.Contract;
- import org.jetbrains.annotations.NotNull;
- import org.jetbrains.annotations.Nullable;
- 
- import java.util.ArrayList;
- import java.util.Calendar;
- import java.util.Date;
- import java.util.HashMap;
- import java.util.List;
- import java.util.Map;
- import java.util.Objects;
- import java.util.Set;
- import java.util.UUID;
- import java.util.function.Supplier;
- import java.util.stream.Collectors;
- 
- //represents a player claim
- //creating an instance doesn't make an effective claim
- //only claims which have been added to the datastore have any effect
- public class Claim
- {
-     //two locations, which together define the boundaries of the claim
-     //for subdivisions, if is3D is true, the Y boundaries are respected
-     Location lesserBoundaryCorner;
-     Location greaterBoundaryCorner;
+import me.ryanhamshire.GriefPrevention.events.ClaimPermissionCheckEvent;
+import me.ryanhamshire.GriefPrevention.util.BoundingBox;
+import org.bukkit.Bukkit;
+import org.bukkit.Chunk;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.World;
+import org.bukkit.entity.Player;
+import org.bukkit.event.Event;
+import org.bukkit.event.HandlerList;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
+import org.jetbrains.annotations.Contract;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.UUID;
+import java.util.function.Supplier;
+
+//represents a player claim
+//creating an instance doesn't make an effective claim
+//only claims which have been added to the datastore have any effect
+public class Claim
+{
+    //two locations, which together define the boundaries of the claim
+    //for subdivisions, if is3D is true, the Y boundaries are respected
+    public Location lesserBoundaryCorner;
+    public Location greaterBoundaryCorner;
      
      //whether this claim respects Y boundaries (for 3D subdivisions)
      private boolean is3D = false;
@@ -66,16 +69,18 @@
      //id number.  unique to this claim, never changes.
      Long id = null;
  
-     //ownerID.  for admin claims, this is NULL
      //use getOwnerName() to get a friendly name (will be "an administrator" for admin claims)
      public UUID ownerID;
  
      //list of players who (beyond the claim owner) have permission to grant permissions in this claim
      public ArrayList<String> managers = new ArrayList<>();
- 
+
      //permissions for this claim, see ClaimPermission class
      private HashMap<String, ClaimPermission> playerIDToClaimPermissionMap = new HashMap<>();
- 
+
+    //players/permissions explicitly denied in this claim (override parent inheritance)
+    private final HashSet<String> deniedPermissions = new HashSet<>();
+
      //whether or not this claim is in the data store
      //if a claim instance isn't in the data store, it isn't "active" - players can't interract with it
      //why keep this?  so that claims which have been removed from the data store can be correctly
@@ -208,6 +213,7 @@
          this.ownerID = claim.ownerID;
          this.managers = new ArrayList<>(claim.managers);
          this.playerIDToClaimPermissionMap = new HashMap<>(claim.playerIDToClaimPermissionMap);
+        this.deniedPermissions.addAll(claim.deniedPermissions);
          this.inDataStore = false; //since it's a copy of a claim, not in datastore!
          this.areExplosivesAllowed = claim.areExplosivesAllowed;
          this.parent = claim.parent;
@@ -288,6 +294,28 @@
              Material.GLOW_BERRIES,
              Material.CAVE_VINES,
              Material.CAVE_VINES_PLANT);
+
+    public static @NotNull String normalizeIdentifier(@Nullable String identifier)
+    {
+        if (identifier == null)
+        {
+            return "";
+        }
+
+        return identifier.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private static @NotNull String getPermissionSuffix(@NotNull ClaimPermission permission)
+    {
+        return switch (permission)
+        {
+            case Manage -> "#manager";
+            case Build -> "#build";
+            case Inventory -> "#inventory";
+            case Access -> "#access";
+            case Edit -> "";
+        };
+    }
  
      private static boolean placeableForFarming(Material material)
      {
@@ -335,6 +363,61 @@
          }
  
      }
+     public void denyPermission(@NotNull String identifier)
+    {
+        this.deniedPermissions.add(normalizeIdentifier(identifier));
+
+        for (Claim child : this.children)
+        {
+            child.denyPermission(identifier);
+        }
+    }
+
+    public void allowPermission(@NotNull String identifier)
+    {
+        String normalized = normalizeIdentifier(identifier);
+        this.deniedPermissions.remove(normalized);
+
+        for (Claim child : this.children)
+        {
+            child.allowPermission(identifier);
+        }
+    }
+
+    public boolean isPermissionDenied(@Nullable String identifier)
+    {
+        return this.isPermissionDenied(identifier, null);
+    }
+
+    public boolean isPermissionDenied(@Nullable String identifier, @Nullable ClaimPermission permission)
+    {
+        if (identifier == null || identifier.isEmpty())
+        {
+            return false;
+        }
+
+        String normalized = normalizeIdentifier(identifier);
+        if (normalized.isEmpty())
+        {
+            return false;
+        }
+
+        if (this.deniedPermissions.contains(normalized))
+        {
+            return true;
+        }
+
+        if (permission != null && permission != ClaimPermission.Edit)
+        {
+            String key = normalized + getPermissionSuffix(permission);
+            if (this.deniedPermissions.contains(key))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
  
      public boolean hasExplicitPermission(@NotNull UUID uuid, @NotNull ClaimPermission level)
      {
@@ -358,6 +441,7 @@
                  // Ensure valid permission format for permissions - [permission.node]
                  if (node.length() < 3 || node.charAt(0) != '[' || node.charAt(node.length() - 1) != ']') continue;
                  // Check if player has node
+                 if (this.isPermissionDenied(node)) continue;
                  if (player.hasPermission(node.substring(1, node.length() - 1))) return true;
              }
              return false;
@@ -521,37 +605,49 @@
          if (permission.isGrantedBy(this.playerIDToClaimPermissionMap.get("public"))) return null;
 
          // Special building-only rules.
-         if (permission == ClaimPermission.Build)
-         {
-             // No building while in PVP.
-             PlayerData playerData = GriefPrevention.instance.dataStore.getPlayerData(uuid);
-             if (playerData.inPvpCombat())
-             {
-                 return () -> GriefPrevention.instance.dataStore.getMessage(Messages.NoBuildPvP);
-             }
+        if (permission == ClaimPermission.Build)
+        {
+            // No building while in PVP.
+            PlayerData playerData = GriefPrevention.instance.dataStore.getPlayerData(uuid);
+            if (playerData.inPvpCombat())
+            {
+                return () -> GriefPrevention.instance.dataStore.getMessage(Messages.NoBuildPvP);
+            }
 
-             // Allow farming crops with container trust.
-             Material material = null;
-             if (event instanceof BlockBreakEvent || event instanceof BlockPlaceEvent)
-                 material = ((BlockEvent) event).getBlock().getType();
+            // Allow farm crops with container trust.
+            Material material = null;
+            if (event instanceof BlockBreakEvent || event instanceof BlockPlaceEvent)
+            {
+                material = ((BlockEvent) event).getBlock().getType();
+            }
 
-             if (material != null && placeableForFarming(material)
-                     && this.getDefaultDenial(player, uuid, ClaimPermission.Inventory, event) == null)
-                 return null;
-         }
+            if (material != null && placeableForFarming(material)
+                    && this.getDefaultDenial(player, uuid, ClaimPermission.Inventory, event) == null)
+            {
+                return null;
+            }
+        }
 
-         // Permission inheritance for subdivisions.
-         if (this.parent != null)
-         {
-             if (!inheritNothing)
-             {
-                 // FIX: Only inherit if current claim doesn't explicitly deny permission
-                 Supplier<String> parentDenial = this.parent.getDefaultDenial(player, uuid, permission, event);
-                 if (parentDenial == null) {
-                     return null;
-                 }
-             }
-         }
+        // Permission inheritance for subdivisions.
+        if (this.parent != null)
+        {
+            boolean inheritsFromParent = !inheritNothing && !this.is3D() && this.parent.parent == null;
+            if (inheritsFromParent)
+            {
+                // Block inherited permission if explicitly denied here
+                if (this.isPermissionDenied(uuid.toString(), permission))
+                {
+                    return () -> GriefPrevention.instance.dataStore.getMessage(permission.getDenialMessage(), this.getOwnerName());
+                }
+
+                // Only inherit if current claim doesn't explicitly deny permission
+                Supplier<String> parentDenial = this.parent.getDefaultDenial(player, uuid, permission, event);
+                if (parentDenial == null)
+                {
+                    return null;
+                }
+            }
+        }
 
          // Catch-all error message for all other cases.
          return () ->
@@ -630,40 +726,46 @@
      }
 
      @Contract("null -> null")
-     public @Nullable ClaimPermission getPermission(@Nullable String playerID)
-     {
-         if (playerID == null || playerID.isEmpty()) return null;
+    public @Nullable ClaimPermission getPermission(@Nullable String playerID)
+    {
+        if (playerID == null || playerID.isEmpty()) return null;
 
-         return this.playerIDToClaimPermissionMap.get(playerID.toLowerCase());
-     }
+        return this.playerIDToClaimPermissionMap.get(normalizeIdentifier(playerID));
+    }
 
      //grants a permission for a player or the public
      public void setPermission(@Nullable String playerID, @Nullable ClaimPermission permissionLevel)
      {
-         if (permissionLevel == ClaimPermission.Edit) throw new IllegalArgumentException("Cannot add editors!");
+         String normalized = normalizeIdentifier(playerID);
+        if (permissionLevel == ClaimPermission.Edit) throw new IllegalArgumentException("Cannot add editors!");
 
-         if (playerID == null || playerID.isEmpty()) return;
+        if (normalized.isEmpty()) return;
 
-         if (permissionLevel == null)
-             dropPermission(playerID);
-         else if (permissionLevel == ClaimPermission.Manage)
-             this.managers.add(playerID.toLowerCase());
-         else
-             this.playerIDToClaimPermissionMap.put(playerID.toLowerCase(), permissionLevel);
-     }
+        if (permissionLevel == null)
+            dropPermission(normalized);
+        else if (permissionLevel == ClaimPermission.Manage)
+            this.managers.add(normalized);
+        else
+            this.playerIDToClaimPermissionMap.put(normalized, permissionLevel);
+    }
 
-     //revokes a permission for a player or the public
-     public void dropPermission(@NotNull String playerID)
-     {
-         playerID = playerID.toLowerCase();
-         this.playerIDToClaimPermissionMap.remove(playerID);
-         this.managers.remove(playerID);
+    //revokes a permission for a player or the public
+    public void dropPermission(@NotNull String playerID)
+    {
+        String normalized = normalizeIdentifier(playerID);
+        if (normalized.isEmpty())
+        {
+            return;
+        }
 
-         for (Claim child : this.children)
-         {
-             child.dropPermission(playerID);
-         }
-     }
+        this.playerIDToClaimPermissionMap.remove(normalized);
+        this.managers.remove(normalized);
+
+        for (Claim child : this.children)
+        {
+            child.dropPermission(normalized);
+        }
+    }
 
      //clears all permissions (except owner of course)
      public void clearPermissions()

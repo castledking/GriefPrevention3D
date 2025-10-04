@@ -18,6 +18,7 @@
 
 package me.ryanhamshire.GriefPrevention;
 
+import com.google.common.base.Predicate;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.griefprevention.commands.ClaimCommand;
@@ -147,6 +148,7 @@ public class GriefPrevention extends JavaPlugin
 
     public int config_claims_chestClaimExpirationDays;                //number of days of inactivity before an automatic chest claim will be deleted
     public boolean config_claims_allowTrappedInAdminClaims;            //whether it should be allowed to use /trapped in adminclaims.
+    public boolean config_claims_allowNestedSubClaims;                   //whether nested subdivisions may be created inside other subdivisions
 
     public Material config_claims_investigationTool;                //which material will be used to investigate claims with a right click
     public Material config_claims_modificationTool;                    //which material will be used to create/resize claims with a right click
@@ -573,6 +575,7 @@ public class GriefPrevention extends JavaPlugin
         this.config_claims_expirationExemptionTotalBlocks = config.getInt("GriefPrevention.Claims.Expiration.AllClaims.ExceptWhenOwnerHasTotalClaimBlocks", 10000);
         this.config_claims_expirationExemptionBonusBlocks = config.getInt("GriefPrevention.Claims.Expiration.AllClaims.ExceptWhenOwnerHasBonusClaimBlocks", 5000);
         this.config_claims_allowTrappedInAdminClaims = config.getBoolean("GriefPrevention.Claims.AllowTrappedInAdminClaims", false);
+        this.config_claims_allowNestedSubClaims = config.getBoolean("GriefPrevention.Claims.AllowNestedSubClaims", false);
 
         this.config_claims_maxClaimsPerPlayer = config.getInt("GriefPrevention.Claims.MaximumNumberOfClaimsPerPlayer", 0);
         this.config_claims_villagerTradingRequiresTrust = config.getBoolean("GriefPrevention.Claims.VillagerTradingRequiresPermission", true);
@@ -730,6 +733,7 @@ public class GriefPrevention extends JavaPlugin
         outConfig.set("GriefPrevention.Claims.Expiration.AllClaims.ExceptWhenOwnerHasTotalClaimBlocks", this.config_claims_expirationExemptionTotalBlocks);
         outConfig.set("GriefPrevention.Claims.Expiration.AllClaims.ExceptWhenOwnerHasBonusClaimBlocks", this.config_claims_expirationExemptionBonusBlocks);
         outConfig.set("GriefPrevention.Claims.AllowTrappedInAdminClaims", this.config_claims_allowTrappedInAdminClaims);
+        outConfig.set("GriefPrevention.Claims.AllowNestedSubClaims", this.config_claims_allowNestedSubClaims);
         outConfig.set("GriefPrevention.Claims.MaximumNumberOfClaimsPerPlayer", this.config_claims_maxClaimsPerPlayer);
         outConfig.set("GriefPrevention.Claims.VillagerTradingRequiresPermission", this.config_claims_villagerTradingRequiresTrust);
         outConfig.set("GriefPrevention.Claims.CommandsRequiringAccessTrust", commandsRequiringAccessTrust);
@@ -1215,10 +1219,9 @@ public class GriefPrevention extends JavaPlugin
         //trustlist
         else if (cmd.getName().equalsIgnoreCase("trustlist") && player != null)
         {
-            PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
             Claim claim = this.dataStore.getClaimAt(player.getLocation(), false /*ignore height*/, null);
             
-
+            
             
             if (claim == null)
             {
@@ -1242,14 +1245,43 @@ public class GriefPrevention extends JavaPlugin
             ArrayList<String> managers = new ArrayList<>();
             claim.getPermissions(builders, containers, accessors, managers);
 
+            // Also collect inherited permissions from parent claim if this claim inherits permissions
+            ArrayList<String> inheritedBuilders = new ArrayList<>();
+            ArrayList<String> inheritedContainers = new ArrayList<>();
+            ArrayList<String> inheritedAccessors = new ArrayList<>();
+            ArrayList<String> inheritedManagers = new ArrayList<>();
+
+            boolean canInheritForDisplay = claim.parent != null
+                    && claim.parent.parent == null
+                    && !claim.getSubclaimRestrictions()
+                    && !claim.is3D();
+
+            if (canInheritForDisplay)
+            {
+                claim.parent.getPermissions(inheritedBuilders, inheritedContainers, inheritedAccessors, inheritedManagers);
+
+                Predicate<String> isDeniedBuilder = id -> claim.isPermissionDenied(id, ClaimPermission.Build);
+                Predicate<String> isDeniedContainer = id -> claim.isPermissionDenied(id, ClaimPermission.Inventory);
+                Predicate<String> isDeniedAccessor = id -> claim.isPermissionDenied(id, ClaimPermission.Access);
+                Predicate<String> isDeniedManager = id -> claim.isPermissionDenied(id, ClaimPermission.Manage);
+
+                inheritedBuilders.removeIf(isDeniedBuilder);
+                inheritedContainers.removeIf(isDeniedContainer);
+                inheritedAccessors.removeIf(isDeniedAccessor);
+                inheritedManagers.removeIf(isDeniedManager);
+            }
+
             GriefPrevention.sendMessage(player, TextMode.Info, Messages.TrustListHeader, claim.getOwnerName());
 
             StringBuilder permissions = new StringBuilder();
             permissions.append(ChatColor.GOLD).append('>');
 
-            if (managers.size() > 0)
+            // Show managers (both explicit and inherited)
+            Set<String> allManagers = new HashSet<>(managers);
+            allManagers.addAll(inheritedManagers);
+            if (!allManagers.isEmpty())
             {
-                for (String manager : managers)
+                for (String manager : allManagers)
                     permissions.append(this.trustEntryToPlayerName(manager)).append(' ');
             }
 
@@ -1257,9 +1289,12 @@ public class GriefPrevention extends JavaPlugin
             permissions = new StringBuilder();
             permissions.append(ChatColor.YELLOW).append('>');
 
-            if (builders.size() > 0)
+            // Show builders (both explicit and inherited)
+            Set<String> allBuilders = new HashSet<>(builders);
+            allBuilders.addAll(inheritedBuilders);
+            if (!allBuilders.isEmpty())
             {
-                for (String builder : builders)
+                for (String builder : allBuilders)
                     permissions.append(this.trustEntryToPlayerName(builder)).append(' ');
             }
 
@@ -1267,9 +1302,12 @@ public class GriefPrevention extends JavaPlugin
             permissions = new StringBuilder();
             permissions.append(ChatColor.GREEN).append('>');
 
-            if (containers.size() > 0)
+            // Show containers (both explicit and inherited)
+            Set<String> allContainers = new HashSet<>(containers);
+            allContainers.addAll(inheritedContainers);
+            if (!allContainers.isEmpty())
             {
-                for (String container : containers)
+                for (String container : allContainers)
                     permissions.append(this.trustEntryToPlayerName(container)).append(' ');
             }
 
@@ -1277,9 +1315,12 @@ public class GriefPrevention extends JavaPlugin
             permissions = new StringBuilder();
             permissions.append(ChatColor.BLUE).append('>');
 
-            if (accessors.size() > 0)
+            // Show accessors (both explicit and inherited)
+            Set<String> allAccessors = new HashSet<>(accessors);
+            allAccessors.addAll(inheritedAccessors);
+            if (!allAccessors.isEmpty())
             {
-                for (String accessor : accessors)
+                for (String accessor : allAccessors)
                     permissions.append(this.trustEntryToPlayerName(accessor)).append(' ');
             }
 
@@ -1305,7 +1346,7 @@ public class GriefPrevention extends JavaPlugin
             //requires exactly one parameter, the other player's name
             if (args.length != 1) return false;
 
-            //determine which claim the player is standing in
+            //determine which claim the player is standing in (use true to find subdivisions)
             Claim claim = this.dataStore.getClaimAt(player.getLocation(), false, null);
 
             //determine whether a single player or clearing permissions entirely
@@ -1384,16 +1425,36 @@ public class GriefPrevention extends JavaPlugin
                     {
                         claim.dropPermission(idToDrop);
                         claim.managers.remove(idToDrop);
+
+                        // Check if this claim has inherited permissions that need to be explicitly removed
+                        if (claim.parent != null && !claim.getSubclaimRestrictions())
+                        {
+                            // Get all permissions from parent that would be inherited
+                            ArrayList<String> parentBuilders = new ArrayList<>();
+                            ArrayList<String> parentContainers = new ArrayList<>();
+                            ArrayList<String> parentAccessors = new ArrayList<>();
+                            ArrayList<String> parentManagers = new ArrayList<>();
+                            claim.parent.getPermissions(parentBuilders, parentContainers, parentAccessors, parentManagers);
+
+                            // Check if the player being untrusted is in any of the parent's permission lists
+                            String playerIdToCheck = idToDrop.toLowerCase();
+                            if (parentManagers.contains(playerIdToCheck) ||
+                                parentBuilders.contains(playerIdToCheck) ||
+                                parentContainers.contains(playerIdToCheck) ||
+                                parentAccessors.contains(playerIdToCheck))
+                            {
+                                // Remove the player from this claim's explicit permissions to override inheritance
+                                claim.dropPermission(idToDrop);
+                                claim.managers.remove(idToDrop);
+                            }
+                        }
                     }
 
                     //save changes
                     this.dataStore.saveClaim(claim);
-                }
 
-                //beautify for output
-                if (args[0].equals("public"))
-                {
-                    args[0] = "the public";
+                    // Propagate trust removal to child claims that inherit permissions
+                    propagateTrustToChildren(claim, idToDrop, null, false);
                 }
 
                 //confirmation message
@@ -1463,7 +1524,56 @@ public class GriefPrevention extends JavaPlugin
                             return true;
                         }
 
-                        event.getClaims().forEach(targetClaim -> targetClaim.dropPermission(event.getIdentifier()));
+                        // Check if the player being untrusted has inherited permissions from parent
+                        ArrayList<String> parentBuilders = new ArrayList<>();
+                        ArrayList<String> parentContainers = new ArrayList<>();
+                        ArrayList<String> parentAccessors = new ArrayList<>();
+                        ArrayList<String> parentManagers = new ArrayList<>();
+
+                        String normalizedIdentifier = Claim.normalizeIdentifier(event.getIdentifier());
+                        String normalizedIdToDrop = Claim.normalizeIdentifier(idToDrop);
+
+                        if (claim.parent != null && !claim.getSubclaimRestrictions())
+                        {
+                            claim.parent.getPermissions(parentBuilders, parentContainers, parentAccessors, parentManagers);
+                        }
+
+                        boolean inheritsManager = parentManagers.contains(normalizedIdToDrop);
+                        boolean inheritsBuilder = parentBuilders.contains(normalizedIdToDrop);
+                        boolean inheritsContainer = parentContainers.contains(normalizedIdToDrop);
+                        boolean inheritsAccessor = parentAccessors.contains(normalizedIdToDrop);
+
+                        if (inheritsManager || inheritsBuilder || inheritsContainer || inheritsAccessor)
+                        {
+                            event.getClaims().forEach(targetClaim ->
+                            {
+                                // Record denials to block inherited trust without granting new permissions
+                                if (inheritsManager)
+                                {
+                                    targetClaim.denyPermission(normalizedIdToDrop + "#manager");
+                                }
+                                if (inheritsBuilder)
+                                {
+                                    targetClaim.denyPermission(normalizedIdToDrop + "#build");
+                                }
+                                if (inheritsContainer)
+                                {
+                                    targetClaim.denyPermission(normalizedIdToDrop + "#inventory");
+                                }
+                                if (inheritsAccessor)
+                                {
+                                    targetClaim.denyPermission(normalizedIdToDrop + "#access");
+                                }
+
+                                // Remove any explicit trust that might still exist
+                                targetClaim.dropPermission(normalizedIdentifier);
+                            });
+                        }
+                        else
+                        {
+                            // Normal case - just drop the explicit permission
+                            event.getClaims().forEach(targetClaim -> targetClaim.dropPermission(normalizedIdentifier));
+                        }
 
                         //beautify for output
                         if (args[0].equals("public"))
@@ -1526,12 +1636,10 @@ public class GriefPrevention extends JavaPlugin
                 return true;
             }
 
-            // If player has /ignoreclaims on, continue
-            // If admin claim, fail if this user is not an admin
-            // If not an admin claim, fail if this user is not the owner
-            if (!playerData.ignoreClaims && (claim.isAdminClaim() ? !player.hasPermission("griefprevention.adminclaims") : !player.getUniqueId().equals(claim.parent.ownerID)))
+            // Only the owner of the parent claim may toggle restrictions. Admin claims require admin permission.
+            if (!player.hasPermission("griefprevention.adminclaims"))
             {
-                GriefPrevention.sendMessage(player, TextMode.Err, Messages.OnlyOwnersModifyClaims, claim.getOwnerName());
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoAdminClaimsPermission);
                 return true;
             }
 
@@ -1542,6 +1650,72 @@ public class GriefPrevention extends JavaPlugin
             }
             else
             {
+                // When restricting, remove inherited permissions but keep explicit ones
+                if (claim.parent != null && !claim.getSubclaimRestrictions())
+                {
+                    // Get all permissions from parent that would be inherited
+                    ArrayList<String> parentBuilders = new ArrayList<>();
+                    ArrayList<String> parentContainers = new ArrayList<>();
+                    ArrayList<String> parentAccessors = new ArrayList<>();
+                    ArrayList<String> parentManagers = new ArrayList<>();
+                    claim.parent.getPermissions(parentBuilders, parentContainers, parentAccessors, parentManagers);
+
+                    // Get current permissions in this claim
+                    ArrayList<String> currentBuilders = new ArrayList<>();
+                    ArrayList<String> currentContainers = new ArrayList<>();
+                    ArrayList<String> currentAccessors = new ArrayList<>();
+                    ArrayList<String> currentManagers = new ArrayList<>();
+                    claim.getPermissions(currentBuilders, currentContainers, currentAccessors, currentManagers);
+
+                    // Remove permissions that exist in both parent and child (inherited ones)
+                    for (String manager : parentManagers)
+                    {
+                        if (currentManagers.contains(manager))
+                        {
+                            claim.managers.remove(manager);
+                        }
+                    }
+
+                    for (String builder : parentBuilders)
+                    {
+                        if (currentBuilders.contains(builder))
+                        {
+                            // Check if this builder permission matches the parent's builder permission
+                            ClaimPermission childPerm = claim.getPermission(builder.toLowerCase());
+                            if (childPerm == ClaimPermission.Build)
+                            {
+                                claim.dropPermission(builder);
+                            }
+                        }
+                    }
+
+                    for (String container : parentContainers)
+                    {
+                        if (currentContainers.contains(container))
+                        {
+                            // Check if this container permission matches the parent's container permission
+                            ClaimPermission childPerm = claim.getPermission(container.toLowerCase());
+                            if (childPerm == ClaimPermission.Inventory)
+                            {
+                                claim.dropPermission(container);
+                            }
+                        }
+                    }
+
+                    for (String accessor : parentAccessors)
+                    {
+                        if (currentAccessors.contains(accessor))
+                        {
+                            // Check if this accessor permission matches the parent's accessor permission
+                            ClaimPermission childPerm = claim.getPermission(accessor.toLowerCase());
+                            if (childPerm == ClaimPermission.Access)
+                            {
+                                claim.dropPermission(accessor);
+                            }
+                        }
+                    }
+                }
+
                 claim.setSubclaimRestrictions(true);
                 GriefPrevention.sendMessage(player, TextMode.Success, Messages.SubclaimRestricted);
             }
@@ -1593,12 +1767,11 @@ public class GriefPrevention extends JavaPlugin
 
             return true;
         }
-
         //deleteclaim
         else if (cmd.getName().equalsIgnoreCase("deleteclaim") && player != null)
         {
             //determine which claim the player is standing in
-            Claim claim = this.dataStore.getClaimAt(player.getLocation(), true /*ignore height*/, null);
+            Claim claim = this.dataStore.getClaimAt(player.getLocation(), false /*ignore height*/, null);
 
             if (claim == null)
             {
@@ -1639,7 +1812,7 @@ public class GriefPrevention extends JavaPlugin
         else if (cmd.getName().equalsIgnoreCase("claimexplosions") && player != null)
         {
             //determine which claim the player is standing in
-            Claim claim = this.dataStore.getClaimAt(player.getLocation(), true /*ignore height*/, null);
+            Claim claim = this.dataStore.getClaimAt(player.getLocation(), false /*ignore height*/, null);
 
             if (claim == null)
             {
@@ -2358,11 +2531,90 @@ public class GriefPrevention extends JavaPlugin
 
     }
 
+    /**
+     * Propagates trust changes to child claims that inherit permissions.
+     *
+     * @param parentClaim The parent claim whose trust changes should be propagated
+     * @param identifier The player/permission identifier to add/remove trust for
+     * @param permissionLevel The permission level, or null for manager permissions
+     * @param isAddingTrust true if adding trust, false if removing trust
+     */
+    private void propagateTrustToChildren(Claim parentClaim, String identifier, ClaimPermission permissionLevel, boolean isAddingTrust)
+    {
+        if (parentClaim.children.isEmpty()) return;
+
+        for (Claim childClaim : parentClaim.children)
+        {
+            // Only propagate to children that inherit permissions (inheritNothing = false)
+            if (!childClaim.getSubclaimRestrictions())
+            {
+                if (isAddingTrust)
+                {
+                    // Add trust to child claim
+                    if (permissionLevel == null)
+                    {
+                        // Manager permission
+                        if (!childClaim.managers.contains(identifier))
+                        {
+                            childClaim.managers.add(identifier);
+                        }
+                    }
+                    else
+                    {
+                        // Regular permission
+                        childClaim.setPermission(identifier, permissionLevel);
+                    }
+                    this.dataStore.saveClaim(childClaim);
+                }
+                else
+                {
+                    // Remove trust from child claim
+                    if (permissionLevel == null)
+                    {
+                        // Manager permission
+                        childClaim.managers.remove(identifier);
+                    }
+                    else
+                    {
+                        // Regular permission - only remove if it's not explicitly set in the child
+                        // Check if identifier is a UUID string or permission string
+                        if (identifier.startsWith("[") && identifier.endsWith("]"))
+                        {
+                            // Permission string - check if it exists in the child's permission map
+                            String permKey = identifier.toLowerCase();
+                            ClaimPermission existingPerm = childClaim.getPermission(permKey);
+                            boolean isManager = childClaim.managers.contains(permKey);
+                            if (existingPerm != null || isManager)
+                            {
+                                childClaim.dropPermission(identifier);
+                            }
+                        }
+                        else
+                        {
+                            // UUID string - check if it exists in the maps
+                            String uuidKey = identifier.toLowerCase();
+                            ClaimPermission existingPerm = childClaim.getPermission(uuidKey);
+                            boolean isManager = childClaim.managers.contains(uuidKey);
+                            if (existingPerm != null || isManager)
+                            {
+                                childClaim.dropPermission(identifier);
+                            }
+                        }
+                    }
+                    this.dataStore.saveClaim(childClaim);
+                }
+
+                // Recursively propagate to grandchildren
+                propagateTrustToChildren(childClaim, identifier, permissionLevel, isAddingTrust);
+            }
+        }
+    }
+
     //helper method keeps the trust commands consistent and eliminates duplicate code
     private void handleTrustCommand(Player player, ClaimPermission permissionLevel, String recipientName, boolean clearPermissions)
     {
-        //determine which claim the player is standing in
-        Claim claim = this.dataStore.getClaimAt(player.getLocation(), false /*ignore height*/, null);
+        //determine which claim the player is standing in (use false to respect 3D subclaim boundaries)
+        Claim claim = this.dataStore.getClaimAt(player.getLocation(), false, null);
         
 
 
@@ -2504,6 +2756,9 @@ public class GriefPrevention extends JavaPlugin
                     currentClaim.setPermission(identifierToAdd, permissionLevel);
                 }
                 this.dataStore.saveClaim(currentClaim);
+
+                // Propagate trust changes to child claims that inherit permissions
+                propagateTrustToChildren(currentClaim, identifierToAdd, permissionLevel, true);
             }
 
             //notify player

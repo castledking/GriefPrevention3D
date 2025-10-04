@@ -7,7 +7,6 @@ import org.bukkit.Tag;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryPickupItemEvent;
-import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.plugin.Plugin;
@@ -62,9 +61,10 @@ public class BlockEventHandlerTest
 
         Item item = mock(Item.class);
         Inventory inventory = mock(Inventory.class);
+        org.bukkit.block.Hopper hopper = mock(org.bukkit.block.Hopper.class);
         InventoryPickupItemEvent event = mock(InventoryPickupItemEvent.class);
         when(item.getMetadata("GP_ITEMOWNER")).thenReturn(List.of());
-        when(inventory.getType()).thenReturn(InventoryType.HOPPER);
+        when(inventory.getHolder()).thenReturn(hopper);
         when(event.getItem()).thenReturn(item);
         when(event.getInventory()).thenReturn(inventory);
         BlockEventHandler handler = new BlockEventHandler(null);
@@ -83,7 +83,8 @@ public class BlockEventHandlerTest
         when(item.getMetadata("GP_ITEMOWNER"))
                 .thenReturn(List.of(new FixedMetadataValue(mock(Plugin.class), PLAYER_UUID)));
         Inventory inventory = mock(Inventory.class);
-        when(inventory.getType()).thenReturn(InventoryType.HOPPER);
+        org.bukkit.block.Hopper hopper = mock(org.bukkit.block.Hopper.class);
+        when(inventory.getHolder()).thenReturn(hopper);
         DataStore dataStore = mock(DataStore.class);
         when(dataStore.getPlayerData(PLAYER_UUID)).thenReturn(new PlayerData());
         BlockEventHandler handler = new BlockEventHandler(dataStore);
@@ -114,7 +115,8 @@ public class BlockEventHandlerTest
         when(item.getMetadata("GP_ITEMOWNER"))
                 .thenReturn(List.of(new FixedMetadataValue(mock(Plugin.class), PLAYER_UUID)));
         Inventory inventory = mock(Inventory.class);
-        when(inventory.getType()).thenReturn(InventoryType.HOPPER);
+        org.bukkit.block.Hopper hopper = mock(org.bukkit.block.Hopper.class);
+        when(inventory.getHolder()).thenReturn(hopper);
         BlockEventHandler handler = new BlockEventHandler(null);
         InventoryPickupItemEvent event = mock(InventoryPickupItemEvent.class);
         when(event.getInventory()).thenReturn(inventory);

@@ -224,35 +224,61 @@ public abstract class BoundaryVisualization
     {
         if (claim == null) return Set.of();
 
-        // For single claims, always visualize parent and children.
-        if (claim.parent != null) claim = claim.parent;
-
-        // Correct visualization type for claim type for simplicity.
-        if (type == VisualizationType.CLAIM && claim.isAdminClaim()) type = VisualizationType.ADMIN_CLAIM;
-
-        // For 3D claims, only visualize the specific claim being looked at and
-        // force 3D subdivision visualization style unless a special type is requested.
-        if (claim.is3D()) {
-            VisualizationType resolvedType = switch (type) {
-                case CONFLICT_ZONE, INITIALIZE_ZONE -> type; // preserve special intents
-                default -> VisualizationType.SUBDIVISION_3D; // coerce to 3D subdivision style
-            };
-            return Set.of(new Boundary(claim, resolvedType));
+        // Special visualizations focus exclusively on the supplied claim.
+        if (type == VisualizationType.CONFLICT_ZONE || type == VisualizationType.INITIALIZE_ZONE)
+        {
+            return Set.of(new Boundary(claim, type));
         }
 
-        // For non-3D claims, gather all boundaries. It's important that children override parent so
-        // that users can always find children, no matter how oddly sized or positioned.
-        // For 3D children, we still want to show them with their actual boundaries
+        // When targeting a 3D claim, visualize it (and its descendants) without promoting to the parent so inner 3D
+        // subdivisions render correctly.
+        if (claim.is3D())
+        {
+            Set<Boundary> boundaries = new HashSet<>();
+            addClaimWithDescendants(boundaries, claim, VisualizationType.SUBDIVISION_3D);
+            return boundaries;
+        }
+
+        // For non-3D claims, promote to the highest non-3D ancestor so all subdivisions are rendered together.
+        Claim root = claim;
+        while (root.parent != null && !root.parent.is3D())
+        {
+            root = root.parent;
+        }
+
+        VisualizationType rootType;
+        if (root == claim)
+        {
+            rootType = type;
+            if (rootType == VisualizationType.CLAIM && root.isAdminClaim())
+            {
+                rootType = VisualizationType.ADMIN_CLAIM;
+            }
+        }
+        else
+        {
+            rootType = root.isAdminClaim() ? VisualizationType.ADMIN_CLAIM : VisualizationType.CLAIM;
+        }
+
         Set<Boundary> boundaries = new HashSet<>();
-        boundaries.add(new Boundary(claim, type));
-        
-        // Add all children with their appropriate visualization types
-        claim.children.forEach(child -> {
-            VisualizationType childType = child.is3D() ? VisualizationType.SUBDIVISION_3D : VisualizationType.SUBDIVISION;
-            boundaries.add(new Boundary(child, childType));
-        });
-        
+        addClaimWithDescendants(boundaries, root, rootType);
         return boundaries;
+    }
+
+    private static void addClaimWithDescendants(Set<Boundary> boundaries, Claim claim, VisualizationType type)
+    {
+        boundaries.add(new Boundary(claim, type));
+
+        for (Claim child : claim.children)
+        {
+            if (!child.inDataStore) continue;
+
+            VisualizationType childType = child.is3D()
+                    ? VisualizationType.SUBDIVISION_3D
+                    : VisualizationType.SUBDIVISION;
+
+            addClaimWithDescendants(boundaries, child, childType);
+        }
     }
 
     /**
@@ -292,19 +318,24 @@ public abstract class BoundaryVisualization
         Collection<Boundary> boundaries = event.getBoundaries();
         boundaries.removeIf(Objects::isNull);
 
-        if (currentVisualization != null
+        // Always clear the current visualization first to prevent duplicates
+        // This ensures old visualizations are properly cleaned up
+        if (currentVisualization != null) {
+            currentVisualization.revert(player);
+            playerData.setVisibleBoundaries(null);
+        }
+
+        // Check if this would be a duplicate visualization (same boundaries, player hasn't moved far)
+        if (boundaries.isEmpty() || (currentVisualization != null
                 && currentVisualization.elements.equals(boundaries)
-                && currentVisualization.visualizeFrom.distanceSquared(event.getCenter()) < 165)
+                && currentVisualization.visualizeFrom.distanceSquared(event.getCenter()) < 165))
         {
-            // Ignore visualizations with duplicate boundaries if the viewer has moved fewer than 15 blocks.
+            // Don't create a new visualization for duplicates or empty boundaries
             return;
         }
 
         BoundaryVisualization visualization = event.getProvider().create(player.getWorld(), event.getCenter(), event.getHeight());
         visualization.elements.addAll(boundaries);
-
-        // If they have a visualization active, clear it first.
-        playerData.setVisibleBoundaries(null);
 
         // If they are online and in the same world as the visualization, display the visualization next tick.
         if (visualization.canVisualize(player))

@@ -89,26 +89,29 @@ import org.bukkit.Tag;
  import org.bukkit.inventory.InventoryHolder;
  import org.bukkit.inventory.ItemStack;
  import org.bukkit.profile.PlayerProfile;
- import org.bukkit.scheduler.BukkitRunnable;
- import org.bukkit.util.BlockIterator;
- import org.bukkit.util.Vector;
- import org.jetbrains.annotations.NotNull;
+import org.bukkit.util.BlockIterator;
+import org.bukkit.util.Vector;
+import org.jetbrains.annotations.NotNull;
+
+import java.net.InetAddress;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.Date;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Supplier;
+import java.util.regex.Pattern;
  
- import java.net.InetAddress;
- import java.util.ArrayList;
- import java.util.Calendar;
- import java.util.Collection;
- import java.util.Date;
- import java.util.HashMap;
- import java.util.HashSet;
- import java.util.List;
- import java.util.Set;
- import java.util.UUID;
- import java.util.concurrent.ConcurrentHashMap;
- import java.util.function.Supplier;
- import java.util.regex.Pattern;
- 
- import me.ryanhamshire.GriefPrevention.util.SchedulerUtil;
+import me.ryanhamshire.GriefPrevention.util.SchedulerUtil;
+
+
  import me.ryanhamshire.GriefPrevention.util.TaskHandle;
  
  class PlayerEventHandler implements Listener
@@ -544,28 +547,103 @@ import org.bukkit.Tag;
  
          //if requires access trust, check for permission
          if (accessTrustCommands.isMonitoredCommand(command))
-         {
-             Claim claim = this.dataStore.getClaimAt(player.getLocation(), false, playerData.lastClaim);
-             if (claim != null)
-             {
-                 playerData.lastClaim = claim;
-                 Supplier<String> reason = claim.checkPermission(player, ClaimPermission.Access, event);
-                 if (reason != null)
-                 {
-                     GriefPrevention.sendMessage(player, TextMode.Err, reason.get());
-                     event.setCancelled(true);
-                 }
-             }
-         }
-     }
- 
+        {
+            Claim deepestClaim = findDeepestContainingClaim(playerData.lastClaim, player.getLocation());
+            if (deepestClaim != null)
+            {
+                playerData.lastClaim = deepestClaim;
+                Supplier<String> reason = deepestClaim.checkPermission(player, ClaimPermission.Access, event);
+                if (reason != null)
+                {
+                    GriefPrevention.sendMessage(player, TextMode.Err, reason.get());
+                    event.setCancelled(true);
+                    return;
+                }
+            }
+        }
+    }
+
+    private Claim findDeepestContainingClaim(@org.jetbrains.annotations.Nullable Claim start,
+                                             @org.jetbrains.annotations.Nullable Location location)
+    {
+        if (start == null || location == null)
+        {
+            return start;
+        }
+
+        Claim current = start;
+        while (true)
+        {
+            Claim bestChild = null;
+
+            for (Claim child : current.children)
+            {
+                if (child == null || !child.inDataStore)
+                {
+                    continue;
+                }
+
+                if (!child.contains(location, false, false))
+                {
+                    continue;
+                }
+
+                if (bestChild == null || isMoreSpecificChild(child, bestChild, location))
+                {
+                    bestChild = child;
+                }
+            }
+
+            if (bestChild == null)
+            {
+                break;
+            }
+
+            current = bestChild;
+        }
+
+        return current;
+    }
+
+    private boolean isMoreSpecificChild(@org.jetbrains.annotations.NotNull Claim candidate,
+                                        @org.jetbrains.annotations.NotNull Claim incumbent,
+                                        @org.jetbrains.annotations.NotNull Location location)
+    {
+        boolean candidate3D = candidate.is3D();
+        boolean incumbent3D = incumbent.is3D();
+
+        if (candidate3D != incumbent3D)
+        {
+            if (candidate3D && candidate.containsY(location.getBlockY()))
+            {
+                return true;
+            }
+            if (incumbent3D && incumbent.containsY(location.getBlockY()))
+            {
+                return false;
+            }
+        }
+
+        if (candidate3D && incumbent3D)
+        {
+            int candidateHeight = candidate.getGreaterBoundaryCorner().getBlockY() - candidate.getLesserBoundaryCorner().getBlockY();
+            int incumbentHeight = incumbent.getGreaterBoundaryCorner().getBlockY() - incumbent.getLesserBoundaryCorner().getBlockY();
+            if (candidateHeight != incumbentHeight)
+            {
+                return candidateHeight < incumbentHeight;
+            }
+        }
+
+        return candidate.getArea() < incumbent.getArea();
+    }
+
      private CommandCategory getCommandCategory(MonitorableCommand command)
      {
          if (whisperCommands.isMonitoredCommand(command)) return CommandCategory.Whisper;
          if (chatCommands.isMonitoredCommand(command)) return CommandCategory.Chat;
          return CommandCategory.None;
-     }
- 
+    }
+
      static int longestNameLength = 10;
  
      static void makeSocialLogEntry(String name, String message)
@@ -1083,7 +1161,7 @@ import org.bukkit.Tag;
          Entity entity = event.getEntity();
 
          // Only handle boats
-         if (entity.getType() != EntityType.BOAT && entity.getType() != EntityType.CHEST_BOAT) {
+         if (!entity.getType().name().contains("BOAT")) {
              return;
          }
 
@@ -1239,7 +1317,8 @@ import org.bukkit.Tag;
         if (instance.config_claims_preventTheft && itemInHand.getType() == Material.LEAD)
         {
             // Handle creatures (original logic)
-            if (entity instanceof Creature || entity.getType() == EntityType.BOAT || entity.getType() == EntityType.CHEST_BOAT)
+            // Handle creatures and boats (updated for modern Minecraft versions)
+            if (entity.getType().name().contains("BOAT") || entity instanceof Creature)
             {
                 Claim claim = this.dataStore.getClaimAt(entity.getLocation(), false, playerData.lastClaim);
                 if (claim != null)
@@ -1887,14 +1966,16 @@ import org.bukkit.Tag;
                      if (materialInHand != instance.config_claims_modificationTool)
                      {
                          GriefPrevention.sendRateLimitedErrorMessage(player, Messages.TooFarAway);
- 
                          // Remove visualizations
                          playerData.setVisibleBoundaries(null);
                          return;
                      }
                      // else: do not message/return here; shovel path below will handle it
                  }
- 
+
+                 //if the player is currently resizing a claim, don't do anything
+                 if (playerData.claimResizing != null) return;
+
                  Claim claim = this.dataStore.getClaimAt(clickedBlock.getLocation(), false /*ignore height*/, playerData.lastClaim);
  
                  //no claim case
@@ -1921,8 +2002,9 @@ import org.bukkit.Tag;
                      playerData.lastClaim = claim;
                      GriefPrevention.sendMessage(player, TextMode.Info, Messages.BlockClaimed, claim.getOwnerName());
  
-                     //visualize boundary
-                     BoundaryVisualization.visualizeClaim(player, claim, VisualizationType.CLAIM);
+                     //visualize boundary. Preserve subdivision colors when probing 3D claims so parents stay intact.
+                     VisualizationType inspectType = claim.is3D() ? VisualizationType.SUBDIVISION_3D : VisualizationType.CLAIM;
+                     BoundaryVisualization.visualizeClaim(player, claim, inspectType);
  
                      if (player.hasPermission("griefprevention.seeclaimsize"))
                      {
@@ -2072,7 +2154,7 @@ import org.bukkit.Tag;
                  {
                      // 2D claims keep legacy behavior: extend into ground based on clicked Y
                      newy1 = playerData.claimResizing.getLesserBoundaryCorner().getBlockY();
-                     newy2 = clickedBlock.getY() - instance.config_claims_claimsExtendIntoGroundDistance;
+                     newy2 = playerData.claimResizing.getGreaterBoundaryCorner().getBlockY();
                  }
  
                  this.dataStore.resizeClaimWithChecks(player, playerData, newx1, newx2, newy1, newy2, newz1, newz2);
@@ -2088,25 +2170,28 @@ import org.bukkit.Tag;
                 // Fallback to ignore-height search to preserve legacy behavior when no 3D subclaim matches Y
                 resolvedClaim = this.dataStore.getClaimAt(clickedBlock.getLocation(), true /* ignore height */, playerData.lastClaim);
             }
-            Claim claim = resolvedClaim;
-
-            // If this click is exactly at a shared corner between a child and its parent, favor the parent for resizing.
-            if (claim != null && claim.parent != null)
+            Claim claim = findDeepestContainingClaim(resolvedClaim, clickedBlock.getLocation());
+            if (claim != null)
             {
-                Claim parent = claim.parent;
-                boolean isCornerOfChild =
-                        (clickedBlock.getX() == claim.getLesserBoundaryCorner().getBlockX() || clickedBlock.getX() == claim.getGreaterBoundaryCorner().getBlockX()) &&
-                        (clickedBlock.getZ() == claim.getLesserBoundaryCorner().getBlockZ() || clickedBlock.getZ() == claim.getGreaterBoundaryCorner().getBlockZ());
+                playerData.lastClaim = claim;
+            }
 
-                boolean isCornerOfParent =
-                        (clickedBlock.getX() == parent.getLesserBoundaryCorner().getBlockX() || clickedBlock.getX() == parent.getGreaterBoundaryCorner().getBlockX()) &&
-                        (clickedBlock.getZ() == parent.getLesserBoundaryCorner().getBlockZ() || clickedBlock.getZ() == parent.getGreaterBoundaryCorner().getBlockZ());
-
-                if (isCornerOfChild && isCornerOfParent)
+            // If this click is exactly at a shared corner, promote to the outermost parent sharing that corner.
+            if (claim != null)
+            {
+                Claim promoted = claim;
+                while (promoted.parent != null && isCornerMatch(promoted, clickedBlock))
                 {
-                    // Promote to parent so user can expand the main claim while keeping the child encapsulated
-                    claim = parent;
+                    Claim parent = promoted.parent;
+                    if (!isCornerMatch(parent, clickedBlock))
+                    {
+                        break;
+                    }
+
+                    promoted = parent;
                 }
+
+                claim = promoted;
             }
  
              //if within an existing claim, he's not creating a new one
@@ -2125,7 +2210,17 @@ import org.bukkit.Tag;
                          GriefPrevention.sendMessage(player, TextMode.Instr, Messages.ResizeStart);
                          // Refresh visualization in resize mode. For 3D subclaims this will render corners + stubs
                          // due to coercion in BoundaryVisualization.defineBoundaries().
-                         BoundaryVisualization.visualizeClaim(player, claim, VisualizationType.CLAIM, clickedBlock);
+                         VisualizationType visualizationType;
+                         if (claim.parent == null)
+                         {
+                             visualizationType = claim.isAdminClaim() ? VisualizationType.ADMIN_CLAIM : VisualizationType.CLAIM;
+                         }
+                         else
+                         {
+                             visualizationType = claim.is3D() ? VisualizationType.SUBDIVISION_3D : VisualizationType.SUBDIVISION;
+                         }
+
+                         BoundaryVisualization.visualizeClaim(player, claim, visualizationType, clickedBlock);
                      }
  
                      //if he didn't click on a corner and is in subdivision mode, he's creating a new subdivision
@@ -2134,19 +2229,47 @@ import org.bukkit.Tag;
                          //if it's the first click, he's trying to start a new subdivision
                          if (playerData.lastShovelLocation == null)
                          {
-                             //if the clicked claim was a subdivision, tell him he can't start a new subdivision here
-                             if (claim.parent != null)
-                             {
-                                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.ResizeFailOverlapSubdivision);
-                             }
- 
-                             //otherwise start a new subdivision
-                             else
-                             {
-                                 GriefPrevention.sendMessage(player, TextMode.Instr, Messages.SubdivisionStart);
-                                 playerData.lastShovelLocation = clickedBlock.getLocation();
-                                 playerData.claimSubdividing = claim;
-                             }
+                             //if the clicked claim was a subdivision, decide whether nesting is allowed
+                            if (claim.parent != null)
+                            {
+                                boolean parentIs3D = claim.is3D();
+                                boolean wants3DSubdivision = playerData.shovelMode == ShovelMode.Subdivide3D;
+                                boolean canStartSubdivision;
+
+                                if (!instance.config_claims_allowNestedSubClaims)
+                                {
+                                    // Nested subdivisions disabled entirely.
+                                    canStartSubdivision = false;
+                                }
+                                else if (parentIs3D)
+                                {
+                                    // Only allow stacking inside a 3D parent when the player is in 3D mode.
+                                    canStartSubdivision = wants3DSubdivision;
+                                }
+                                else
+                                {
+                                    // Parent is 2D: allow additional subdivisions (2D or 3D) when nesting is enabled.
+                                    canStartSubdivision = true;
+                                }
+
+                                if (canStartSubdivision)
+                                {
+                                    GriefPrevention.sendMessage(player, TextMode.Instr, Messages.SubdivisionStart);
+                                    playerData.lastShovelLocation = clickedBlock.getLocation();
+                                    playerData.claimSubdividing = claim;
+                                }
+                                else
+                                {
+                                    GriefPrevention.sendMessage(player, TextMode.Err, Messages.ResizeFailOverlapSubdivision);
+                                }
+                            }
+                            else
+                            {
+                                // Top-level claim: always allow starting a subdivision.
+                                GriefPrevention.sendMessage(player, TextMode.Instr, Messages.SubdivisionStart);
+                                playerData.lastShovelLocation = clickedBlock.getLocation();
+                                playerData.claimSubdividing = claim;
+                            }
                          }
  
                          //otherwise, he's trying to finish creating a subdivision by setting the other boundary corner
@@ -2193,41 +2316,170 @@ import org.bukkit.Tag;
                                 maxY = playerData.claimSubdividing.getGreaterBoundaryCorner().getBlockY();
                             }
 
+                            // Enforce inner offset if nesting 3D subclaims is enabled
+                            if (instance.config_claims_allowNestedSubClaims && playerData.claimSubdividing != null && playerData.claimSubdividing.is3D() && playerData.shovelMode == ShovelMode.Subdivide3D)
+                            {
+                                Claim parentClaim = playerData.claimSubdividing;
+                                int inset = 1;
+                                if (inset > 0)
+                                {
+                                    Location parentMin = parentClaim.getLesserBoundaryCorner();
+                                    Location parentMax = parentClaim.getGreaterBoundaryCorner();
+
+                                    int parentMinY = Math.min(parentMin.getBlockY(), parentMax.getBlockY());
+                                    int parentMaxY = Math.max(parentMin.getBlockY(), parentMax.getBlockY());
+
+                                    int minAllowedX = parentMin.getBlockX() + inset;
+                                    int maxAllowedX = parentMax.getBlockX() - inset;
+                                    int minAllowedZ = parentMin.getBlockZ() + inset;
+                                    int maxAllowedZ = parentMax.getBlockZ() - inset;
+                                    int minAllowedY = parentMinY + inset;
+                                    int maxAllowedY = parentMaxY - inset;
+
+                                    if (minAllowedX > maxAllowedX || minAllowedZ > maxAllowedZ || minAllowedY > maxAllowedY)
+                                    {
+                                        GriefPrevention.sendMessage(player, TextMode.Err, Messages.CreateSubdivisionOverlap);
+                                        return;
+                                    }
+
+                                    int subMinX = Math.min(playerData.lastShovelLocation.getBlockX(), clickedBlock.getX());
+                                    int subMaxX = Math.max(playerData.lastShovelLocation.getBlockX(), clickedBlock.getX());
+                                    int subMinZ = Math.min(playerData.lastShovelLocation.getBlockZ(), clickedBlock.getZ());
+                                    int subMaxZ = Math.max(playerData.lastShovelLocation.getBlockZ(), clickedBlock.getZ());
+                                    int subMinY = Math.min(minY, maxY);
+                                    int subMaxY = Math.max(minY, maxY);
+
+                                    if (subMinX < minAllowedX || subMaxX > maxAllowedX
+                                            || subMinZ < minAllowedZ || subMaxZ > maxAllowedZ
+                                            || subMinY < minAllowedY || subMaxY > maxAllowedY)
+                                    {
+                                        GriefPrevention.sendMessage(player, TextMode.Err, Messages.InnerSubdivisionTooClose);
+                                        return;
+                                    }
+                                }
+                            }
+
+                            // Ensure 3D subclaims placed inside 2D parents stay inset from parent and sibling borders.
+                            if (playerData.shovelMode == ShovelMode.Subdivide3D
+                                    && playerData.claimSubdividing != null
+                                    && !playerData.claimSubdividing.is3D())
+                            {
+                                Claim parentClaim = playerData.claimSubdividing;
+                                int inset = 1;
+                                if (inset > 0)
+                                {
+                                    Location parentMin = parentClaim.getLesserBoundaryCorner();
+                                    Location parentMax = parentClaim.getGreaterBoundaryCorner();
+
+                                    int parentMinX = Math.min(parentMin.getBlockX(), parentMax.getBlockX());
+                                    int parentMaxX = Math.max(parentMin.getBlockX(), parentMax.getBlockX());
+                                    int parentMinZ = Math.min(parentMin.getBlockZ(), parentMax.getBlockZ());
+                                    int parentMaxZ = Math.max(parentMin.getBlockZ(), parentMax.getBlockZ());
+
+                                    int minAllowedX = parentMinX + inset;
+                                    int maxAllowedX = parentMaxX - inset;
+                                    int minAllowedZ = parentMinZ + inset;
+                                    int maxAllowedZ = parentMaxZ - inset;
+
+                                    int proposedMinX = Math.min(playerData.lastShovelLocation.getBlockX(), clickedBlock.getX());
+                                    int proposedMaxX = Math.max(playerData.lastShovelLocation.getBlockX(), clickedBlock.getX());
+                                    int proposedMinZ = Math.min(playerData.lastShovelLocation.getBlockZ(), clickedBlock.getZ());
+                                    int proposedMaxZ = Math.max(playerData.lastShovelLocation.getBlockZ(), clickedBlock.getZ());
+
+                                    if (proposedMinX < minAllowedX || proposedMaxX > maxAllowedX
+                                            || proposedMinZ < minAllowedZ || proposedMaxZ > maxAllowedZ)
+                                    {
+                                        GriefPrevention.sendMessage(player, TextMode.Err, Messages.InnerSubdivisionTooClose);
+                                        return;
+                                    }
+
+                                    for (Claim sibling : parentClaim.children)
+                                    {
+                                        if (!sibling.inDataStore || sibling.is3D()) continue;
+
+                                        Location siblingMin = sibling.getLesserBoundaryCorner();
+                                        Location siblingMax = sibling.getGreaterBoundaryCorner();
+
+                                        int siblingMinX = Math.min(siblingMin.getBlockX(), siblingMax.getBlockX());
+                                        int siblingMaxX = Math.max(siblingMin.getBlockX(), siblingMax.getBlockX());
+                                        int siblingMinZ = Math.min(siblingMin.getBlockZ(), siblingMax.getBlockZ());
+                                        int siblingMaxZ = Math.max(siblingMin.getBlockZ(), siblingMax.getBlockZ());
+
+                                        boolean zOverlap = proposedMinZ <= siblingMaxZ && proposedMaxZ >= siblingMinZ;
+                                        if (zOverlap)
+                                        {
+                                            int gapEast = proposedMinX - siblingMaxX;
+                                            if (gapEast >= 0 && gapEast < 1)
+                                            {
+                                                GriefPrevention.sendMessage(player, TextMode.Err, Messages.InnerSubdivisionTooClose);
+                                                return;
+                                            }
+
+                                            int gapWest = siblingMinX - proposedMaxX;
+                                            if (gapWest >= 0 && gapWest < 1)
+                                            {
+                                                GriefPrevention.sendMessage(player, TextMode.Err, Messages.InnerSubdivisionTooClose);
+                                                return;
+                                            }
+                                        }
+
+                                        boolean xOverlap = proposedMinX <= siblingMaxX && proposedMaxX >= siblingMinX;
+                                        if (xOverlap)
+                                        {
+                                            int gapSouth = proposedMinZ - siblingMaxZ;
+                                            if (gapSouth >= 0 && gapSouth < 1)
+                                            {
+                                                GriefPrevention.sendMessage(player, TextMode.Err, Messages.InnerSubdivisionTooClose);
+                                                return;
+                                            }
+
+                                            int gapNorth = siblingMinZ - proposedMaxZ;
+                                            if (gapNorth >= 0 && gapNorth < 1)
+                                            {
+                                                GriefPrevention.sendMessage(player, TextMode.Err, Messages.InnerSubdivisionTooClose);
+                                                return;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
                              //try to create a new claim (will return null if this subdivision overlaps another)
-                             CreateClaimResult result = this.dataStore.createClaim(
-                                     player.getWorld(),
-                                     playerData.lastShovelLocation.getBlockX(), clickedBlock.getX(),
-                                     minY, maxY,
-                                     playerData.lastShovelLocation.getBlockZ(), clickedBlock.getZ(),
-                                     null,  //owner is not used for subdivisions
-                                     playerData.claimSubdividing,
-                                     null, player);
- 
- 
-                             //if it didn't succeed, tell the player why
-                             if (!result.succeeded || result.claim == null)
-                             {
-                                 if (result.claim != null)
-                                 {
-                                     GriefPrevention.sendMessage(player, TextMode.Err, Messages.CreateSubdivisionOverlap);
-                                     BoundaryVisualization.visualizeClaim(player, result.claim, VisualizationType.CONFLICT_ZONE, clickedBlock);
-                                 }
-                                 else
-                                 {
-                                     GriefPrevention.sendMessage(player, TextMode.Err, Messages.CreateClaimFailOverlapRegion);
-                                 }
- 
-                                 return;
-                             }
- 
-                             //otherwise, advise him on the /trust command and show him his new subdivision
-                             else
-                             {
-                                 GriefPrevention.sendMessage(player, TextMode.Success, Messages.SubdivisionSuccess);
-                                 BoundaryVisualization.visualizeClaim(player, result.claim, VisualizationType.CLAIM, clickedBlock);
-                                 playerData.lastShovelLocation = null;
-                                 playerData.claimSubdividing = null;
-                             }
+                            CreateClaimResult subdivisionResult = this.dataStore.createClaim(
+                                player.getWorld(),
+                                playerData.lastShovelLocation.getBlockX(), clickedBlock.getX(),
+                                minY, maxY,
+                                playerData.lastShovelLocation.getBlockZ(), clickedBlock.getZ(),
+                                null,  //owner is not used for subdivisions
+                                playerData.claimSubdividing,
+                                null, player);
+
+                            //if it didn't succeed, tell the player why
+                            if (!subdivisionResult.succeeded || subdivisionResult.claim == null)
+                            {
+                            if (subdivisionResult.claim != null)
+                            {
+                                GriefPrevention.sendMessage(player, TextMode.Err, Messages.CreateSubdivisionOverlap);
+                                BoundaryVisualization.visualizeClaim(player, subdivisionResult.claim, VisualizationType.CONFLICT_ZONE, clickedBlock);
+                            }
+                            else
+                            {
+                                GriefPrevention.sendMessage(player, TextMode.Err, Messages.CreateClaimFailOverlapRegion);
+                            }
+
+                            return;
+                            }
+
+                            //otherwise, advise him on the /trust command and show him his new subdivision
+                            else
+                            {
+                            GriefPrevention.sendMessage(player, TextMode.Success, Messages.SubdivisionSuccess);
+                            VisualizationType subdivisionViz =
+                                subdivisionResult.claim.is3D() ? VisualizationType.SUBDIVISION_3D : VisualizationType.SUBDIVISION;
+                            BoundaryVisualization.visualizeClaim(player, subdivisionResult.claim, subdivisionViz, clickedBlock);
+                            playerData.lastShovelLocation = null;
+                            playerData.claimSubdividing = null;
+                            }
                          }
                      }
  
@@ -2393,75 +2645,198 @@ import org.bukkit.Tag;
  
      // Helper container for a corner raycast hit
      private static class CornerHit {
-         final Claim claim;
-         final int x, y, z;
-         final double t;
-         CornerHit(Claim claim, int x, int y, int z, double t) {
-             this.claim = claim; this.x = x; this.y = y; this.z = z; this.t = t;
-         }
-     }
- 
-     // Raycast from player's eye to detect intersection near any 3D subclaim corner within maxDistance.
-     // Returns the closest corner hit along the ray, or null if none.
-     private CornerHit raycast3DSubclaimCorner(Player player, int maxDistance)
-     {
-         Vector eyePos = player.getEyeLocation().toVector();
-         Vector dir = player.getEyeLocation().getDirection().normalize();
-         World world = player.getWorld();
- 
-         CornerHit best = null;
-         double bestT = Double.POSITIVE_INFINITY;
-         double threshold = 1.2; // be more forgiving when aiming at corners
- 
-         for (Claim parent : this.dataStore.getClaims())
-         {
-             if (parent == null || parent.children.isEmpty()) continue;
-             if (parent.getLesserBoundaryCorner().getWorld() != world) continue;
- 
-             for (Claim child : parent.children)
-             {
-                 if (!child.is3D() || !child.inDataStore) continue;
- 
-                 int x1 = child.getLesserBoundaryCorner().getBlockX();
-                 int x2 = child.getGreaterBoundaryCorner().getBlockX();
-                 int y1 = child.getLesserBoundaryCorner().getBlockY();
-                 int y2 = child.getGreaterBoundaryCorner().getBlockY();
-                 int z1 = child.getLesserBoundaryCorner().getBlockZ();
-                 int z2 = child.getGreaterBoundaryCorner().getBlockZ();
- 
-                 int[] xs = new int[] { x1, x2 };
-                 int[] ys = new int[] { y1, y2 };
-                 int[] zs = new int[] { z1, z2 };
- 
-                 for (int xi : xs)
-                     for (int yi : ys)
-                         for (int zi : zs)
-                         {
-                             // Use the true corner vertex instead of block center
-                             Vector p = new Vector(xi, yi, zi);
-                             Vector v = p.clone().subtract(eyePos);
-                             double t = v.dot(dir);
-                             if (t < 0 || t > maxDistance) continue; // behind or too far
-                             Vector closest = eyePos.clone().add(dir.clone().multiply(t));
-                             double dist = closest.distance(p);
-                             if (dist <= threshold && t < bestT)
-                             {
-                                 bestT = t;
-                                 best = new CornerHit(child, xi, yi, zi, t);
-                             }
-                         }
-             }
-         }
- 
-         return best;
-     }
+        final Claim claim;
+        final int x, y, z;
+        final double t;
+        CornerHit(Claim claim, int x, int y, int z, double t) {
+            this.claim = claim; this.x = x; this.y = y; this.z = z; this.t = t;
+        }
+    }
+
+    private static boolean isCornerMatch(Claim claim, Block block)
+    {
+        if (claim == null || block == null)
+        {
+            return false;
+        }
+
+        Location lesser = claim.getLesserBoundaryCorner();
+        Location greater = claim.getGreaterBoundaryCorner();
+        int blockX = block.getX();
+        int blockY = block.getY();
+        int blockZ = block.getZ();
+
+        boolean xMatch = blockX == lesser.getBlockX() || blockX == greater.getBlockX();
+        boolean zMatch = blockZ == lesser.getBlockZ() || blockZ == greater.getBlockZ();
+        if (!xMatch || !zMatch)
+        {
+            return false;
+        }
+
+        if (!claim.is3D())
+        {
+            return true;
+        }
+
+        int minY = Math.min(lesser.getBlockY(), greater.getBlockY());
+        int maxY = Math.max(lesser.getBlockY(), greater.getBlockY());
+        return blockY == minY || blockY == maxY;
+    }
+
+    // Raycast from player's eye to detect intersection near any 3D subclaim corner within maxDistance.
+    // Returns the closest corner hit along the ray, or null if none.
+    private CornerHit raycast3DSubclaimCorner(Player player, int maxDistance)
+    {
+        Vector eyePos = player.getEyeLocation().toVector();
+        Vector dir = player.getEyeLocation().getDirection().normalize();
+        World world = player.getWorld();
+
+        CornerHit best = null;
+        double bestT = Double.POSITIVE_INFINITY;
+        double threshold = 1.2; // be more forgiving when aiming at corners
+
+        for (Claim root : this.dataStore.getClaims())
+        {
+            if (root == null || !root.inDataStore) continue;
+            if (!world.equals(root.getLesserBoundaryCorner().getWorld())) continue;
+            Deque<Claim> stack = new ArrayDeque<>();
+            stack.push(root);
+
+            while (!stack.isEmpty())
+            {
+                Claim current = stack.pop();
+                if (current == null || !current.inDataStore) continue;
+                if (!world.equals(current.getLesserBoundaryCorner().getWorld())) continue;
+
+                if (current.is3D())
+                {
+                    Location lesser = current.getLesserBoundaryCorner();
+                    Location greater = current.getGreaterBoundaryCorner();
+
+                    int minX = Math.min(lesser.getBlockX(), greater.getBlockX());
+                    int maxX = Math.max(lesser.getBlockX(), greater.getBlockX());
+                    int minY = Math.min(lesser.getBlockY(), greater.getBlockY());
+                    int maxY = Math.max(lesser.getBlockY(), greater.getBlockY());
+                    int minZ = Math.min(lesser.getBlockZ(), greater.getBlockZ());
+                    int maxZ = Math.max(lesser.getBlockZ(), greater.getBlockZ());
+
+                    int[] xs = new int[] { minX, maxX };
+                    int[] ys = new int[] { minY, maxY };
+                    int[] zs = new int[] { minZ, maxZ };
+
+                    for (int xi : xs)
+                        for (int yi : ys)
+                            for (int zi : zs)
+                            {
+                                // Evaluate the real corner itself
+                                CornerHit candidate = evaluateCornerCandidate(
+                                        eyePos, dir, maxDistance, threshold, current,
+                                        xi + 0.5, yi + 0.5, zi + 0.5,
+                                        xi, yi, zi);
+                                if (candidate != null && candidate.t < bestT)
+                                {
+                                    bestT = candidate.t;
+                                    best = candidate;
+                                }
+
+                                // Allow aiming at interior extensions (+/-1 block toward claim interior)
+                                if (maxX - minX >= 1)
+                                {
+                                    int offsetX = xi == minX ? xi + 1 : xi - 1;
+                                    candidate = evaluateCornerCandidate(
+                                            eyePos, dir, maxDistance, threshold, current,
+                                            offsetX + 0.5, yi + 0.5, zi + 0.5,
+                                            xi, yi, zi);
+                                    if (candidate != null && candidate.t < bestT)
+                                    {
+                                        bestT = candidate.t;
+                                        best = candidate;
+                                    }
+                                }
+
+                                if (maxZ - minZ >= 1)
+                                {
+                                    int offsetZ = zi == minZ ? zi + 1 : zi - 1;
+                                    candidate = evaluateCornerCandidate(
+                                            eyePos, dir, maxDistance, threshold, current,
+                                            xi + 0.5, yi + 0.5, offsetZ + 0.5,
+                                            xi, yi, zi);
+                                    if (candidate != null && candidate.t < bestT)
+                                    {
+                                        bestT = candidate.t;
+                                        best = candidate;
+                                    }
+                                }
+
+                                if (maxY - minY >= 1)
+                                {
+                                    int offsetY = yi == minY ? yi + 1 : yi - 1;
+                                    candidate = evaluateCornerCandidate(
+                                            eyePos, dir, maxDistance, threshold, current,
+                                            xi + 0.5, offsetY + 0.5, zi + 0.5,
+                                            xi, yi, zi);
+                                    if (candidate != null && candidate.t < bestT)
+                                    {
+                                        bestT = candidate.t;
+                                        best = candidate;
+                                    }
+                                }
+                            }
+                }
+
+                if (!current.children.isEmpty())
+                {
+                    for (Claim child : current.children)
+                    {
+                        if (child != null && child.inDataStore)
+                        {
+                            stack.push(child);
+                        }
+                    }
+                }
+            }
+        }
+
+        return best;
+    }
+
+    private CornerHit evaluateCornerCandidate(
+            Vector eyePos,
+            Vector dir,
+            int maxDistance,
+            double threshold,
+            Claim claim,
+            double targetX,
+            double targetY,
+            double targetZ,
+            int hitX,
+            int hitY,
+            int hitZ)
+    {
+        Vector target = new Vector(targetX, targetY, targetZ);
+        Vector toTarget = target.clone().subtract(eyePos);
+
+        double t = toTarget.dot(dir);
+        if (t < 0 || t > maxDistance)
+        {
+            return null;
+        }
+
+        Vector closestPoint = eyePos.clone().add(dir.clone().multiply(t));
+        double distance = closestPoint.distance(target);
+        if (distance > threshold)
+        {
+            return null;
+        }
+
+        return new CornerHit(claim, hitX, hitY, hitZ, t);
+    }
  
      //determines whether a block type is an inventory holder.  uses a caching strategy to save cpu time
      private final ConcurrentHashMap<Material, Boolean> inventoryHolderCache = new ConcurrentHashMap<>();
  
      private boolean isInventoryHolder(Block clickedBlock)
      {
- 
          Material cacheKey = clickedBlock.getType();
          Boolean cachedValue = this.inventoryHolderCache.get(cacheKey);
          if (cachedValue != null)
@@ -2541,7 +2916,7 @@ import org.bukkit.Tag;
          Vehicle vehicle = event.getVehicle();
         
          // Only handle boats
-         if (vehicle.getType() != EntityType.BOAT && vehicle.getType() != EntityType.CHEST_BOAT) {
+         if (!vehicle.getType().name().contains("BOAT")) {
              return;
          }
         

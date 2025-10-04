@@ -66,14 +66,16 @@ import org.bukkit.event.entity.EntityChangeBlockEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.hanging.HangingBreakEvent;
 import org.bukkit.event.inventory.InventoryPickupItemEvent;
-import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.world.PortalCreateEvent;
 import org.bukkit.event.world.StructureGrowEvent;
+import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.MetadataValue;
 import me.ryanhamshire.GriefPrevention.PlayerEventHandler;
 import org.bukkit.projectiles.BlockProjectileSource;
 import org.bukkit.projectiles.ProjectileSource;
+import org.bukkit.block.Hopper;
+import org.bukkit.entity.minecart.HopperMinecart;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -1292,7 +1294,8 @@ public class BlockEventHandler implements Listener
     public void onInventoryPickupItem(InventoryPickupItemEvent event)
     {
         // Prevent hoppers from taking items dropped by players upon death.
-        if (event.getInventory().getType() != InventoryType.HOPPER)
+        InventoryHolder holder = event.getInventory().getHolder();
+        if (!(holder instanceof Hopper) && !(holder instanceof HopperMinecart))
         {
             return;
         }
