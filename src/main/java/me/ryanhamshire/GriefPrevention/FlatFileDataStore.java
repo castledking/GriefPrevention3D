@@ -723,6 +723,8 @@ public class FlatFileDataStore extends DataStore
     @Override
     synchronized void deleteClaimFromSecondaryStorage(Claim claim)
     {
+        boolean debugEnabled = GriefPrevention.instance.config_logs_debugEnabled;
+        
         // Subdivisions are persisted inside their top-level parent's YAML file. When one is removed,
         // rewrite the parent file so the child entry disappears instead of leaving a stale record that
         // resurrects on restart.
@@ -737,6 +739,13 @@ public class FlatFileDataStore extends DataStore
             // Remove the claim from its parent's children list
             claim.parent.children.remove(claim);
             
+            if (debugEnabled) {
+                String rootFile = claimDataFolderPath + File.separator + root.id + ".yml";
+                GriefPrevention.AddLogEntry("[DEBUG] Storage: Subdivision " + claim.id 
+                    + " removed from parent " + claim.parent.id 
+                    + ", updating root file: " + rootFile, CustomLogEntryTypes.Debug, true);
+            }
+            
             // Save the parent to update the YAML
             this.writeClaimToStorage(root);
         }
@@ -745,9 +754,24 @@ public class FlatFileDataStore extends DataStore
         // (in case it's a top-level claim or the file wasn't properly cleaned up)
         String claimID = String.valueOf(claim.id);
         File claimFile = new File(claimDataFolderPath + File.separator + claimID + ".yml");
-        if (claimFile.exists() && !claimFile.delete())
+        if (claimFile.exists())
         {
-            GriefPrevention.AddLogEntry("Error: Unable to delete claim file \"" + claimFile.getAbsolutePath() + "\".");
+            if (claimFile.delete())
+            {
+                if (debugEnabled) {
+                    GriefPrevention.AddLogEntry("[DEBUG] Storage: Deleted claim file: " + claimFile.getAbsolutePath(), 
+                        CustomLogEntryTypes.Debug, true);
+                }
+            }
+            else
+            {
+                GriefPrevention.AddLogEntry("Error: Unable to delete claim file \"" + claimFile.getAbsolutePath() + "\".");
+            }
+        }
+        else if (debugEnabled && claim.parent == null)
+        {
+            GriefPrevention.AddLogEntry("[DEBUG] Storage: No file to delete for claim " + claim.id 
+                + " (file did not exist: " + claimFile.getAbsolutePath() + ")", CustomLogEntryTypes.Debug, true);
         }
     }
 

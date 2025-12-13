@@ -472,10 +472,18 @@ public class DatabaseDataStore extends DataStore
     @Override
     synchronized void deleteClaimFromSecondaryStorage(Claim claim)
     {
+        boolean debugEnabled = GriefPrevention.instance.config_logs_debugEnabled;
+        
         try (PreparedStatement deleteStmnt = this.databaseConnection.prepareStatement(SQL_DELETE_CLAIM))
         {
             deleteStmnt.setLong(1, claim.id);
-            deleteStmnt.executeUpdate();
+            int rowsAffected = deleteStmnt.executeUpdate();
+            
+            if (debugEnabled) {
+                String claimType = claim.parent != null ? "subdivision" : "claim";
+                GriefPrevention.AddLogEntry("[DEBUG] Database: Deleted " + claimType + " " + claim.id 
+                    + " from database (rows affected: " + rowsAffected + ")", CustomLogEntryTypes.Debug, true);
+            }
         }
         catch (SQLException e)
         {

@@ -651,6 +651,19 @@ public abstract class DataStore
 
     synchronized void deleteClaim(Claim claim, boolean fireEvent, boolean ignored)
     {
+        // Debug logging for claim deletion - outputs claim details to console when debug mode is enabled
+        if (GriefPrevention.instance.config_logs_debugEnabled) {
+            String claimType = claim.parent != null ? "Subdivision" : (claim.isAdminClaim() ? "Admin Claim" : "Top-level Claim");
+            String ownerInfo = claim.ownerID != null ? claim.ownerID.toString() : "admin";
+            String locationInfo = claim.getLesserBoundaryCorner() != null 
+                ? GriefPrevention.getfriendlyLocationString(claim.getLesserBoundaryCorner()) 
+                : "unknown";
+            GriefPrevention.AddLogEntry("[DEBUG] Deleting " + claimType + " - ID: " + claim.id 
+                + ", Owner: " + ownerInfo 
+                + ", Location: " + locationInfo
+                + ", Children: " + claim.children.size(), CustomLogEntryTypes.Debug, true);
+        }
+
         // delete any children (iterate over a snapshot to avoid skipping due to parent list mutation)
         if (!claim.children.isEmpty())
         {
