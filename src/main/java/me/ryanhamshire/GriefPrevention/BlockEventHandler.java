@@ -718,10 +718,9 @@ public class BlockEventHandler implements Listener
             // Ensure claim intersects with block bounding box.
             if (!claimBoundingBox.intersects(boundingBox)) continue;
 
-            // Do additional mode-based handling.
-            if (precisePredicate.test(claim, claimBoundingBox)) return true;
-
-            // Also consider child subdivisions (including 2D subclaims) which are not in the chunk map.
+            // Check child subdivisions FIRST (they take precedence over the parent).
+            // This ensures players trusted in subdivisions can act there even if not trusted in the parent.
+            boolean coveredByGrantingChild = false;
             if (!claim.children.isEmpty())
             {
                 for (Claim child : claim.children)
@@ -732,9 +731,26 @@ public class BlockEventHandler implements Listener
                     BoundingBox childBox = new BoundingBox(child);
                     if (!childBox.intersects(boundingBox)) continue;
 
-                    if (precisePredicate.test(child, childBox)) return true;
+                    // Child intersects - check permission
+                    if (precisePredicate.test(child, childBox))
+                    {
+                        // Child denies permission - this is a conflict
+                        return true;
+                    }
+                    else
+                    {
+                        // Child grants permission - this area is covered by the subdivision
+                        coveredByGrantingChild = true;
+                    }
                 }
             }
+
+            // If any child granted permission for the affected area, skip the parent check.
+            // The subdivision's permission takes precedence over the parent claim.
+            if (coveredByGrantingChild) continue;
+
+            // No intersecting children granted permission - check the parent claim.
+            if (precisePredicate.test(claim, claimBoundingBox)) return true;
         }
 
         return false;
