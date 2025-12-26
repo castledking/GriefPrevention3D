@@ -1,6 +1,7 @@
 package com.griefprevention.commands;
 
 import me.ryanhamshire.GriefPrevention.*;
+import me.ryanhamshire.GriefPrevention.DataStore.NoTransferException;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
@@ -77,11 +78,11 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
     }
 
     private boolean handleRestore(CommandSender sender, String[] args) {
-        // TODO: Implement restore command logic
+        // RestoreNature feature is not available in this version
         if (sender instanceof Player player) {
-            GriefPrevention.sendMessage(player, TextMode.Err, Messages.CommandNotImplementedYet);
+            GriefPrevention.sendMessage(player, TextMode.Info, "The restore nature feature is not available in this version.");
         } else {
-            sender.sendMessage("This command is not implemented yet.");
+            sender.sendMessage("The restore nature feature is not available in this version.");
         }
         return true;
     }
@@ -121,13 +122,8 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
     }
 
     private boolean handleAdminList(CommandSender sender, String[] args) {
-        // TODO: Implement admin claims list
-        if (sender instanceof Player player) {
-            GriefPrevention.sendMessage(player, TextMode.Err, Messages.CommandNotImplementedYet);
-        } else {
-            sender.sendMessage("This command is not implemented yet.");
-        }
-        return true;
+        // Delegate to handleList which shows admin claims
+        return handleList(sender, args);
     }
 
     private boolean handleList(CommandSender sender, String[] args) {
@@ -166,32 +162,296 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
     }
 
     private boolean handleBlocks(CommandSender sender, String[] args) {
-        // TODO: Implement blocks management (adjust/add/set)
-        if (sender instanceof Player player) {
-            GriefPrevention.sendMessage(player, TextMode.Err, Messages.CommandNotImplementedYet);
-        } else {
-            sender.sendMessage("This command is not implemented yet.");
+        // Usage: /aclaim blocks <adjust|set> <player> <amount>
+        // or: /aclaim blocks <adjust> [permission] <amount>
+        if (args.length < 3) {
+            if (sender instanceof Player player) {
+                GriefPrevention.sendMessage(player, TextMode.Info, "Usage: /aclaim blocks <adjust|set> <player> <amount>");
+            } else {
+                sender.sendMessage("Usage: /aclaim blocks <adjust|set> <player> <amount>");
+            }
+            return true;
         }
+
+        String operation = args[0].toLowerCase();
+        String target = args[1];
+        int amount;
+
+        try {
+            amount = Integer.parseInt(args[2]);
+        } catch (NumberFormatException e) {
+            if (sender instanceof Player player) {
+                GriefPrevention.sendMessage(player, TextMode.Err, "Invalid amount: " + args[2]);
+            } else {
+                sender.sendMessage("Invalid amount: " + args[2]);
+            }
+            return true;
+        }
+
+        if (operation.equals("adjust")) {
+            // Check if target is a permission group
+            if (target.startsWith("[") && target.endsWith("]")) {
+                String permissionIdentifier = target.substring(1, target.length() - 1);
+                int newTotal = plugin.dataStore.adjustGroupBonusBlocks(permissionIdentifier, amount);
+
+                if (sender instanceof Player player) {
+                    GriefPrevention.sendMessage(player, TextMode.Success, Messages.AdjustGroupBlocksSuccess,
+                            permissionIdentifier, String.valueOf(amount), String.valueOf(newTotal));
+                } else {
+                    sender.sendMessage("Adjusted " + permissionIdentifier + "'s bonus claim blocks by " + amount + ". New total: " + newTotal);
+                }
+                return true;
+            }
+
+            // Otherwise, find the specified player
+            OfflinePlayer targetPlayer = plugin.resolvePlayerByName(target);
+            if (targetPlayer == null) {
+                if (sender instanceof Player player) {
+                    GriefPrevention.sendMessage(player, TextMode.Err, Messages.PlayerNotFound2);
+                } else {
+                    sender.sendMessage("Player not found: " + target);
+                }
+                return true;
+            }
+
+            PlayerData playerData = plugin.dataStore.getPlayerData(targetPlayer.getUniqueId());
+            playerData.setBonusClaimBlocks(playerData.getBonusClaimBlocks() + amount);
+            plugin.dataStore.savePlayerData(targetPlayer.getUniqueId(), playerData);
+
+            if (sender instanceof Player player) {
+                GriefPrevention.sendMessage(player, TextMode.Success, Messages.AdjustBlocksSuccess,
+                        targetPlayer.getName(), String.valueOf(amount), String.valueOf(playerData.getBonusClaimBlocks()));
+            } else {
+                sender.sendMessage("Adjusted " + targetPlayer.getName() + "'s bonus claim blocks by " + amount + ". New total: " + playerData.getBonusClaimBlocks());
+            }
+        } else if (operation.equals("set")) {
+            OfflinePlayer targetPlayer = plugin.resolvePlayerByName(target);
+            if (targetPlayer == null) {
+                if (sender instanceof Player player) {
+                    GriefPrevention.sendMessage(player, TextMode.Err, Messages.PlayerNotFound2);
+                } else {
+                    sender.sendMessage("Player not found: " + target);
+                }
+                return true;
+            }
+
+            PlayerData playerData = plugin.dataStore.getPlayerData(targetPlayer.getUniqueId());
+            playerData.setAccruedClaimBlocks(amount);
+            plugin.dataStore.savePlayerData(targetPlayer.getUniqueId(), playerData);
+
+            if (sender instanceof Player player) {
+                GriefPrevention.sendMessage(player, TextMode.Success, Messages.SetClaimBlocksSuccess);
+            } else {
+                sender.sendMessage("Set " + targetPlayer.getName() + "'s accrued claim blocks to " + amount);
+            }
+        } else {
+            if (sender instanceof Player player) {
+                GriefPrevention.sendMessage(player, TextMode.Err, "Unknown operation: " + operation + ". Use 'adjust' or 'set'.");
+            } else {
+                sender.sendMessage("Unknown operation: " + operation + ". Use 'adjust' or 'set'.");
+            }
+        }
+
         return true;
     }
 
     private boolean handleDelete(CommandSender sender, String[] args) {
-        // TODO: Implement delete commands (claim/world/all/user)
-        if (sender instanceof Player player) {
-            GriefPrevention.sendMessage(player, TextMode.Err, Messages.CommandNotImplementedYet);
+        // Usage: /aclaim delete [claim|player <name>|world <world>|alladmin]
+        if (args.length == 0) {
+            // Default: delete claim player is standing in
+            if (!(sender instanceof Player player)) {
+                sender.sendMessage("Usage: /aclaim delete <claim|player <name>|world <world>|alladmin>");
+                return true;
+            }
+            return deleteCurrentClaim(player);
+        }
+
+        String subOp = args[0].toLowerCase();
+
+        switch (subOp) {
+            case "claim" -> {
+                if (!(sender instanceof Player player)) {
+                    sender.sendMessage("This sub-command can only be used by players.");
+                    return true;
+                }
+                return deleteCurrentClaim(player);
+            }
+            case "player" -> {
+                if (args.length < 2) {
+                    if (sender instanceof Player player) {
+                        GriefPrevention.sendMessage(player, TextMode.Err, "Usage: /aclaim delete player <name>");
+                    } else {
+                        sender.sendMessage("Usage: /aclaim delete player <name>");
+                    }
+                    return true;
+                }
+                return deletePlayerClaims(sender, args[1]);
+            }
+            case "world" -> {
+                if (args.length < 2) {
+                    sender.sendMessage("Usage: /aclaim delete world <worldname>");
+                    return true;
+                }
+                return deleteWorldClaims(sender, args[1], true);
+            }
+            case "userworld" -> {
+                if (args.length < 2) {
+                    sender.sendMessage("Usage: /aclaim delete userworld <worldname>");
+                    return true;
+                }
+                return deleteWorldClaims(sender, args[1], false);
+            }
+            case "alladmin" -> {
+                return deleteAllAdminClaims(sender);
+            }
+            default -> {
+                if (sender instanceof Player player) {
+                    GriefPrevention.sendMessage(player, TextMode.Err, "Unknown delete operation: " + subOp);
+                } else {
+                    sender.sendMessage("Unknown delete operation: " + subOp);
+                }
+                return true;
+            }
+        }
+    }
+
+    private boolean deleteCurrentClaim(Player player) {
+        Claim claim = plugin.dataStore.getClaimAt(player.getLocation(), false, null);
+        if (claim == null) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.DeleteClaimMissing);
+            return true;
+        }
+
+        // deleting an admin claim additionally requires the adminclaims permission
+        if (!claim.isAdminClaim() || player.hasPermission("griefprevention.adminclaims")) {
+            PlayerData playerData = plugin.dataStore.getPlayerData(player.getUniqueId());
+            if (claim.children.size() > 0 && !playerData.warnedAboutMajorDeletion) {
+                GriefPrevention.sendMessage(player, TextMode.Warn, Messages.DeletionSubdivisionWarning);
+                playerData.warnedAboutMajorDeletion = true;
+            } else {
+                plugin.deleteClaimPublic(claim, true);
+                GriefPrevention.sendMessage(player, TextMode.Success, Messages.DeleteSuccess);
+                GriefPrevention.AddLogEntry(
+                        player.getName() + " deleted " + claim.getOwnerName() + "'s claim at "
+                                + GriefPrevention.getfriendlyLocationString(claim.getLesserBoundaryCorner()),
+                        CustomLogEntryTypes.AdminActivity);
+                playerData.setVisibleBoundaries(null);
+                playerData.warnedAboutMajorDeletion = false;
+            }
         } else {
-            sender.sendMessage("This command is not implemented yet.");
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.CantDeleteAdminClaim);
         }
         return true;
     }
 
-    private boolean handleTransfer(CommandSender sender, String[] args) {
-        // TODO: Implement transfer claim logic
-        if (sender instanceof Player player) {
-            GriefPrevention.sendMessage(player, TextMode.Err, Messages.CommandNotImplementedYet);
-        } else {
-            sender.sendMessage("This command is not implemented yet.");
+    private boolean deletePlayerClaims(CommandSender sender, String playerName) {
+        OfflinePlayer targetPlayer = plugin.resolvePlayerByName(playerName);
+        if (targetPlayer == null) {
+            if (sender instanceof Player player) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.PlayerNotFound2);
+            } else {
+                sender.sendMessage("Player not found: " + playerName);
+            }
+            return true;
         }
+
+        plugin.dataStore.deleteClaimsForPlayer(targetPlayer.getUniqueId(), true);
+
+        if (sender instanceof Player player) {
+            GriefPrevention.sendMessage(player, TextMode.Success, Messages.DeleteAllSuccess, targetPlayer.getName());
+            plugin.dataStore.getPlayerData(player.getUniqueId()).setVisibleBoundaries(null);
+        } else {
+            sender.sendMessage("Deleted all claims belonging to " + targetPlayer.getName());
+        }
+
+        GriefPrevention.AddLogEntry(
+                (sender instanceof Player ? ((Player) sender).getName() : "Console") + " deleted all claims belonging to " + targetPlayer.getName(),
+                CustomLogEntryTypes.AdminActivity);
+        return true;
+    }
+
+    private boolean deleteWorldClaims(CommandSender sender, String worldName, boolean includeAdmin) {
+        org.bukkit.World world = Bukkit.getServer().getWorld(worldName);
+        if (world == null) {
+            if (sender instanceof Player player) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.WorldNotFound);
+            } else {
+                sender.sendMessage("World not found: " + worldName);
+            }
+            return true;
+        }
+
+        plugin.deleteClaimsInWorldPublic(world, includeAdmin);
+        String message = includeAdmin ? "Deleted all claims in world: " : "Deleted all user claims in world: ";
+        if (sender instanceof Player player) {
+            GriefPrevention.sendMessage(player, TextMode.Success, message + world.getName());
+        } else {
+            sender.sendMessage(message + world.getName());
+        }
+
+        GriefPrevention.AddLogEntry(message + world.getName(), CustomLogEntryTypes.AdminActivity);
+        return true;
+    }
+
+    private boolean deleteAllAdminClaims(CommandSender sender) {
+        plugin.dataStore.deleteClaimsForPlayer(null, true);
+
+        if (sender instanceof Player player) {
+            GriefPrevention.sendMessage(player, TextMode.Success, "Deleted all administrative claims.");
+        } else {
+            sender.sendMessage("Deleted all administrative claims.");
+        }
+
+        GriefPrevention.AddLogEntry("Deleted all administrative claims.", CustomLogEntryTypes.AdminActivity);
+        return true;
+    }
+
+    private boolean handleTransfer(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage("This command can only be used by players.");
+            return true;
+        }
+
+        // which claim is the user in?
+        Claim claim = plugin.dataStore.getClaimAt(player.getLocation(), false, null);
+        if (claim == null) {
+            GriefPrevention.sendMessage(player, TextMode.Instr, Messages.TransferClaimMissing);
+            return true;
+        }
+
+        // check additional permission for admin claims
+        if (claim.isAdminClaim() && !player.hasPermission("griefprevention.adminclaims")) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.TransferClaimPermission);
+            return true;
+        }
+
+        java.util.UUID newOwnerID = null; // no argument = make an admin claim
+        String ownerName = "admin";
+
+        if (args.length > 0) {
+            OfflinePlayer targetPlayer = plugin.resolvePlayerByName(args[0]);
+            if (targetPlayer == null) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.PlayerNotFound2);
+                return true;
+            }
+            newOwnerID = targetPlayer.getUniqueId();
+            ownerName = targetPlayer.getName();
+        }
+
+        // change ownership
+        try {
+            plugin.changeClaimOwnerPublic(claim, newOwnerID);
+        } catch (NoTransferException e) {
+            GriefPrevention.sendMessage(player, TextMode.Instr, Messages.TransferTopLevel);
+            return true;
+        }
+
+        // confirm
+        GriefPrevention.sendMessage(player, TextMode.Success, Messages.TransferSuccess);
+        GriefPrevention.AddLogEntry(player.getName() + " transferred a claim at "
+                + GriefPrevention.getfriendlyLocationString(claim.getLesserBoundaryCorner()) + " to " + ownerName
+                + ".", CustomLogEntryTypes.AdminActivity);
+
         return true;
     }
 

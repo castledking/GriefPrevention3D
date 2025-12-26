@@ -3597,17 +3597,18 @@ public class GriefPrevention extends JavaPlugin {
     }
 
     public boolean handleUntrustCommand(CommandSender sender, String[] args) {
-        // Extract untrust command logic from onCommand
         if (!(sender instanceof Player player))
             return false;
 
         if (args.length != 1)
             return false;
 
+        // determine which claim the player is standing in
         Claim claim = this.dataStore.getClaimAt(player.getLocation(), false, null);
+
+        // determine whether a single player or clearing permissions entirely
         boolean clearPermissions = false;
         OfflinePlayer otherPlayer = null;
-
         if (args[0].equals("all")) {
             if (claim == null || claim.checkPermission(player, ClaimPermission.Edit, null) == null) {
                 clearPermissions = true;
@@ -3616,9 +3617,11 @@ public class GriefPrevention extends JavaPlugin {
                 return true;
             }
         } else {
+            // validate player argument or group argument
             if (!args[0].startsWith("[") || !args[0].endsWith("]")) {
                 otherPlayer = this.resolvePlayerByName(args[0]);
                 if (!clearPermissions && otherPlayer == null && !args[0].equals("public")) {
+                    // bracket any permissions - at this point it must be a permission without brackets
                     if (args[0].contains(".")) {
                         args[0] = "[" + args[0] + "]";
                     } else {
@@ -3626,45 +3629,176 @@ public class GriefPrevention extends JavaPlugin {
                         return true;
                     }
                 }
+
+                // correct to proper casing
                 if (otherPlayer != null)
                     args[0] = otherPlayer.getName();
             }
         }
 
-        // Apply changes to all claims if no specific claim
+        // if no claim here, apply changes to all player's claims
         if (claim == null) {
             PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
+
             String idToDrop = args[0];
             if (otherPlayer != null) {
                 idToDrop = otherPlayer.getUniqueId().toString();
             }
 
+            // calling event
             TrustChangedEvent event = new TrustChangedEvent(player, playerData.getClaims(), null, false, idToDrop);
             Bukkit.getPluginManager().callEvent(event);
 
-            if (event.isCancelled())
+            if (event.isCancelled()) {
                 return true;
-
-            for (Claim targetClaim : event.getClaims()) {
-                claim = targetClaim;
-                if (clearPermissions) {
-                    claim.clearPermissions();
-                } else {
-                    claim.dropPermission(idToDrop);
-                    claim.managers.remove(idToDrop);
-                    // Handle inheritance logic here...
-                }
-                this.dataStore.saveClaim(claim);
             }
 
+            // dropping permissions
+            for (Claim targetClaim : event.getClaims()) {
+                claim = targetClaim;
+
+                // if untrusting "all" drop all permissions
+                if (clearPermissions) {
+                    claim.clearPermissions();
+                }
+                // otherwise drop individual permissions
+                else {
+                    claim.dropPermission(idToDrop);
+                    claim.managers.remove(idToDrop);
+
+                    // Check if this claim has inherited permissions that need to be explicitly removed
+                    if (claim.parent != null && !claim.getSubclaimRestrictions()) {
+                        ArrayList<String> parentBuilders = new ArrayList<>();
+                        ArrayList<String> parentContainers = new ArrayList<>();
+                        ArrayList<String> parentAccessors = new ArrayList<>();
+                        ArrayList<String> parentManagers = new ArrayList<>();
+                        claim.parent.getPermissions(parentBuilders, parentContainers, parentAccessors, parentManagers);
+
+                        // Check if the player being untrusted is in any of the parent's permission lists
+                        String playerIdToCheck = idToDrop.toLowerCase();
+                        if (parentManagers.contains(playerIdToCheck) ||
+                                parentBuilders.contains(playerIdToCheck) ||
+                                parentContainers.contains(playerIdToCheck) ||
+                                parentAccessors.contains(playerIdToCheck)) {
+                            // Remove the player from this claim's explicit permissions to override inheritance
+                            claim.dropPermission(idToDrop);
+                            claim.managers.remove(idToDrop);
+                        }
+                    }
+                }
+
+                // save changes
+                this.dataStore.saveClaim(claim);
+
+                // Propagate trust removal to child claims that inherit permissions
+                propagateTrustToChildren(claim, idToDrop, null, false);
+            }
+
+            // confirmation message
             if (!clearPermissions) {
                 GriefPrevention.sendMessage(player, TextMode.Success, Messages.UntrustIndividualAllClaims, args[0]);
             } else {
                 GriefPrevention.sendMessage(player, TextMode.Success, Messages.UntrustEveryoneAllClaims);
             }
+        }
+        // otherwise, apply changes to only this claim
+        else if (claim.checkPermission(player, ClaimPermission.Manage, null) != null) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionTrust, claim.getOwnerName());
+            return true;
         } else {
-            // Apply to specific claim - simplified version
-            GriefPrevention.sendMessage(player, TextMode.Err, Messages.CommandNotImplementedYet);
+            // if clearing all
+            if (clearPermissions) {
+                // requires owner
+                if (claim.checkPermission(player, ClaimPermission.Edit, null) != null) {
+                    GriefPrevention.sendMessage(player, TextMode.Err, Messages.UntrustAllOwnerOnly);
+                    return true;
+                }
+
+                // calling the event
+                TrustChangedEvent event = new TrustChangedEvent(player, claim, null, false, args[0]);
+                Bukkit.getPluginManager().callEvent(event);
+
+                if (event.isCancelled()) {
+                    return true;
+                }
+
+                event.getClaims().forEach(Claim::clearPermissions);
+                GriefPrevention.sendMessage(player, TextMode.Success, Messages.ClearPermissionsOneClaim);
+            }
+            // otherwise individual permission drop
+            else {
+                String idToDrop = args[0];
+                if (otherPlayer != null) {
+                    idToDrop = otherPlayer.getUniqueId().toString();
+                }
+                boolean targetIsManager = claim.managers.contains(idToDrop);
+                if (targetIsManager && claim.checkPermission(player, ClaimPermission.Edit, null) != null) {
+                    // only claim owners can untrust managers
+                    GriefPrevention.sendMessage(player, TextMode.Err, Messages.ManagersDontUntrustManagers,
+                            claim.getOwnerName());
+                    return true;
+                } else {
+                    // calling the event
+                    TrustChangedEvent event = new TrustChangedEvent(player, claim, null, false, idToDrop);
+                    Bukkit.getPluginManager().callEvent(event);
+
+                    if (event.isCancelled()) {
+                        return true;
+                    }
+
+                    // Check if the player being untrusted has inherited permissions from parent
+                    ArrayList<String> parentBuilders = new ArrayList<>();
+                    ArrayList<String> parentContainers = new ArrayList<>();
+                    ArrayList<String> parentAccessors = new ArrayList<>();
+                    ArrayList<String> parentManagers = new ArrayList<>();
+
+                    String normalizedIdentifier = Claim.normalizeIdentifier(event.getIdentifier());
+                    String normalizedIdToDrop = Claim.normalizeIdentifier(idToDrop);
+
+                    if (claim.parent != null && !claim.getSubclaimRestrictions()) {
+                        claim.parent.getPermissions(parentBuilders, parentContainers, parentAccessors, parentManagers);
+                    }
+
+                    boolean inheritsManager = parentManagers.contains(normalizedIdToDrop);
+                    boolean inheritsBuilder = parentBuilders.contains(normalizedIdToDrop);
+                    boolean inheritsContainer = parentContainers.contains(normalizedIdToDrop);
+                    boolean inheritsAccessor = parentAccessors.contains(normalizedIdToDrop);
+
+                    if (inheritsManager || inheritsBuilder || inheritsContainer || inheritsAccessor) {
+                        event.getClaims().forEach(targetClaim -> {
+                            // Record denials to block inherited trust without granting new permissions
+                            if (inheritsManager) {
+                                targetClaim.denyPermission(normalizedIdToDrop + "#manager");
+                            }
+                            if (inheritsBuilder) {
+                                targetClaim.denyPermission(normalizedIdToDrop + "#build");
+                            }
+                            if (inheritsContainer) {
+                                targetClaim.denyPermission(normalizedIdToDrop + "#inventory");
+                            }
+                            if (inheritsAccessor) {
+                                targetClaim.denyPermission(normalizedIdToDrop + "#access");
+                            }
+
+                            // Remove any explicit trust that might still exist
+                            targetClaim.dropPermission(normalizedIdentifier);
+                        });
+                    } else {
+                        // Normal case - just drop the explicit permission
+                        event.getClaims().forEach(targetClaim -> targetClaim.dropPermission(normalizedIdentifier));
+                    }
+
+                    // beautify for output
+                    if (args[0].equals("public")) {
+                        args[0] = "the public";
+                    }
+
+                    GriefPrevention.sendMessage(player, TextMode.Success, Messages.UntrustIndividualSingleClaim, args[0]);
+                }
+            }
+
+            // save changes
+            this.dataStore.saveClaim(claim);
         }
 
         return true;
@@ -3995,5 +4129,35 @@ public class GriefPrevention extends JavaPlugin {
         } else {
             Bukkit.getLogger().info(color + message);
         }
+    }
+
+    // Public helper methods for command handlers in other packages
+
+    /**
+     * Deletes a claim. For use by command handlers in other packages.
+     * @param claim The claim to delete
+     * @param fireEvent Whether to fire the claim deletion event
+     */
+    public void deleteClaimPublic(Claim claim, boolean fireEvent) {
+        this.dataStore.deleteClaim(claim, fireEvent, false);
+    }
+
+    /**
+     * Deletes all claims in a world. For use by command handlers in other packages.
+     * @param world The world to delete claims in
+     * @param deleteAdminClaims Whether to also delete admin claims
+     */
+    public void deleteClaimsInWorldPublic(World world, boolean deleteAdminClaims) {
+        this.dataStore.deleteClaimsInWorld(world, deleteAdminClaims);
+    }
+
+    /**
+     * Changes the owner of a claim. For use by command handlers in other packages.
+     * @param claim The claim to transfer
+     * @param newOwnerID The UUID of the new owner (null for admin claim)
+     * @throws DataStore.NoTransferException if the claim cannot be transferred
+     */
+    public void changeClaimOwnerPublic(Claim claim, UUID newOwnerID) throws DataStore.NoTransferException {
+        this.dataStore.changeClaimOwner(claim, newOwnerID);
     }
 }

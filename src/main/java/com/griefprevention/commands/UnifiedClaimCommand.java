@@ -325,21 +325,21 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
     }
 
     private boolean handleBuyBlocks(CommandSender sender, String[] args) {
-        // TODO: Implement buy claim blocks logic
+        // Economy integration is not available in this version
         if (sender instanceof Player player) {
-            GriefPrevention.sendMessage(player, TextMode.Err, Messages.CommandNotImplementedYet);
+            GriefPrevention.sendMessage(player, TextMode.Info, "The buy claim blocks feature requires economy integration which is not available.");
         } else {
-            sender.sendMessage("This command is not implemented yet.");
+            sender.sendMessage("The buy claim blocks feature requires economy integration which is not available.");
         }
         return true;
     }
 
     private boolean handleSellBlocks(CommandSender sender, String[] args) {
-        // TODO: Implement sell claim blocks logic
+        // Economy integration is not available in this version
         if (sender instanceof Player player) {
-            GriefPrevention.sendMessage(player, TextMode.Err, Messages.CommandNotImplementedYet);
+            GriefPrevention.sendMessage(player, TextMode.Info, "The sell claim blocks feature requires economy integration which is not available.");
         } else {
-            sender.sendMessage("This command is not implemented yet.");
+            sender.sendMessage("The sell claim blocks feature requires economy integration which is not available.");
         }
         return true;
     }
@@ -357,11 +357,11 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
     }
 
     private boolean handleSiege(CommandSender sender, String[] args) {
-        // TODO: Implement siege logic
+        // Siege feature is not available in this version
         if (sender instanceof Player player) {
-            GriefPrevention.sendMessage(player, TextMode.Err, Messages.CommandNotImplementedYet);
+            GriefPrevention.sendMessage(player, TextMode.Info, "The siege feature is not available in this version.");
         } else {
-            sender.sendMessage("This command is not implemented yet.");
+            sender.sendMessage("The siege feature is not available in this version.");
         }
         return true;
     }
