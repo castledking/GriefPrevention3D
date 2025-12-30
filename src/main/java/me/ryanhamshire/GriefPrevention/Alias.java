@@ -350,6 +350,13 @@ public enum Alias {
    */
   public static @NotNull String getDefaultYaml() {
     return """
+        # ============================================
+        #      GRIEFPREVENTION ALIAS CONFIGURATION
+        # ============================================
+        # Customize command names, translations, and tab completion.
+        # Full documentation: https://github.com/castledking/GriefPrevention3D/tree/master/src/main/resources/alias.yml
+        # Reload changes with: /gpreload
+
         commands:
           claim:
             enable: true
@@ -397,7 +404,7 @@ public enum Alias {
               usage: "/claim untrust <player|all>"
               description: Revoke claim access from a player or everyone.
               arguments:
-                target:
+                player:
                   type: player
                   options:
                     all: [all]

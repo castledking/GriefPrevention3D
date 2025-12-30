@@ -325,15 +325,20 @@ public final class CommandAliasConfiguration {
                             continue;
 
                         argumentAliases.put(normalize(canonical), canonical);
-                        suggestions.add(canonical);
 
                         List<String> aliasList = optionsSection.getStringList(canonicalValue);
-                        for (String alias : aliasList) {
-                            String normalizedAlias = normalize(alias);
-                            if (normalizedAlias.isEmpty())
-                                continue;
-                            argumentAliases.put(normalizedAlias, canonical);
-                            suggestions.add(alias.trim());
+                        if (aliasList.isEmpty()) {
+                            // No aliases configured, show canonical name
+                            suggestions.add(canonical);
+                        } else {
+                            // Aliases exist - only show aliases, not canonical name
+                            for (String alias : aliasList) {
+                                String normalizedAlias = normalize(alias);
+                                if (normalizedAlias.isEmpty())
+                                    continue;
+                                argumentAliases.put(normalizedAlias, canonical);
+                                suggestions.add(alias.trim());
+                            }
                         }
                     }
                 } else {
@@ -350,15 +355,20 @@ public final class CommandAliasConfiguration {
 
                         translateArguments = true;
                         argumentAliases.put(normalize(canonical), canonical);
-                        suggestions.add(canonical);
 
                         List<String> aliasList = argumentSection.getStringList(canonicalValue);
-                        for (String alias : aliasList) {
-                            String normalizedAlias = normalize(alias);
-                            if (normalizedAlias.isEmpty())
-                                continue;
-                            argumentAliases.put(normalizedAlias, canonical);
-                            suggestions.add(alias.trim());
+                        if (aliasList.isEmpty()) {
+                            // No aliases configured, show canonical name
+                            suggestions.add(canonical);
+                        } else {
+                            // Aliases exist - only show aliases, not canonical name
+                            for (String alias : aliasList) {
+                                String normalizedAlias = normalize(alias);
+                                if (normalizedAlias.isEmpty())
+                                    continue;
+                                argumentAliases.put(normalizedAlias, canonical);
+                                suggestions.add(alias.trim());
+                            }
                         }
                     }
                 }
