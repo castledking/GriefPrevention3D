@@ -51,13 +51,22 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
     protected UnifiedCommandHandler(@NotNull GriefPrevention plugin, String command) {
         this.plugin = plugin;
         this.canonicalCommand = command.toLowerCase(Locale.ROOT);
-        this.rootCommandConfig = plugin.getCommandAliases().getRootCommand(this.canonicalCommand);
-        this.rootCommandEnabled = this.rootCommandConfig == null || this.rootCommandConfig.isEnabled();
-
-        // Log the enable/disable state for debugging
-        plugin.getLogger()
-                .info("Initializing command '" + this.canonicalCommand + "' - Enabled: " + this.rootCommandEnabled +
-                        (this.rootCommandConfig != null ? " (from config)" : " (default enabled)"));
+        
+        // Check if alias system is globally disabled
+        if (!plugin.getCommandAliases().isEnabled()) {
+            this.rootCommandConfig = null;
+            this.rootCommandEnabled = true; // Use defaults when alias system disabled
+            plugin.getLogger()
+                    .info("Initializing command '" + this.canonicalCommand + "' - Using defaults (alias system disabled)");
+        } else {
+            this.rootCommandConfig = plugin.getCommandAliases().getRootCommand(this.canonicalCommand);
+            this.rootCommandEnabled = this.rootCommandConfig == null || this.rootCommandConfig.isEnabled();
+            
+            // Log the enable/disable state for debugging
+            plugin.getLogger()
+                    .info("Initializing command '" + this.canonicalCommand + "' - Enabled: " + this.rootCommandEnabled +
+                            (this.rootCommandConfig != null ? " (from config)" : " (default enabled)"));
+        }
 
         // Get the primary command name from config (first entry in commands list)
         String primaryCommandName = canonicalCommand;
@@ -101,6 +110,16 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
      */
     protected void registerStandaloneCommand(@NotNull Alias alias,
             @NotNull BiFunction<CommandSender, String[], Boolean> handler) {
+        // If alias system is globally disabled, use enum defaults only
+        if (!plugin.getCommandAliases().isEnabled()) {
+            String enumStandalone = alias.getStandalone();
+            if (enumStandalone == null || enumStandalone.isEmpty()) {
+                return;
+            }
+            registerDynamicStandaloneCommand(enumStandalone, alias.toString(), handler, null);
+            return;
+        }
+
         // Get the subcommand name from the enum
         final String subcommandName = alias.toString().toLowerCase(Locale.ROOT);
         final String finalSubcommandName;

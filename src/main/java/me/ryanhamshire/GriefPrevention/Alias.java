@@ -357,6 +357,9 @@ public enum Alias {
         # Full documentation: https://github.com/castledking/GriefPrevention3D/tree/master/src/main/resources/alias.yml
         # Reload changes with: /gpreload
 
+        # Set to false to disable all alias customization (uses default command names)
+        enabled: true
+
         commands:
           claim:
             enable: true

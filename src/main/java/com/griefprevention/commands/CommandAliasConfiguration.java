@@ -24,10 +24,20 @@ import java.util.logging.Level;
  */
 public final class CommandAliasConfiguration {
 
+    private final boolean enabled;
     private final Map<String, RootCommand> rootCommands;
 
-    private CommandAliasConfiguration(@NotNull Map<String, RootCommand> rootCommands) {
+    private CommandAliasConfiguration(boolean enabled, @NotNull Map<String, RootCommand> rootCommands) {
+        this.enabled = enabled;
         this.rootCommands = rootCommands;
+    }
+
+    /**
+     * Returns whether the alias configuration system is globally enabled.
+     * When disabled, commands use their default names without aliasing.
+     */
+    public boolean isEnabled() {
+        return enabled;
     }
 
     public static @NotNull CommandAliasConfiguration load(@NotNull GriefPrevention plugin, @NotNull File file) {
@@ -62,6 +72,9 @@ public final class CommandAliasConfiguration {
 
         // Merge user configuration with defaults, preserving user customizations
         YamlConfiguration mergedConfig = mergeConfigurations(defaultConfig, configuration);
+
+        // Check global enabled toggle (defaults to true)
+        boolean globalEnabled = mergedConfig.getBoolean("enabled", true);
 
         Map<String, RootCommand> commands = new HashMap<>();
         ConfigurationSection commandSection = mergedConfig.getConfigurationSection("commands");
@@ -134,11 +147,11 @@ public final class CommandAliasConfiguration {
             }
         }
 
-        return new CommandAliasConfiguration(commands);
+        return new CommandAliasConfiguration(globalEnabled, commands);
     }
 
     public static @NotNull CommandAliasConfiguration empty() {
-        return new CommandAliasConfiguration(Collections.emptyMap());
+        return new CommandAliasConfiguration(true, Collections.emptyMap());
     }
 
     private static @NotNull YamlConfiguration getDefaultConfiguration() {
