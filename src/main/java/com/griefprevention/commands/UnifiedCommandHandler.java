@@ -59,6 +59,15 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
                 .info("Initializing command '" + this.canonicalCommand + "' - Enabled: " + this.rootCommandEnabled +
                         (this.rootCommandConfig != null ? " (from config)" : " (default enabled)"));
 
+        // Get the primary command name from config (first entry in commands list)
+        String primaryCommandName = canonicalCommand;
+        if (rootCommandConfig != null && !rootCommandConfig.getCommands().isEmpty()) {
+            primaryCommandName = rootCommandConfig.getCommands().get(0).toLowerCase(Locale.ROOT);
+        }
+
+        // Check if we need to register a different primary command name
+        boolean needsDynamicRegistration = !primaryCommandName.equals(canonicalCommand);
+        
         PluginCommand pluginCommand = plugin.getCommand(this.canonicalCommand);
         if (pluginCommand == null) {
             // Try to register the command manually if not found in plugin.yml
@@ -78,6 +87,11 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
 
         pluginCommand.setExecutor(this);
         applyRootCommandMetadata(pluginCommand);
+        
+        // If user configured a different primary command name, register it dynamically
+        if (needsDynamicRegistration && rootCommandEnabled) {
+            registerDynamicRootCommand(primaryCommandName);
+        }
     }
 
     /**
@@ -328,6 +342,94 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
             } catch (Exception e) {
                 plugin.getLogger().warning("Failed to unregister dynamic commands: " + e.getMessage());
             }
+        }
+    }
+
+    /**
+     * Dynamically register the root command with a custom name from alias.yml.
+     * This allows users to rename the main command (e.g., "claim" -> "terreno").
+     */
+    private void registerDynamicRootCommand(@NotNull String commandName) {
+        synchronized (registrationLock) {
+            try {
+                CommandMap map = getCommandMap();
+                if (map == null) {
+                    plugin.getLogger().warning("Failed to get CommandMap for dynamic root command registration");
+                    return;
+                }
+
+                // Create a dynamic root command that delegates to this handler
+                DynamicRootCommand dynamicCommand = new DynamicRootCommand(
+                        commandName,
+                        rootCommandConfig != null ? rootCommandConfig.getDescription() : "GriefPrevention command",
+                        "/" + commandName,
+                        rootCommandConfig != null ? rootCommandConfig.getPermission() : "griefprevention.claims"
+                );
+
+                // Register using reflection to ensure we can override existing commands
+                try {
+                    Field knownCommandsField = map.getClass().getSuperclass().getDeclaredField("knownCommands");
+                    knownCommandsField.setAccessible(true);
+                    @SuppressWarnings("unchecked")
+                    Map<String, Command> knownCommands = (Map<String, Command>) knownCommandsField.get(map);
+                    
+                    String lowerName = commandName.toLowerCase();
+                    knownCommands.put(lowerName, dynamicCommand);
+                    knownCommands.put(plugin.getName().toLowerCase() + ":" + lowerName, dynamicCommand);
+                    
+                } catch (Exception e) {
+                    // Fallback to normal registration
+                    map.register(plugin.getName().toLowerCase(), dynamicCommand);
+                }
+                
+                registeredDynamicCommands.add(commandName);
+                plugin.getLogger().info("Registered dynamic root command: " + commandName + " (alias for " + canonicalCommand + ")");
+
+            } catch (Exception e) {
+                plugin.getLogger().warning("Failed to dynamically register root command '" + commandName + "': " + e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Dynamic root command that delegates to this handler
+     */
+    private class DynamicRootCommand extends BukkitCommand {
+        protected DynamicRootCommand(@NotNull String name, @Nullable String description,
+                @Nullable String usageMessage, @Nullable String permission) {
+            super(name);
+            if (description != null) setDescription(description);
+            if (usageMessage != null) setUsage(usageMessage);
+            if (permission != null) setPermission(permission);
+            
+            // Set aliases from config (excluding the primary name we're registering as)
+            if (rootCommandConfig != null) {
+                List<String> aliases = new ArrayList<>();
+                for (String alias : rootCommandConfig.getCommands()) {
+                    if (alias != null && !alias.equalsIgnoreCase(name) && !alias.equalsIgnoreCase(canonicalCommand)) {
+                        aliases.add(alias.trim());
+                    }
+                }
+                // Also add the canonical name as an alias so old command still works
+                aliases.add(canonicalCommand);
+                setAliases(aliases);
+            }
+        }
+
+        @Override
+        public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
+            if (getPermission() != null && !sender.hasPermission(getPermission())) {
+                sender.sendMessage(ChatColor.RED + "You don't have permission to use this command.");
+                return true;
+            }
+            // Delegate to the main handler
+            return UnifiedCommandHandler.this.onCommand(sender, this, commandLabel, args);
+        }
+
+        @Override
+        public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, @NotNull String[] args) {
+            List<String> result = UnifiedCommandHandler.this.onTabComplete(sender, this, alias, args);
+            return result != null ? result : Collections.emptyList();
         }
     }
 

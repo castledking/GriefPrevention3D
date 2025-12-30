@@ -1,0 +1,430 @@
+# ============================================================================
+#                    GRIEFPREVENTION ALIAS CONFIGURATION
+# ============================================================================
+#
+# This file documents all configurable options for alias.yml
+# The actual alias.yml in your plugins/GriefPreventionData/ folder will be
+# generated without these comments for cleaner editing.
+#
+# Reload changes with: /gpreload
+#
+# ============================================================================
+#                              ARGUMENT TYPES
+# ============================================================================
+#
+# When defining arguments, use these exact type values:
+#
+#   player          - Suggests online player names
+#   online-player   - Same as player
+#   integer         - Suggests positive numbers (1, 2, 3...)
+#   integer-negative - Allows negative numbers (-1, -2, 0, 1...)
+#
+# Example:
+#   arguments:
+#     player:
+#       type: player      # <-- Must be one of the types above
+#
+# ============================================================================
+
+# ============================================================================
+#                            ROOT COMMANDS
+# ============================================================================
+# These define the main commands (/claim, /aclaim)
+
+commands:
+
+  # --------------------------------------------------------------------------
+  # /claim - Player claim management command
+  # --------------------------------------------------------------------------
+  claim:
+    # Set to false to completely disable /claim and all its subcommands
+    enable: true
+
+    # Command names - FIRST entry becomes the primary command shown to players
+    # Other entries become aliases that also work
+    # Example: [terreno, claim] makes /terreno the main command, /claim still works
+    commands: [claim]
+
+    # Description shown in /help and command listings
+    description: Command to manage your claim(s)
+
+    # Permission required to use this command
+    permission: griefprevention.claims
+
+    # If true, running /claim with no arguments shows help instead of creating a claim
+    use-as-help-cmd: false
+
+  # --------------------------------------------------------------------------
+  # /aclaim - Admin claim management command
+  # --------------------------------------------------------------------------
+  aclaim:
+    enable: true
+    commands: [aclaim]
+    description: Command to manage administrative claims
+    permission: griefprevention.adminclaims
+    use-as-help-cmd: false
+
+
+# ============================================================================
+#                              SUBCOMMANDS
+# ============================================================================
+# Organized by root command (claim, aclaim)
+
+subcommands:
+
+  # ==========================================================================
+  #                         /claim SUBCOMMANDS
+  # ==========================================================================
+  claim:
+
+    # ------------------------------------------------------------------------
+    # /claim protect - Create or resize claims
+    # ------------------------------------------------------------------------
+    protect:
+      # Set to false to disable this subcommand entirely
+      enable: true
+
+      # Subcommand names - First entry is shown in tab completion
+      # Example: [criar, protect] shows "criar" but "protect" also works
+      commands: [protect]
+
+      # Standalone command versions (e.g., /protect instead of /claim protect)
+      # Set to empty [] to disable standalone version
+      standalone: [protect]
+
+      # Usage string shown in help - can include description after " - "
+      # Format: "/command args" or "/command args - Description here"
+      usage: "/claim protect [radius]"
+
+      # Description shown in /claim help (used if usage has no description)
+      description: Create or expand a claim centered on you.
+
+      # Argument configuration for tab completion
+      arguments:
+        radius:
+          type: integer    # Shows number suggestions
+
+    # ------------------------------------------------------------------------
+    # /claim trust - Grant access to players
+    # ------------------------------------------------------------------------
+    trust:
+      enable: true
+      commands: [trust]
+      standalone: [trust]
+      usage: "/claim trust <player> [type]"
+      description: Grant a player access to your claim.
+      arguments:
+        # First argument: player name
+        player:
+          type: player     # Shows online player names
+
+        # Second argument: trust type with translatable options
+        type:
+          # Options define valid choices and their aliases
+          # Format:  canonical_value: [alias1, alias2, ...]
+          #
+          # - Left side (canonical): The internal value the plugin uses
+          # - Right side (aliases): What players can type instead
+          # - Tab completion shows ONLY the aliases (not canonical) when aliases exist
+          # - When a player types an alias, it's converted to canonical automatically
+          #
+          # Translation example:
+          #   access: [acesso]      # Player types "acesso", plugin receives "access"
+          #   container: [inventario]
+          options:
+            access: [access]
+            container: [container]
+            permission: [permission]
+
+    # ------------------------------------------------------------------------
+    # /claim untrust - Revoke player access
+    # ------------------------------------------------------------------------
+    untrust:
+      enable: true
+      commands: [untrust]
+      standalone: [untrust]
+      usage: "/claim untrust <player|all>"
+      description: Revoke claim access from a player or everyone.
+      arguments:
+        player:
+          type: player     # Suggests player names
+          # Options can be combined with type - both players AND these options shown
+          options:
+            all: [all]
+            public: [public]
+
+    # ------------------------------------------------------------------------
+    # /claim trustlist - View trusted players
+    # ------------------------------------------------------------------------
+    trustlist:
+      enable: true
+      commands: [trustlist]
+      standalone: [trustlist]
+      usage: "/claim trustlist"
+      description: Show players who have access to this claim.
+      # No arguments section = no tab completion suggestions
+
+    # ------------------------------------------------------------------------
+    # /claim list - List owned claims
+    # ------------------------------------------------------------------------
+    list:
+      enable: true
+      commands: [list]
+      standalone: [claimslist]
+      usage: "/claim list [player]"
+      description: List claims owned by you or another player.
+      arguments:
+        player:
+          type: player
+
+    # ------------------------------------------------------------------------
+    # /claim mode - Change shovel mode
+    # ------------------------------------------------------------------------
+    mode:
+      enable: true
+      commands: [mode]
+      standalone: [claimmode]
+      usage: "/claim mode <basic|2d|3d>"
+      description: Change your golden shovel claim mode.
+      arguments:
+        mode:
+          # Multiple aliases per option
+          options:
+            basic: [basic]
+            2d: [2d, subdivide]    # Both "2d" and "subdivide" work
+            3d: [3d]
+
+    # ------------------------------------------------------------------------
+    # /claim restrictsubclaim - Toggle subdivision inheritance
+    # ------------------------------------------------------------------------
+    restrictsubclaim:
+      enable: true
+      commands: [restrictsubclaim]
+      standalone: [restrictsubclaim]
+      usage: "/claim restrictsubclaim"
+      description: Toggle whether a subdivision inherits parent permissions.
+
+    # ------------------------------------------------------------------------
+    # /claim explosions - Toggle claim explosions
+    # ------------------------------------------------------------------------
+    explosions:
+      enable: true
+      commands: [explosions]
+      standalone: [claimexplosions]
+      usage: "/claim explosions [on|off]"
+      description: Toggle explosions inside your current claim.
+      arguments:
+        state:
+          options:
+            on: [on]
+            off: [off]
+
+    # ------------------------------------------------------------------------
+    # /claim buyblocks - Purchase claim blocks
+    # ------------------------------------------------------------------------
+    buyblocks:
+      enable: true
+      commands: [buyblocks]
+      standalone: [buyclaimblocks]
+      usage: "/claim buyblocks"
+      description: Purchase additional claim blocks.
+
+    # ------------------------------------------------------------------------
+    # /claim sellblocks - Sell claim blocks
+    # ------------------------------------------------------------------------
+    sellblocks:
+      enable: true
+      commands: [sellblocks]
+      standalone: [sellclaimblocks]
+      usage: "/claim sellblocks"
+      description: Sell excess claim blocks for currency.
+
+    # ------------------------------------------------------------------------
+    # /claim abandon - Delete claims
+    # ------------------------------------------------------------------------
+    abandon:
+      enable: true
+      commands: [abandon]
+      standalone: [abandonclaim]
+      usage: "/claim abandon [all]"
+      description: Abandon the claim you are standing in or all claims you own.
+      arguments:
+        scope:
+          options:
+            all: [all]
+
+    # ------------------------------------------------------------------------
+    # /claim siege - PvP siege (if enabled)
+    # ------------------------------------------------------------------------
+    siege:
+      enable: true
+      commands: [siege]
+      standalone: [siege]
+      usage: "/claim siege <player>"
+      description: Challenge another player to a siege (if enabled).
+      arguments:
+        player:
+          type: player
+
+    # ------------------------------------------------------------------------
+    # /claim trapped - Escape from claims
+    # ------------------------------------------------------------------------
+    trapped:
+      enable: true
+      commands: [trapped]
+      standalone: [trapped]
+      usage: "/claim trapped"
+      description: Attempt to escape if you are stuck inside a claim.
+
+    # ------------------------------------------------------------------------
+    # /claim help - Show help
+    # ------------------------------------------------------------------------
+    help:
+      enable: true
+      commands: [help]
+      standalone: [claimhelp]
+      usage: "/claim help [page]"
+      description: View a list of all available claim subcommands.
+      arguments:
+        page:
+          type: integer
+
+
+  # ==========================================================================
+  #                        /aclaim SUBCOMMANDS (Admin)
+  # ==========================================================================
+  aclaim:
+
+    # ------------------------------------------------------------------------
+    # /aclaim restore - Restore nature
+    # ------------------------------------------------------------------------
+    restore:
+      enable: true
+      commands: [restore]
+      standalone: [restorenature]
+      usage: "/aclaim restore [mode]"
+      description: Restore an area to nature using the specified mode.
+      arguments:
+        mode:
+          options:
+            default: [default]
+            aggressive: [aggressive]
+            fill: [fill]
+
+    # ------------------------------------------------------------------------
+    # /aclaim restoreaggressive - Aggressive restore mode
+    # ------------------------------------------------------------------------
+    restoreaggressive:
+      enable: true
+      commands: [restoreaggressive]
+      standalone: [restorenatureaggressive]
+      usage: "/aclaim restoreaggressive"
+      description: Switches the shovel tool to aggressive restoration mode.
+
+    # ------------------------------------------------------------------------
+    # /aclaim restorefill - Fill restore mode
+    # ------------------------------------------------------------------------
+    restorefill:
+      enable: true
+      commands: [restorefill]
+      standalone: [restorenaturefill]
+      usage: "/aclaim restorefill [radius]"
+      description: Switches the shovel tool to fill mode.
+      arguments:
+        radius:
+          type: integer
+
+    # ------------------------------------------------------------------------
+    # /aclaim ignore - Toggle claim bypass
+    # ------------------------------------------------------------------------
+    ignore:
+      enable: true
+      commands: [ignore]
+      standalone: [ignoreclaims]
+      usage: "/aclaim ignore"
+      description: Toggle ignoring nearby claims.
+
+    # ------------------------------------------------------------------------
+    # /aclaim mode - Admin claim mode
+    # ------------------------------------------------------------------------
+    mode:
+      enable: true
+      commands: [mode]
+      standalone: [adminclaims]
+      usage: "/aclaim mode <admin>"
+      description: Switch your shovel to admin-claim mode.
+      arguments:
+        mode:
+          options:
+            admin: [admin]
+
+    # ------------------------------------------------------------------------
+    # /aclaim adminlist - List admin claims
+    # ------------------------------------------------------------------------
+    adminlist:
+      enable: true
+      commands: [adminlist]
+      standalone: [adminclaimslist]
+      usage: "/aclaim adminlist"
+      description: List administrative claims on the current server.
+
+    # ------------------------------------------------------------------------
+    # /aclaim checkexpiry - Check claim expiration
+    # ------------------------------------------------------------------------
+    checkexpiry:
+      enable: true
+      commands: [checkexpiry]
+      standalone: [claimcheckexpiry]
+      usage: "/aclaim checkexpiry <player>"
+      description: View claim expiration details for a player.
+      arguments:
+        player:
+          type: player
+
+    # ------------------------------------------------------------------------
+    # /aclaim blocks - Adjust player claim blocks
+    # ------------------------------------------------------------------------
+    blocks:
+      enable: true
+      commands: [blocks]
+      standalone: [adjustbonusclaimblocks]
+      usage: "/aclaim blocks <add|set> <player> [amount]"
+      description: Adjust a player's claim block balance.
+      arguments:
+        action:
+          options:
+            add: [add, adjust]
+            set: [set]
+        player:
+          type: player
+        amount:
+          type: integer
+
+    # ------------------------------------------------------------------------
+    # /aclaim delete - Delete claims
+    # ------------------------------------------------------------------------
+    delete:
+      enable: true
+      commands: [delete]
+      standalone: [deleteclaim]
+      usage: "/aclaim delete <player|world|all>"
+      description: Delete claims owned by a player or within a world.
+      arguments:
+        scope:
+          options:
+            player: [player]
+            world: [world]
+            all: [all]
+
+    # ------------------------------------------------------------------------
+    # /aclaim transfer - Transfer claim ownership
+    # ------------------------------------------------------------------------
+    transfer:
+      enable: true
+      commands: [transfer]
+      standalone: [transferclaim]
+      usage: "/aclaim transfer <player>"
+      description: Transfer the claim you are standing in to another player.
+      arguments:
+        player:
+          type: player
