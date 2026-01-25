@@ -74,7 +74,8 @@ import org.bukkit.Tag;
  import org.bukkit.event.player.PlayerJoinEvent;
  import org.bukkit.event.player.PlayerKickEvent;
  import org.bukkit.event.entity.PlayerLeashEntityEvent;
- import org.bukkit.event.player.PlayerLoginEvent;
+import org.bukkit.event.inventory.InventoryType;
+import org.bukkit.event.player.PlayerLoginEvent;
  import org.bukkit.event.player.PlayerLoginEvent.Result;
  import org.bukkit.event.player.PlayerPortalEvent;
  import org.bukkit.event.player.PlayerQuitEvent;
@@ -89,27 +90,27 @@ import org.bukkit.Tag;
  import org.bukkit.inventory.InventoryHolder;
  import org.bukkit.inventory.ItemStack;
  import org.bukkit.profile.PlayerProfile;
-import org.bukkit.util.BlockIterator;
-import org.bukkit.util.Vector;
-import org.jetbrains.annotations.NotNull;
+ import org.bukkit.util.BlockIterator;
+ import org.bukkit.util.Vector;
+ import org.jetbrains.annotations.NotNull;
 
-import java.net.InetAddress;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Collection;
-import java.util.Date;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Supplier;
-import java.util.regex.Pattern;
+ import java.net.InetAddress;
+ import java.util.ArrayDeque;
+ import java.util.ArrayList;
+ import java.util.Calendar;
+ import java.util.Collection;
+ import java.util.Date;
+ import java.util.Deque;
+ import java.util.HashMap;
+ import java.util.HashSet;
+ import java.util.List;
+ import java.util.Set;
+ import java.util.UUID;
+ import java.util.concurrent.ConcurrentHashMap;
+ import java.util.function.Supplier;
+ import java.util.regex.Pattern;
  
-import me.ryanhamshire.GriefPrevention.util.SchedulerUtil;
+ import me.ryanhamshire.GriefPrevention.util.SchedulerUtil;
 
 
  import me.ryanhamshire.GriefPrevention.util.TaskHandle;
@@ -188,7 +189,7 @@ import me.ryanhamshire.GriefPrevention.util.SchedulerUtil;
      }
  
      //when a player chats, monitor for spam
-     @EventHandler(ignoreCancelled = true, priority = EventPriority.LOWEST)
+     @EventHandler(ignoreCancelled = false, priority = EventPriority.LOWEST)
      synchronized void onPlayerChat(AsyncPlayerChatEvent event)
      {
          Player player = event.getPlayer();
@@ -199,6 +200,72 @@ import me.ryanhamshire.GriefPrevention.util.SchedulerUtil;
          }
  
          String message = event.getMessage();
+
+         //soft muted messages should not be processed by other chat plugins
+         if (this.dataStore.isSoftMuted(player.getUniqueId()))
+         {
+             String notificationMessage = "(Muted " + player.getName() + "): " + message;
+             Set<UUID> recipientsToKeep = new HashSet<>();
+             Set<UUID> eavesdroppers = new HashSet<>();
+
+             for (Player recipient : event.getRecipients())
+             {
+                 if (recipient == null) continue;
+
+                 if (this.dataStore.isSoftMuted(recipient.getUniqueId()))
+                 {
+                     recipientsToKeep.add(recipient.getUniqueId());
+                 }
+                 else if (recipient.hasPermission("griefprevention.eavesdrop.softmute"))
+                 {
+                     eavesdroppers.add(recipient.getUniqueId());
+                 }
+             }
+
+             //stop normal chat handling and downstream plugin processing
+             event.setCancelled(true);
+
+             final String senderName = player.getDisplayName();
+             final String finalMessage = message;
+             final String format = event.getFormat();
+
+             String formatted;
+             try
+             {
+                 formatted = String.format(format, senderName, finalMessage);
+             }
+             catch (Exception ignored)
+             {
+                 formatted = senderName + ": " + finalMessage;
+             }
+
+             final String formattedFinal = formatted;
+             final String notificationFinal = ChatColor.GRAY + notificationMessage;
+
+             Bukkit.getScheduler().runTask(instance, () ->
+             {
+                 for (UUID recipientId : recipientsToKeep)
+                 {
+                     Player recipient = Bukkit.getPlayer(recipientId);
+                     if (recipient != null && recipient.isOnline())
+                     {
+                         recipient.sendMessage(formattedFinal);
+                     }
+                 }
+
+                 for (UUID recipientId : eavesdroppers)
+                 {
+                     Player recipient = Bukkit.getPlayer(recipientId);
+                     if (recipient != null && recipient.isOnline())
+                     {
+                         recipient.sendMessage(notificationFinal);
+                     }
+                 }
+             });
+
+             GriefPrevention.AddLogEntry(notificationMessage, CustomLogEntryTypes.MutedChat, false);
+             return;
+         }
  
          boolean muted = this.handlePlayerChat(player, message, event);
          Set<Player> recipients = event.getRecipients();
@@ -208,28 +275,6 @@ import me.ryanhamshire.GriefPrevention.util.SchedulerUtil;
          {
              recipients.clear();
              recipients.add(player);
-         }
- 
-         //soft muted messages go out to all soft muted players
-         else if (this.dataStore.isSoftMuted(player.getUniqueId()))
-         {
-             String notificationMessage = "(Muted " + player.getName() + "): " + message;
-             Set<Player> recipientsToKeep = new HashSet<>();
-             for (Player recipient : recipients)
-             {
-                 if (this.dataStore.isSoftMuted(recipient.getUniqueId()))
-                 {
-                     recipientsToKeep.add(recipient);
-                 }
-                 else if (recipient.hasPermission("griefprevention.eavesdrop.softmute"))
-                 {
-                     recipient.sendMessage(ChatColor.GRAY + notificationMessage);
-                 }
-             }
-             recipients.clear();
-             recipients.addAll(recipientsToKeep);
- 
-             GriefPrevention.AddLogEntry(notificationMessage, CustomLogEntryTypes.MutedChat, false);
          }
  
          //troll and excessive profanity filter
@@ -1730,6 +1775,7 @@ import me.ryanhamshire.GriefPrevention.util.SchedulerUtil;
          if (clickedBlock != null && instance.config_claims_preventTheft && (
                  event.getAction() == Action.RIGHT_CLICK_BLOCK && (
                          (this.isInventoryHolder(clickedBlock) && clickedBlock.getType() != Material.LECTERN) ||
+                                 clickedBlockType == Material.LECTERN ||
                                  clickedBlockType == Material.ANVIL ||
                                  clickedBlockType == Material.BEACON ||
                                  clickedBlockType == Material.BEE_NEST ||
@@ -1838,14 +1884,21 @@ import me.ryanhamshire.GriefPrevention.util.SchedulerUtil;
              if (playerData == null) playerData = this.dataStore.getPlayerData(player.getUniqueId());
  
              //block container use during pvp combat, same reason
-             if (playerData.inPvpCombat())
-             {
-                 GriefPrevention.sendRateLimitedErrorMessage(player, Messages.PvPNoContainers);
-                 event.setCancelled(true);
-                 return;
-             }
- 
-             //otherwise check permissions for the claim the player is in
+            if (playerData.inPvpCombat())
+            {
+                GriefPrevention.sendRateLimitedErrorMessage(player, Messages.PvPNoContainers);
+                event.setCancelled(true);
+                return;
+            }
+
+            //allow players with ignoreclaims permission in spectator mode to access containers
+            if (player.hasPermission("griefprevention.ignoreclaims") && player.getGameMode() == GameMode.SPECTATOR)
+            {
+                // Skip container permission checks for admins in spectator mode
+                return;
+            }
+
+            //otherwise check permissions for the claim the player is in
              Claim claim = this.dataStore.getClaimAt(clickedBlock.getLocation(), false, playerData.lastClaim);
              if (claim != null)
              {
@@ -1855,7 +1908,13 @@ import me.ryanhamshire.GriefPrevention.util.SchedulerUtil;
                  if (noContainersReason != null)
                  {
                      event.setCancelled(true);
-                     GriefPrevention.sendRateLimitedErrorMessage(player, noContainersReason.get());
+                     
+                     // Delay the error message to check if another plugin opened an inventory
+                     Bukkit.getScheduler().runTaskLater(instance, () -> {
+                         if (player.getOpenInventory().getTopInventory().getType() == InventoryType.CRAFTING) return;
+                         GriefPrevention.sendRateLimitedErrorMessage(player, noContainersReason.get());
+                     }, 1L); // Check 1 tick later
+                     
                      return;
                  }
              }

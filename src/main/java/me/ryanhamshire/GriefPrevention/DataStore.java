@@ -1650,17 +1650,27 @@ public abstract class DataStore {
             int inset = parentIsSubdivision ? 1 : 0;
 
             boolean violatesParentBounds;
-            if (parentClaim.is3D()) {
-                // Only enforce Y-axis inset for 3D claims, allow X/Z boundaries to match parent
-                violatesParentBounds = newMinY < parentMinY + inset
-                        || newMaxY > parentMaxY - inset;
+            if (parentIsSubdivision) {
+                // Nested subdivisions require 1-block inset on ALL sides (X/Z and Y for 3D)
+                boolean violatesXZ = newMinX < parentMinX + inset
+                        || newMaxX > parentMaxX - inset
+                        || newMinZ < parentMinZ + inset
+                        || newMaxZ > parentMaxZ - inset;
+                boolean violatesY = parentClaim.is3D() && (newMinY < parentMinY + inset
+                        || newMaxY > parentMaxY - inset);
+                violatesParentBounds = violatesXZ || violatesY;
+            } else if (parentClaim.is3D()) {
+                // Direct child of 3D claim - no inset required
+                violatesParentBounds = false;
             } else {
-                // No X/Z inset enforcement for 2D parent claims
+                // Direct child of 2D claim - no inset required
                 violatesParentBounds = false;
             }
 
             if (violatesParentBounds) {
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.InnerSubdivisionTooClose);
+                playerData.claimResizing = null;
+                playerData.lastShovelLocation = null;
                 return;
             }
 
@@ -1702,6 +1712,8 @@ public abstract class DataStore {
                     }
 
                     GriefPrevention.sendMessage(player, TextMode.Err, Messages.ResizeFailOverlapSubdivision);
+                    playerData.claimResizing = null;
+                    playerData.lastShovelLocation = null;
                     return;
                 }
             }
@@ -1716,21 +1728,46 @@ public abstract class DataStore {
             int newMinZ = Math.min(newz1, newz2);
             int newMaxZ = Math.max(newz1, newz2);
 
+            // Check if this is a subdivision being resized (has a parent)
+            boolean isSubdivision = playerData.claimResizing.parent != null;
+            int inset = isSubdivision ? 1 : 0;
+
             for (Claim child : playerData.claimResizing.children) {
                 Location childMin = child.getLesserBoundaryCorner();
                 Location childMax = child.getGreaterBoundaryCorner();
 
-                // New containment rule for main-claim resize with children (X/Z only, Y
-                // ignored):
-                // Child must be fully contained or exactly flush with the new parent X/Z
-                // bounds.
-                boolean containedX = newMinX <= childMin.getBlockX() && newMaxX >= childMax.getBlockX();
-                boolean containedZ = newMinZ <= childMin.getBlockZ() && newMaxZ >= childMax.getBlockZ();
+                int childMinX = childMin.getBlockX();
+                int childMaxX = childMax.getBlockX();
+                int childMinZ = childMin.getBlockZ();
+                int childMaxZ = childMax.getBlockZ();
 
-                if (!(containedX && containedZ)) {
-                    GriefPrevention.sendMessage(player, TextMode.Err,
-                            Messages.ResizeFailSubdivision);
-                    return;
+                if (isSubdivision) {
+                    // Nested children require 1-block inset from parent bounds on all sides
+                    boolean violatesInsetX = childMinX < newMinX + inset || childMaxX > newMaxX - inset;
+                    boolean violatesInsetZ = childMinZ < newMinZ + inset || childMaxZ > newMaxZ - inset;
+                    boolean violatesInsetY = false;
+                    if (playerData.claimResizing.is3D() && child.is3D()) {
+                        int childMinY = childMin.getBlockY();
+                        int childMaxY = childMax.getBlockY();
+                        violatesInsetY = childMinY < newMinY + inset || childMaxY > newMaxY - inset;
+                    }
+
+                    if (violatesInsetX || violatesInsetZ || violatesInsetY) {
+                        GriefPrevention.sendMessage(player, TextMode.Err, Messages.InnerSubdivisionTooClose);
+                        playerData.claimResizing = null;
+                        playerData.lastShovelLocation = null;
+                        return;
+                    }
+                } else {
+                    // Top-level claim children: just need containment, no inset required
+                    boolean containedX = newMinX <= childMinX && newMaxX >= childMaxX;
+                    boolean containedZ = newMinZ <= childMinZ && newMaxZ >= childMaxZ;
+
+                    if (!(containedX && containedZ)) {
+                        GriefPrevention.sendMessage(player, TextMode.Err,
+                                Messages.ResizeFailSubdivision);
+                        return;
+                    }
                 }
             }
         }

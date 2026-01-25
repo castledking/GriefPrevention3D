@@ -90,6 +90,12 @@ public class FlatFileDataStore extends DataStore
             this.setSchemaVersion(DataStore.latestSchemaVersion);
         }
 
+        //check for legacy subdivision format migration
+        if (GriefPrevention.instance.config_claims_legacySubdivisionFormat)
+        {
+            this.migrateToLegacySubdivisionFormat();
+        }
+
         //load group data into memory
         File[] files = playerDataFolder.listFiles();
         for (File file : files)
@@ -1152,5 +1158,86 @@ public class FlatFileDataStore extends DataStore
         }
         catch (IOException exception) {}
 
+    }
+
+    /**
+     * Migrates subdivisions from nested Children: format to original GP format (separate files)
+     * Only processes 2D subdivisions, ignores 3D subdivisions
+     */
+    private void migrateToLegacySubdivisionFormat()
+    {
+        GriefPrevention.AddLogEntry("Starting migration to legacy subdivision format...");
+        
+        File claimDataFolder = new File(claimDataFolderPath);
+        File[] claimFiles = claimDataFolder.listFiles((dir, name) -> name.endsWith(".yml"));
+        
+        if (claimFiles == null) return;
+        
+        int migratedCount = 0;
+        int skippedCount = 0;
+        
+        for (File claimFile : claimFiles)
+        {
+            try
+            {
+                // Read the claim file
+                YamlConfiguration yaml = YamlConfiguration.loadConfiguration(claimFile);
+                
+                // Check if this claim has Children
+                ConfigurationSection childrenSection = yaml.getConfigurationSection("Children");
+                if (childrenSection == null) continue;
+                
+                // Load the parent claim
+                List<World> validWorlds = Bukkit.getServer().getWorlds();
+                Claim parentClaim = this.loadClaim(claimFile, new ArrayList<>(), Long.parseLong(claimFile.getName().replace(".yml", "")));
+                
+                if (parentClaim == null) continue;
+                
+                // Process each child
+                for (String childKey : childrenSection.getKeys(false))
+                {
+                    ConfigurationSection childYaml = childrenSection.getConfigurationSection(childKey);
+                    if (childYaml == null) continue;
+                    
+                    Claim child = deserializeChild(childYaml, parentClaim, validWorlds);
+                    if (child == null) continue;
+                    
+                    // Skip 3D subdivisions - only migrate 2D
+                    if (child.is3D())
+                    {
+                        skippedCount++;
+                        continue;
+                    }
+                    
+                    // Create separate file for the subdivision
+                    long childId = this.nextClaimID;
+                    this.incrementNextClaimID();
+                    
+                    child.id = childId;
+                    child.parent = parentClaim;
+                    child.inDataStore = true;
+                    
+                    // Write child to separate file
+                    String childYamlContent = this.getYamlForClaim(child);
+                    File childFile = new File(claimDataFolderPath + File.separator + childId + ".yml");
+                    Files.write(childYamlContent.getBytes(StandardCharsets.UTF_8), childFile);
+                    
+                    migratedCount++;
+                }
+                
+                // Remove Children section from parent file
+                yaml.set("Children", null);
+                String parentYaml = yaml.saveToString();
+                Files.write(parentYaml.getBytes(StandardCharsets.UTF_8), claimFile);
+                
+            }
+            catch (Exception e)
+            {
+                GriefPrevention.AddLogEntry("Error migrating claim file " + claimFile.getName() + ": " + e.getMessage(), CustomLogEntryTypes.Exception);
+            }
+        }
+        
+        GriefPrevention.AddLogEntry("Migration complete. Migrated " + migratedCount + " subdivisions, skipped " + skippedCount + " (3D subdivisions).");
+        GriefPrevention.AddLogEntry("Please restart the server to complete the migration.");
     }
 }

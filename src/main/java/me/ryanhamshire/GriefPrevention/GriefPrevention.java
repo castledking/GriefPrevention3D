@@ -173,6 +173,8 @@ public class GriefPrevention extends JavaPlugin {
                                                             // adminclaims.
     public boolean config_claims_allowNestedSubClaims; // whether nested subdivisions may be created inside other
                                                        // subdivisions
+    public boolean config_claims_legacySubdivisionFormat; // whether to use original GP subdivision format (separate files)
+                                                          // REQUIRED for GPExpansion compatibility. Default: false
 
     public Material config_claims_investigationTool; // which material will be used to investigate claims with a right
                                                      // click
@@ -785,6 +787,7 @@ public class GriefPrevention extends JavaPlugin {
                 .getBoolean("GriefPrevention.Claims.AllowTrappedInAdminClaims", false);
         this.config_claims_allowNestedSubClaims = config.getBoolean("GriefPrevention.Claims.AllowNestedSubClaims",
                 false);
+        this.config_claims_legacySubdivisionFormat = config.getBoolean("GriefPrevention.Claims.LegacySubdivisionFormat", false);
 
         this.config_claims_maxClaimsPerPlayer = config.getInt("GriefPrevention.Claims.MaximumNumberOfClaimsPerPlayer", 0);
         this.config_claims_villagerTradingRequiresTrust = config.getBoolean("GriefPrevention.Claims.VillagerTradingRequiresPermission", true);
@@ -989,6 +992,7 @@ public class GriefPrevention extends JavaPlugin {
                 this.config_claims_expirationExemptionBonusBlocks);
         outConfig.set("GriefPrevention.Claims.AllowTrappedInAdminClaims", this.config_claims_allowTrappedInAdminClaims);
         outConfig.set("GriefPrevention.Claims.AllowNestedSubClaims", this.config_claims_allowNestedSubClaims);
+        outConfig.set("GriefPrevention.Claims.LegacySubdivisionFormat", this.config_claims_legacySubdivisionFormat);
         outConfig.set("GriefPrevention.Claims.MaximumNumberOfClaimsPerPlayer", this.config_claims_maxClaimsPerPlayer);
         outConfig.set("GriefPrevention.Claims.VillagerTradingRequiresPermission",
                 this.config_claims_villagerTradingRequiresTrust);

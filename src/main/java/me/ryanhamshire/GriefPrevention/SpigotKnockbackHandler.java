@@ -36,10 +36,8 @@ public class SpigotKnockbackHandler implements Listener {
 
         // Check if the source is a wind charge
         String sourceTypeName = source.getType().name();
-        instance.AddLogEntry("DEBUG: Spigot wind charge knockback detected - Source type: " + sourceTypeName);
         
         if (!sourceTypeName.contains("WIND_CHARGE") && !sourceTypeName.equals("BREEZE_WIND_CHARGE")) {
-            instance.AddLogEntry("DEBUG: Spigot - Not a wind charge, returning");
             return;
         }
 
@@ -51,13 +49,11 @@ public class SpigotKnockbackHandler implements Listener {
 
         // Allow self-knockback (e.g., for movement tricks)
         if (attacker == null || attacker == defender) {
-            instance.AddLogEntry("DEBUG: Spigot - Self-knockback or null attacker, allowing");
             return;
         }
 
         // Only protect when PVP rules are enabled for this world
         if (!instance.pvpRulesApply(defender.getWorld())) {
-            instance.AddLogEntry("DEBUG: Spigot - PVP rules don't apply in world: " + defender.getWorld().getName());
             return;
         }
 
@@ -66,11 +62,8 @@ public class SpigotKnockbackHandler implements Listener {
         Claim claim = dataStore.getClaimAt(defender.getLocation(), false, defenderData.lastClaim);
         if (claim != null && instance.claimIsPvPSafeZone(claim)) {
             defenderData.lastClaim = claim;
-            instance.AddLogEntry("DEBUG: Spigot - Canceling wind charge knockback in protected claim");
             event.setCancelled(true);
             GriefPrevention.sendRateLimitedErrorMessage(attacker, Messages.CantFightWhileImmune);
-        } else {
-            instance.AddLogEntry("DEBUG: Spigot - Allowing wind charge knockback - claim: " + (claim != null ? "not PVP safe" : "no claim"));
         }
     }
 }
