@@ -3295,7 +3295,14 @@ public class GriefPrevention extends JavaPlugin {
                         candidateLocation.getBlockZ());
                 Location destination = new Location(highestBlock.getWorld(), highestBlock.getX(),
                         highestBlock.getY() + 2, highestBlock.getZ());
-                player.teleport(destination);
+                // Use Folia-compatible teleport via reflection
+                try {
+                    // Try teleportAsync first (Paper/Folia 1.19+)
+                    player.getClass().getMethod("teleportAsync", Location.class).invoke(player, destination);
+                } catch (Exception e) {
+                    // Fallback to regular teleport (shouldn't reach here on Folia)
+                    player.teleport(destination);
+                }
                 return destination;
             }
         }
@@ -4200,14 +4207,40 @@ public class GriefPrevention extends JavaPlugin {
         PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
         Claim claim = this.dataStore.getClaimAt(player.getLocation(), false, playerData.lastClaim);
 
+        // Check if player can build here - if so, they're not trapped
         if (claim != null && claim.checkPermission(player, ClaimPermission.Build, null) == null) {
             GriefPrevention.sendMessage(player, TextMode.Err, Messages.NotTrappedHere);
             return true;
         }
 
-        // Simplified trapped logic
+        // Check if player is in an admin claim and trapped command is not allowed there
+        if (claim != null && claim.isAdminClaim() && !this.config_claims_allowTrappedInAdminClaims) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.TrappedWontWorkHere);
+            return true;
+        }
+
+        // Check if player already has a pending rescue
+        if (playerData.pendingTrapped) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.RescueAbortedMoved);
+            return true;
+        }
+
+        // Fire SaveTrappedPlayerEvent to allow other plugins to cancel or handle the rescue
+        if (claim != null) {
+            SaveTrappedPlayerEvent event = new SaveTrappedPlayerEvent(claim);
+            Bukkit.getPluginManager().callEvent(event);
+            if (event.isCancelled()) {
+                return true;
+            }
+        }
+
+        // Mark player as having a pending rescue
+        playerData.pendingTrapped = true;
+
+        // Schedule the rescue task using Folia-compatible scheduler
         GriefPrevention.sendMessage(player, TextMode.Instr, Messages.RescuePending);
-        // Would need to implement rescue task here
+        PlayerRescueTask task = new PlayerRescueTask(player, player.getLocation(), null);
+        SchedulerUtil.runLaterEntity(this, player, task, 200L); // 10 seconds (200 ticks)
 
         return true;
     }
