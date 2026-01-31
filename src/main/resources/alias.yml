@@ -48,7 +48,6 @@ enabled: true
 # These define the main commands (/claim, /aclaim)
 
 commands:
-
   # --------------------------------------------------------------------------
   # /claim - Player claim management command
   # --------------------------------------------------------------------------
@@ -80,19 +79,16 @@ commands:
     permission: griefprevention.adminclaims
     use-as-help-cmd: false
 
-
 # ============================================================================
 #                              SUBCOMMANDS
 # ============================================================================
 # Organized by root command (claim, aclaim)
 
 subcommands:
-
   # ==========================================================================
   #                         /claim SUBCOMMANDS
   # ==========================================================================
   claim:
-
     # ------------------------------------------------------------------------
     # /claim create - Create or resize claims
     # ------------------------------------------------------------------------
@@ -118,7 +114,7 @@ subcommands:
       # Argument configuration for tab completion
       arguments:
         radius:
-          type: '[<radius>]'    # Shows literal suggestion
+          type: "[<radius>]" # Shows literal suggestion
 
     # ------------------------------------------------------------------------
     # /claim trust - Grant access to players
@@ -132,7 +128,7 @@ subcommands:
       arguments:
         # First argument: player name
         player:
-          type: player     # Shows online player names
+          type: player # Shows online player names
 
         # Second argument: trust type with translatable options
         type:
@@ -164,7 +160,7 @@ subcommands:
       description: Revoke claim access from a player or everyone.
       arguments:
         player:
-          type: player     # Suggests player names
+          type: player # Suggests player names
           options:
             all: [all]
             public: [public]
@@ -206,7 +202,7 @@ subcommands:
         mode:
           options:
             basic: [basic]
-            2d: [2d, subdivide]    # Both "2d" and "subdivide" work
+            2d: [2d, subdivide] # Both "2d" and "subdivide" work
             3d: [3d]
 
     # ------------------------------------------------------------------------
@@ -317,12 +313,10 @@ subcommands:
         page:
           type: integer
 
-
   # ==========================================================================
   #                        /aclaim SUBCOMMANDS (Admin)
   # ==========================================================================
   aclaim:
-
     # ------------------------------------------------------------------------
     # /aclaim restore - Restore nature
     # ------------------------------------------------------------------------
@@ -415,16 +409,18 @@ subcommands:
     blocks:
       enable: true
       commands: [blocks]
-      standalone: [adjustbonusclaimblocks]
-      usage: "/aclaim blocks <add|set> <player> [amount]"
+      standalone: []
+      usage: "/aclaim blocks <bonus|accrued> <player|all> <amount>"
       description: Adjust a player's claim block balance.
       arguments:
-        action:
+        type:
           options:
-            add: [add, adjust]
-            set: [set]
+            bonus: [bonus]
+            accrued: [accrued]
         player:
           type: player
+          options:
+            all: [all]
         amount:
           type: integer
 

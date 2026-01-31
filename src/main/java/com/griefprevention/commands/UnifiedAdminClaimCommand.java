@@ -15,7 +15,6 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
 
     public UnifiedAdminClaimCommand(@NotNull GriefPrevention plugin) {
         super(plugin, "aclaim");
-
         // Register subcommands
         registerSubcommand("restore", createRestoreTabExecutor());
         registerSubcommand("ignore", this::handleIgnore);
@@ -24,26 +23,87 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
         registerSubcommand("list", this::handleList);
         registerSubcommand("checkexpiry", this::handleCheckExpiry);
         registerSubcommand("blocks", this::handleBlocks);
-        registerSubcommand("delete", this::handleDelete, "deleteclaim", "deleteallclaims", "deleteclaimsinworld",
-                "deleteuserclaimsinworld", "deletealladminclaims");
+        registerSubcommand(
+            "delete",
+            this::handleDelete,
+            "deleteclaim",
+            "deleteallclaims",
+            "deleteclaimsinworld",
+            "deleteuserclaimsinworld",
+            "deletealladminclaims"
+        );
         registerSubcommand("transfer", this::handleTransfer);
         registerSubcommand("help", this::handleHelp);
 
         // Register standalone commands from Alias enum
         registerStandaloneCommand(Alias.AClaimRestore, createRestoreTabExecutor());
         // Legacy standalone commands - redirect to unified restore with appropriate type
-        registerLegacyStandaloneCommand("restorenatureaggressive", "griefprevention.restorenatureaggressive",
-                (sender, args) -> handleRestore(sender, prependArg("aggressive", args)),
-                java.util.Arrays.asList("1", "2", "3", "4", "5", "10"));
-        registerLegacyStandaloneCommand("restorenaturefill", "griefprevention.restorenatureaggressive",
-                (sender, args) -> handleRestore(sender, prependArg("fill", args)),
-                java.util.Arrays.asList("1", "2", "3", "4", "5", "10"));
+        registerLegacyStandaloneCommand(
+            "restorenatureaggressive",
+            "griefprevention.restorenatureaggressive",
+            (sender, args) -> handleRestore(sender, prependArg("aggressive", args)),
+            java.util.Arrays.asList("1", "2", "3", "4", "5", "10")
+        );
+        registerLegacyStandaloneCommand(
+            "restorenaturefill",
+            "griefprevention.restorenatureaggressive",
+            (sender, args) -> handleRestore(sender, prependArg("fill", args)),
+            java.util.Arrays.asList("1", "2", "3", "4", "5", "10")
+        );
         registerStandaloneCommand(Alias.AClaimIgnore, this::handleIgnore);
         registerStandaloneCommand(Alias.AClaimMode, this::handleMode);
         registerStandaloneCommand(Alias.AClaimAdminList, this::handleAdminList);
         registerStandaloneCommand(Alias.AClaimList, this::handleList);
         registerStandaloneCommand(Alias.AClaimCheckExpiry, this::handleCheckExpiry);
         registerStandaloneCommand(Alias.AClaimBlocks, this::handleBlocks);
+        registerLegacyStandaloneCommand(
+            "adjustbonusclaimblocks",
+            "griefprevention.adjustclaimblocks",
+            (sender, args) -> handleBlocks(sender, prependArg("bonus", args)),
+            null
+        );
+        registerLegacyStandaloneCommand(
+            "acb",
+            "griefprevention.adjustclaimblocks",
+            (sender, args) -> handleBlocks(sender, prependArg("bonus", args)),
+            null
+        );
+        registerLegacyStandaloneCommand(
+            "setaccruedclaimblocks",
+            "griefprevention.adjustclaimblocks",
+            (sender, args) -> handleBlocks(sender, prependArg("accrued", args)),
+            null
+        );
+        registerLegacyStandaloneCommand(
+            "scb",
+            "griefprevention.adjustclaimblocks",
+            (sender, args) -> handleBlocks(sender, prependArg("accrued", args)),
+            null
+        );
+        registerLegacyStandaloneCommand(
+            "adjustbonusclaimblocksall",
+            "griefprevention.adjustclaimblocks",
+            (sender, args) -> handleBlocks(sender, prependArg("bonus", prependArg("all", args))),
+            null
+        );
+        registerLegacyStandaloneCommand(
+            "acball",
+            "griefprevention.adjustclaimblocks",
+            (sender, args) -> handleBlocks(sender, prependArg("bonus", prependArg("all", args))),
+            null
+        );
+        registerLegacyStandaloneCommand(
+            "setaccruedclaimblocksall",
+            "griefprevention.adjustclaimblocks",
+            (sender, args) -> handleBlocks(sender, prependArg("accrued", prependArg("all", args))),
+            null
+        );
+        registerLegacyStandaloneCommand(
+            "scball",
+            "griefprevention.adjustclaimblocks",
+            (sender, args) -> handleBlocks(sender, prependArg("accrued", prependArg("all", args))),
+            null
+        );
         registerStandaloneCommand(Alias.AClaimDelete, this::handleDelete);
         registerStandaloneCommand(Alias.AClaimTransfer, this::handleTransfer);
         registerStandaloneCommand(Alias.AClaimHelp, this::handleHelp);
@@ -119,7 +179,12 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
                         playerData.fillRadius = 2; // default
                     }
                     playerData.shovelMode = ShovelMode.RestoreNatureFill;
-                    GriefPrevention.sendMessage(player, TextMode.Success, Messages.FillModeActive, String.valueOf(playerData.fillRadius));
+                    GriefPrevention.sendMessage(
+                        player,
+                        TextMode.Success,
+                        Messages.FillModeActive,
+                        String.valueOf(playerData.fillRadius)
+                    );
                 }
                 default -> {
                     // Default restore nature mode
@@ -139,22 +204,34 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
     private org.bukkit.command.TabExecutor createRestoreTabExecutor() {
         return new org.bukkit.command.TabExecutor() {
             @Override
-            public boolean onCommand(@NotNull CommandSender sender, @NotNull org.bukkit.command.Command command, @NotNull String label, String[] args) {
+            public boolean onCommand(
+                @NotNull CommandSender sender,
+                @NotNull org.bukkit.command.Command command,
+                @NotNull String label,
+                String[] args
+            ) {
                 return handleRestore(sender, args);
             }
 
             @Override
-            public java.util.List<String> onTabComplete(@NotNull CommandSender sender, @NotNull org.bukkit.command.Command command, @NotNull String label, String[] args) {
+            public java.util.List<String> onTabComplete(
+                @NotNull CommandSender sender,
+                @NotNull org.bukkit.command.Command command,
+                @NotNull String label,
+                String[] args
+            ) {
                 if (args.length == 1) {
-                    return java.util.Arrays.asList("nature", "aggressive", "fill").stream()
-                            .filter(s -> s.startsWith(args[0].toLowerCase()))
-                            .collect(java.util.stream.Collectors.toList());
+                    return java.util.Arrays.asList("nature", "aggressive", "fill")
+                        .stream()
+                        .filter(s -> s.startsWith(args[0].toLowerCase()))
+                        .collect(java.util.stream.Collectors.toList());
                 }
                 // Show radius suggestions for all restore types
                 if (args.length == 2) {
-                    return java.util.Arrays.asList("1", "2", "3", "4", "5", "10").stream()
-                            .filter(s -> s.startsWith(args[1]))
-                            .collect(java.util.stream.Collectors.toList());
+                    return java.util.Arrays.asList("1", "2", "3", "4", "5", "10")
+                        .stream()
+                        .filter(s -> s.startsWith(args[1]))
+                        .collect(java.util.stream.Collectors.toList());
                 }
                 return java.util.Collections.emptyList();
             }
@@ -169,8 +246,7 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
     }
 
     private boolean handleIgnore(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player player))
-            return false;
+        if (!(sender instanceof Player player)) return false;
 
         // Permission check - requires griefprevention.ignoreclaims
         if (!player.hasPermission("griefprevention.ignoreclaims")) {
@@ -190,8 +266,7 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
     }
 
     private boolean handleMode(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player player))
-            return false;
+        if (!(sender instanceof Player player)) return false;
 
         PlayerData playerData = plugin.dataStore.getPlayerData(player.getUniqueId());
 
@@ -227,17 +302,21 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
         // Find admin claims
         java.util.Vector<Claim> claims = new java.util.Vector<>();
         for (Claim claim : plugin.dataStore.getClaims()) {
-            if (claim.ownerID == null) // admin claim
-            {
+            if (
+                claim.ownerID == null // admin claim
+            ) {
                 claims.add(claim);
             }
         }
-        
+
         if (claims.size() > 0) {
             GriefPrevention.sendMessage(player, TextMode.Instr, Messages.ClaimsListHeader);
             for (Claim claim : claims) {
-                GriefPrevention.sendMessage(player, TextMode.Instr,
-                        GriefPrevention.getfriendlyLocationString(claim.getLesserBoundaryCorner()));
+                GriefPrevention.sendMessage(
+                    player,
+                    TextMode.Instr,
+                    GriefPrevention.getfriendlyLocationString(claim.getLesserBoundaryCorner())
+                );
             }
         } else {
             GriefPrevention.sendMessage(player, TextMode.Info, "No administrative claims found.");
@@ -247,103 +326,96 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
     }
 
     private boolean handleBlocks(CommandSender sender, String[] args) {
-        // Usage: /aclaim blocks <add|set> <player> <amount>
-        // or: /aclaim blocks <add> [permission] <amount>
+        // Usage: /aclaim blocks <bonus|accrued> <player|all> <amount>
         if (args.length < 3) {
-            if (sender instanceof Player player) {
-                GriefPrevention.sendMessage(player, TextMode.Info, "Usage: /aclaim blocks <add|set> <player> <amount>");
+            if (sender instanceof Player) {
+                GriefPrevention.sendMessage(
+                    (Player) sender,
+                    TextMode.Info,
+                    "Usage: /aclaim blocks <bonus|accrued> <player|all> <amount>"
+                );
             } else {
-                sender.sendMessage("Usage: /aclaim blocks <add|set> <player> <amount>");
+                sender.sendMessage("Usage: /aclaim blocks <bonus|accrued> <player|all> <amount>");
             }
             return true;
         }
 
-        // Resolve operation alias to canonical name using config
-        String inputOperation = args[0].toLowerCase();
-        String operation = resolveOptionAlias("blocks", "action", inputOperation);
-        if (operation == null) {
-            operation = inputOperation; // Fallback to input if resolution fails
-        }
-        
+        String type = args[0].toLowerCase();
         String target = args[1];
         int amount;
 
         try {
             amount = Integer.parseInt(args[2]);
         } catch (NumberFormatException e) {
-            if (sender instanceof Player player) {
-                GriefPrevention.sendMessage(player, TextMode.Err, "Invalid amount: " + args[2]);
+            if (sender instanceof Player) {
+                GriefPrevention.sendMessage((Player) sender, TextMode.Err, "Invalid amount: " + args[2]);
             } else {
                 sender.sendMessage("Invalid amount: " + args[2]);
             }
             return true;
         }
 
-        if (operation.equals("add")) {
-            // Check if target is a permission group
-            if (target.startsWith("[") && target.endsWith("]")) {
-                String permissionIdentifier = target.substring(1, target.length() - 1);
-                int newTotal = plugin.dataStore.adjustGroupBonusBlocks(permissionIdentifier, amount);
-
-                if (sender instanceof Player player) {
-                    GriefPrevention.sendMessage(player, TextMode.Success, Messages.AdjustGroupBlocksSuccess,
-                            permissionIdentifier, String.valueOf(amount), String.valueOf(newTotal));
-                } else {
-                    sender.sendMessage("Adjusted " + permissionIdentifier + "'s bonus claim blocks by " + amount + ". New total: " + newTotal);
-                }
-                return true;
-            }
-
-            // Otherwise, find the specified player
-            OfflinePlayer targetPlayer = plugin.resolvePlayerByName(target);
-            if (targetPlayer == null) {
-                if (sender instanceof Player player) {
-                    GriefPrevention.sendMessage(player, TextMode.Err, Messages.PlayerNotFound2);
-                } else {
-                    sender.sendMessage("Player not found: " + target);
-                }
-                return true;
-            }
-
-            PlayerData playerData = plugin.dataStore.getPlayerData(targetPlayer.getUniqueId());
-            playerData.setBonusClaimBlocks(playerData.getBonusClaimBlocks() + amount);
-            plugin.dataStore.savePlayerData(targetPlayer.getUniqueId(), playerData);
-
-            if (sender instanceof Player player) {
-                GriefPrevention.sendMessage(player, TextMode.Success, Messages.AdjustBlocksSuccess,
-                        targetPlayer.getName(), String.valueOf(amount), String.valueOf(playerData.getBonusClaimBlocks()));
+        if (!type.equals("bonus") && !type.equals("accrued")) {
+            if (sender instanceof Player) {
+                GriefPrevention.sendMessage(
+                    (Player) sender,
+                    TextMode.Err,
+                    "Invalid block type: " + type + ". Use 'bonus' or 'accrued'."
+                );
             } else {
-                sender.sendMessage("Adjusted " + targetPlayer.getName() + "'s bonus claim blocks by " + amount + ". New total: " + playerData.getBonusClaimBlocks());
+                sender.sendMessage("Invalid block type: " + type + ". Use 'bonus' or 'accrued'.");
             }
-        } else if (operation.equals("set")) {
-            OfflinePlayer targetPlayer = plugin.resolvePlayerByName(target);
-            if (targetPlayer == null) {
-                if (sender instanceof Player player) {
-                    GriefPrevention.sendMessage(player, TextMode.Err, Messages.PlayerNotFound2);
-                } else {
-                    sender.sendMessage("Player not found: " + target);
-                }
-                return true;
+            return true;
+        }
+
+        if (target.equalsIgnoreCase("all")) {
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                adjustPlayerBlocks(sender, player, type, amount);
             }
-
-            PlayerData playerData = plugin.dataStore.getPlayerData(targetPlayer.getUniqueId());
-            playerData.setAccruedClaimBlocks(amount);
-            plugin.dataStore.savePlayerData(targetPlayer.getUniqueId(), playerData);
-
-            if (sender instanceof Player player) {
-                GriefPrevention.sendMessage(player, TextMode.Success, Messages.SetClaimBlocksSuccess);
+            if (sender instanceof Player) {
+                GriefPrevention.sendMessage(
+                    (Player) sender,
+                    TextMode.Success,
+                    "Adjusted " + type + " blocks for all online players by " + amount + "."
+                );
             } else {
-                sender.sendMessage("Set " + targetPlayer.getName() + "'s accrued claim blocks to " + amount);
+                sender.sendMessage("Adjusted " + type + " blocks for all online players by " + amount + ".");
             }
         } else {
-            if (sender instanceof Player player) {
-                GriefPrevention.sendMessage(player, TextMode.Err, "Unknown operation: " + operation + ". Use 'add' or 'set'.");
-            } else {
-                sender.sendMessage("Unknown operation: " + operation + ". Use 'add' or 'set'.");
+            OfflinePlayer offlinePlayer = plugin.resolvePlayerByName(target);
+            if (offlinePlayer == null) {
+                if (sender instanceof Player) {
+                    GriefPrevention.sendMessage((Player) sender, TextMode.Err, Messages.PlayerNotFound2);
+                } else {
+                    sender.sendMessage(plugin.dataStore.getMessage(Messages.PlayerNotFound2));
+                }
+                return true;
             }
+            adjustPlayerBlocks(sender, offlinePlayer, type, amount);
         }
 
         return true;
+    }
+
+    private void adjustPlayerBlocks(CommandSender sender, OfflinePlayer player, String type, int amount) {
+        PlayerData playerData = plugin.dataStore.getPlayerData(player.getUniqueId());
+        if (type.equals("bonus")) {
+            playerData.setBonusClaimBlocks(playerData.getBonusClaimBlocks() + amount);
+        } else {
+            // accrued
+            playerData.setAccruedClaimBlocks(playerData.getAccruedClaimBlocks() + amount);
+        }
+        plugin.dataStore.savePlayerData(player.getUniqueId(), playerData);
+
+        if (sender instanceof Player) {
+            GriefPrevention.sendMessage(
+                (Player) sender,
+                TextMode.Success,
+                "Adjusted " + player.getName() + "'s " + type + " blocks by " + amount + "."
+            );
+        } else {
+            sender.sendMessage("Adjusted " + player.getName() + "'s " + type + " blocks by " + amount + ".");
+        }
     }
 
     private boolean handleDelete(CommandSender sender, String[] args) {
@@ -423,9 +495,13 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
                 plugin.deleteClaimPublic(claim, true);
                 GriefPrevention.sendMessage(player, TextMode.Success, Messages.DeleteSuccess);
                 GriefPrevention.AddLogEntry(
-                        player.getName() + " deleted " + claim.getOwnerName() + "'s claim at "
-                                + GriefPrevention.getfriendlyLocationString(claim.getLesserBoundaryCorner()),
-                        CustomLogEntryTypes.AdminActivity);
+                    player.getName() +
+                        " deleted " +
+                        claim.getOwnerName() +
+                        "'s claim at " +
+                        GriefPrevention.getfriendlyLocationString(claim.getLesserBoundaryCorner()),
+                    CustomLogEntryTypes.AdminActivity
+                );
                 playerData.setVisibleBoundaries(null);
                 playerData.warnedAboutMajorDeletion = false;
             }
@@ -456,8 +532,11 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
         }
 
         GriefPrevention.AddLogEntry(
-                (sender instanceof Player ? ((Player) sender).getName() : "Console") + " deleted all claims belonging to " + targetPlayer.getName(),
-                CustomLogEntryTypes.AdminActivity);
+            (sender instanceof Player ? ((Player) sender).getName() : "Console") +
+                " deleted all claims belonging to " +
+                targetPlayer.getName(),
+            CustomLogEntryTypes.AdminActivity
+        );
         return true;
     }
 
@@ -539,9 +618,15 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
 
         // confirm
         GriefPrevention.sendMessage(player, TextMode.Success, Messages.TransferSuccess);
-        GriefPrevention.AddLogEntry(player.getName() + " transferred a claim at "
-                + GriefPrevention.getfriendlyLocationString(claim.getLesserBoundaryCorner()) + " to " + ownerName
-                + ".", CustomLogEntryTypes.AdminActivity);
+        GriefPrevention.AddLogEntry(
+            player.getName() +
+                " transferred a claim at " +
+                GriefPrevention.getfriendlyLocationString(claim.getLesserBoundaryCorner()) +
+                " to " +
+                ownerName +
+                ".",
+            CustomLogEntryTypes.AdminActivity
+        );
 
         return true;
     }
@@ -587,8 +672,7 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
         OfflinePlayer targetPlayer = plugin.resolvePlayerByName(targetPlayerName);
         if (targetPlayer == null || !targetPlayer.hasPlayedBefore()) {
             if (sender instanceof Player player) {
-                GriefPrevention.sendMessage(player, TextMode.Err, Messages.ClaimExpiryPlayerNotFound,
-                        targetPlayerName);
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.ClaimExpiryPlayerNotFound, targetPlayerName);
             } else {
                 sender.sendMessage("Could not find player: " + targetPlayerName);
             }
@@ -599,8 +683,7 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
         PlayerData playerData = plugin.dataStore.getPlayerData(targetPlayer.getUniqueId());
         if (playerData == null) {
             if (sender instanceof Player player) {
-                GriefPrevention.sendMessage(player, TextMode.Err, Messages.ClaimExpiryPlayerNotFound,
-                        targetPlayerName);
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.ClaimExpiryPlayerNotFound, targetPlayerName);
             } else {
                 sender.sendMessage("Could not find player data for: " + targetPlayerName);
             }
@@ -611,8 +694,12 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
         java.util.List<Claim> claims = playerData.getClaims();
         if (claims.isEmpty()) {
             if (sender instanceof Player player) {
-                GriefPrevention.sendMessage(player, TextMode.Info, Messages.ClaimExpiryPlayerNoClaims,
-                        targetPlayer.getName());
+                GriefPrevention.sendMessage(
+                    player,
+                    TextMode.Info,
+                    Messages.ClaimExpiryPlayerNoClaims,
+                    targetPlayer.getName()
+                );
             } else {
                 sender.sendMessage(targetPlayer.getName() + " has no claims.");
             }
@@ -627,17 +714,21 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
     private void showSingleClaimExpiry(CommandSender sender, Claim claim) {
         // Show header for single claim
         if (sender instanceof Player player) {
-            GriefPrevention.sendMessage(player, TextMode.Info, Messages.ClaimExpiryHeader,
-                    claim.getOwnerName());
+            GriefPrevention.sendMessage(player, TextMode.Info, Messages.ClaimExpiryHeader, claim.getOwnerName());
         } else {
             sender.sendMessage("Claim expiration for " + claim.getOwnerName() + ":");
         }
 
         // Show location
-        String location = claim.getLesserBoundaryCorner().getWorld().getName() + " (" +
-                claim.getLesserBoundaryCorner().getBlockX() + ", " +
-                claim.getLesserBoundaryCorner().getBlockY() + ", " +
-                claim.getLesserBoundaryCorner().getBlockZ() + ")";
+        String location =
+            claim.getLesserBoundaryCorner().getWorld().getName() +
+            " (" +
+            claim.getLesserBoundaryCorner().getBlockX() +
+            ", " +
+            claim.getLesserBoundaryCorner().getBlockY() +
+            ", " +
+            claim.getLesserBoundaryCorner().getBlockZ() +
+            ")";
 
         if (sender instanceof Player player) {
             GriefPrevention.sendMessage(player, TextMode.Info, Messages.ClaimExpiryLocation, location);
@@ -654,19 +745,28 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
         }
     }
 
-    private void showPlayerClaimsExpiry(CommandSender sender, OfflinePlayer targetPlayer, java.util.List<Claim> claims) {
+    private void showPlayerClaimsExpiry(
+        CommandSender sender,
+        OfflinePlayer targetPlayer,
+        java.util.List<Claim> claims
+    ) {
         // Check if player is online
         boolean isOnline = targetPlayer.isOnline();
 
         // Send header
         if (sender instanceof Player player) {
-            GriefPrevention.sendMessage(player, TextMode.Info, Messages.ClaimExpiryPlayerHeading,
-                    targetPlayer.getName());
+            GriefPrevention.sendMessage(
+                player,
+                TextMode.Info,
+                Messages.ClaimExpiryPlayerHeading,
+                targetPlayer.getName()
+            );
             if (isOnline) {
                 int maxDays = plugin.config_claims_expirationDays;
                 if (maxDays > 0) {
                     player.sendMessage(
-                            "§7Player is online. Claims will expire after §e" + maxDays + " days§7 of inactivity.");
+                        "§7Player is online. Claims will expire after §e" + maxDays + " days§7 of inactivity."
+                    );
                 } else {
                     player.sendMessage("§7Player is online. Claims are configured to never expire.");
                 }
@@ -677,7 +777,8 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
                 int maxDays = plugin.config_claims_expirationDays;
                 if (maxDays > 0) {
                     sender.sendMessage(
-                            "Player is online. Claims will expire after " + maxDays + " days of inactivity.");
+                        "Player is online. Claims will expire after " + maxDays + " days of inactivity."
+                    );
                 } else {
                     sender.sendMessage("Player is online. Claims are configured to never expire.");
                 }
@@ -687,14 +788,18 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
         // Display each claim with expiry info
         for (Claim claim : claims) {
             String expiryInfo = getClaimExpiryInfo(claim, targetPlayer, isOnline);
-            String location = claim.getLesserBoundaryCorner().getWorld().getName() + " (" +
-                    claim.getLesserBoundaryCorner().getBlockX() + ", " +
-                    claim.getLesserBoundaryCorner().getBlockY() + ", " +
-                    claim.getLesserBoundaryCorner().getBlockZ() + ")";
+            String location =
+                claim.getLesserBoundaryCorner().getWorld().getName() +
+                " (" +
+                claim.getLesserBoundaryCorner().getBlockX() +
+                ", " +
+                claim.getLesserBoundaryCorner().getBlockY() +
+                ", " +
+                claim.getLesserBoundaryCorner().getBlockZ() +
+                ")";
 
             if (sender instanceof Player player) {
-                GriefPrevention.sendMessage(player, TextMode.Info, Messages.ClaimExpiryListEntry,
-                        location, expiryInfo);
+                GriefPrevention.sendMessage(player, TextMode.Info, Messages.ClaimExpiryListEntry, location, expiryInfo);
             } else {
                 sender.sendMessage("- " + location + ": " + expiryInfo);
             }
@@ -740,9 +845,10 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
         }
 
         PlayerData ownerData = plugin.dataStore.getPlayerData(owner.getUniqueId());
-        boolean isChestClaim = ownerData.getClaims().size() == 1 &&
-                claim.getArea() <= areaOfDefaultClaim &&
-                plugin.config_claims_chestClaimExpirationDays > 0;
+        boolean isChestClaim =
+            ownerData.getClaims().size() == 1 &&
+            claim.getArea() <= areaOfDefaultClaim &&
+            plugin.config_claims_chestClaimExpirationDays > 0;
 
         if (isChestClaim) {
             expirationDays = plugin.config_claims_chestClaimExpirationDays;
@@ -790,9 +896,10 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
         }
 
         PlayerData ownerData = plugin.dataStore.getPlayerData(player.getUniqueId());
-        boolean isChestClaim = ownerData.getClaims().size() == 1 &&
-                claim.getArea() <= areaOfDefaultClaim &&
-                plugin.config_claims_chestClaimExpirationDays > 0;
+        boolean isChestClaim =
+            ownerData.getClaims().size() == 1 &&
+            claim.getArea() <= areaOfDefaultClaim &&
+            plugin.config_claims_chestClaimExpirationDays > 0;
 
         if (isChestClaim) {
             expirationDays = plugin.config_claims_chestClaimExpirationDays;

@@ -1,22 +1,5 @@
 package com.griefprevention.commands;
 
-import me.ryanhamshire.GriefPrevention.Alias;
-import me.ryanhamshire.GriefPrevention.GriefPrevention;
-import me.ryanhamshire.GriefPrevention.Messages;
-import me.ryanhamshire.GriefPrevention.TextMode;
-import org.bukkit.ChatColor;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandSender;
-import org.bukkit.command.PluginCommand;
-import org.bukkit.command.TabExecutor;
-import org.bukkit.entity.Player;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-
-import org.bukkit.Bukkit;
-import org.bukkit.command.CommandMap;
-import org.bukkit.command.defaults.BukkitCommand;
-
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -28,6 +11,21 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.function.BiFunction;
+import me.ryanhamshire.GriefPrevention.Alias;
+import me.ryanhamshire.GriefPrevention.GriefPrevention;
+import me.ryanhamshire.GriefPrevention.Messages;
+import me.ryanhamshire.GriefPrevention.TextMode;
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.command.Command;
+import org.bukkit.command.CommandMap;
+import org.bukkit.command.CommandSender;
+import org.bukkit.command.PluginCommand;
+import org.bukkit.command.TabExecutor;
+import org.bukkit.command.defaults.BukkitCommand;
+import org.bukkit.entity.Player;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Base class for unified command handlers that support subcommands
@@ -43,7 +41,7 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
     protected final String canonicalCommand;
     protected final CommandAliasConfiguration.RootCommand rootCommandConfig;
     protected final boolean rootCommandEnabled;
-    
+
     // Track dynamically registered commands for cleanup on reload
     private static final List<String> registeredDynamicCommands = new ArrayList<>();
     private static final Object registrationLock = new Object();
@@ -51,21 +49,28 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
     protected UnifiedCommandHandler(@NotNull GriefPrevention plugin, String command) {
         this.plugin = plugin;
         this.canonicalCommand = command.toLowerCase(Locale.ROOT);
-        
+
         // Check if alias system is globally disabled
         if (!plugin.getCommandAliases().isEnabled()) {
             this.rootCommandConfig = null;
             this.rootCommandEnabled = true; // Use defaults when alias system disabled
-            plugin.getLogger()
-                    .info("Initializing command '" + this.canonicalCommand + "' - Using defaults (alias system disabled)");
+            plugin
+                .getLogger()
+                .info("Initializing command '" + this.canonicalCommand + "' - Using defaults (alias system disabled)");
         } else {
             this.rootCommandConfig = plugin.getCommandAliases().getRootCommand(this.canonicalCommand);
             this.rootCommandEnabled = this.rootCommandConfig == null || this.rootCommandConfig.isEnabled();
-            
+
             // Log the enable/disable state for debugging
-            plugin.getLogger()
-                    .info("Initializing command '" + this.canonicalCommand + "' - Enabled: " + this.rootCommandEnabled +
-                            (this.rootCommandConfig != null ? " (from config)" : " (default enabled)"));
+            plugin
+                .getLogger()
+                .info(
+                    "Initializing command '" +
+                        this.canonicalCommand +
+                        "' - Enabled: " +
+                        this.rootCommandEnabled +
+                        (this.rootCommandConfig != null ? " (from config)" : " (default enabled)")
+                );
         }
 
         // Get the primary command name from config (first entry in commands list)
@@ -76,27 +81,35 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
 
         // Check if we need to register a different primary command name
         boolean needsDynamicRegistration = !primaryCommandName.equals(canonicalCommand);
-        
+
         PluginCommand pluginCommand = plugin.getCommand(this.canonicalCommand);
         if (pluginCommand == null) {
             // Try to register the command manually if not found in plugin.yml
             try {
                 pluginCommand = plugin.getServer().getPluginCommand(this.canonicalCommand);
                 if (pluginCommand == null) {
-                    plugin.getLogger().warning("Failed to find command '" + this.canonicalCommand
-                            + "' in plugin.yml. Some functionality may be limited.");
+                    plugin
+                        .getLogger()
+                        .warning(
+                            "Failed to find command '" +
+                                this.canonicalCommand +
+                                "' in plugin.yml. Some functionality may be limited."
+                        );
                     return;
                 }
             } catch (Exception e) {
-                plugin.getLogger().warning(
-                        "Error while trying to register command '" + this.canonicalCommand + "': " + e.getMessage());
+                plugin
+                    .getLogger()
+                    .warning(
+                        "Error while trying to register command '" + this.canonicalCommand + "': " + e.getMessage()
+                    );
                 return;
             }
         }
 
         pluginCommand.setExecutor(this);
         applyRootCommandMetadata(pluginCommand);
-        
+
         // If user configured a different primary command name, register it dynamically
         if (needsDynamicRegistration && rootCommandEnabled) {
             registerDynamicRootCommand(primaryCommandName);
@@ -108,8 +121,10 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
      * This reads the actual standalone names from alias.yml configuration,
      * allowing users to customize command names dynamically.
      */
-    protected void registerStandaloneCommand(@NotNull Alias alias,
-            @NotNull BiFunction<CommandSender, String[], Boolean> handler) {
+    protected void registerStandaloneCommand(
+        @NotNull Alias alias,
+        @NotNull BiFunction<CommandSender, String[], Boolean> handler
+    ) {
         // If alias system is globally disabled, use enum defaults only
         if (!plugin.getCommandAliases().isEnabled()) {
             String enumStandalone = alias.getStandalone();
@@ -132,9 +147,8 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
         }
 
         // Get standalone names from configuration (alias.yml), not from enum
-        CommandAliasConfiguration.Subcommand config = rootCommandConfig != null
-                ? rootCommandConfig.getSubcommand(finalSubcommandName)
-                : null;
+        CommandAliasConfiguration.Subcommand config =
+            rootCommandConfig != null ? rootCommandConfig.getSubcommand(finalSubcommandName) : null;
 
         List<String> standaloneNames;
         if (config != null && !config.getStandalone().isEmpty()) {
@@ -165,11 +179,12 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
      * Dynamically register a standalone command using Bukkit's CommandMap.
      * This allows command names to be configured in alias.yml without being in plugin.yml.
      */
-    private void registerDynamicStandaloneCommand(@NotNull String commandName,
-            @NotNull String subcommandName,
-            @NotNull BiFunction<CommandSender, String[], Boolean> handler,
-            @Nullable CommandAliasConfiguration.Subcommand config) {
-        
+    private void registerDynamicStandaloneCommand(
+        @NotNull String commandName,
+        @NotNull String subcommandName,
+        @NotNull BiFunction<CommandSender, String[], Boolean> handler,
+        @Nullable CommandAliasConfiguration.Subcommand config
+    ) {
         // First try to get from plugin.yml
         PluginCommand pluginCommand = plugin.getCommand(commandName);
         if (pluginCommand != null) {
@@ -193,12 +208,12 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
 
                 // Create a dynamic command
                 DynamicStandaloneCommand dynamicCommand = new DynamicStandaloneCommand(
-                        commandName,
-                        config != null ? config.getDescription() : "GriefPrevention command",
-                        config != null ? config.getUsage() : "/" + commandName,
-                        config != null ? config.getPermission() : "griefprevention.claims",
-                        handler,
-                        subcommandName
+                    commandName,
+                    config != null ? config.getDescription() : "GriefPrevention command",
+                    config != null ? config.getUsage() : "/" + commandName,
+                    config != null ? config.getPermission() : "griefprevention.claims",
+                    handler,
+                    subcommandName
                 );
 
                 // Force-register by removing any existing command with this name first
@@ -207,43 +222,53 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
                     knownCommandsField.setAccessible(true);
                     @SuppressWarnings("unchecked")
                     Map<String, Command> knownCommands = (Map<String, Command>) knownCommandsField.get(map);
-                    
+
                     // Remove existing command if present (allows override)
                     String lowerName = commandName.toLowerCase();
                     knownCommands.remove(lowerName);
-                    
+
                     // Register our command
                     knownCommands.put(lowerName, dynamicCommand);
                     knownCommands.put(plugin.getName().toLowerCase() + ":" + lowerName, dynamicCommand);
-                    
                 } catch (Exception e) {
                     // Fallback to normal registration if reflection fails
                     map.register(plugin.getName().toLowerCase(), dynamicCommand);
                 }
-                
+
                 // Track for cleanup on reload
                 registeredDynamicCommands.add(commandName);
-                
-                plugin.getLogger().info("Registered standalone command: " + commandName + " (dynamically)");
 
+                plugin.getLogger().info("Registered standalone command: " + commandName + " (dynamically)");
             } catch (Exception e) {
-                plugin.getLogger().warning("Failed to dynamically register command '" + commandName + "': " + e.getMessage());
+                plugin
+                    .getLogger()
+                    .warning("Failed to dynamically register command '" + commandName + "': " + e.getMessage());
             }
         }
     }
 
-    private TabExecutor createStandaloneWrapper(@NotNull BiFunction<CommandSender, String[], Boolean> handler,
-            @NotNull String subcommandName) {
+    private TabExecutor createStandaloneWrapper(
+        @NotNull BiFunction<CommandSender, String[], Boolean> handler,
+        @NotNull String subcommandName
+    ) {
         return new TabExecutor() {
             @Override
-            public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label,
-                    @NotNull String[] args) {
+            public boolean onCommand(
+                @NotNull CommandSender sender,
+                @NotNull Command command,
+                @NotNull String label,
+                @NotNull String[] args
+            ) {
                 return handler.apply(sender, args);
             }
 
             @Override
-            public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command,
-                    @NotNull String alias, @NotNull String[] args) {
+            public @Nullable List<String> onTabComplete(
+                @NotNull CommandSender sender,
+                @NotNull Command command,
+                @NotNull String alias,
+                @NotNull String[] args
+            ) {
                 // For standalone commands, directly complete arguments for the specific subcommand
                 // instead of treating it as a root command with subcommand selection
                 String canonical = subcommandName; // subcommandName is already canonical
@@ -252,8 +277,11 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
                     // Create a mock command for TabExecutor
                     org.bukkit.command.Command mockCommand = new org.bukkit.command.Command(canonical) {
                         @Override
-                        public boolean execute(@NotNull org.bukkit.command.CommandSender sender,
-                                @NotNull String commandLabel, @NotNull String[] args) {
+                        public boolean execute(
+                            @NotNull org.bukkit.command.CommandSender sender,
+                            @NotNull String commandLabel,
+                            @NotNull String[] args
+                        ) {
                             return false;
                         }
                     };
@@ -267,8 +295,10 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
         };
     }
 
-    private void applyStandaloneMetadata(@NotNull PluginCommand pluginCommand,
-            @Nullable CommandAliasConfiguration.Subcommand config) {
+    private void applyStandaloneMetadata(
+        @NotNull PluginCommand pluginCommand,
+        @Nullable CommandAliasConfiguration.Subcommand config
+    ) {
         if (config == null) return;
 
         String description = config.getDescription();
@@ -285,22 +315,33 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
     /**
      * Register a legacy standalone command that exists in plugin.yml but not in alias system
      */
-    protected void registerLegacyStandaloneCommand(@NotNull String commandName, @Nullable String permission,
-            @NotNull BiFunction<CommandSender, String[], Boolean> handler) {
+    protected void registerLegacyStandaloneCommand(
+        @NotNull String commandName,
+        @Nullable String permission,
+        @NotNull BiFunction<CommandSender, String[], Boolean> handler
+    ) {
         registerLegacyStandaloneCommand(commandName, permission, handler, Collections.emptyList());
     }
 
     /**
      * Register a legacy standalone command with custom tab completions
      */
-    protected void registerLegacyStandaloneCommand(@NotNull String commandName, @Nullable String permission,
-            @NotNull BiFunction<CommandSender, String[], Boolean> handler, @NotNull List<String> tabCompletions) {
+    protected void registerLegacyStandaloneCommand(
+        @NotNull String commandName,
+        @Nullable String permission,
+        @NotNull BiFunction<CommandSender, String[], Boolean> handler,
+        @Nullable List<String> tabCompletions
+    ) {
         PluginCommand pluginCommand = plugin.getCommand(commandName);
         if (pluginCommand != null) {
             TabExecutor wrapper = new TabExecutor() {
                 @Override
-                public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label,
-                        @NotNull String[] args) {
+                public boolean onCommand(
+                    @NotNull CommandSender sender,
+                    @NotNull Command command,
+                    @NotNull String label,
+                    @NotNull String[] args
+                ) {
                     if (permission != null && !sender.hasPermission(permission)) {
                         sender.sendMessage(org.bukkit.ChatColor.RED + "You don't have permission to use this command.");
                         return true;
@@ -308,13 +349,17 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
                     return handler.apply(sender, args);
                 }
 
-                @Override
-                public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command,
-                        @NotNull String alias, @NotNull String[] args) {
-                    if (args.length == 1 && !tabCompletions.isEmpty()) {
-                        return tabCompletions.stream()
-                                .filter(s -> s.toLowerCase().startsWith(args[0].toLowerCase()))
-                                .collect(java.util.stream.Collectors.toList());
+                public @Nullable List<String> onTabComplete(
+                    @NotNull CommandSender sender,
+                    @NotNull Command command,
+                    @NotNull String alias,
+                    @NotNull String[] args
+                ) {
+                    if (args.length == 1 && tabCompletions != null && !tabCompletions.isEmpty()) {
+                        return tabCompletions
+                            .stream()
+                            .filter(s -> s.toLowerCase().startsWith(args[0].toLowerCase()))
+                            .collect(java.util.stream.Collectors.toList());
                     }
                     return Collections.emptyList();
                 }
@@ -338,7 +383,7 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
             return null;
         }
     }
-    
+
     /**
      * Get a snapshot of currently registered dynamic command names.
      * Used to detect command registration changes during reload.
@@ -360,21 +405,21 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
                 plugin.getLogger().warning("Could not get CommandMap for command unregistration");
                 return;
             }
-            
+
             try {
                 // Get the knownCommands map from SimpleCommandMap
                 Field knownCommandsField = map.getClass().getSuperclass().getDeclaredField("knownCommands");
                 knownCommandsField.setAccessible(true);
                 @SuppressWarnings("unchecked")
                 Map<String, Command> knownCommands = (Map<String, Command>) knownCommandsField.get(map);
-                
+
                 for (String cmdName : registeredDynamicCommands) {
                     // Remove both the plain name and the prefixed version
                     knownCommands.remove(cmdName.toLowerCase());
                     knownCommands.remove(plugin.getName().toLowerCase() + ":" + cmdName.toLowerCase());
                     plugin.getLogger().info("Unregistered dynamic command: " + cmdName);
                 }
-                
+
                 registeredDynamicCommands.clear();
             } catch (Exception e) {
                 plugin.getLogger().warning("Failed to unregister dynamic commands: " + e.getMessage());
@@ -397,10 +442,10 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
 
                 // Create a dynamic root command that delegates to this handler
                 DynamicRootCommand dynamicCommand = new DynamicRootCommand(
-                        commandName,
-                        rootCommandConfig != null ? rootCommandConfig.getDescription() : "GriefPrevention command",
-                        "/" + commandName,
-                        rootCommandConfig != null ? rootCommandConfig.getPermission() : "griefprevention.claims"
+                    commandName,
+                    rootCommandConfig != null ? rootCommandConfig.getDescription() : "GriefPrevention command",
+                    "/" + commandName,
+                    rootCommandConfig != null ? rootCommandConfig.getPermission() : "griefprevention.claims"
                 );
 
                 // Register using reflection to ensure we can override existing commands
@@ -409,21 +454,23 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
                     knownCommandsField.setAccessible(true);
                     @SuppressWarnings("unchecked")
                     Map<String, Command> knownCommands = (Map<String, Command>) knownCommandsField.get(map);
-                    
+
                     String lowerName = commandName.toLowerCase();
                     knownCommands.put(lowerName, dynamicCommand);
                     knownCommands.put(plugin.getName().toLowerCase() + ":" + lowerName, dynamicCommand);
-                    
                 } catch (Exception e) {
                     // Fallback to normal registration
                     map.register(plugin.getName().toLowerCase(), dynamicCommand);
                 }
-                
-                registeredDynamicCommands.add(commandName);
-                plugin.getLogger().info("Registered dynamic root command: " + commandName + " (alias for " + canonicalCommand + ")");
 
+                registeredDynamicCommands.add(commandName);
+                plugin
+                    .getLogger()
+                    .info("Registered dynamic root command: " + commandName + " (alias for " + canonicalCommand + ")");
             } catch (Exception e) {
-                plugin.getLogger().warning("Failed to dynamically register root command '" + commandName + "': " + e.getMessage());
+                plugin
+                    .getLogger()
+                    .warning("Failed to dynamically register root command '" + commandName + "': " + e.getMessage());
             }
         }
     }
@@ -432,13 +479,18 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
      * Dynamic root command that delegates to this handler
      */
     private class DynamicRootCommand extends BukkitCommand {
-        protected DynamicRootCommand(@NotNull String name, @Nullable String description,
-                @Nullable String usageMessage, @Nullable String permission) {
+
+        protected DynamicRootCommand(
+            @NotNull String name,
+            @Nullable String description,
+            @Nullable String usageMessage,
+            @Nullable String permission
+        ) {
             super(name);
             if (description != null) setDescription(description);
             if (usageMessage != null) setUsage(usageMessage);
             if (permission != null) setPermission(permission);
-            
+
             // Set aliases from config (excluding the primary name we're registering as)
             if (rootCommandConfig != null) {
                 List<String> aliases = new ArrayList<>();
@@ -464,7 +516,11 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
         }
 
         @Override
-        public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, @NotNull String[] args) {
+        public @NotNull List<String> tabComplete(
+            @NotNull CommandSender sender,
+            @NotNull String alias,
+            @NotNull String[] args
+        ) {
             List<String> result = UnifiedCommandHandler.this.onTabComplete(sender, this, alias, args);
             return result != null ? result : Collections.emptyList();
         }
@@ -474,13 +530,18 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
      * Dynamic command that can be registered at runtime without being in plugin.yml
      */
     private class DynamicStandaloneCommand extends BukkitCommand {
+
         private final BiFunction<CommandSender, String[], Boolean> handler;
         private final String subcommandName;
 
-        protected DynamicStandaloneCommand(@NotNull String name, @Nullable String description,
-                @Nullable String usageMessage, @Nullable String permission,
-                @NotNull BiFunction<CommandSender, String[], Boolean> handler,
-                @NotNull String subcommandName) {
+        protected DynamicStandaloneCommand(
+            @NotNull String name,
+            @Nullable String description,
+            @Nullable String usageMessage,
+            @Nullable String permission,
+            @NotNull BiFunction<CommandSender, String[], Boolean> handler,
+            @NotNull String subcommandName
+        ) {
             super(name);
             this.handler = handler;
             this.subcommandName = subcommandName;
@@ -499,7 +560,11 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
         }
 
         @Override
-        public @NotNull List<String> tabComplete(@NotNull CommandSender sender, @NotNull String alias, @NotNull String[] args) {
+        public @NotNull List<String> tabComplete(
+            @NotNull CommandSender sender,
+            @NotNull String alias,
+            @NotNull String[] args
+        ) {
             // For standalone commands, directly complete arguments for the specific subcommand
             // instead of treating it as a root command with subcommand selection
             String canonical = subcommandName; // subcommandName is already canonical
@@ -508,8 +573,11 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
                 // Create a mock command for TabExecutor
                 org.bukkit.command.Command mockCommand = new org.bukkit.command.Command(canonical) {
                     @Override
-                    public boolean execute(@NotNull org.bukkit.command.CommandSender sender,
-                            @NotNull String commandLabel, @NotNull String[] args) {
+                    public boolean execute(
+                        @NotNull org.bukkit.command.CommandSender sender,
+                        @NotNull String commandLabel,
+                        @NotNull String[] args
+                    ) {
                         return false;
                     }
                 };
@@ -538,11 +606,18 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
     }
 
     @Override
-    public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label,
-            @NotNull String[] args) {
+    public boolean onCommand(
+        @NotNull CommandSender sender,
+        @NotNull Command command,
+        @NotNull String label,
+        @NotNull String[] args
+    ) {
         if (!rootCommandEnabled) {
-            plugin.getLogger().info(
-                    "Command '" + this.canonicalCommand + "' is disabled, blocking execution for " + sender.getName());
+            plugin
+                .getLogger()
+                .info(
+                    "Command '" + this.canonicalCommand + "' is disabled, blocking execution for " + sender.getName()
+                );
             sender.sendMessage("This command is disabled.");
             return true;
         }
@@ -565,16 +640,27 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
                     // Create a mock command for TabExecutor
                     org.bukkit.command.Command mockCommand = new org.bukkit.command.Command(canonicalSubcommand) {
                         @Override
-                        public boolean execute(@NotNull org.bukkit.command.CommandSender sender,
-                                @NotNull String commandLabel, @NotNull String[] args) {
+                        public boolean execute(
+                            @NotNull org.bukkit.command.CommandSender sender,
+                            @NotNull String commandLabel,
+                            @NotNull String[] args
+                        ) {
                             return false;
                         }
                     };
-                    handled = ((TabExecutor) handlerObj).onCommand(sender, mockCommand, canonicalSubcommand,
-                            translated);
+                    handled = ((TabExecutor) handlerObj).onCommand(
+                        sender,
+                        mockCommand,
+                        canonicalSubcommand,
+                        translated
+                    );
                 } else if (handlerObj instanceof BiFunction) {
                     @SuppressWarnings("unchecked")
-                    BiFunction<CommandSender, String[], Boolean> biFunctionHandler = (BiFunction<CommandSender, String[], Boolean>) handlerObj;
+                    BiFunction<CommandSender, String[], Boolean> biFunctionHandler = (BiFunction<
+                        CommandSender,
+                        String[],
+                        Boolean
+                    >) handlerObj;
                     handled = biFunctionHandler.apply(sender, translated);
                 } else {
                     // Unknown handler type, skip
@@ -605,12 +691,14 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
     /**
      * Register a subcommand handler
      */
-    protected void registerSubcommand(String name, BiFunction<CommandSender, String[], Boolean> handler,
-            String... defaultAliases) {
+    protected void registerSubcommand(
+        String name,
+        BiFunction<CommandSender, String[], Boolean> handler,
+        String... defaultAliases
+    ) {
         String canonical = name.toLowerCase(Locale.ROOT);
-        CommandAliasConfiguration.Subcommand config = rootCommandConfig != null
-                ? rootCommandConfig.getSubcommand(canonical)
-                : null;
+        CommandAliasConfiguration.Subcommand config =
+            rootCommandConfig != null ? rootCommandConfig.getSubcommand(canonical) : null;
         if (config != null && !config.isEnabled()) {
             return;
         }
@@ -645,9 +733,8 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
      */
     protected void registerSubcommand(String name, TabExecutor tabExecutor, String... defaultAliases) {
         String canonical = name.toLowerCase(Locale.ROOT);
-        CommandAliasConfiguration.Subcommand config = rootCommandConfig != null
-                ? rootCommandConfig.getSubcommand(canonical)
-                : null;
+        CommandAliasConfiguration.Subcommand config =
+            rootCommandConfig != null ? rootCommandConfig.getSubcommand(canonical) : null;
         if (config != null && !config.isEnabled()) {
             return;
         }
@@ -692,11 +779,9 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
         }
 
         for (String alias : aliases) {
-            if (alias == null)
-                continue;
+            if (alias == null) continue;
             String lowerAlias = alias.toLowerCase(Locale.ROOT).trim();
-            if (lowerAlias.isEmpty() || lowerAlias.equals(canonical))
-                continue;
+            if (lowerAlias.isEmpty() || lowerAlias.equals(canonical)) continue;
             if (!aliasList.contains(lowerAlias)) {
                 aliasList.add(lowerAlias);
             }
@@ -705,15 +790,20 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
     }
 
     @Override
-    public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command command,
-            @NotNull String alias, @NotNull String[] args) {
+    public @Nullable List<String> onTabComplete(
+        @NotNull CommandSender sender,
+        @NotNull Command command,
+        @NotNull String alias,
+        @NotNull String[] args
+    ) {
         if (args.length == 1) {
             // Suggest subcommands that start with the partial input
             // Use tabCompletionSuggestions which contains only the configured aliases
             String prefix = args[0].toLowerCase(Locale.ROOT);
-            return tabCompletionSuggestions.stream()
-                    .filter(name -> name.toLowerCase(Locale.ROOT).startsWith(prefix))
-                    .collect(java.util.stream.Collectors.toList());
+            return tabCompletionSuggestions
+                .stream()
+                .filter(name -> name.toLowerCase(Locale.ROOT).startsWith(prefix))
+                .collect(java.util.stream.Collectors.toList());
         } else if (args.length >= 2) {
             // User has typed a space after the subcommand, now complete arguments
             String subcommand = args[0].toLowerCase();
@@ -726,8 +816,11 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
                 // Create a mock command for TabExecutor
                 org.bukkit.command.Command mockCommand = new org.bukkit.command.Command(canonical) {
                     @Override
-                    public boolean execute(@NotNull org.bukkit.command.CommandSender sender,
-                            @NotNull String commandLabel, @NotNull String[] args) {
+                    public boolean execute(
+                        @NotNull org.bukkit.command.CommandSender sender,
+                        @NotNull String commandLabel,
+                        @NotNull String[] args
+                    ) {
                         return false;
                     }
                 };
@@ -749,11 +842,9 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
 
         List<String> aliases = new ArrayList<>();
         for (String alias : rootCommandConfig.getCommands()) {
-            if (alias == null)
-                continue;
+            if (alias == null) continue;
             String trimmed = alias.trim();
-            if (trimmed.isEmpty())
-                continue;
+            if (trimmed.isEmpty()) continue;
             if (!trimmed.equalsIgnoreCase(canonicalCommand)) {
                 aliases.add(trimmed);
             }
@@ -811,10 +902,12 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
         }
 
         // Get all enabled subcommands
-        List<Map.Entry<String, CommandAliasConfiguration.Subcommand>> entries = subcommandConfigs.entrySet().stream()
-                .filter(entry -> entry.getValue() != null && entry.getValue().isEnabled())
-                .sorted(Map.Entry.comparingByKey())
-                .collect(java.util.stream.Collectors.toList());
+        List<Map.Entry<String, CommandAliasConfiguration.Subcommand>> entries = subcommandConfigs
+            .entrySet()
+            .stream()
+            .filter(entry -> entry.getValue() != null && entry.getValue().isEnabled())
+            .sorted(Map.Entry.comparingByKey())
+            .collect(java.util.stream.Collectors.toList());
 
         int commandsPerPage = 8;
         int totalPages = (int) Math.ceil((double) entries.size() / commandsPerPage);
@@ -823,10 +916,12 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
         int end = Math.min(start + commandsPerPage, entries.size());
 
         // Send header
-        Messages headerMessage = "aclaim".equalsIgnoreCase(getPrimaryRootAlias()) ? Messages.AClaimHelpHeader
-                : Messages.ClaimHelpHeader;
-        Messages legendMessage = "aclaim".equalsIgnoreCase(getPrimaryRootAlias()) ? Messages.AClaimHelpLegend
-                : Messages.ClaimHelpLegend;
+        Messages headerMessage = "aclaim".equalsIgnoreCase(getPrimaryRootAlias())
+            ? Messages.AClaimHelpHeader
+            : Messages.ClaimHelpHeader;
+        Messages legendMessage = "aclaim".equalsIgnoreCase(getPrimaryRootAlias())
+            ? Messages.AClaimHelpLegend
+            : Messages.ClaimHelpLegend;
 
         // Send header and legend messages
         if (sender instanceof Player player) {
@@ -835,8 +930,16 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
             GriefPrevention.sendMessage(player, TextMode.Info, legendMessage);
             GriefPrevention.sendMessage(player, TextMode.Info, "");
         } else {
-            sender.sendMessage(ChatColor.GOLD + "Available /" + getPrimaryRootAlias() + " commands (Page " + page + "/"
-                    + totalPages + "):");
+            sender.sendMessage(
+                ChatColor.GOLD +
+                    "Available /" +
+                    getPrimaryRootAlias() +
+                    " commands (Page " +
+                    page +
+                    "/" +
+                    totalPages +
+                    "):"
+            );
             sender.sendMessage("");
             String legendText = GriefPrevention.instance.dataStore.getMessage(legendMessage, "");
             String[] legendParts = (legendText != null ? legendText : "").split(" - ", 2);
@@ -885,13 +988,14 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
             sender.sendMessage("");
             if (page < totalPages) {
                 Messages paginationMsg = this.canonicalCommand.equalsIgnoreCase("aclaim")
-                        ? Messages.AClaimHelpPagination
-                        : Messages.ClaimHelpPagination;
+                    ? Messages.AClaimHelpPagination
+                    : Messages.ClaimHelpPagination;
                 sender.sendMessage(plugin.dataStore.getMessage(paginationMsg, String.valueOf(page + 1)));
             }
             if (page > 1) {
-                sender.sendMessage(ChatColor.GRAY + "Type /" + getPrimaryRootAlias() + " " + (page - 1)
-                        + " for the previous page.");
+                sender.sendMessage(
+                    ChatColor.GRAY + "Type /" + getPrimaryRootAlias() + " " + (page - 1) + " for the previous page."
+                );
             }
         }
     }
@@ -943,12 +1047,14 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
         return result;
     }
 
-    private @NotNull List<String> completeSubcommandArguments(@NotNull CommandSender sender,
-            @NotNull Command command,
-            @NotNull String alias,
-            @NotNull String canonical,
-            @NotNull String[] subArgs,
-            int argumentIndex) {
+    private @NotNull List<String> completeSubcommandArguments(
+        @NotNull CommandSender sender,
+        @NotNull Command command,
+        @NotNull String alias,
+        @NotNull String canonical,
+        @NotNull String[] subArgs,
+        int argumentIndex
+    ) {
         CommandAliasConfiguration.Subcommand config = subcommandConfigs.get(canonical);
         if (config == null) {
             return Collections.emptyList();
@@ -993,8 +1099,9 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
                         suggestions.addAll(players);
                     }
                     case "integer" -> suggestions.addAll(TabCompletions.integer(new String[] { current }, 6, false));
-                    case "integer-negative" ->
-                        suggestions.addAll(TabCompletions.integer(new String[] { current }, 6, true));
+                    case "integer-negative" -> suggestions.addAll(
+                        TabCompletions.integer(new String[] { current }, 6, true)
+                    );
                     default -> {
                         // no special handling
                     }
@@ -1004,14 +1111,14 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
 
         // Add option suggestions from the argument configuration
         for (String suggestion : argument.suggestions()) {
-            if (suggestion == null)
-                continue;
+            if (suggestion == null) continue;
             suggestions.add(suggestion);
         }
 
-        return suggestions.stream()
-                .filter(suggestion -> suggestion.toLowerCase(Locale.ROOT).startsWith(lowerPrefix))
-                .collect(java.util.stream.Collectors.toList());
+        return suggestions
+            .stream()
+            .filter(suggestion -> suggestion.toLowerCase(Locale.ROOT).startsWith(lowerPrefix))
+            .collect(java.util.stream.Collectors.toList());
     }
 
     /**
@@ -1023,8 +1130,11 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
      * @param inputValue     The input value to resolve (e.g., "adjust")
      * @return The canonical option name, or the input value if no alias found
      */
-    protected @NotNull String resolveOptionAlias(@NotNull String subcommandName, @NotNull String argumentName,
-            @NotNull String inputValue) {
+    protected @NotNull String resolveOptionAlias(
+        @NotNull String subcommandName,
+        @NotNull String argumentName,
+        @NotNull String inputValue
+    ) {
         CommandAliasConfiguration.Subcommand config = subcommandConfigs.get(subcommandName.toLowerCase(Locale.ROOT));
         if (config == null) {
             return inputValue;

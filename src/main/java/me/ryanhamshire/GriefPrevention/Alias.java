@@ -25,342 +25,424 @@ import org.jetbrains.annotations.NotNull;
  * These are used to populate missing keys in user configurations
  */
 public enum Alias {
+    // Commands section
+    ClaimCommand(
+        """
+        enable: true
+        commands: [claim]
+        description: Command to manage your claim(s)
+        permission: griefprevention.claims
+        """,
+        "claim"
+    ),
 
-  // Commands section
-  ClaimCommand("""
-      enable: true
-      commands: [claim]
-      description: Command to manage your claim(s)
-      permission: griefprevention.claims
-      """, "claim"),
+    AClaimCommand(
+        """
+        enable: true
+        commands: [aclaim]
+        description: Command to manage administrative claims
+        permission: griefprevention.adminclaims
+        """,
+        "aclaim"
+    ),
 
-  AClaimCommand("""
-      enable: true
-      commands: [aclaim]
-      description: Command to manage administrative claims
-      permission: griefprevention.adminclaims
-      """, "aclaim"),
+    // Subcommands section - claim commands
+    ClaimCreate(
+        """
+        enable: true
+        commands: [create]
+        standalone: [createclaim]
+        usage: "/claim create [radius]"
+        description: Create or expand a claim centered on you.
+        arguments:
+          radius:
+            type: integer
+        """,
+        "createclaim"
+    ),
 
-  // Subcommands section - claim commands
-  ClaimCreate("""
-      enable: true
-      commands: [create]
-      standalone: [createclaim]
-      usage: "/claim create [radius]"
-      description: Create or expand a claim centered on you.
-      arguments:
-        radius:
-          type: integer
-      """, "createclaim"),
+    ClaimTrust(
+        """
+        enable: true
+        commands: [trust]
+        standalone: [trust]
+        usage: "/claim trust <player> [type]"
+        description: Grant a player access to your claim.
+        arguments:
+          player:
+            type: player
+          type:
+            options:
+              access: [access]
+              container: [container]
+              permission: [permission]
+              build: [build]
+        """,
+        "trust"
+    ),
 
-  ClaimTrust("""
-      enable: true
-      commands: [trust]
-      standalone: [trust]
-      usage: "/claim trust <player> [type]"
-      description: Grant a player access to your claim.
-      arguments:
-        player:
-          type: player
-        type:
+    ClaimUntrust(
+        """
+        enable: true
+        commands: [untrust]
+        standalone: [untrust]
+        usage: "/claim untrust <player|all>"
+        description: Revoke claim access from a player or everyone.
+        arguments:
           options:
-            access: [access]
-            container: [container]
-            permission: [permission]
-            build: [build]
-      """, "trust"),
-
-  ClaimUntrust("""
-      enable: true
-      commands: [untrust]
-      standalone: [untrust]
-      usage: "/claim untrust <player|all>"
-      description: Revoke claim access from a player or everyone.
-      arguments:
-        options:
-          player: player
-          all: [all]
-          public: [public]
-      """, "untrust"),
-
-  ClaimTrustlist("""
-      enable: true
-      commands: [trustlist]
-      standalone: [trustlist]
-      usage: "/claim trustlist"
-      description: Show players who have access to this claim.
-      """, "trustlist"),
-
-  ClaimList("""
-      enable: true
-      commands: [list]
-      standalone: [claimslist]
-      usage: "/claim list [player]"
-      description: List claims owned by you or another player.
-      arguments:
-        player:
-          type: player
-      """, "claimslist"),
-
-  ClaimMode("""
-      enable: true
-      commands: [mode]
-      standalone: [basicclaims]
-      usage: "/claim mode <basic|2d|3d>"
-      description: Change your golden shovel claim mode.
-      arguments:
-        mode:
-          options:
-            basic: [basic]
-            2d: [2d, subdivide]
-            3d: [3d]
-      """, "basicclaims"),
-
-  ClaimRestrictSubclaim("""
-      enable: true
-      commands: [restrictsubclaim]
-      standalone: [restrictsubclaim]
-      usage: "/claim restrictsubclaim"
-      description: Toggle whether a subdivision inherits parent permissions.
-      """, "restrictsubclaim"),
-
-  ClaimBuyBlocks("""
-      enable: true
-      commands: [buyblocks]
-      standalone: [buyclaimblocks]
-      usage: "/claim buyblocks <amount>"
-      description: Purchase additional claim blocks with server currency.
-      arguments:
-        amount:
-          type: integer
-      """, "buyclaimblocks"),
-
-  ClaimSellBlocks("""
-      enable: true
-      commands: [sellblocks]
-      standalone: [sellclaimblocks]
-      usage: "/claim sellblocks <amount>"
-      description: Sell claim blocks for server currency.
-      arguments:
-        amount:
-          type: integer
-      """, "sellclaimblocks"),
-
-  ClaimExplosions("""
-      enable: true
-      commands: [explosions]
-      standalone: [claimexplosions]
-      usage: "/claim explosions [on|off]"
-      description: Toggle explosions inside your current claim.
-      arguments:
-        state:
-          options:
-            on: [on]
-            off: [off]
-      """, "explosions"),
-
-  ClaimAbandon("""
-      enable: true
-      commands: [abandon]
-      standalone: [abandonclaim]
-      usage: "/claim abandon [all]"
-      description: Abandon the claim you are standing in or all claims you own.
-      arguments:
-        scope:
-          options:
+            player: player
             all: [all]
-      """, "abandonclaim"),
+            public: [public]
+        """,
+        "untrust"
+    ),
 
-  ClaimSiege("""
-      enable: true
-      commands: [siege]
-      standalone: [siege]
-      usage: "/claim siege <player>"
-      description: Challenge another player to a siege (if enabled).
-      arguments:
-        player:
-          type: player
-      """, "siege"),
+    ClaimTrustlist(
+        """
+        enable: true
+        commands: [trustlist]
+        standalone: [trustlist]
+        usage: "/claim trustlist"
+        description: Show players who have access to this claim.
+        """,
+        "trustlist"
+    ),
 
-  ClaimTrapped("""
-      enable: true
-      commands: [trapped]
-      standalone: [trapped]
-      usage: "/claim trapped"
-      description: Attempt to escape if you are stuck inside a claim.
-      """, "trapped"),
+    ClaimList(
+        """
+        enable: true
+        commands: [list]
+        standalone: [claimslist]
+        usage: "/claim list [player]"
+        description: List claims owned by you or another player.
+        arguments:
+          player:
+            type: player
+        """,
+        "claimslist"
+    ),
 
-  ClaimExpand("""
-      enable: true
-      commands: [expand]
-      standalone: [expandclaim, extendclaim]
-      usage: "/claim expand <numberOfBlocks>"
-      description: Expand the claim you're standing in by pushing or pulling its boundary.
-      arguments:
-        numberOfBlocks:
-          type: integer-negative
-      """, "expandclaim"),
+    ClaimMode(
+        """
+        enable: true
+        commands: [mode]
+        standalone: [basicclaims]
+        usage: "/claim mode <basic|2d|3d>"
+        description: Change your golden shovel claim mode.
+        arguments:
+          mode:
+            options:
+              basic: [basic]
+              2d: [2d, subdivide]
+              3d: [3d]
+        """,
+        "basicclaims"
+    ),
 
-  ClaimHelp("""
-      enable: true
-      commands: [help]
-      standalone: [claimhelp]
-      usage: "/claim help [page]"
-      description: View a list of all available claim subcommands.
-      arguments:
-        page:
-          type: integer
-      """, "claimhelp"),
+    ClaimRestrictSubclaim(
+        """
+        enable: true
+        commands: [restrictsubclaim]
+        standalone: [restrictsubclaim]
+        usage: "/claim restrictsubclaim"
+        description: Toggle whether a subdivision inherits parent permissions.
+        """,
+        "restrictsubclaim"
+    ),
 
-  // Subcommands section - aclaim commands
-  AClaimRestore("""
-      enable: true
-      commands: [restore]
-      standalone: [restorenature]
-      usage: "/aclaim restore [type] [radius]"
-      description: Restore an area to nature. Types: nature (default), aggressive, fill.
-      arguments:
-        type:
-          options:
-            nature: [nature]
-            aggressive: [aggressive]
-            fill: [fill]
-        radius:
-          type: integer
-      """, "restorenature"),
+    ClaimBuyBlocks(
+        """
+        enable: true
+        commands: [buyblocks]
+        standalone: [buyclaimblocks]
+        usage: "/claim buyblocks <amount>"
+        description: Purchase additional claim blocks with server currency.
+        arguments:
+          amount:
+            type: integer
+        """,
+        "buyclaimblocks"
+    ),
 
-  AClaimIgnore("""
-      enable: true
-      commands: [ignore]
-      standalone: [ignoreclaims]
-      usage: "/aclaim ignore"
-      description: Toggle ignoring nearby claims.
-      """, "ignoreclaims"),
+    ClaimSellBlocks(
+        """
+        enable: true
+        commands: [sellblocks]
+        standalone: [sellclaimblocks]
+        usage: "/claim sellblocks <amount>"
+        description: Sell claim blocks for server currency.
+        arguments:
+          amount:
+            type: integer
+        """,
+        "sellclaimblocks"
+    ),
 
-  AClaimMode("""
-      enable: true
-      commands: [mode]
-      standalone: [adminclaims]
-      usage: "/aclaim mode <admin>"
-      description: Switch your shovel to admin-claim mode.
-      arguments:
-        mode:
-          options:
-            admin: [admin]
-      """, "adminclaims"),
+    ClaimExplosions(
+        """
+        enable: true
+        commands: [explosions]
+        standalone: [claimexplosions]
+        usage: "/claim explosions [on|off]"
+        description: Toggle explosions inside your current claim.
+        arguments:
+          state:
+            options:
+              on: [on]
+              off: [off]
+        """,
+        "explosions"
+    ),
 
-  AClaimAdminList("""
-      enable: true
-      commands: [adminlist]
-      standalone: [adminclaimslist]
-      usage: "/adminlist"
-      description: List administrative claims on the current server.
-      """, "adminclaimslist"),
+    ClaimAbandon(
+        """
+        enable: true
+        commands: [abandon]
+        standalone: [abandonclaim]
+        usage: "/claim abandon [all]"
+        description: Abandon the claim you are standing in or all claims you own.
+        arguments:
+          scope:
+            options:
+              all: [all]
+        """,
+        "abandonclaim"
+    ),
 
-  AClaimList("""
-      enable: true
-      commands: [adminclaimslist]
-      usage: "/aclaim list [player]"
-      description: Show claims owned by a player (including admin claims).
-      arguments:
-        player:
-          type: player
-      """, "adminclaimslist"),
+    ClaimSiege(
+        """
+        enable: true
+        commands: [siege]
+        standalone: [siege]
+        usage: "/claim siege <player>"
+        description: Challenge another player to a siege (if enabled).
+        arguments:
+          player:
+            type: player
+        """,
+        "siege"
+    ),
 
-  AClaimCheckExpiry("""
-      enable: true
-      commands: [checkexpiry]
-      standalone: [claimcheckexpiry]
-      usage: "/aclaim checkexpiry <player>"
-      description: View claim expiration details for a player.
-      arguments:
-        player:
-          type: player
-      """, "claimcheckexpiry"),
+    ClaimTrapped(
+        """
+        enable: true
+        commands: [trapped]
+        standalone: [trapped]
+        usage: "/claim trapped"
+        description: Attempt to escape if you are stuck inside a claim.
+        """,
+        "trapped"
+    ),
 
-  AClaimBlocks("""
-      enable: true
-      commands: [blocks]
-      standalone: [adjustbonusclaimblocks]
-      usage: "/aclaim blocks <add|set> <player> [amount]"
-      description: Adjust a player's claim block balance.
-      arguments:
-        action:
-          options:
-            add: [add, adjust]
-            set: [set]
-        player:
-          type: player
-        amount:
-          type: integer
-      """, "adjustbonusclaimblocks"),
+    ClaimExpand(
+        """
+        enable: true
+        commands: [expand]
+        standalone: [expandclaim, extendclaim]
+        usage: "/claim expand <numberOfBlocks>"
+        description: Expand the claim you're standing in by pushing or pulling its boundary.
+        arguments:
+          numberOfBlocks:
+            type: integer-negative
+        """,
+        "expandclaim"
+    ),
 
-  AClaimDelete("""
-      enable: true
-      commands: [delete]
-      standalone: [deleteclaim]
-      usage: "/aclaim delete <player|world|all>"
-      description: Delete claims owned by a player or within a world.
-      arguments:
-        scope:
-          options:
-            player: [player]
-            world: [world]
-            all: [all]
-      """, "deleteclaim"),
+    ClaimHelp(
+        """
+        enable: true
+        commands: [help]
+        standalone: [claimhelp]
+        usage: "/claim help [page]"
+        description: View a list of all available claim subcommands.
+        arguments:
+          page:
+            type: integer
+        """,
+        "claimhelp"
+    ),
 
-  AClaimTransfer("""
-      enable: true
-      commands: [transfer]
-      standalone: [transferclaim]
-      usage: "/aclaim transfer <player>"
-      description: Transfer the claim you are standing in to another player.
-      arguments:
-        player:
-          type: player
-      """, "transferclaim"),
+    // Subcommands section - aclaim commands
+    AClaimRestore(
+        """
+        enable: true
+        commands: [restore]
+        standalone: [restorenature]
+        usage: "/aclaim restore [type] [radius]"
+        description: Restore an area to nature. Types: nature (default), aggressive, fill.
+        arguments:
+          type:
+            options:
+              nature: [nature]
+              aggressive: [aggressive]
+              fill: [fill]
+          radius:
+            type: integer
+        """,
+        "restorenature"
+    ),
 
-  AClaimHelp("""
-      enable: true
-      commands: [help]
-      standalone: [aclaimhelp]
-      usage: "/aclaim help [page]"
-      description: View a list of all available admin claim subcommands.
-      arguments:
-        page:
-          type: integer
-      """, "aclaimhelp"),
+    AClaimIgnore(
+        """
+        enable: true
+        commands: [ignore]
+        standalone: [ignoreclaims]
+        usage: "/aclaim ignore"
+        description: Toggle ignoring nearby claims.
+        """,
+        "ignoreclaims"
+    ),
 
-  // Empty subcommands sections (for backwards compatibility)
-  ClaimSubcommands(""),
+    AClaimMode(
+        """
+        enable: true
+        commands: [mode]
+        standalone: [adminclaims]
+        usage: "/aclaim mode <admin>"
+        description: Switch your shovel to admin-claim mode.
+        arguments:
+          mode:
+            options:
+              admin: [admin]
+        """,
+        "adminclaims"
+    ),
 
-  AClaimSubcommands("");
+    AClaimAdminList(
+        """
+        enable: true
+        commands: [adminlist]
+        standalone: [adminclaimslist]
+        usage: "/adminlist"
+        description: List administrative claims on the current server.
+        """,
+        "adminclaimslist"
+    ),
 
-  final @NotNull String defaultValue;
-  final @NotNull String standalone;
+    AClaimList(
+        """
+        enable: true
+        commands: [adminclaimslist]
+        usage: "/aclaim list [player]"
+        description: Show claims owned by a player (including admin claims).
+        arguments:
+          player:
+            type: player
+        """,
+        "adminclaimslist"
+    ),
 
-  Alias(@NotNull String defaultValue) {
-    this(defaultValue, "");
-  }
+    AClaimCheckExpiry(
+        """
+        enable: true
+        commands: [checkexpiry]
+        standalone: [claimcheckexpiry]
+        usage: "/aclaim checkexpiry <player>"
+        description: View claim expiration details for a player.
+        arguments:
+          player:
+            type: player
+        """,
+        "claimcheckexpiry"
+    ),
 
-  Alias(@NotNull String defaultValue, @NotNull String standalone) {
-    this.defaultValue = defaultValue;
-    this.standalone = standalone;
-  }
+    AClaimBlocks(
+        """
+        enable: true
+        commands: [blocks]
+        standalone: []
+        usage: "/aclaim blocks <bonus|accrued> <player|all> <amount>"
+        description: Adjust a player's claim block balance.
+        arguments:
+          type:
+            options:
+              bonus: [bonus]
+              accrued: [accrued]
+          player:
+            type: player
+            options:
+              all: [all]
+          amount:
+            type: integer
+        """,
+        "aclaimblocks"
+    ),
 
-  public @NotNull String getDefaultValue() {
-    return defaultValue;
-  }
+    AClaimDelete(
+        """
+        enable: true
+        commands: [delete]
+        standalone: [deleteclaim]
+        usage: "/aclaim delete <player|world|all>"
+        description: Delete claims owned by a player or within a world.
+        arguments:
+          scope:
+            options:
+              player: [player]
+              world: [world]
+              all: [all]
+        """,
+        "deleteclaim"
+    ),
 
-  public @NotNull String getStandalone() {
-    return standalone;
-  }
+    AClaimTransfer(
+        """
+        enable: true
+        commands: [transfer]
+        standalone: [transferclaim]
+        usage: "/aclaim transfer <player>"
+        description: Transfer the claim you are standing in to another player.
+        arguments:
+          player:
+            type: player
+        """,
+        "transferclaim"
+    ),
 
-  /**
-   * Gets all default alias configuration as a single YAML string
-   */
-  public static @NotNull String getDefaultYaml() {
-    return """
+    AClaimHelp(
+        """
+        enable: true
+        commands: [help]
+        standalone: [aclaimhelp]
+        usage: "/aclaim help [page]"
+        description: View a list of all available admin claim subcommands.
+        arguments:
+          page:
+            type: integer
+        """,
+        "aclaimhelp"
+    ),
+
+    // Empty subcommands sections (for backwards compatibility)
+    ClaimSubcommands(""),
+
+    AClaimSubcommands("");
+
+    final @NotNull String defaultValue;
+    final @NotNull String standalone;
+
+    Alias(@NotNull String defaultValue) {
+        this(defaultValue, "");
+    }
+
+    Alias(@NotNull String defaultValue, @NotNull String standalone) {
+        this.defaultValue = defaultValue;
+        this.standalone = standalone;
+    }
+
+    public @NotNull String getDefaultValue() {
+        return defaultValue;
+    }
+
+    public @NotNull String getStandalone() {
+        return standalone;
+    }
+
+    /**
+     * Gets all default alias configuration as a single YAML string
+     */
+    public static @NotNull String getDefaultYaml() {
+        return """
         # ============================================
         #      GRIEFPREVENTION ALIAS CONFIGURATION
         # ============================================
@@ -604,16 +686,18 @@ public enum Alias {
             blocks:
               enable: true
               commands: [blocks]
-              standalone: [adjustbonusclaimblocks]
-              usage: "/aclaim blocks <add|set> <player> [amount]"
+              standalone: []
+              usage: "/aclaim blocks <bonus|accrued> <player|all> <amount>"
               description: Adjust a player's claim block balance.
               arguments:
-                action:
+                type:
                   options:
-                    add: [add, adjust]
-                    set: [set]
+                    bonus: [bonus]
+                    accrued: [accrued]
                 player:
                   type: player
+                  options:
+                    all: [all]
                 amount:
                   type: integer
 
@@ -650,31 +734,31 @@ public enum Alias {
                 page:
                   type: integer
         """;
-  }
-
-  /**
-   * Helper method to indent a multi-line string by a specified number of levels
-   * (each level is 2 spaces).
-   */
-  private static @NotNull String indent(@NotNull String text, int levels) {
-    String[] lines = text.split("\n", -1);
-    StringBuilder sb = new StringBuilder();
-    String baseIndent = "  ".repeat(levels);
-
-    for (String line : lines) {
-      if (line.trim().isEmpty()) {
-        sb.append("\n");
-        continue;
-      }
-
-      // Preserve the existing indentation of the line
-      // and add the base indentation level
-      String trimmed = line.trim();
-      int originalIndent = line.indexOf(trimmed);
-      String preservedIndent = originalIndent > 0 ? line.substring(0, originalIndent) : "";
-
-      sb.append(baseIndent).append(preservedIndent).append(trimmed).append("\n");
     }
-    return sb.toString();
-  }
+
+    /**
+     * Helper method to indent a multi-line string by a specified number of levels
+     * (each level is 2 spaces).
+     */
+    private static @NotNull String indent(@NotNull String text, int levels) {
+        String[] lines = text.split("\n", -1);
+        StringBuilder sb = new StringBuilder();
+        String baseIndent = "  ".repeat(levels);
+
+        for (String line : lines) {
+            if (line.trim().isEmpty()) {
+                sb.append("\n");
+                continue;
+            }
+
+            // Preserve the existing indentation of the line
+            // and add the base indentation level
+            String trimmed = line.trim();
+            int originalIndent = line.indexOf(trimmed);
+            String preservedIndent = originalIndent > 0 ? line.substring(0, originalIndent) : "";
+
+            sb.append(baseIndent).append(preservedIndent).append(trimmed).append("\n");
+        }
+        return sb.toString();
+    }
 }
