@@ -231,7 +231,7 @@ class PlayerEventHandler implements Listener {
             final String formattedFinal = formatted;
             final String notificationFinal = ChatColor.GRAY + notificationMessage;
 
-            Bukkit.getScheduler().runTask(instance, () -> {
+            SchedulerUtil.runLaterGlobal(instance, () -> {
                 for (UUID recipientId : recipientsToKeep) {
                     Player recipient = Bukkit.getPlayer(recipientId);
                     if (recipient != null && recipient.isOnline()) {
@@ -245,7 +245,7 @@ class PlayerEventHandler implements Listener {
                         recipient.sendMessage(notificationFinal);
                     }
                 }
-            });
+            }, 1L);
 
             GriefPrevention.AddLogEntry(notificationMessage, CustomLogEntryTypes.MutedChat, false);
             return;
@@ -1785,7 +1785,7 @@ class PlayerEventHandler implements Listener {
                     event.setCancelled(true);
 
                     // Delay the error message to check if another plugin opened an inventory
-                    Bukkit.getScheduler().runTaskLater(instance, () -> {
+                    SchedulerUtil.runLaterEntity(instance, player, () -> {
                         if (player.getOpenInventory().getTopInventory().getType() != InventoryType.CRAFTING)
                             return;
                         GriefPrevention.sendRateLimitedErrorMessage(player, noContainersReason.get());
