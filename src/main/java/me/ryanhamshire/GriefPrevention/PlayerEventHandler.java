@@ -1084,7 +1084,7 @@ class PlayerEventHandler implements Listener {
                     if (noAccessReason != null) {
                         GriefPrevention.sendMessage(player, TextMode.Err, noAccessReason.get());
                         event.setCancelled(true);
-                        if (cause == TeleportCause.ENDER_PEARL) {
+                        if (cause == TeleportCause.ENDER_PEARL && instance.config_claims_refundDeniedEnderPearls) {
                             player.getInventory().addItem(new ItemStack(Material.ENDER_PEARL));
                         }
                     }
@@ -1142,7 +1142,7 @@ class PlayerEventHandler implements Listener {
         Claim claim = this.dataStore.getClaimAt(entity.getLocation(), false, null);
         if (claim != null) {
             Supplier<String> noBuildReason = ProtectionHelper.checkPermission(player, entity.getLocation(),
-                    ClaimPermission.Inventory, event);
+                    ClaimPermission.Container, event);
             if (noBuildReason != null) {
                 GriefPrevention.sendRateLimitedErrorMessage(player, noBuildReason.get());
                 event.setCancelled(true);
@@ -1266,7 +1266,7 @@ class PlayerEventHandler implements Listener {
             if (claim != null) {
                 // for storage entities, apply container rules (this is a potential theft)
                 if (entity instanceof InventoryHolder) {
-                    Supplier<String> noContainersReason = claim.checkPermission(player, ClaimPermission.Inventory,
+                    Supplier<String> noContainersReason = claim.checkPermission(player, ClaimPermission.Container,
                             event);
                     if (noContainersReason != null) {
                         GriefPrevention.sendRateLimitedErrorMessage(player, noContainersReason.get());
@@ -1292,7 +1292,7 @@ class PlayerEventHandler implements Listener {
 
                     return message;
                 };
-                final Supplier<String> noContainersReason = claim.checkPermission(player, ClaimPermission.Inventory,
+                final Supplier<String> noContainersReason = claim.checkPermission(player, ClaimPermission.Container,
                         event, override);
                 if (noContainersReason != null) {
                     GriefPrevention.sendRateLimitedErrorMessage(player, noContainersReason.get());
@@ -1311,7 +1311,7 @@ class PlayerEventHandler implements Listener {
             if (entity.getType().name().contains("BOAT") || entity instanceof Creature) {
                 Claim claim = this.dataStore.getClaimAt(entity.getLocation(), false, playerData.lastClaim);
                 if (claim != null) {
-                    Supplier<String> failureReason = claim.checkPermission(player, ClaimPermission.Inventory, event);
+                    Supplier<String> failureReason = claim.checkPermission(player, ClaimPermission.Container, event);
                     if (failureReason != null) {
                         event.setCancelled(true);
                         GriefPrevention.sendRateLimitedErrorMessage(player, failureReason.get());
@@ -1343,7 +1343,7 @@ class PlayerEventHandler implements Listener {
             };
 
             // Check for permission to access containers.
-            Supplier<String> noContainersReason = claim.checkPermission(player, ClaimPermission.Inventory, event,
+            Supplier<String> noContainersReason = claim.checkPermission(player, ClaimPermission.Container, event,
                     override);
 
             // If player has permission, action is allowed.
@@ -1365,7 +1365,7 @@ class PlayerEventHandler implements Listener {
         if (playerData.ignoreClaims || claim == null)
             return;
 
-        Supplier<String> failureReason = claim.checkPermission(player, ClaimPermission.Inventory, event);
+        Supplier<String> failureReason = claim.checkPermission(player, ClaimPermission.Container, event);
         if (failureReason != null) {
             String reason = failureReason.get();
             if (player.hasPermission("griefprevention.ignoreclaims")) {
@@ -1398,7 +1398,7 @@ class PlayerEventHandler implements Listener {
             Claim claim = instance.dataStore.getClaimAt(entity.getLocation(), false, playerData.lastClaim);
             if (claim != null) {
                 // if no permission, cancel
-                Supplier<String> errorMessage = claim.checkPermission(player, ClaimPermission.Inventory, event);
+                Supplier<String> errorMessage = claim.checkPermission(player, ClaimPermission.Container, event);
                 if (errorMessage != null) {
                     event.setCancelled(true);
                     GriefPrevention.sendRateLimitedErrorMessage(player, Messages.NoDamageClaimedEntity,
@@ -1761,13 +1761,6 @@ class PlayerEventHandler implements Listener {
             if (playerData == null)
                 playerData = this.dataStore.getPlayerData(player.getUniqueId());
 
-            // block container use during pvp combat, same reason
-            if (playerData.inPvpCombat()) {
-                GriefPrevention.sendRateLimitedErrorMessage(player, Messages.PvPNoContainers);
-                event.setCancelled(true);
-                return;
-            }
-
             // allow players with ignoreclaims permission in spectator mode to access
             // containers
             if (player.hasPermission("griefprevention.ignoreclaims") && player.getGameMode() == GameMode.SPECTATOR) {
@@ -1778,9 +1771,16 @@ class PlayerEventHandler implements Listener {
             // otherwise check permissions for the claim the player is in
             Claim claim = this.dataStore.getClaimAt(clickedBlock.getLocation(), false, playerData.lastClaim);
             if (claim != null) {
+                // block container use during pvp combat, same reason
+                if (playerData.inPvpCombat()) {
+                    GriefPrevention.sendRateLimitedErrorMessage(player, Messages.PvPNoContainers);
+                    event.setCancelled(true);
+                    return;
+                }
+
                 playerData.lastClaim = claim;
 
-                Supplier<String> noContainersReason = claim.checkPermission(player, ClaimPermission.Inventory, event);
+                Supplier<String> noContainersReason = claim.checkPermission(player, ClaimPermission.Container, event);
                 if (noContainersReason != null) {
                     event.setCancelled(true);
 
@@ -1928,7 +1928,7 @@ class PlayerEventHandler implements Listener {
                     playerData = this.dataStore.getPlayerData(player.getUniqueId());
                 Claim claim = this.dataStore.getClaimAt(clickedBlock.getLocation(), false, playerData.lastClaim);
                 if (claim != null) {
-                    Supplier<String> reason = claim.checkPermission(player, ClaimPermission.Inventory, event);
+                    Supplier<String> reason = claim.checkPermission(player, ClaimPermission.Container, event);
                     if (reason != null) {
                         GriefPrevention.sendRateLimitedErrorMessage(player, reason.get());
                         event.setCancelled(true);
@@ -1952,7 +1952,7 @@ class PlayerEventHandler implements Listener {
                     playerData = this.dataStore.getPlayerData(player.getUniqueId());
                 Claim claim = this.dataStore.getClaimAt(clickedBlock.getLocation(), false, playerData.lastClaim);
                 if (claim != null) {
-                    Supplier<String> reason = claim.checkPermission(player, ClaimPermission.Inventory, event);
+                    Supplier<String> reason = claim.checkPermission(player, ClaimPermission.Container, event);
                     if (reason != null) {
                         GriefPrevention.sendRateLimitedErrorMessage(player, reason.get());
                         event.setCancelled(true);
@@ -2614,22 +2614,35 @@ class PlayerEventHandler implements Listener {
                 }
 
                 // apply minimum claim dimensions rule
-                int newClaimWidth = Math.abs(playerData.lastShovelLocation.getBlockX() - clickedBlock.getX()) + 1;
-                int newClaimHeight = Math.abs(playerData.lastShovelLocation.getBlockZ() - clickedBlock.getZ()) + 1;
+                int newWidth;
+                int newHeight;
+
+                try
+                {
+                    newWidth = Math.abs(Math.subtractExact(lastShovelLocation.getBlockX(), clickedBlock.getX())) + 1;
+                    newHeight = Math.abs(Math.subtractExact(lastShovelLocation.getBlockZ(), clickedBlock.getZ())) + 1;
+                }
+                catch (ArithmeticException e)
+                {
+                    GriefPrevention.sendMessage(player, TextMode.Err, Messages.CreateClaimInsufficientBlocks, String.valueOf(Integer.MAX_VALUE));
+                    playerData.lastShovelLocation = null;
+                    playerData.claimSubdividing = null;
+                    return;
+                }
 
                 if (playerData.shovelMode != ShovelMode.Admin) {
-                    if (newClaimWidth < instance.config_claims_minWidth
-                            || newClaimHeight < instance.config_claims_minWidth) {
+                    if (newWidth < instance.config_claims_minWidth
+                            || newHeight < instance.config_claims_minWidth) {
                         // this IF block is a workaround for craftbukkit bug which fires two events for
                         // one interaction
-                        if (newClaimWidth != 1 && newClaimHeight != 1) {
+                        if (newWidth != 1 && newHeight != 1) {
                             GriefPrevention.sendMessage(player, TextMode.Err, Messages.NewClaimTooNarrow,
                                     String.valueOf(instance.config_claims_minWidth));
                         }
                         return;
                     }
 
-                    int newArea = newClaimWidth * newClaimHeight;
+                    int newArea = newWidth * newHeight;
                     if (newArea < instance.config_claims_minArea) {
                         if (newArea != 1) {
                             GriefPrevention.sendMessage(player, TextMode.Err, Messages.ResizeClaimInsufficientArea,
@@ -2645,7 +2658,7 @@ class PlayerEventHandler implements Listener {
                 // if not an administrative claim, verify the player has enough claim blocks for
                 // this new claim
                 if (playerData.shovelMode != ShovelMode.Admin) {
-                    int newClaimArea = newClaimWidth * newClaimHeight;
+                    int newClaimArea = newWidth * newHeight;
                     int remainingBlocks = playerData.getRemainingClaimBlocks();
                     if (newClaimArea > remainingBlocks) {
                         GriefPrevention.sendMessage(player, TextMode.Err, Messages.CreateClaimInsufficientBlocks,
@@ -2933,7 +2946,7 @@ class PlayerEventHandler implements Listener {
         Claim claim = this.dataStore.getClaimAt(event.getLectern().getLocation(), false, playerData.lastClaim);
         if (claim != null) {
             playerData.lastClaim = claim;
-            Supplier<String> noContainerReason = claim.checkPermission(player, ClaimPermission.Inventory, event);
+            Supplier<String> noContainerReason = claim.checkPermission(player, ClaimPermission.Container, event);
             if (noContainerReason != null) {
                 event.setCancelled(true);
                 player.closeInventory();

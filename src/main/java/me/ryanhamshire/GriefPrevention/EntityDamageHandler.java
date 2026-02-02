@@ -740,7 +740,7 @@ public class EntityDamageHandler implements Listener {
         }
 
         // Check for permission to access containers.
-        Supplier<String> noContainersReason = claim.checkPermission(attacker, ClaimPermission.Inventory,
+        Supplier<String> noContainersReason = claim.checkPermission(attacker, ClaimPermission.Container,
                 event.original(), override);
 
         // If player has permission, action is allowed.
@@ -944,7 +944,7 @@ public class EntityDamageHandler implements Listener {
                 message += "  " + dataStore.getMessage(Messages.IgnoreClaimsAdvertisement);
             return message;
         };
-        Supplier<String> noContainersReason = claim.checkPermission(attacker, ClaimPermission.Inventory, event,
+        Supplier<String> noContainersReason = claim.checkPermission(attacker, ClaimPermission.Container, event,
                 override);
         if (noContainersReason != null) {
             event.setCancelled(true);
@@ -1014,7 +1014,7 @@ public class EntityDamageHandler implements Listener {
                         Supplier<String> override = () -> instance.dataStore
                                 .getMessage(Messages.NoDamageClaimedEntity, claim.getOwnerName());
                         final Supplier<String> noContainersReason = claim.checkPermission(thrower,
-                                ClaimPermission.Inventory, event, override);
+                                ClaimPermission.Container, event, override);
                         return noContainersReason != null; // Remove effect if no permission
                     }
                     // Allow harmful effects on hostile mobs
@@ -1076,7 +1076,7 @@ public class EntityDamageHandler implements Listener {
                                 Supplier<String> override = () -> instance.dataStore
                                         .getMessage(Messages.NoDamageClaimedEntity, claim.getOwnerName());
                                 final Supplier<String> noContainersReason = claim.checkPermission(thrower,
-                                        ClaimPermission.Inventory, event, override);
+                                        ClaimPermission.Container, event, override);
                                 if (noContainersReason != null) {
                                     event.setIntensity(affected, 0);
                                     if (messagedPlayer.compareAndSet(false, true)) {

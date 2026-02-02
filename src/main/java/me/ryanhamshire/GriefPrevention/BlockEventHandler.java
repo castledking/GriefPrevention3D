@@ -89,9 +89,52 @@ import java.util.function.BiPredicate;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import org.bukkit.event.inventory.InventoryMoveItemEvent;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.block.Hopper;
+
 //event handlers related to blocks
 public class BlockEventHandler implements Listener
 {
+
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.LOWEST)
+    public void onInventoryMoveItem(InventoryMoveItemEvent event)
+    {
+        if (!GriefPrevention.instance.config_claims_hoppersRequireBuildTrust) return;
+
+        Inventory initiator = event.getInitiator();
+        if (!(initiator.getHolder() instanceof Hopper)) return;
+
+        Location hopperLocation = initiator.getLocation();
+        if(hopperLocation == null) return;
+        
+        Claim hopperClaim = this.dataStore.getClaimAt(hopperLocation, false, null);
+
+        Location sourceLocation = event.getSource().getLocation();
+        Location destLocation = event.getDestination().getLocation();
+
+        if (sourceLocation == null || destLocation == null) return;
+
+        Claim sourceClaim = this.dataStore.getClaimAt(sourceLocation, false, hopperClaim);
+        Claim destClaim = this.dataStore.getClaimAt(destLocation, false, hopperClaim);
+
+        // If all three are in the same claim, it's fine.
+        if (hopperClaim == sourceClaim && hopperClaim == destClaim) return;
+        
+        // If the hopper is in the wilderness, it can't interact with claimed inventories.
+        if (hopperClaim == null && (sourceClaim != null || destClaim != null)) {
+            event.setCancelled(true);
+            return;
+        }
+        
+        // If the hopper is in a claim, it can't interact with inventories in other claims.
+        if (hopperClaim != null) {
+            if (sourceClaim != hopperClaim || destClaim != hopperClaim) {
+                event.setCancelled(true);
+            }
+        }
+    }
+
 
     protected static final Set<Material> TRASH_BLOCKS;
 
@@ -336,7 +379,7 @@ public class BlockEventHandler implements Listener
                 if (claim != null)
                 {
                     playerData.lastClaim = claim;
-                    Supplier<String> noContainerReason = claim.checkPermission(player, ClaimPermission.Inventory, placeEvent);
+                    Supplier<String> noContainerReason = claim.checkPermission(player, ClaimPermission.Container, placeEvent);
                     if (noContainerReason == null)
                         return;
 
@@ -390,7 +433,7 @@ public class BlockEventHandler implements Listener
         else if (GriefPrevention.instance.config_claims_automaticClaimsForNewPlayersRadius > -1 && player.hasPermission("griefprevention.createclaims") && block.getType() == Material.CHEST)
         {
             //if the chest is too deep underground, don't create the claim and explain why
-            if (GriefPrevention.instance.config_claims_preventTheft && block.getY() < GriefPrevention.instance.config_claims_maxDepth)
+            if (GriefPrevention.instance.config_claims_preventTheft && block.getY() < GriefPrevention.instance.getMaxDepthForWorld(block.getWorld()))
             {
                 GriefPrevention.sendMessage(player, TextMode.Warn, Messages.TooDeepToClaim);
                 return;
@@ -908,7 +951,7 @@ public class BlockEventHandler implements Listener
             return;
         }
 
-        if (!GriefPrevention.instance.config_fireSpreads && igniteEvent.getCause() != IgniteCause.FLINT_AND_STEEL && igniteEvent.getCause() != IgniteCause.LIGHTNING)
+        if (!GriefPrevention.instance.config_fireSpreads && igniteEvent.getCause() != IgniteCause.FLINT_AND_STEEL && igniteEvent.getCause() != IgniteCause.LIGHTNING && igniteEvent.getCause() != IgniteCause.FIREBALL)
         {
             igniteEvent.setCancelled(true);
         }
@@ -1035,8 +1078,12 @@ public class BlockEventHandler implements Listener
         // Disallow spreading from other users' claims.
         if (spreadFrom == null || !Objects.equals(spreadTo.getOwnerID(), spreadFrom.getOwnerID()))
         {
-            if (isFire) extinguishFiniteFire(spreadEvent.getSource());
-            spreadEvent.setCancelled(true);
+            if (isFire) {
+                extinguishFiniteFire(spreadEvent.getSource());
+                spreadEvent.setCancelled(true);
+            } else if (newType == Material.SCULK_VEIN || newType == Material.MOSS_BLOCK) {
+                spreadEvent.setCancelled(true);
+            }
             return;
         }
 
@@ -1260,7 +1307,7 @@ public class BlockEventHandler implements Listener
             return;
         }
 
-        Supplier<String> allowContainer = claim.checkPermission(shooter, ClaimPermission.Inventory, event);
+        Supplier<String> allowContainer = claim.checkPermission(shooter, ClaimPermission.Container, event);
 
         if (allowContainer != null)
         {

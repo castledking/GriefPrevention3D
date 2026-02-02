@@ -1,6 +1,7 @@
 package me.ryanhamshire.GriefPrevention;
 
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.event.EventHandler;
@@ -48,7 +49,9 @@ public class PaperKnockbackHandler implements Listener {
         
         // Also check if source is directly a wind charge (for breeze wind charges)
         if (!isWindChargeKnockback && !sourceTypeName.contains("WIND_CHARGE") && !sourceTypeName.equals("BREEZE_WIND_CHARGE")) {
-            return;
+            if (source.getType() != EntityType.TRIDENT) { // Add this check
+                return;
+            }
         }
 
         // Get the attacker - for player-thrown wind charges, source IS the player

@@ -28,13 +28,13 @@ public enum ClaimPermission
      */
     Edit(Messages.OnlyOwnersModifyClaims),
     /**
-     * ClaimPermission used for building checks. Grants {@link #Inventory} and {@link #Access}.
+     * ClaimPermission used for building checks. Grants {@link #Container} and {@link #Access}.
      */
     Build(Messages.NoBuildPermission),
     /**
      * ClaimPermission used for inventory management checks. Grants {@link #Access}.
      */
-    Inventory(Messages.NoContainersPermission),
+    Container(Messages.NoContainersPermission),
     /**
      * ClaimPermission used for basic access.
      */
