@@ -452,6 +452,8 @@ public enum Alias {
 
         # Set to false to disable all alias customization (uses default command names)
         enabled: true
+        # Set to false to disable standalone commands (/trust, /trapped, etc.); only /claim and /aclaim (or their translations) will be registered
+        standalone: true
 
         commands:
           claim:

@@ -73,15 +73,6 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
                 );
         }
 
-        // Get the primary command name from config (first entry in commands list)
-        String primaryCommandName = canonicalCommand;
-        if (rootCommandConfig != null && !rootCommandConfig.getCommands().isEmpty()) {
-            primaryCommandName = rootCommandConfig.getCommands().get(0).toLowerCase(Locale.ROOT);
-        }
-
-        // Check if we need to register a different primary command name
-        boolean needsDynamicRegistration = !primaryCommandName.equals(canonicalCommand);
-
         PluginCommand pluginCommand = plugin.getCommand(this.canonicalCommand);
         if (pluginCommand == null) {
             // Try to register the command manually if not found in plugin.yml
@@ -110,9 +101,15 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
         pluginCommand.setExecutor(this);
         applyRootCommandMetadata(pluginCommand);
 
-        // If user configured a different primary command name, register it dynamically
-        if (needsDynamicRegistration && rootCommandEnabled) {
-            registerDynamicRootCommand(primaryCommandName);
+        // Register every name in commands list (except canonical) so e.g. /claim and /claims both host subcommands
+        if (rootCommandEnabled && rootCommandConfig != null) {
+            for (String name : rootCommandConfig.getCommands()) {
+                if (name == null || name.isBlank()) continue;
+                String normalized = name.trim().toLowerCase(Locale.ROOT);
+                if (!normalized.equals(canonicalCommand)) {
+                    registerDynamicRootCommand(normalized);
+                }
+            }
         }
     }
 
@@ -132,6 +129,10 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
                 return;
             }
             registerDynamicStandaloneCommand(enumStandalone, alias.toString(), handler, null);
+            return;
+        }
+        // If standalone commands are disabled globally, do not register any standalone (ignore per-subcommand standalone entries)
+        if (!plugin.getCommandAliases().isStandaloneEnabled()) {
             return;
         }
 
@@ -490,19 +491,7 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
             if (description != null) setDescription(description);
             if (usageMessage != null) setUsage(usageMessage);
             if (permission != null) setPermission(permission);
-
-            // Set aliases from config (excluding the primary name we're registering as)
-            if (rootCommandConfig != null) {
-                List<String> aliases = new ArrayList<>();
-                for (String alias : rootCommandConfig.getCommands()) {
-                    if (alias != null && !alias.equalsIgnoreCase(name) && !alias.equalsIgnoreCase(canonicalCommand)) {
-                        aliases.add(alias.trim());
-                    }
-                }
-                // Also add the canonical name as an alias so old command still works
-                aliases.add(canonicalCommand);
-                setAliases(aliases);
-            }
+            // No aliases: each name in commands list is registered separately so /claim and /claims both work
         }
 
         @Override

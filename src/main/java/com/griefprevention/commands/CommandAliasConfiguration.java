@@ -25,10 +25,13 @@ import java.util.logging.Level;
 public final class CommandAliasConfiguration {
 
     private final boolean enabled;
+    private final boolean standaloneEnabled;
     private final Map<String, RootCommand> rootCommands;
 
-    private CommandAliasConfiguration(boolean enabled, @NotNull Map<String, RootCommand> rootCommands) {
+    private CommandAliasConfiguration(boolean enabled, boolean standaloneEnabled,
+            @NotNull Map<String, RootCommand> rootCommands) {
         this.enabled = enabled;
+        this.standaloneEnabled = standaloneEnabled;
         this.rootCommands = rootCommands;
     }
 
@@ -38,6 +41,15 @@ public final class CommandAliasConfiguration {
      */
     public boolean isEnabled() {
         return enabled;
+    }
+
+    /**
+     * Returns whether standalone commands (e.g. /trust, /trapped) are enabled.
+     * When false, only root commands like /claim or /aclaim (and their subcommands) are registered;
+     * per-subcommand standalone entries in alias.yml are ignored.
+     */
+    public boolean isStandaloneEnabled() {
+        return standaloneEnabled;
     }
 
     public static @NotNull CommandAliasConfiguration load(@NotNull GriefPrevention plugin, @NotNull File file) {
@@ -75,6 +87,8 @@ public final class CommandAliasConfiguration {
 
         // Check global enabled toggle (defaults to true)
         boolean globalEnabled = mergedConfig.getBoolean("enabled", true);
+        // Standalone commands toggle (defaults to true); when false, no /trust, /trapped etc.
+        boolean standaloneEnabled = mergedConfig.getBoolean("standalone", true);
 
         Map<String, RootCommand> commands = new HashMap<>();
         ConfigurationSection commandSection = mergedConfig.getConfigurationSection("commands");
@@ -147,11 +161,11 @@ public final class CommandAliasConfiguration {
             }
         }
 
-        return new CommandAliasConfiguration(globalEnabled, commands);
+        return new CommandAliasConfiguration(globalEnabled, standaloneEnabled, commands);
     }
 
     public static @NotNull CommandAliasConfiguration empty() {
-        return new CommandAliasConfiguration(true, Collections.emptyMap());
+        return new CommandAliasConfiguration(true, true, Collections.emptyMap());
     }
 
     private static @NotNull YamlConfiguration getDefaultConfiguration() {

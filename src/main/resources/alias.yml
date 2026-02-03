@@ -35,12 +35,17 @@
 # ============================================================================
 
 # ============================================================================
-#                            GLOBAL TOGGLE
+#                            GLOBAL TOGGLES
 # ============================================================================
-# Set to false to completely disable the alias system.
-# When disabled, all commands use their default English names.
+# enabled: Set to false to completely disable the alias system.
+#          When disabled, all commands use their default English names.
+#
+# standalone: Set to false to disable standalone commands (/trust, /trapped, etc.).
+#            When false, only /claim and /aclaim (or their translations) are registered;
+#            per-subcommand standalone entries below are ignored.
 
 enabled: true
+standalone: true
 
 # ============================================================================
 #                            ROOT COMMANDS
@@ -55,9 +60,8 @@ commands:
     # Set to false to completely disable /claim and all its subcommands
     enable: true
 
-    # Command names - FIRST entry becomes the primary command shown to players
-    # Other entries become aliases that also work
-    # Example: [terreno, claim] makes /terreno the main command, /claim still works
+    # Command names - ALL entries are registered as root commands (e.g. /claim and /claims both host subcommands)
+    # Example: [claim, claims] allows /claim create and /claims create; [terreno, claim] allows both /terreno and /claim
     commands: [claim]
 
     # Description shown in /help and command listings
@@ -74,6 +78,7 @@ commands:
   # --------------------------------------------------------------------------
   aclaim:
     enable: true
+    # All entries are registered as root (e.g. [aclaim, aclaims] allows both /aclaim and /aclaims)
     commands: [aclaim]
     description: Command to manage administrative claims
     permission: griefprevention.adminclaims
