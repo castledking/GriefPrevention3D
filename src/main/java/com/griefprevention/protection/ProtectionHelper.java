@@ -100,12 +100,20 @@ public final class ProtectionHelper
 
         // Update cached claim.
         playerData.lastClaim = claim;
-        // For 3D claims, only check the specific subclaim, not parent claims
-        if (claim.is3D()) {
+        // Nested 3D subdivisions (inheritNothing=true): only check the subdivision, never parent.
+        if (claim.is3D() && claim.getSubclaimRestrictions()) {
             return claim.checkPermission(player, permission, trigger);
         }
-        
-        // For non-3D claims, check this claim first. Only fall back to parents if the claim inherits permissions.
+
+        // First-child 3D subdivisions: if not explicitly denied here, consult parent (ensures inheritance).
+        if (claim.is3D() && claim.parent != null && claim.parent.parent == null) {
+            if (permission == null || !claim.isPermissionDenied(player.getUniqueId().toString(), permission)) {
+                Supplier<String> parentResult = claim.parent.checkPermission(player, permission, trigger);
+                if (parentResult == null) return null;
+            }
+        }
+
+        // Check this claim first. Only fall back to parents if the claim inherits permissions.
         Supplier<String> cancel = claim.checkPermission(player, permission, trigger);
         if (cancel == null)
         {

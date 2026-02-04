@@ -415,6 +415,10 @@ public class DatabaseDataStore extends DataStore
             childClaim.parent = topLevelClaim;
             topLevelClaim.children.add(childClaim);
             childClaim.inDataStore = true;
+            // Migration: first-child 3D subdivisions should inherit (inheritNothing=false)
+            if (childClaim.is3D() && childClaim.getSubclaimRestrictions() && topLevelClaim.parent == null) {
+                childClaim.setSubclaimRestrictions(false);
+            }
         }
 
         for (Claim claim : claimsToRemove)

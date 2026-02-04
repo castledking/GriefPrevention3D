@@ -1213,8 +1213,9 @@ public abstract class DataStore {
 
         ArrayList<Claim> claimsToCheck;
         if (parent != null) {
-            // Subdivisions should inherit trust from their parent hierarchy by default.
-            newClaim.setSubclaimRestrictions(false);
+            // First-child subdivisions inherit from parent; nested subdivisions do not.
+            boolean isNested = parent.parent != null;
+            newClaim.setSubclaimRestrictions(isNested);
             claimsToCheck = newClaim.parent.children;
         } else {
             claimsToCheck = this.claims;
@@ -1364,6 +1365,22 @@ public abstract class DataStore {
         }
         // otherwise add this new claim to the data store to make it effective
         this.addClaim(newClaim, true);
+
+        // First-child subdivisions (2D and 3D): copy parent permissions into the new claim so they are
+        // persisted in YAML. 2D gets propagation when /trust runs on existing children; new subdivisions
+        // created after /trust need explicit copy. 3D does not get setPermission propagation, so always copy.
+        if (newClaim.parent != null && newClaim.parent.parent == null) {
+            
+            ArrayList<String> builders = new ArrayList<>();
+            ArrayList<String> containers = new ArrayList<>();
+            ArrayList<String> accessors = new ArrayList<>();
+            ArrayList<String> managers = new ArrayList<>();
+            newClaim.parent.getPermissions(builders, containers, accessors, managers);
+            for (String identifier : builders) newClaim.setPermission(identifier, ClaimPermission.Build);
+            for (String identifier : containers) newClaim.setPermission(identifier, ClaimPermission.Container);
+            for (String identifier : accessors) newClaim.setPermission(identifier, ClaimPermission.Access);
+            for (String identifier : managers) newClaim.setPermission(identifier, ClaimPermission.Manage);
+        }
 
         // then return success along with reference to new claim
         result.succeeded = true;

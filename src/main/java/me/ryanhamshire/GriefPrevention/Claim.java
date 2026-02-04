@@ -647,9 +647,12 @@ public class Claim
         }
 
         // Permission inheritance for subdivisions.
+        // First-child subdivisions (parent is top-level) inherit from parent; nested subdivisions do not.
+        // For 3D: first-child always inherits; nested never inherits (runtime fix for any stale inheritNothing).
         if (this.parent != null)
         {
-            boolean inheritsFromParent = !inheritNothing && !this.is3D() && this.parent.parent == null;
+            boolean isFirstChild = this.parent.parent == null;
+            boolean inheritsFromParent = isFirstChild && (!inheritNothing || this.is3D());
             if (inheritsFromParent)
             {
                 // Block inherited permission if explicitly denied here
