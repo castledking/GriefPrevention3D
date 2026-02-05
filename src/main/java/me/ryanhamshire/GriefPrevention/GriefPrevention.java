@@ -830,6 +830,8 @@ public class GriefPrevention extends JavaPlugin {
                 "1.2.3.4; 5.6.7.8");
         this.config_spam_banOffenders = config.getBoolean("GriefPrevention.Spam.BanOffenders", true);
         this.config_spam_banMessage = config.getString("GriefPrevention.Spam.BanMessage", "Banned for spam.");
+        this.config_spam_deathMessageCooldownSeconds = config.getInt("GriefPrevention.Spam.DeathMessageCooldownSeconds", 120);
+        this.config_spam_logoutMessageDelaySeconds = config.getInt("GriefPrevention.Spam.Logout Message Delay In Seconds", 0);
         String slashCommandsToMonitor = config.getString("GriefPrevention.Spam.MonitorSlashCommands",
                 "/me;/global;/local");
         slashCommandsToMonitor = config.getString("GriefPrevention.Spam.ChatSlashCommands", slashCommandsToMonitor);
