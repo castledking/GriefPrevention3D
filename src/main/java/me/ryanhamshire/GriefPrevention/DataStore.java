@@ -1885,7 +1885,32 @@ public abstract class DataStore {
         this.messages = new String[messageIDs.length];
 
         // load the config file
-        FileConfiguration config = YamlConfiguration.loadConfiguration(new File(messagesFilePath));
+        File messagesFile = new File(messagesFilePath);
+        FileConfiguration config = YamlConfiguration.loadConfiguration(messagesFile);
+
+        // Versioning: ResizeStart was replaced by ClaimSelected (no children) and ClaimSelectedTopLevel (has children).
+        // Backup the old ResizeStart line so users can transfer formatting; new messages use /claim abandon and /claim abandon toplevel.
+        String resizeStartValue = config.isString("Messages.ResizeStart.Text")
+                ? config.getString("Messages.ResizeStart.Text")
+                : config.getString("Messages.ResizeStart");
+        if (resizeStartValue != null) {
+            File backupFile = new File(messagesFile.getParent(), "ResizeStart-backup.yml");
+            try {
+                YamlConfiguration backup = new YamlConfiguration();
+                backup.options().setHeader(java.util.List.of(
+                        "This file backs up your old ResizeStart message from messages.yml.",
+                        "ResizeStart was removed and replaced by two messages:",
+                        "  - ClaimSelected: shown when the selected claim has no subdivisions (suggests /claim abandon).",
+                        "  - ClaimSelectedTopLevel: shown when the selected claim has subdivisions (suggests /claim abandon toplevel).",
+                        "Copy any formatting (e.g. color codes) from below into ClaimSelected or ClaimSelectedTopLevel in messages.yml if desired."
+                ));
+                backup.set("Messages.ResizeStart", resizeStartValue);
+                backup.save(backupFile);
+            } catch (IOException e) {
+                Bukkit.getLogger().warning("GriefPrevention: Could not write ResizeStart-backup.yml: " + e.getMessage());
+            }
+            config.set("Messages.ResizeStart", null);
+        }
 
         // for each message ID
         for (Messages message : messageIDs) {

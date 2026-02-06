@@ -1757,6 +1757,112 @@ class PlayerEventHandler implements Listener {
                     }
                     return;
                 }
+                // In Basic mode: resize in progress or corner selection on container — don't open container
+                if (playerData.shovelMode == ShovelMode.Basic) {
+                    if (playerData.claimResizing != null && playerData.claimResizing.inDataStore
+                        && playerData.lastShovelLocation != null
+                        && !clickedBlock.getLocation().equals(playerData.lastShovelLocation)) {
+                    event.setCancelled(true);
+                    int newx1, newx2, newz1, newz2, newy1, newy2;
+                    if (playerData.lastShovelLocation.getBlockX() == playerData.claimResizing.getLesserBoundaryCorner()
+                            .getBlockX()) {
+                        newx1 = clickedBlock.getX();
+                        newx2 = playerData.claimResizing.getGreaterBoundaryCorner().getBlockX();
+                    } else {
+                        newx1 = playerData.claimResizing.getLesserBoundaryCorner().getBlockX();
+                        newx2 = clickedBlock.getX();
+                    }
+                    if (playerData.lastShovelLocation.getBlockZ() == playerData.claimResizing.getLesserBoundaryCorner()
+                            .getBlockZ()) {
+                        newz1 = clickedBlock.getZ();
+                        newz2 = playerData.claimResizing.getGreaterBoundaryCorner().getBlockZ();
+                    } else {
+                        newz1 = playerData.claimResizing.getLesserBoundaryCorner().getBlockZ();
+                        newz2 = clickedBlock.getZ();
+                    }
+                    if (playerData.claimResizing.is3D()) {
+                        int currentMinY = playerData.claimResizing.getLesserBoundaryCorner().getBlockY();
+                        int currentMaxY = playerData.claimResizing.getGreaterBoundaryCorner().getBlockY();
+                        int startY = playerData.lastShovelLocation.getBlockY();
+                        int endY = clickedBlock.getY();
+                        boolean isSingleLayer = (currentMinY == currentMaxY);
+                        newy1 = currentMinY;
+                        newy2 = currentMaxY;
+                        if (isSingleLayer || startY == currentMinY) {
+                            newy1 = Math.min(endY, currentMaxY);
+                            if (endY > currentMaxY) newy2 = endY;
+                        } else if (startY == currentMaxY) {
+                            newy2 = Math.max(endY, currentMinY);
+                            if (endY < currentMinY) newy1 = endY;
+                        }
+                        if (newy1 > newy2) {
+                            int tmp = newy1;
+                            newy1 = newy2;
+                            newy2 = tmp;
+                        }
+                    } else {
+                        newy1 = playerData.claimResizing.getLesserBoundaryCorner().getBlockY();
+                        newy2 = playerData.claimResizing.getGreaterBoundaryCorner().getBlockY();
+                    }
+                    this.dataStore.resizeClaimWithChecks(player, playerData, newx1, newx2, newy1, newy2, newz1, newz2);
+                    return;
+                }
+                // Corner selection on container block: don't open container, start selection/resize
+                Claim resolvedClaim = this.dataStore.getClaimAt(clickedBlock.getLocation(), false, playerData.lastClaim);
+                if (resolvedClaim == null) {
+                    resolvedClaim = this.dataStore.getClaimAt(clickedBlock.getLocation(), true, playerData.lastClaim);
+                }
+                Claim claimForCorner = findDeepestContainingClaim(resolvedClaim, clickedBlock.getLocation());
+                if (claimForCorner != null
+                        && claimForCorner.checkPermission(player, ClaimPermission.Edit, null) == null) {
+                    boolean isCorner = (clickedBlock.getX() == claimForCorner.getLesserBoundaryCorner().getBlockX()
+                            || clickedBlock.getX() == claimForCorner.getGreaterBoundaryCorner().getBlockX())
+                            && (clickedBlock.getZ() == claimForCorner.getLesserBoundaryCorner().getBlockZ()
+                                    || clickedBlock.getZ() == claimForCorner.getGreaterBoundaryCorner().getBlockZ());
+                    if (isCorner && claimForCorner.is3D()) {
+                        int minY = Math.min(claimForCorner.getLesserBoundaryCorner().getBlockY(),
+                                claimForCorner.getGreaterBoundaryCorner().getBlockY());
+                        int maxY = Math.max(claimForCorner.getLesserBoundaryCorner().getBlockY(),
+                                claimForCorner.getGreaterBoundaryCorner().getBlockY());
+                        isCorner = (clickedBlock.getY() == minY || clickedBlock.getY() == maxY);
+                    }
+                    if (isCorner) {
+                        event.setCancelled(true);
+                        Claim selection = claimForCorner;
+                        while (selection.parent != null) {
+                            Claim parent = selection.parent;
+                            boolean parentContains = parent.contains(clickedBlock.getLocation(), true, false);
+                            boolean parentCornerXZ = (clickedBlock.getX() == parent.getLesserBoundaryCorner().getBlockX()
+                                    || clickedBlock.getX() == parent.getGreaterBoundaryCorner().getBlockX())
+                                    && (clickedBlock.getZ() == parent.getLesserBoundaryCorner().getBlockZ()
+                                            || clickedBlock.getZ() == parent.getGreaterBoundaryCorner().getBlockZ());
+                            boolean parentCornerY = !parent.is3D()
+                                    || (clickedBlock.getY() == parent.getLesserBoundaryCorner().getBlockY()
+                                            || clickedBlock.getY() == parent.getGreaterBoundaryCorner().getBlockY());
+                            if (parentContains && parentCornerXZ && parentCornerY) {
+                                selection = parent;
+                            } else {
+                                break;
+                            }
+                        }
+                        playerData.claimResizing = selection;
+                        playerData.lastShovelLocation = clickedBlock.getLocation();
+                        boolean hasNoChildren = selection.children == null || selection.children.isEmpty();
+                        GriefPrevention.sendMessage(player, TextMode.Instr,
+                                hasNoChildren ? Messages.ClaimSelected : Messages.ClaimSelectedTopLevel);
+                        VisualizationType visualizationType;
+                        if (selection.parent == null) {
+                            visualizationType = selection.isAdminClaim() ? VisualizationType.ADMIN_CLAIM
+                                    : VisualizationType.CLAIM;
+                        } else {
+                            visualizationType = selection.is3D() ? VisualizationType.SUBDIVISION_3D
+                                    : VisualizationType.SUBDIVISION;
+                        }
+                        BoundaryVisualization.visualizeClaim(player, selection, visualizationType, clickedBlock);
+                        return;
+                    }
+                }
+                }
             }
             if (playerData == null)
                 playerData = this.dataStore.getPlayerData(player.getUniqueId());
@@ -2279,22 +2385,42 @@ class PlayerEventHandler implements Listener {
                         isCorner = (clickedBlock.getY() == minY || clickedBlock.getY() == maxY);
                     }
                     if (isCorner) {
-                        playerData.claimResizing = claim;
+                        // When 2D/3D subdivisions share a corner with the parent, select the parent (so
+                        // e.g. 1x1x1 sub at main corner can be removed by selecting main and deleting).
+                        Claim selection = claim;
+                        while (selection.parent != null) {
+                            Claim parent = selection.parent;
+                            boolean parentContains = parent.contains(clickedBlock.getLocation(), true, false);
+                            boolean parentCornerXZ = (clickedBlock.getX() == parent.getLesserBoundaryCorner().getBlockX()
+                                    || clickedBlock.getX() == parent.getGreaterBoundaryCorner().getBlockX())
+                                    && (clickedBlock.getZ() == parent.getLesserBoundaryCorner().getBlockZ()
+                                            || clickedBlock.getZ() == parent.getGreaterBoundaryCorner().getBlockZ());
+                            boolean parentCornerY = !parent.is3D()
+                                    || (clickedBlock.getY() == parent.getLesserBoundaryCorner().getBlockY()
+                                            || clickedBlock.getY() == parent.getGreaterBoundaryCorner().getBlockY());
+                            if (parentContains && parentCornerXZ && parentCornerY) {
+                                selection = parent;
+                            } else {
+                                break;
+                            }
+                        }
+                        playerData.claimResizing = selection;
                         playerData.lastShovelLocation = clickedBlock.getLocation();
-                        GriefPrevention.sendMessage(player, TextMode.Instr, Messages.ResizeStart);
-                        // Refresh visualization in resize mode. For 3D subclaims this will render
-                        // corners + stubs
-                        // due to coercion in BoundaryVisualization.defineBoundaries().
+                        // ClaimSelected when no children; ClaimSelectedTopLevel when claim has subdivisions
+                        boolean hasNoChildren = selection.children == null || selection.children.isEmpty();
+                        GriefPrevention.sendMessage(player, TextMode.Instr,
+                                hasNoChildren ? Messages.ClaimSelected : Messages.ClaimSelectedTopLevel);
+                        // Refresh visualization in selection/resize mode.
                         VisualizationType visualizationType;
-                        if (claim.parent == null) {
-                            visualizationType = claim.isAdminClaim() ? VisualizationType.ADMIN_CLAIM
+                        if (selection.parent == null) {
+                            visualizationType = selection.isAdminClaim() ? VisualizationType.ADMIN_CLAIM
                                     : VisualizationType.CLAIM;
                         } else {
-                            visualizationType = claim.is3D() ? VisualizationType.SUBDIVISION_3D
+                            visualizationType = selection.is3D() ? VisualizationType.SUBDIVISION_3D
                                     : VisualizationType.SUBDIVISION;
                         }
 
-                        BoundaryVisualization.visualizeClaim(player, claim, visualizationType, clickedBlock);
+                        BoundaryVisualization.visualizeClaim(player, selection, visualizationType, clickedBlock);
                     }
 
                     // if he didn't click on a corner and is in subdivision mode, he's creating a

@@ -1980,20 +1980,26 @@ public class GriefPrevention extends JavaPlugin {
         }
         // deleteclaim
         else if (cmd.getName().equalsIgnoreCase("deleteclaim") && player != null) {
-            // determine which claim the player is standing in
-            Claim claim = this.dataStore.getClaimAt(player.getLocation(), false /* ignore height */, null);
+            PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
+            // Prefer claim selected via shovel corner (selection session) when set
+            Claim claim = playerData.claimResizing != null ? playerData.claimResizing
+                    : this.dataStore.getClaimAt(player.getLocation(), false /* ignore height */, null);
 
             if (claim == null) {
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.DeleteClaimMissing);
             } else {
                 // deleting an admin claim additionally requires the adminclaims permission
                 if (!claim.isAdminClaim() || player.hasPermission("griefprevention.adminclaims")) {
-                    PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
                     if (claim.children.size() > 0 && !playerData.warnedAboutMajorDeletion) {
                         GriefPrevention.sendMessage(player, TextMode.Warn, Messages.DeletionSubdivisionWarning);
                         playerData.warnedAboutMajorDeletion = true;
                     } else {
                         this.dataStore.deleteClaim(claim, true, true);
+
+                        if (playerData.claimResizing == claim) {
+                            playerData.claimResizing = null;
+                            playerData.lastShovelLocation = null;
+                        }
 
                         GriefPrevention.sendMessage(player, TextMode.Success, Messages.DeleteSuccess);
                         GriefPrevention
@@ -2762,8 +2768,9 @@ public class GriefPrevention extends JavaPlugin {
     public boolean abandonClaimHandler(Player player, boolean deleteTopLevelClaim) {
         PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
 
-        // which claim is being abandoned?
-        Claim claim = this.dataStore.getClaimAt(player.getLocation(), false, playerData.lastClaim);
+        // Prefer claim selected via shovel corner (selection session) when set
+        Claim claim = playerData.claimResizing != null ? playerData.claimResizing
+                : this.dataStore.getClaimAt(player.getLocation(), false, playerData.lastClaim);
 
         // if no claim here, nothing to abandon
         if (claim == null) {
@@ -2784,6 +2791,12 @@ public class GriefPrevention extends JavaPlugin {
         } else {
             // delete it
             this.dataStore.deleteClaim(claim, true, false);
+
+            // clear selection session if we were deleting the selected claim
+            if (playerData.claimResizing == claim) {
+                playerData.claimResizing = null;
+                playerData.lastShovelLocation = null;
+            }
 
             // adjust claim blocks when abandoning a top level claim
             if (this.config_claims_abandonReturnRatio != 1.0D && claim.parent == null

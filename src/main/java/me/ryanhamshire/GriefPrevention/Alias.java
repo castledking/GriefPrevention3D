@@ -199,12 +199,13 @@ public enum Alias {
         enable: true
         commands: [abandon]
         standalone: [abandonclaim]
-        usage: "/claim abandon [all]"
-        description: Abandon the claim you are standing in or all claims you own.
+        usage: "/claim abandon [all|toplevel]"
+        description: Abandon the claim you are standing in, or use 'toplevel' to delete it and all subdivisions, or 'all' to abandon every claim you own.
         arguments:
           scope:
             options:
               all: [all]
+              toplevel: [toplevel]
         """,
         "abandonclaim"
     ),
@@ -575,12 +576,13 @@ public enum Alias {
               enable: true
               commands: [abandon]
               standalone: [abandonclaim]
-              usage: "/claim abandon [all]"
-              description: Abandon the claim you are standing in or all claims you own.
+              usage: "/claim abandon [all|toplevel]"
+              description: Abandon the claim you are standing in, or use 'toplevel' to delete it and all subdivisions, or 'all' to abandon every claim you own.
               arguments:
                 scope:
                   options:
                     all: [all]
+                    toplevel: [toplevel]
 
             siege:
               enable: true

@@ -85,6 +85,13 @@ public final class CommandAliasConfiguration {
         // Merge user configuration with defaults, preserving user customizations
         YamlConfiguration mergedConfig = mergeConfigurations(defaultConfig, configuration);
 
+        // Ensure /claim abandon tab completion includes "toplevel" (user's alias may have been created before it existed)
+        ConfigurationSection abandonOptions =
+                mergedConfig.getConfigurationSection("subcommands.claim.abandon.arguments.scope.options");
+        if (abandonOptions != null && !abandonOptions.contains("toplevel")) {
+            mergedConfig.set("subcommands.claim.abandon.arguments.scope.options.toplevel", List.of("toplevel"));
+        }
+
         // Check global enabled toggle (defaults to true)
         boolean globalEnabled = mergedConfig.getBoolean("enabled", true);
         // Standalone commands toggle (defaults to true); when false, no /trust, /trapped etc.

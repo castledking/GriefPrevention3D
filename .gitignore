@@ -78,3 +78,7 @@ target/
 
 # VS Code
 .vscode/
+
+# Java Pack
+java-pack.manifest.json
+redhat-java.vsix

@@ -521,13 +521,17 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
     private boolean handleAbandon(CommandSender sender, String[] args) {
         if (args.length > 0 && "all".equalsIgnoreCase(args[0])) {
             return plugin.abandonAllClaimsHandler(sender);
-        } else {
-            if (sender instanceof Player player) {
-                return plugin.abandonClaimHandler(player, false);
-            } else {
-                return false;
-            }
         }
+        if (args.length > 0 && "toplevel".equalsIgnoreCase(args[0])) {
+            if (sender instanceof Player player) {
+                return plugin.abandonClaimHandler(player, true);
+            }
+            return false;
+        }
+        if (sender instanceof Player player) {
+            return plugin.abandonClaimHandler(player, false);
+        }
+        return false;
     }
 
     private boolean handleSiege(CommandSender sender, String[] args) {
