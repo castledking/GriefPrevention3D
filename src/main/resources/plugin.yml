@@ -124,6 +124,10 @@ commands:
     description: Ejects you to nearby unclaimed land.  Has a substantial cooldown period.
     usage: /<command>
     permission: griefprevention.trapped
+  givepet:
+    description: Allows a player to give away a pet he or she tamed.
+    usage: /<command> <player>
+    permission: griefprevention.givepet
   trustlist:
     description: Lists permissions for the claim you're standing in.
     usage: /<command>
@@ -265,6 +269,9 @@ permissions:
     default: op
   griefprevention.trapped:
     description: Grants permission to use /trapped.
+    default: true
+  griefprevention.givepet:
+    description: Grants permission to use /givepet.
     default: true
   griefprevention.claimslistother:
     description: Grants permission to use /claimslist to get another player's information.

@@ -1207,6 +1207,13 @@ class PlayerEventHandler implements Listener {
                     // if the player interacting is the owner or an admin in ignore claims mode,
                     // always allow
                     if (player.getUniqueId().equals(ownerID) || playerData.ignoreClaims) {
+                        //if giving away pet, do that instead
+                        if (playerData.petGiveawayRecipient != null) {
+                            tameable.setOwner(playerData.petGiveawayRecipient);
+                            playerData.petGiveawayRecipient = null;
+                            GriefPrevention.sendMessage(player, TextMode.Success, Messages.PetGiveawayConfirmation);
+                            event.setCancelled(true);
+                        }
                         return;
                     }
                     if (!instance.pvpRulesApply(entity.getLocation().getWorld()) || instance.config_pvp_protectPets) {
