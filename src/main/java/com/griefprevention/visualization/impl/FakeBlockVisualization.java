@@ -519,7 +519,11 @@ public class FakeBlockVisualization extends BlockBoundaryVisualization
         Material blockMaterial = block.getType();
 
         // Always pass through air, leaves, and leaf litter - check before SnapOverride
-        if (blockMaterial.isAir() || Tag.LEAVES.isTagged(blockMaterial) || blockMaterial == Material.LEAF_LITTER)
+        if (blockMaterial.isAir() 
+            || Tag.LEAVES.isTagged(blockMaterial) 
+            || blockMaterial == Material.LEAF_LITTER
+            || blockMaterial == Material.WILDFLOWERS
+            || blockMaterial == Material.PINK_PETALS)
         {
             return true;
         }

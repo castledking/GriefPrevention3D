@@ -1,5 +1,7 @@
 package com.griefprevention.commands;
 
+import com.griefprevention.api.ClaimCommandAddonRegistry;
+
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -787,12 +789,16 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
     ) {
         if (args.length == 1) {
             // Suggest subcommands that start with the partial input
-            // Use tabCompletionSuggestions which contains only the configured aliases
             String prefix = args[0].toLowerCase(Locale.ROOT);
-            return tabCompletionSuggestions
+            java.util.TreeSet<String> suggestions = new java.util.TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+            tabCompletionSuggestions
                 .stream()
                 .filter(name -> name.toLowerCase(Locale.ROOT).startsWith(prefix))
-                .collect(java.util.stream.Collectors.toList());
+                .forEach(suggestions::add);
+            // Merge addon subcommand completions
+            List<String> addonSubs = ClaimCommandAddonRegistry.getAdditionalSubcommandCompletions(sender, canonicalCommand, prefix);
+            suggestions.addAll(addonSubs);
+            return new ArrayList<>(suggestions);
         } else if (args.length >= 2) {
             // User has typed a space after the subcommand, now complete arguments
             String subcommand = args[0].toLowerCase();
@@ -802,7 +808,6 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
             if (handlerObj instanceof TabExecutor) {
                 String[] subArgs = new String[args.length - 1];
                 System.arraycopy(args, 1, subArgs, 0, subArgs.length);
-                // Create a mock command for TabExecutor
                 org.bukkit.command.Command mockCommand = new org.bukkit.command.Command(canonical) {
                     @Override
                     public boolean execute(
@@ -813,11 +818,13 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
                         return false;
                     }
                 };
-                return ((TabExecutor) handlerObj).onTabComplete(sender, mockCommand, alias, subArgs);
+                List<String> base = ((TabExecutor) handlerObj).onTabComplete(sender, mockCommand, alias, subArgs);
+                return mergeAddonCompletions(sender, canonicalCommand, canonical, subArgs, base);
             } else if (canonical != null) {
                 String[] subArgs = new String[args.length - 1];
                 System.arraycopy(args, 1, subArgs, 0, subArgs.length);
-                return completeSubcommandArguments(sender, command, alias, canonical, subArgs, subArgs.length - 1);
+                List<String> base = completeSubcommandArguments(sender, command, alias, canonical, subArgs, subArgs.length - 1);
+                return mergeAddonCompletions(sender, canonicalCommand, canonical, subArgs, base);
             }
         }
 
@@ -851,6 +858,25 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
         if (permission != null && !permission.isBlank()) {
             pluginCommand.setPermission(permission);
         }
+    }
+
+    private @NotNull List<String> mergeAddonCompletions(
+            @NotNull CommandSender sender,
+            @NotNull String rootCommand,
+            @NotNull String subcommand,
+            @NotNull String[] subArgs,
+            @Nullable List<String> base
+    ) {
+        String prefix = subArgs.length > 0 ? subArgs[subArgs.length - 1] : "";
+        List<String> addonCompletions = ClaimCommandAddonRegistry.getAdditionalTabCompletions(
+                sender, rootCommand, subcommand, subArgs, prefix);
+        if (addonCompletions.isEmpty()) {
+            return base != null ? base : Collections.emptyList();
+        }
+        java.util.TreeSet<String> merged = new java.util.TreeSet<>(String.CASE_INSENSITIVE_ORDER);
+        if (base != null) merged.addAll(base);
+        merged.addAll(addonCompletions);
+        return new ArrayList<>(merged);
     }
 
     private @Nullable String resolveCanonicalSubcommandName(@NotNull String name) {
