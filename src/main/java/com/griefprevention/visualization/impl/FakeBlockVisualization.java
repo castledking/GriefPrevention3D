@@ -5,6 +5,7 @@ import com.griefprevention.visualization.BlockBoundaryVisualization;
 import com.griefprevention.visualization.Boundary;
 import com.griefprevention.visualization.BoundaryVisualization;
 import com.griefprevention.visualization.VisualizationType;
+import java.util.function.Consumer;
 import me.ryanhamshire.GriefPrevention.Claim;
 import me.ryanhamshire.GriefPrevention.PlayerData;
 import me.ryanhamshire.GriefPrevention.util.BoundingBox;
@@ -16,18 +17,14 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.Directional;
 import org.bukkit.block.data.Lightable;
-import com.griefprevention.visualization.impl.SnapOverrideHelper.SnapOverride;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
-
-import java.util.function.Consumer;
 
 /**
  * A {@link BoundaryVisualization} implementation that displays clientside blocks along
  * {@link com.griefprevention.visualization.Boundary Boundaries}.
  */
-public class FakeBlockVisualization extends BlockBoundaryVisualization
-{
+public class FakeBlockVisualization extends BlockBoundaryVisualization {
 
     protected boolean waterTransparent;
 
@@ -40,38 +37,15 @@ public class FakeBlockVisualization extends BlockBoundaryVisualization
      */
     public FakeBlockVisualization(@NotNull World world, @NotNull IntVector visualizeFrom, int height) {
         super(world, visualizeFrom, height);
-
         // Water is considered transparent based on whether the visualization is initiated in water.
         waterTransparent = visualizeFrom.toBlock(world).getType() == Material.WATER;
     }
 
     @Override
-    protected void apply(@NotNull Player player, @NotNull PlayerData playerData) {
-        boolean previous = this.waterTransparent;
-        try {
-            this.waterTransparent = isPlayerSubmerged(player);
-            super.apply(player, playerData);
-        } finally {
-            this.waterTransparent = previous;
-        }
-    }
-    private boolean isPlayerSubmerged(@NotNull Player player) {
-        Block feet = player.getLocation().getBlock();
-        return isLiquidLike(feet);
-    }
-
-    private boolean isLiquidLike(@NotNull Block block)
-    {
-        return SnapOverrideHelper.isLiquidLike(block, waterTransparent);
-    }
-
-    @Override
-    protected @NotNull Consumer<@NotNull IntVector> addCornerElements(@NotNull Boundary boundary)
-    {
+    protected @NotNull Consumer<@NotNull IntVector> addCornerElements(@NotNull Boundary boundary) {
         VisualizationType type = boundary.type();
 
-        return switch (type)
-        {
+        return switch (type) {
             case SUBDIVISION_3D -> createElementAdder(Material.IRON_BLOCK.createBlockData(), type, true);
             case SUBDIVISION -> createElementAdder(Material.IRON_BLOCK.createBlockData(), type, false);
             case ADMIN_CLAIM -> createElementAdder(Material.GLOWSTONE.createBlockData(), type, false);
@@ -91,15 +65,12 @@ public class FakeBlockVisualization extends BlockBoundaryVisualization
         };
     }
 
-
     @Override
-    protected @NotNull Consumer<@NotNull IntVector> addSideElements(@NotNull Boundary boundary)
-    {
+    protected @NotNull Consumer<@NotNull IntVector> addSideElements(@NotNull Boundary boundary) {
         // Determine BlockData from boundary type to cache for reuse in function.
         VisualizationType type = boundary.type();
 
-        return switch (type)
-        {
+        return switch (type) {
             case ADMIN_CLAIM -> createElementAdder(Material.PUMPKIN.createBlockData(), type, false);
             case SUBDIVISION -> createElementAdder(Material.WHITE_WOOL.createBlockData(), type, false);
             case SUBDIVISION_3D -> createElementAdder(Material.WHITE_WOOL.createBlockData(), type, true);
@@ -115,18 +86,19 @@ public class FakeBlockVisualization extends BlockBoundaryVisualization
      * Create an element-adder consumer, allowing subclasses to inject alternative behaviour.
      */
     protected @NotNull Consumer<@NotNull IntVector> createElementAdder(
-            @NotNull BlockData fakeData,
-            @NotNull VisualizationType type,
-            boolean exactPlacement)
-    {
+        @NotNull BlockData fakeData,
+        @NotNull VisualizationType type,
+        boolean exactPlacement
+    ) {
         return exactPlacement ? addExactBlockElement(fakeData, type) : addBlockElement(fakeData, type);
     }
 
     @Override
-    protected void draw(@NotNull Player player, @NotNull Boundary boundary)
-    {
+    protected void draw(@NotNull Player player, @NotNull Boundary boundary) {
         // Use 3D-specific drawing for 3D subdivisions and 3D conflict zones, otherwise use standard 2D drawing
-        if (boundary.type() == VisualizationType.SUBDIVISION_3D || boundary.type() == VisualizationType.CONFLICT_ZONE_3D) {
+        if (
+            boundary.type() == VisualizationType.SUBDIVISION_3D || boundary.type() == VisualizationType.CONFLICT_ZONE_3D
+        ) {
             drawRespectingYBoundaries(player, boundary);
         } else if (boundary.type() == VisualizationType.RESTORE_NATURE) {
             drawRestoreNature(player, boundary);
@@ -145,8 +117,7 @@ public class FakeBlockVisualization extends BlockBoundaryVisualization
      * - North West (minX, minZ): facing north
      * - North East (maxX, minZ): facing east
      */
-    private void drawRestoreNature(@NotNull Player player, @NotNull Boundary boundary)
-    {
+    private void drawRestoreNature(@NotNull Player player, @NotNull Boundary boundary) {
         BoundingBox area = boundary.bounds();
         VisualizationType type = boundary.type();
 
@@ -155,23 +126,22 @@ public class FakeBlockVisualization extends BlockBoundaryVisualization
         int baseX = this.visualizeFrom.x();
         int baseZ = this.visualizeFrom.z();
         BoundingBox displayZoneArea = new BoundingBox(
-                new IntVector(baseX - displayZoneRadius, world.getMinHeight(), baseZ - displayZoneRadius),
-                new IntVector(baseX + displayZoneRadius, world.getMaxHeight(), baseZ + displayZoneRadius));
+            new IntVector(baseX - displayZoneRadius, world.getMinHeight(), baseZ - displayZoneRadius),
+            new IntVector(baseX + displayZoneRadius, world.getMaxHeight(), baseZ + displayZoneRadius)
+        );
         BoundingBox displayZone = displayZoneArea.intersection(area);
         if (displayZone == null) return;
 
         Consumer<@NotNull IntVector> addSide = addSideElements(boundary);
 
         // Add stub blocks (emerald) next to corners
-        if (area.getLength() > 2)
-        {
+        if (area.getLength() > 2) {
             addDisplayed(displayZone, new IntVector(area.getMinX() + 1, height, area.getMaxZ()), addSide);
             addDisplayed(displayZone, new IntVector(area.getMinX() + 1, height, area.getMinZ()), addSide);
             addDisplayed(displayZone, new IntVector(area.getMaxX() - 1, height, area.getMaxZ()), addSide);
             addDisplayed(displayZone, new IntVector(area.getMaxX() - 1, height, area.getMinZ()), addSide);
         }
-        if (area.getWidth() > 2)
-        {
+        if (area.getWidth() > 2) {
             addDisplayed(displayZone, new IntVector(area.getMinX(), height, area.getMinZ() + 1), addSide);
             addDisplayed(displayZone, new IntVector(area.getMaxX(), height, area.getMinZ() + 1), addSide);
             addDisplayed(displayZone, new IntVector(area.getMinX(), height, area.getMaxZ() - 1), addSide);
@@ -192,9 +162,12 @@ public class FakeBlockVisualization extends BlockBoundaryVisualization
     /**
      * Add a directional lime glazed terracotta corner block.
      */
-    private void addDirectionalCorner(@NotNull BoundingBox displayZone, @NotNull IntVector coordinate,
-            @NotNull BlockFace facing, @NotNull VisualizationType type)
-    {
+    private void addDirectionalCorner(
+        @NotNull BoundingBox displayZone,
+        @NotNull IntVector coordinate,
+        @NotNull BlockFace facing,
+        @NotNull VisualizationType type
+    ) {
         if (!isAccessible(displayZone, coordinate)) return;
 
         BlockData fakeData = Material.LIME_GLAZED_TERRACOTTA.createBlockData();
@@ -208,13 +181,11 @@ public class FakeBlockVisualization extends BlockBoundaryVisualization
      * Draw a 3D subdivision boundary while respecting Y boundaries and limiting visualization
      * to only one block above and below the subclaim's Y limits.
      */
-    private void drawRespectingYBoundaries(@NotNull Player player, @NotNull Boundary boundary)
-    {
+    private void drawRespectingYBoundaries(@NotNull Player player, @NotNull Boundary boundary) {
         BoundingBox area = boundary.bounds();
         Claim claim = boundary.claim();
-        
-        if (claim == null || !claim.is3D()) 
-        {
+
+        if (claim == null || !claim.is3D()) {
             // Fallback to default behavior if claim is null or not 3D
             super.draw(player, boundary);
             return;
@@ -235,9 +206,10 @@ public class FakeBlockVisualization extends BlockBoundaryVisualization
         int minShowY = Math.max(worldMinY, claimMinY - 1);
         int maxShowY = Math.min(worldMaxY, claimMaxY + 1);
         BoundingBox displayZoneArea = new BoundingBox(
-                new IntVector(baseX - displayZoneRadius, minShowY, baseZ - displayZoneRadius),
-                new IntVector(baseX + displayZoneRadius, maxShowY, baseZ + displayZoneRadius));
-        
+            new IntVector(baseX - displayZoneRadius, minShowY, baseZ - displayZoneRadius),
+            new IntVector(baseX + displayZoneRadius, maxShowY, baseZ + displayZoneRadius)
+        );
+
         // Trim to area - allows for simplified display containment check later.
         BoundingBox displayZone = displayZoneArea.intersection(area);
 
@@ -249,20 +221,17 @@ public class FakeBlockVisualization extends BlockBoundaryVisualization
 
         // We only render at the top and bottom Y boundaries for 3D subdivisions.
         int[] yLevels = new int[] { claimMinY, claimMaxY };
-        for (int y : yLevels)
-        {
+        for (int y : yLevels) {
             if (y < world.getMinHeight() || y > world.getMaxHeight()) continue;
 
             // Short directional side markers next to corners only (no full ring)
-            if (area.getLength() > 2)
-            {
+            if (area.getLength() > 2) {
                 addDisplayed3D(displayZone, new IntVector(area.getMinX() + 1, y, area.getMaxZ()), addSide);
                 addDisplayed3D(displayZone, new IntVector(area.getMinX() + 1, y, area.getMinZ()), addSide);
                 addDisplayed3D(displayZone, new IntVector(area.getMaxX() - 1, y, area.getMaxZ()), addSide);
                 addDisplayed3D(displayZone, new IntVector(area.getMaxX() - 1, y, area.getMinZ()), addSide);
             }
-            if (area.getWidth() > 2)
-            {
+            if (area.getWidth() > 2) {
                 addDisplayed3D(displayZone, new IntVector(area.getMinX(), y, area.getMinZ() + 1), addSide);
                 addDisplayed3D(displayZone, new IntVector(area.getMaxX(), y, area.getMinZ() + 1), addSide);
                 addDisplayed3D(displayZone, new IntVector(area.getMinX(), y, area.getMaxZ() - 1), addSide);
@@ -298,15 +267,19 @@ public class FakeBlockVisualization extends BlockBoundaryVisualization
      * Add a display element if accessible (3D version that doesn't call parent's addDisplayed).
      */
     private void addDisplayed3D(
-            @NotNull BoundingBox displayZone,
-            @NotNull IntVector coordinate,
-            @NotNull Consumer<@NotNull IntVector> addElement)
-    {
+        @NotNull BoundingBox displayZone,
+        @NotNull IntVector coordinate,
+        @NotNull Consumer<@NotNull IntVector> addElement
+    ) {
         // Check if coordinate is within display zone
-        if (coordinate.x() >= displayZone.getMinX() && coordinate.x() <= displayZone.getMaxX() &&
-            coordinate.y() >= displayZone.getMinY() && coordinate.y() <= displayZone.getMaxY() &&
-            coordinate.z() >= displayZone.getMinZ() && coordinate.z() <= displayZone.getMaxZ())
-        {
+        if (
+            coordinate.x() >= displayZone.getMinX() &&
+            coordinate.x() <= displayZone.getMaxX() &&
+            coordinate.y() >= displayZone.getMinY() &&
+            coordinate.y() <= displayZone.getMaxY() &&
+            coordinate.z() >= displayZone.getMinZ() &&
+            coordinate.z() <= displayZone.getMaxZ()
+        ) {
             addElement.accept(coordinate);
         }
     }
@@ -318,8 +291,10 @@ public class FakeBlockVisualization extends BlockBoundaryVisualization
      * @param fakeData the fake {@link BlockData}
      * @return the function for placing a fake block at a terrain-snapped location
      */
-    private @NotNull Consumer<@NotNull IntVector> addBlockElement(@NotNull BlockData fakeData, @NotNull VisualizationType type)
-    {
+    private @NotNull Consumer<@NotNull IntVector> addBlockElement(
+        @NotNull BlockData fakeData,
+        @NotNull VisualizationType type
+    ) {
         return vector -> {
             Block visibleLocation = getVisibleLocation(vector);
             IntVector location = new IntVector(visibleLocation);
@@ -337,9 +312,9 @@ public class FakeBlockVisualization extends BlockBoundaryVisualization
      * @return the function for placing a fake block at the exact location
      */
     private @NotNull Consumer<@NotNull IntVector> addExactBlockElement(
-            @NotNull BlockData fakeData,
-            @NotNull VisualizationType type)
-    {
+        @NotNull BlockData fakeData,
+        @NotNull VisualizationType type
+    ) {
         return vector -> {
             Block exactLocation = vector.toBlock(world);
             IntVector location = new IntVector(exactLocation);
@@ -355,152 +330,33 @@ public class FakeBlockVisualization extends BlockBoundaryVisualization
      * @param fakeData the block data that will be sent to players
      * @param type the visualization type associated with the element
      */
-    protected void onElementAdded(@NotNull IntVector location, @NotNull BlockData fakeData, @NotNull VisualizationType type) {
+    protected void onElementAdded(
+        @NotNull IntVector location,
+        @NotNull BlockData fakeData,
+        @NotNull VisualizationType type
+    ) {
         // Default implementation does nothing.
     }
 
     /**
      * Find a location that should be visible to players. This causes the visualization to "cling" to the ground.
-     * Always searches from the world surface downward to ensure consistent results regardless of player position.
      *
      * @param vector the {@link IntVector} of the display location
      * @return the located {@link Block}
      */
-    protected @NotNull Block getVisibleLocation(@NotNull IntVector vector)
-    {
-        // Always start from the highest block at this X,Z to ensure consistent surface detection
-        // regardless of whether the player is underground or on the surface
-        int highestY = world.getHighestBlockYAt(vector.x(), vector.z());
-        Block start = world.getBlockAt(vector.x(), highestY, vector.z());
-        return snapToSurface(start);
-    }
+    protected @NotNull Block getVisibleLocation(@NotNull IntVector vector) {
+        Block block = vector.toBlock(world);
+        BlockFace direction = (isTransparent(block)) ? BlockFace.DOWN : BlockFace.UP;
 
-    private @NotNull Block snapToSurface(@NotNull Block start)
-    {
-        int maxY = world.getMaxHeight() - 1;
-        int minY = world.getMinHeight();
-
-        Block column = start;
-
-        // Step upward until we reach an open cell (air/liquid depending on context).
-        // This handles cases where getHighestBlockYAt returns a block below overhangs.
-        while (!isTransparent(column) && column.getY() < maxY)
-        {
-            column = column.getRelative(BlockFace.UP);
+        while (
+            block.getY() >= world.getMinHeight() &&
+            block.getY() < world.getMaxHeight() - 1 &&
+            (!isTransparent(block.getRelative(BlockFace.UP)) || isTransparent(block))
+        ) {
+            block = block.getRelative(direction);
         }
 
-        Block current = column;
-        Block lastTransparent = column;
-        boolean inLiquidColumn = false;
-        Block firstLiquid = null;
-        Block firstWater = null;
-        Block seabed = null;
-
-        while (current.getY() >= minY)
-        {
-            // Check for special snap overrides first
-            SnapOverride override = SnapOverrideHelper.resolve(current, waterTransparent);
-            if (override != null)
-            {
-                switch (override)
-                {
-                    case SELF:
-                        return current;
-                    case ABOVE:
-                        Block above = current.getRelative(BlockFace.UP);
-                        if (above.getY() <= maxY)
-                        {
-                            return above;
-                        }
-                        return current;
-                    case TWO_ABOVE:
-                        Block twoAbove = current.getRelative(BlockFace.UP, 2);
-                        if (twoAbove.getY() <= maxY)
-                        {
-                            return twoAbove;
-                        }
-                        return current.getRelative(BlockFace.UP);
-                    case COLUMN_SURFACE:
-                        // For lava, treat as surface liquid
-                        if (!waterTransparent)
-                        {
-                            return current;
-                        }
-                        break;
-                    case COLUMN_SEABED:
-                        // Continue to find seabed
-                        break;
-                }
-            }
-
-            if (isLiquidLike(current))
-            {
-                if (!inLiquidColumn)
-                {
-                    inLiquidColumn = true;
-                    firstLiquid = current;
-                    if (isPureWater(current))
-                    {
-                        firstWater = current;
-                    }
-                }
-
-                if (firstWater == null && isPureWater(current))
-                {
-                    firstWater = current;
-                }
-
-                current = current.getRelative(BlockFace.DOWN);
-                continue;
-            }
-
-            if (isTransparent(current))
-            {
-                if (isStairOrSlab(current))
-                {
-                    return current;
-                }
-
-                lastTransparent = current;
-                current = current.getRelative(BlockFace.DOWN);
-                continue;
-            }
-
-            if (isStairOrSlab(current))
-            {
-                return current;
-            }
-
-            if (!inLiquidColumn)
-            {
-                return current;
-            }
-
-            seabed = current;
-            break;
-        }
-
-        if (!waterTransparent)
-        {
-            if (firstWater != null)
-            {
-                return firstWater;
-            }
-
-            if (firstLiquid != null)
-            {
-                return firstLiquid;
-            }
-
-            return lastTransparent;
-        }
-
-        if (seabed != null)
-        {
-            return seabed;
-        }
-
-        return lastTransparent;
+        return block;
     }
 
     /**
@@ -509,76 +365,26 @@ public class FakeBlockVisualization extends BlockBoundaryVisualization
      * @param block the {@code Block}
      * @return true if transparent
      */
-    protected boolean isTransparent(@NotNull Block block)
-    {
-        if (isLiquidLike(block))
-        {
-            return waterTransparent;
-        }
-
+    protected boolean isTransparent(@NotNull Block block) {
         Material blockMaterial = block.getType();
 
-        // Always pass through air, leaves, and leaf litter - check before SnapOverride
-        if (blockMaterial.isAir() 
-            || Tag.LEAVES.isTagged(blockMaterial) 
-            || blockMaterial == Material.LEAF_LITTER
-            || blockMaterial == Material.WILDFLOWERS
-            || blockMaterial == Material.PINK_PETALS)
-        {
-            return true;
-        }
-
-        // Check if this block has a special snap override - if so, treat as opaque
-        SnapOverride override = SnapOverrideHelper.resolve(block, waterTransparent);
-        if (override != null)
-        {
-            return false;
-        }
-
         // Custom per-material definitions.
-        if (blockMaterial == Material.SNOW)
-        {
-            return false;
+        switch (blockMaterial) {
+            case WATER:
+                return waterTransparent;
+            case SNOW:
+                return false;
         }
 
-        if (isStairOrSlab(block))
-            return false;
-
-        if (Tag.FENCES.isTagged(blockMaterial)
-                || Tag.FENCE_GATES.isTagged(blockMaterial)
-                || Tag.SIGNS.isTagged(blockMaterial)
-                || Tag.WALLS.isTagged(blockMaterial)
-                || Tag.WALL_SIGNS.isTagged(blockMaterial))
-            return true;
+        if (
+            blockMaterial.isAir() ||
+            Tag.FENCES.isTagged(blockMaterial) ||
+            Tag.FENCE_GATES.isTagged(blockMaterial) ||
+            Tag.SIGNS.isTagged(blockMaterial) ||
+            Tag.WALLS.isTagged(blockMaterial) ||
+            Tag.WALL_SIGNS.isTagged(blockMaterial)
+        ) return true;
 
         return block.getType().isTransparent();
     }
-
-    private boolean isStairOrSlab(@NotNull Block block)
-    {
-        BlockData data = block.getBlockData();
-        if (data instanceof org.bukkit.block.data.type.Slab || data instanceof org.bukkit.block.data.type.Stairs)
-        {
-            return true;
-        }
-
-        return isStairOrSlab(block.getType());
-    }
-
-    private boolean isStairOrSlab(@NotNull Material material)
-    {
-        if (Tag.SLABS.isTagged(material) || Tag.STAIRS.isTagged(material))
-        {
-            return true;
-        }
-
-        String name = material.name();
-        return name.contains("SLAB") || name.contains("STAIRS") || name.contains("STEP");
-    }
-
-    private boolean isPureWater(@NotNull Block block)
-    {
-        return block.getType() == Material.WATER;
-    }
-
 }
