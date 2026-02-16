@@ -318,6 +318,7 @@ public class Claim
             case Container -> "#inventory";
             case Access -> "#access";
             case Edit -> "";
+            case Inventory -> "#inventory";
         };
     }
  

@@ -82,3 +82,6 @@ target/
 # Java Pack
 java-pack.manifest.json
 redhat-java.vsix
+
+# Other
+.factorypath
