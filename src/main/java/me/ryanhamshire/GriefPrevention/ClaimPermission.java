@@ -43,7 +43,13 @@ public enum ClaimPermission
      * ClaimPermission that allows users to grant ClaimPermissions. Uses a separate track from normal
      * permissions and does not grant any other permissions.
      */
-    Manage(Messages.NoPermissionTrust);
+    Manage(Messages.NoPermissionTrust),
+
+    /**
+     * @deprecated Use {@link #Container} instead. This alias exists for backward compatibility only.
+     */
+    @Deprecated(forRemoval = true)
+    Inventory(Messages.NoContainersPermission);
 
     private final Messages denialMessage;
 
@@ -69,8 +75,9 @@ public enum ClaimPermission
     public boolean isGrantedBy(ClaimPermission other)
     {
         if (other == Manage || this == Manage) return other == this || other == Edit;
-        // This uses declaration order to compare! If trust levels are reordered this method must be rewritten.
-        return other != null && other.ordinal() <= this.ordinal();
+        ClaimPermission thisNormalized = this == Inventory ? Container : this;
+        ClaimPermission otherNormalized = other == Inventory ? Container : other;
+        return otherNormalized != null && otherNormalized.ordinal() <= thisNormalized.ordinal();
     }
 
 }
