@@ -2505,6 +2505,10 @@ class PlayerEventHandler implements Listener {
                             int minY, maxY;
 
                             if (playerData.shovelMode == ShovelMode.Subdivide) {
+                                if (playerData.claimSubdividing == null) {
+                                    GriefPrevention.sendMessage(player, TextMode.Err, "No claim selected for subdivision.");
+                                    return;
+                                }
                                 // 2D mode: Always span from parent's bottom to world max height so claim is NOT
                                 // 3D.
                                 // This matches default GP behavior where 2D subclaims ignore height.
@@ -2529,6 +2533,10 @@ class PlayerEventHandler implements Listener {
                                 }
                             } else {
                                 // Fallback: default to parent Y bounds
+                                if (playerData.claimSubdividing == null) {
+                                    GriefPrevention.sendMessage(player, TextMode.Err, "No claim selected for subdivision.");
+                                    return;
+                                }
                                 minY = playerData.claimSubdividing.getLesserBoundaryCorner().getBlockY();
                                 maxY = playerData.claimSubdividing.getGreaterBoundaryCorner().getBlockY();
                             }

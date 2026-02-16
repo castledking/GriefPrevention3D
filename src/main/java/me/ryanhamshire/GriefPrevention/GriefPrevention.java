@@ -1864,10 +1864,11 @@ public class GriefPrevention extends JavaPlugin {
                 return true;
             }
 
-            // Only the owner of the parent claim may toggle restrictions. Admin claims
-            // require admin permission.
-            if (!player.hasPermission("griefprevention.adminclaims")) {
-                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoAdminClaimsPermission);
+            // If player has /ignoreclaims on, continue
+            // If admin claim, fail if this user is not an admin
+            // If not an admin claim, fail if this user is not the owner
+            if (!playerData.ignoreClaims && (claim.isAdminClaim() ? !player.hasPermission("griefprevention.adminclaims") : !player.getUniqueId().equals(claim.parent.ownerID))) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.OnlyOwnersModifyClaims, claim.getOwnerName());
                 return true;
             }
 
@@ -1875,60 +1876,6 @@ public class GriefPrevention extends JavaPlugin {
                 claim.setSubclaimRestrictions(false);
                 GriefPrevention.sendMessage(player, TextMode.Success, Messages.SubclaimUnrestricted);
             } else {
-                // When restricting, remove inherited permissions but keep explicit ones
-                if (claim.parent != null && !claim.getSubclaimRestrictions()) {
-                    // Get all permissions from parent that would be inherited
-                    ArrayList<String> parentBuilders = new ArrayList<>();
-                    ArrayList<String> parentContainers = new ArrayList<>();
-                    ArrayList<String> parentAccessors = new ArrayList<>();
-                    ArrayList<String> parentManagers = new ArrayList<>();
-                    claim.parent.getPermissions(parentBuilders, parentContainers, parentAccessors, parentManagers);
-
-                    // Get current permissions in this claim
-                    ArrayList<String> currentBuilders = new ArrayList<>();
-                    ArrayList<String> currentContainers = new ArrayList<>();
-                    ArrayList<String> currentAccessors = new ArrayList<>();
-                    ArrayList<String> currentManagers = new ArrayList<>();
-                    claim.getPermissions(currentBuilders, currentContainers, currentAccessors, currentManagers);
-
-                    // Remove permissions that exist in both parent and child (inherited ones)
-                    for (String manager : parentManagers) {
-                        if (currentManagers.contains(manager)) {
-                            claim.managers.remove(manager);
-                        }
-                    }
-
-                    for (String builder : parentBuilders) {
-                        if (currentBuilders.contains(builder)) {
-                            // Check if this builder permission matches the parent's builder permission
-                            ClaimPermission childPerm = claim.getPermission(builder.toLowerCase());
-                            if (childPerm == ClaimPermission.Build) {
-                                claim.dropPermission(builder);
-                            }
-                        }
-                    }
-
-                    for (String container : parentContainers) {
-                        if (currentContainers.contains(container)) {
-                            // Check if this container permission matches the parent's container permission
-                            ClaimPermission childPerm = claim.getPermission(container.toLowerCase());
-                            if (childPerm == ClaimPermission.Container) {
-                                claim.dropPermission(container);
-                            }
-                        }
-                    }
-
-                    for (String accessor : parentAccessors) {
-                        if (currentAccessors.contains(accessor)) {
-                            // Check if this accessor permission matches the parent's accessor permission
-                            ClaimPermission childPerm = claim.getPermission(accessor.toLowerCase());
-                            if (childPerm == ClaimPermission.Access) {
-                                claim.dropPermission(accessor);
-                            }
-                        }
-                    }
-                }
-
                 claim.setSubclaimRestrictions(true);
                 GriefPrevention.sendMessage(player, TextMode.Success, Messages.SubclaimRestricted);
             }
