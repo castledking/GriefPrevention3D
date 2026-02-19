@@ -554,6 +554,9 @@ public class FlatFileDataStore extends DataStore
 
         boolean inheritNothing = yaml.getBoolean("inheritNothing");
 
+        // Load inheritNothingForNewSubdivisions setting (default false = inherit)
+        boolean inheritNothingForNewSubdivisions = yaml.getBoolean("inheritNothingForNewSubdivisions", false);
+
         out_parentID.add(yaml.getLong("Parent Claim ID", -1L));
 
         // Add is3D flag
@@ -567,6 +570,7 @@ public class FlatFileDataStore extends DataStore
         claim.modifiedDate = new Date(lastModifiedDate);
         claim.id = claimID;
         claim.areExplosivesAllowed = explosivesAllowed;
+        claim.setInheritNothingForNewSubdivisions(inheritNothingForNewSubdivisions);
 
         ConfigurationSection childrenSection = yaml.getConfigurationSection("Children");
         if (childrenSection != null)
@@ -711,6 +715,7 @@ public class FlatFileDataStore extends DataStore
 
         section.set("Parent Claim ID", claim.parent == null ? -1L : claim.parent.id);
         section.set("inheritNothing", claim.getSubclaimRestrictions());
+        section.set("inheritNothingForNewSubdivisions", claim.getInheritNothingForNewSubdivisions());
         section.set("Is3D", claim.is3D());
         section.set("Explosives Allowed", claim.areExplosivesAllowed);
         section.set("Modified Date", claim.modifiedDate != null ? claim.modifiedDate.getTime() : System.currentTimeMillis());

@@ -1859,8 +1859,36 @@ public class GriefPrevention extends JavaPlugin {
         else if (cmd.getName().equalsIgnoreCase("restrictsubclaim") && player != null) {
             PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
             Claim claim = this.dataStore.getClaimAt(player.getLocation(), true, playerData.lastClaim);
-            if (claim == null || claim.parent == null) {
+            if (claim == null) {
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.StandInSubclaim);
+                return true;
+            }
+
+            // If in a main claim (no parent), toggle the flag for future subdivisions
+            if (claim.parent == null) {
+                // If admin claim, fail if this user is not an admin
+                // If not an admin claim, fail if this user is not the owner
+                if (!playerData.ignoreClaims && (claim.isAdminClaim() ? !player.hasPermission("griefprevention.adminclaims") : !player.getUniqueId().equals(claim.ownerID))) {
+                    GriefPrevention.sendMessage(player, TextMode.Err, Messages.OnlyOwnersModifyClaims, claim.getOwnerName());
+                    return true;
+                }
+
+                if (claim.getInheritNothingForNewSubdivisions()) {
+                    claim.setInheritNothingForNewSubdivisions(false);
+                    GriefPrevention.sendMessage(player, TextMode.Success, Messages.MainClaimSubdivisionInheritEnabled);
+                } else {
+                    claim.setInheritNothingForNewSubdivisions(true);
+                    // Also restrict existing subdivisions that aren't already restricted
+                    for (Claim child : claim.children) {
+                        if (!child.getSubclaimRestrictions()) {
+                            removeInheritedPermissions(child);
+                            child.setSubclaimRestrictions(true);
+                            this.dataStore.saveClaim(child);
+                        }
+                    }
+                    GriefPrevention.sendMessage(player, TextMode.Success, Messages.MainClaimSubdivisionInheritDisabled);
+                }
+                this.dataStore.saveClaim(claim);
                 return true;
             }
 
@@ -4133,11 +4161,32 @@ public class GriefPrevention extends JavaPlugin {
         PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
         Claim claim = this.dataStore.getClaimAt(player.getLocation(), true, playerData.lastClaim);
 
-        if (claim == null || claim.parent == null) {
+        if (claim == null) {
             GriefPrevention.sendMessage(player, TextMode.Err, Messages.StandInSubclaim);
             return true;
         }
 
+        // If in a main claim (no parent), toggle the flag for future subdivisions
+        if (claim.parent == null) {
+            // If admin claim, fail if this user is not an admin
+            // If not an admin claim, fail if this user is not the owner
+            if (!playerData.ignoreClaims && (claim.isAdminClaim() ? !player.hasPermission("griefprevention.adminclaims") : !player.getUniqueId().equals(claim.ownerID))) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.OnlyOwnersModifyClaims, claim.getOwnerName());
+                return true;
+            }
+
+            if (claim.getInheritNothingForNewSubdivisions()) {
+                claim.setInheritNothingForNewSubdivisions(false);
+                GriefPrevention.sendMessage(player, TextMode.Success, Messages.MainClaimSubdivisionInheritEnabled);
+            } else {
+                claim.setInheritNothingForNewSubdivisions(true);
+                GriefPrevention.sendMessage(player, TextMode.Success, Messages.MainClaimSubdivisionInheritDisabled);
+            }
+            this.dataStore.saveClaim(claim);
+            return true;
+        }
+
+        // Original logic for subdivisions
         if (claim.getSubclaimRestrictions()) {
             claim.setSubclaimRestrictions(false);
             GriefPrevention.sendMessage(player, TextMode.Success, Messages.SubclaimUnrestricted);
