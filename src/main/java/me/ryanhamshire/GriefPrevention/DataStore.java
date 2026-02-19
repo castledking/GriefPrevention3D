@@ -93,7 +93,7 @@ public abstract class DataStore {
     final static String bannedWordsFilePath = dataLayerFolderPath + File.separator + "bannedWords.txt";
 
     // the latest version of the data schema implemented here
-    protected static final int latestSchemaVersion = 5;
+    protected static final int latestSchemaVersion = 6;
 
     // reading and writing the schema version to the data store
     abstract int getSchemaVersionFromStorage();
@@ -1215,7 +1215,9 @@ public abstract class DataStore {
         if (parent != null) {
             // First-child subdivisions inherit from parent; nested subdivisions do not.
             boolean isNested = parent.parent != null;
-            newClaim.setSubclaimRestrictions(isNested);
+            // Also check if parent has inheritNothingForNewSubdivisions set
+            boolean parentRestrictsFutureSubdivisions = parent.getInheritNothingForNewSubdivisions();
+            newClaim.setSubclaimRestrictions(isNested || parentRestrictsFutureSubdivisions);
             claimsToCheck = newClaim.parent.children;
         } else {
             claimsToCheck = this.claims;

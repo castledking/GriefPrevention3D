@@ -109,7 +109,7 @@ public class DatabaseDataStore extends DataStore
         {
             //ensure the data tables exist
             statement.execute("CREATE TABLE IF NOT EXISTS griefprevention_nextclaimid (nextid INTEGER)");
-            statement.execute("CREATE TABLE IF NOT EXISTS griefprevention_claimdata (id INTEGER, owner VARCHAR(50), lessercorner VARCHAR(100), greatercorner VARCHAR(100), builders TEXT, containers TEXT, accessors TEXT, managers TEXT, inheritnothing BOOLEAN, parentid INTEGER, expiration BIGINT)");
+            statement.execute("CREATE TABLE IF NOT EXISTS griefprevention_claimdata (id INTEGER, owner VARCHAR(50), lessercorner VARCHAR(100), greatercorner VARCHAR(100), builders TEXT, containers TEXT, accessors TEXT, managers TEXT, inheritnothing BOOLEAN, parentid INTEGER, expiration BIGINT, explosivesallowed BOOLEAN, inheritnothingfornewsubdivisions BOOLEAN)");
             statement.execute("CREATE TABLE IF NOT EXISTS griefprevention_playerdata (name VARCHAR(50), lastlogin DATETIME, accruedblocks INTEGER, bonusblocks INTEGER)");
             statement.execute("CREATE TABLE IF NOT EXISTS griefprevention_schemaversion (version INTEGER)");
 
@@ -278,6 +278,12 @@ public class DatabaseDataStore extends DataStore
             statement.execute(SQL_UPDATE_SCHEMA_ADD_EXPLOSIVES);
         }
 
+        if (this.getSchemaVersion() <= 5)
+        {
+            statement = this.databaseConnection.createStatement();
+            statement.execute("ALTER TABLE griefprevention_claimdata ADD inheritNothingForNewSubdivisions BOOLEAN DEFAULT 0 AFTER inheritNothing");
+        }
+
         //load claims data into memory
 
         results = statement.executeQuery("SELECT * FROM griefprevention_claimdata");
@@ -297,6 +303,7 @@ public class DatabaseDataStore extends DataStore
                 long parentId = results.getLong("parentid");
                 claimID = results.getLong("id");
                 boolean inheritNothing = results.getBoolean("inheritnothing");
+                boolean inheritNothingForNewSubdivisions = results.getBoolean("inheritnothingfornewsubdivisions");
 
                 //expiration date
                 long expirationDate = results.getLong("expiration");
@@ -375,6 +382,7 @@ public class DatabaseDataStore extends DataStore
                 Claim claim = new Claim(lesserBoundaryCorner, greaterBoundaryCorner, ownerID, builderNames, containerNames, accessorNames, managerNames, inheritNothing, claimID, false);
                 claim.setExpirationDate(expirationDate);
                 claim.areExplosivesAllowed = explosivesAllowed;
+                claim.setInheritNothingForNewSubdivisions(inheritNothingForNewSubdivisions);
 
                 if (removeClaim)
                 {
@@ -476,6 +484,7 @@ public class DatabaseDataStore extends DataStore
         String accessorsString = this.storageStringBuilder(accessors);
         String managersString = this.storageStringBuilder(managers);
         boolean inheritNothing = claim.getSubclaimRestrictions();
+        boolean inheritNothingForNewSubdivisions = claim.getInheritNothingForNewSubdivisions();
         long parentId = claim.parent == null ? -1 : claim.parent.id;
         long expirationDate = claim.getExpirationDate();
         boolean explosivesAllowed = claim.areExplosivesAllowed;
@@ -495,6 +504,7 @@ public class DatabaseDataStore extends DataStore
             insertStmt.setLong(10, parentId);
             insertStmt.setLong(11, expirationDate);
             insertStmt.setBoolean(12, explosivesAllowed);
+            insertStmt.setBoolean(13, inheritNothingForNewSubdivisions);
             insertStmt.executeUpdate();
         }
         catch (SQLException e)

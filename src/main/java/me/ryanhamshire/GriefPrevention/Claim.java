@@ -95,6 +95,9 @@ public class Claim
  
      // intended for subclaims - they inherit no permissions
      private boolean inheritNothing = false;
+  
+     // for main claims - when true, future subdivisions will NOT inherit permissions
+     private boolean inheritNothingForNewSubdivisions = false;
  
      //children (subdivisions)
      //note subdivisions themselves never have children
@@ -261,6 +264,16 @@ public class Claim
      public void setSubclaimRestrictions(boolean inheritNothing)
      {
          this.inheritNothing = inheritNothing;
+     }
+     
+     public boolean getInheritNothingForNewSubdivisions()
+     {
+         return this.inheritNothingForNewSubdivisions;
+     }
+     
+     public void setInheritNothingForNewSubdivisions(boolean inheritNothingForNewSubdivisions)
+     {
+         this.inheritNothingForNewSubdivisions = inheritNothingForNewSubdivisions;
      }
  
      //distance check for claims, distance in this case is a band around the outside of the claim rather then euclidean distance
