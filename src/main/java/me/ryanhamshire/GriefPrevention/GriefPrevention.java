@@ -1875,10 +1875,17 @@ public class GriefPrevention extends JavaPlugin {
 
                 if (claim.getInheritNothingForNewSubdivisions()) {
                     claim.setInheritNothingForNewSubdivisions(false);
+                    // Also unrestrict all existing subdivisions
+                    for (Claim child : claim.children) {
+                        if (child.getSubclaimRestrictions()) {
+                            child.setSubclaimRestrictions(false);
+                            this.dataStore.saveClaim(child);
+                        }
+                    }
                     GriefPrevention.sendMessage(player, TextMode.Success, Messages.MainClaimSubdivisionInheritEnabled);
                 } else {
                     claim.setInheritNothingForNewSubdivisions(true);
-                    // Also restrict existing subdivisions that aren't already restricted
+                    // Also restrict all existing subdivisions
                     for (Claim child : claim.children) {
                         if (!child.getSubclaimRestrictions()) {
                             removeInheritedPermissions(child);
