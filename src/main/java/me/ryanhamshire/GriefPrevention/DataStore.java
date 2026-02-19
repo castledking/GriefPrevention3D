@@ -439,6 +439,7 @@ public abstract class DataStore {
         this.claimIDMap.put(newClaim.id, newClaim);
         for (Claim child : newClaim.children) {
             this.claimIDMap.put(child.id, child);
+            child.inDataStore = true;
             // 3D subdivisions need to be in chunk claim map so getClaimAt can find them
             if (child.is3D()) {
                 addToChunkClaimMap(child);

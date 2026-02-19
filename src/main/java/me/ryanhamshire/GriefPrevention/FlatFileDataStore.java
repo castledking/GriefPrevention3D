@@ -626,10 +626,6 @@ public class FlatFileDataStore extends DataStore
 
         boolean inheritNothing = section.getBoolean("inheritNothing");
         boolean is3D = section.getBoolean("Is3D", false);
-        // Migration: first-child 3D subdivisions should inherit (inheritNothing=false)
-        if (is3D && inheritNothing && parent != null && parent.parent == null) {
-            inheritNothing = false;
-        }
         boolean explosivesAllowed = section.getBoolean("Explosives Allowed", false);
 
         Long childID = null;
