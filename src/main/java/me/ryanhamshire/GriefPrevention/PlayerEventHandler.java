@@ -1054,7 +1054,7 @@ class PlayerEventHandler implements Listener {
     }
 
     // when a player teleports
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onPlayerTeleport(PlayerTeleportEvent event) {
         Player player = event.getPlayer();
         PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
@@ -1065,31 +1065,33 @@ class PlayerEventHandler implements Listener {
         // Get the claim at the original location
         Claim fromClaim = playerData.lastClaim;
 
-        // Update the lastClaim to the new location
+        // Special handling for ender pearls and chorus fruit to prevent gaining access
+        // to secured claims. Must run before updating lastClaim so we don't corrupt
+        // player state when cancelling. Use ProtectionHelper for proper 3D claim and
+        // parent inheritance handling.
+        if (instance.config_claims_enderPearlsRequireAccessTrust) {
+            TeleportCause cause = event.getCause();
+            if (cause == TeleportCause.CHORUS_FRUIT || cause == TeleportCause.ENDER_PEARL) {
+                Supplier<String> noAccessReason = ProtectionHelper.checkPermission(player, event.getTo(),
+                        ClaimPermission.Access, event);
+                if (noAccessReason != null) {
+                    GriefPrevention.sendMessage(player, TextMode.Err, noAccessReason.get());
+                    event.setCancelled(true);
+                    if (cause == TeleportCause.ENDER_PEARL && instance.config_claims_refundDeniedEnderPearls) {
+                        player.getInventory().addItem(new ItemStack(Material.ENDER_PEARL));
+                    }
+                    return; // Don't update lastClaim when teleport is cancelled
+                }
+            }
+        }
+
+        // Update the lastClaim to the new location (only when teleport proceeds)
         playerData.lastClaim = toClaim;
 
         // If we're moving from one claim to another, or from a claim to wilderness,
         // we need to update the player's permissions
         if (fromClaim != toClaim) {
             player.updateCommands();
-        }
-
-        // Special handling for ender pearls and chorus fruit to prevent gaining access
-        // to secured claims
-        if (instance.config_claims_enderPearlsRequireAccessTrust) {
-            TeleportCause cause = event.getCause();
-            if (cause == TeleportCause.CHORUS_FRUIT || cause == TeleportCause.ENDER_PEARL) {
-                if (toClaim != null) {
-                    Supplier<String> noAccessReason = toClaim.checkPermission(player, ClaimPermission.Access, event);
-                    if (noAccessReason != null) {
-                        GriefPrevention.sendMessage(player, TextMode.Err, noAccessReason.get());
-                        event.setCancelled(true);
-                        if (cause == TeleportCause.ENDER_PEARL && instance.config_claims_refundDeniedEnderPearls) {
-                            player.getInventory().addItem(new ItemStack(Material.ENDER_PEARL));
-                        }
-                    }
-                }
-            }
         }
     }
 
