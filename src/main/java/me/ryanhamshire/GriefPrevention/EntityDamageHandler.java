@@ -78,14 +78,14 @@ public class EntityDamageHandler implements Listener {
             EntityType.POLAR_BEAR,
             EntityType.PANDA);
 
+    private static final NamespacedKey LURED_BY_PLAYER = NamespacedKey.fromString("griefprevention:lured_by_player");
+
     private final @NotNull DataStore dataStore;
     private final @NotNull GriefPrevention instance;
-    private final @NotNull NamespacedKey luredByPlayer;
 
     EntityDamageHandler(@NotNull DataStore dataStore, @NotNull GriefPrevention plugin) {
         this.dataStore = dataStore;
         instance = plugin;
-        luredByPlayer = new NamespacedKey(plugin, "lured_by_player");
     }
 
     // Tag passive animals that can become aggressive so that we can tell whether
@@ -99,9 +99,9 @@ public class EntityDamageHandler implements Listener {
             return;
 
         if (event.getReason() == EntityTargetEvent.TargetReason.TEMPT)
-            event.getEntity().getPersistentDataContainer().set(luredByPlayer, PersistentDataType.BYTE, (byte) 1);
+            event.getEntity().getPersistentDataContainer().set(LURED_BY_PLAYER, PersistentDataType.BYTE, (byte) 1);
         else
-            event.getEntity().getPersistentDataContainer().remove(luredByPlayer);
+            event.getEntity().getPersistentDataContainer().remove(LURED_BY_PLAYER);
 
     }
 
@@ -233,14 +233,17 @@ public class EntityDamageHandler implements Listener {
     }
 
     /**
-     * Check if an {@link Entity} is considered hostile.
+     * Checks if the given entity is considered hostile.
+     * <p>
+     * Used to determine whether an entity should be protected in claims.
+     * Hostile entities are never protected.
      *
      * @param entity the {@code Entity}
      * @return true if the {@code Entity} is hostile
      */
-    private boolean isHostile(@NotNull Entity entity) {
-        if (entity instanceof Monster)
-            return true;
+    public static boolean isHostile(@NotNull Entity entity)
+    {
+        if (entity instanceof Monster) return true;
 
         EntityType type = entity.getType();
         if (type == EntityType.GHAST || type == EntityType.MAGMA_CUBE || type == EntityType.SHULKER)
@@ -261,8 +264,7 @@ public class EntityDamageHandler implements Listener {
             return rabbit.getRabbitType() == Rabbit.Type.THE_KILLER_BUNNY;
 
         if ((TEMPTABLE_SEMI_HOSTILES.contains(type)) && entity instanceof Mob mob)
-            return !entity.getPersistentDataContainer().has(luredByPlayer, PersistentDataType.BYTE)
-                    && mob.getTarget() != null;
+            return !entity.getPersistentDataContainer().has(LURED_BY_PLAYER, PersistentDataType.BYTE) && mob.getTarget() != null;
 
         return false;
     }
@@ -740,8 +742,7 @@ public class EntityDamageHandler implements Listener {
         }
 
         // Check for permission to access containers.
-        Supplier<String> noContainersReason = claim.checkPermission(attacker, ClaimPermission.Container,
-                event.original(), override);
+        Supplier<String> noContainersReason = claim.checkPermission(attacker, ClaimPermission.Container, event.original(), override);
 
         // If player has permission, action is allowed.
         if (noContainersReason == null)
@@ -944,8 +945,7 @@ public class EntityDamageHandler implements Listener {
                 message += "  " + dataStore.getMessage(Messages.IgnoreClaimsAdvertisement);
             return message;
         };
-        Supplier<String> noContainersReason = claim.checkPermission(attacker, ClaimPermission.Container, event,
-                override);
+        Supplier<String> noContainersReason = claim.checkPermission(attacker, ClaimPermission.Container, event, override);
         if (noContainersReason != null) {
             event.setCancelled(true);
             preventInfiniteBounce(arrow, event.getVehicle());
@@ -1071,8 +1071,7 @@ public class EntityDamageHandler implements Listener {
                                     event.setIntensity(affected, 0);
                                 }
                             } else {
-                                // Source is a player. Determine if they have permission to access entities in
-                                // the claim.
+                                // Source is a player. Determine if they have permission to access entities in the claim.
                                 Supplier<String> override = () -> instance.dataStore
                                         .getMessage(Messages.NoDamageClaimedEntity, claim.getOwnerName());
                                 final Supplier<String> noContainersReason = claim.checkPermission(thrower,

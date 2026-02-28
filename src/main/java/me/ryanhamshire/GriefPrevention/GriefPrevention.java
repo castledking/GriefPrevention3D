@@ -23,6 +23,10 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.griefprevention.commands.CommandAliasConfiguration;
 import com.griefprevention.commands.TabCompletions;
+import com.griefprevention.commands.ClaimCommand;
+import com.griefprevention.metrics.MetricsHandler;
+import com.griefprevention.platform.knockback.KnockbackProtectionListener;
+import com.griefprevention.protection.InteractionProtectionHandler;
 import com.griefprevention.protection.ProtectionHelper;
 import me.ryanhamshire.GriefPrevention.DataStore.NoTransferException;
 import me.ryanhamshire.GriefPrevention.events.SaveTrappedPlayerEvent;
@@ -146,19 +150,14 @@ public class GriefPrevention extends JavaPlugin {
                                                                // permission
 
     public int config_claims_initialBlocks; // the number of claim blocks a new player starts with
-    public double config_claims_abandonReturnRatio; // the portion of claim blocks returned to a player when a claim is
-                                                    // abandoned
-    public int config_claims_blocksAccruedPerHour_default; // how many additional blocks players get each hour of play
-                                                           // (can be zero) without any special permissions
-    public int config_claims_maxAccruedBlocks_default; // the limit on accrued blocks (over time) for players without
-                                                       // any special permissions. doesn't limit purchased or
-                                                       // admin-gifted blocks
+    public double config_claims_abandonReturnRatio; // the portion of claim blocks returned to a player when a claim is abandoned
+    public int config_claims_blocksAccruedPerHour_default; // how many additional blocks players get each hour of play (can be zero) without any special permissions
+    public int config_claims_maxAccruedBlocks_default; // the limit on accrued blocks (over time) for players without any special permissions. doesn't limit purchased or admin-gifted blocks
     public HashMap<String, Integer> config_claims_maxDepth; // limit on how deep claims can go
+    public int config_claims_minY; // minimum Y coordinate claims can reach
     public int config_claims_expirationDays; // how many days of inactivity before a player loses his claims
-    public int config_claims_expirationExemptionTotalBlocks; // total claim blocks amount which will exempt a player
-                                                             // from claim expiration
-    public int config_claims_expirationExemptionBonusBlocks; // bonus claim blocks amount which will exempt a player
-                                                             // from claim expiration
+    public int config_claims_expirationExemptionTotalBlocks; // total claim blocks amount which will exempt a player from claim expiration
+    public int config_claims_expirationExemptionBonusBlocks; // bonus claim blocks amount which will exempt a player from claim expiration
 
     public int config_claims_automaticClaimsForNewPlayersRadius; // how big automatic new player claims (when they place
                                                                  // a chest) should be. -1 to disable
@@ -269,12 +268,11 @@ public class GriefPrevention extends JavaPlugin {
 
     public int config_ipLimit; // how many players can share an IP address
 
-    public boolean config_trollFilterEnabled; // whether to auto-mute new players who use banned words right after
-                                              // joining
+    public boolean config_trollFilterEnabled; // whether to auto-mute new players who use banned words right after joining
     public boolean config_silenceBans; // whether to remove quit messages on banned players
 
-    public HashMap<String, Integer> config_seaLevelOverride; // override for sea level, because bukkit doesn't report
-                                                             // the right value for all situations
+    public HashMap<String, Integer> config_seaLevelOverride; // override for sea level, because bukkit doesn't report the right value for all situations
+    public HashMap<String, Integer> config_claims_minYOverride; // per-world override for minimum Y coordinate
 
     public boolean config_limitTreeGrowth; // whether trees should be prevented from growing into a claim from outside
     public PistonMode config_pistonMovement; // Setting for piston check options
@@ -342,8 +340,7 @@ public class GriefPrevention extends JavaPlugin {
 
         AddLogEntry("Finished loading configuration.");
 
-        // when datastore initializes, it loads player and claim data, and posts some
-        // stats to the log
+        // when datastore initializes, it loads player and claim data, and posts some stats to the log
         String dbUrl = this.getConfig().getString("database.url", "");
         String dbUser = this.getConfig().getString("database.username", "");
         String dbPass = this.getConfig().getString("database.password", "");
@@ -434,7 +431,10 @@ public class GriefPrevention extends JavaPlugin {
         entityDamageHandler = new EntityDamageHandler(this.dataStore, this);
         pluginManager.registerEvents(entityDamageHandler, this);
 
-        // Register knockback handler - use Paper's event if available, otherwise use Spigot's
+        // knockback protection - handles melee, projectile, and other player-caused knockback in claims
+        new KnockbackProtectionListener(this.dataStore, this).register(this);
+
+        // Register knockback handler - use Paper's event if available, otherwise use Spigot's (wind charge protection)
         if (PaperKnockbackHandler.isPaperEventAvailable()) {
             pluginManager.registerEvents(new PaperKnockbackHandler(this.dataStore, this), this);
             AddLogEntry("Using Paper knockback handler for wind charge protection.");
@@ -442,6 +442,9 @@ public class GriefPrevention extends JavaPlugin {
             pluginManager.registerEvents(new SpigotKnockbackHandler(this.dataStore, this), this);
             AddLogEntry("Using Spigot knockback handler for wind charge protection.");
         }
+
+        // special interaction-related events
+        pluginManager.registerEvents(new InteractionProtectionHandler(), this);
 
         // cache offline players
         OfflinePlayer[] offlinePlayers = this.getServer().getOfflinePlayers();
@@ -714,7 +717,7 @@ public class GriefPrevention extends JavaPlugin {
             // which may
             // have been created there)
             if (this.config_claims_worldModes.get(world) == ClaimsMode.Disabled &&
-                    deprecated_claimsEnabledWorldNames.size() > 0) {
+                    !deprecated_claimsEnabledWorldNames.isEmpty()) {
                 this.config_claims_worldModes.put(world, ClaimsMode.Survival);
             }
         }
@@ -785,18 +788,44 @@ public class GriefPrevention extends JavaPlugin {
             outConfig.set("GriefPrevention.Claims.MaximumDepth." + world.getName(), maxDepth);
         }
 
-        this.config_claims_chestClaimExpirationDays = config.getInt("GriefPrevention.Claims.Expiration.ChestClaimDays",
-                7);
-        this.config_claims_expirationDays = config.getInt("GriefPrevention.Claims.Expiration.AllClaims.DaysInactive",
-                60);
+        this.config_claims_minY = config.getInt("GriefPrevention.Claims.MinimumY", Integer.MIN_VALUE);
+        // Warn if MinimumY is set above sea level, as this is likely unintended
+        if (this.config_claims_minY != Integer.MIN_VALUE) {
+            for (World world : worlds) {
+                if (!this.claimsEnabledForWorld(world)) continue;
+                int minY = this.config_claims_minY;
+                int seaLevel = this.getSeaLevel(world);
+                if (minY > seaLevel) {
+                    getLogger().warning(
+                            "MinimumY (" + minY + ") is set above sea level (" + seaLevel + ") " +
+                                    "for world '" + world.getName() + "'. This prevents claims extending below Y=" +
+                                    minY + ", which may not have been intended.");
+                    break;
+                }
+            }
+        }
+
+        // minimum Y per world
+        this.config_claims_minYOverride = new HashMap<>();
+        for (World world : worlds) {
+            String configPath = "GriefPrevention.Claims.MinimumYOverrides." + world.getName();
+            if (config.contains(configPath)) {
+                int minYOverride = config.getInt(configPath);
+                outConfig.set(configPath, minYOverride);
+                this.config_claims_minYOverride.put(world.getName(), minYOverride);
+            } else {
+                outConfig.set(configPath, null);
+            }
+        }
+
+        this.config_claims_chestClaimExpirationDays = config.getInt("GriefPrevention.Claims.Expiration.ChestClaimDays", 7);
+        this.config_claims_expirationDays = config.getInt("GriefPrevention.Claims.Expiration.AllClaims.DaysInactive", 60);
         this.config_claims_expirationExemptionTotalBlocks = config
                 .getInt("GriefPrevention.Claims.Expiration.AllClaims.ExceptWhenOwnerHasTotalClaimBlocks", 10000);
         this.config_claims_expirationExemptionBonusBlocks = config
                 .getInt("GriefPrevention.Claims.Expiration.AllClaims.ExceptWhenOwnerHasBonusClaimBlocks", 5000);
-        this.config_claims_allowTrappedInAdminClaims = config
-                .getBoolean("GriefPrevention.Claims.AllowTrappedInAdminClaims", false);
-        this.config_claims_allowNestedSubClaims = config.getBoolean("GriefPrevention.Claims.AllowNestedSubClaims",
-                false);
+        this.config_claims_allowTrappedInAdminClaims = config.getBoolean("GriefPrevention.Claims.AllowTrappedInAdminClaims", false);
+        this.config_claims_allowNestedSubClaims = config.getBoolean("GriefPrevention.Claims.AllowNestedSubClaims", false);
         this.config_claims_legacySubdivisionFormat = config.getBoolean("GriefPrevention.Claims.LegacySubdivisionFormat", false);
 
         this.config_claims_maxClaimsPerPlayer = config.getInt("GriefPrevention.Claims.MaximumNumberOfClaimsPerPlayer", 0);
@@ -997,7 +1026,7 @@ public class GriefPrevention extends JavaPlugin {
                 this.config_claims_claimsExtendIntoGroundDistance);
         outConfig.set("GriefPrevention.Claims.MinimumWidth", this.config_claims_minWidth);
         outConfig.set("GriefPrevention.Claims.MinimumArea", this.config_claims_minArea);
-        outConfig.set("GriefPrevention.Claims.MaximumDepth", this.config_claims_maxDepth);
+        outConfig.set("GriefPrevention.Claims.MinimumY", this.config_claims_minY);
         outConfig.set("GriefPrevention.Claims.InvestigationTool", this.config_claims_investigationTool.name());
         outConfig.set("GriefPrevention.Claims.ModificationTool", this.config_claims_modificationTool.name());
         outConfig.set("GriefPrevention.Claims.Expiration.ChestClaimDays", this.config_claims_chestClaimExpirationDays);
@@ -1846,11 +1875,9 @@ public class GriefPrevention extends JavaPlugin {
         // permissiontrust <player>
         else if (cmd.getName().equalsIgnoreCase("permissiontrust") && player != null) {
             // requires exactly one parameter, the other player's name
-            if (args.length != 1)
-                return false;
+            if (args.length != 1) return false;
 
-            this.handleTrustCommand(player, null, args[0], false); // null indicates permissiontrust to the helper
-                                                                   // method
+            this.handleTrustCommand(player, ClaimPermission.Manage, args[0], false);
 
             return true;
         }
@@ -1914,7 +1941,7 @@ public class GriefPrevention extends JavaPlugin {
             } else {
                 // deleting an admin claim additionally requires the adminclaims permission
                 if (!claim.isAdminClaim() || player.hasPermission("griefprevention.adminclaims")) {
-                    if (claim.children.size() > 0 && !playerData.warnedAboutMajorDeletion) {
+                    if (!claim.children.isEmpty() && !playerData.warnedAboutMajorDeletion) {
                         GriefPrevention.sendMessage(player, TextMode.Warn, Messages.DeletionSubdivisionWarning);
                         playerData.warnedAboutMajorDeletion = true;
                     } else {
@@ -2237,11 +2264,10 @@ public class GriefPrevention extends JavaPlugin {
             Vector<Claim> claims = playerData.getClaims();
             GriefPrevention.sendMessage(player, TextMode.Instr, Messages.StartBlockMath,
                     String.valueOf(playerData.getAccruedClaimBlocks()),
-                    String.valueOf((playerData.getBonusClaimBlocks()
-                            + this.dataStore.getGroupBonusBlocks(otherPlayer.getUniqueId()))),
+                    String.valueOf((playerData.getBonusClaimBlocks() + this.dataStore.getGroupBonusBlocks(otherPlayer.getUniqueId()))),
                     String.valueOf((playerData.getAccruedClaimBlocks() + playerData.getBonusClaimBlocks()
                             + this.dataStore.getGroupBonusBlocks(otherPlayer.getUniqueId()))));
-            if (claims.size() > 0) {
+            if (!claims.isEmpty()) {
                 GriefPrevention.sendMessage(player, TextMode.Instr, Messages.ClaimsListHeader);
                 for (int i = 0; i < playerData.getClaims().size(); i++) {
                     Claim claim = playerData.getClaims().get(i);
@@ -2271,7 +2297,7 @@ public class GriefPrevention extends JavaPlugin {
                     claims.add(claim);
                 }
             }
-            if (claims.size() > 0) {
+            if (!claims.isEmpty()) {
                 GriefPrevention.sendMessage(player, TextMode.Instr, Messages.ClaimsListHeader);
                 for (Claim claim : claims) {
                     GriefPrevention.sendMessage(player, TextMode.Instr,
@@ -2401,7 +2427,7 @@ public class GriefPrevention extends JavaPlugin {
             GriefPrevention.sendMessage(player, TextMode.Success, Messages.AdjustBlocksAllSuccess,
                     String.valueOf(adjustment));
             GriefPrevention.AddLogEntry("Adjusted all " + players.size() + "players' bonus claim blocks by "
-                    + adjustment + ".  " + builder.toString(), CustomLogEntryTypes.AdminActivity);
+                    + adjustment + ".  " + builder, CustomLogEntryTypes.AdminActivity);
 
             return true;
         }
@@ -2741,7 +2767,7 @@ public class GriefPrevention extends JavaPlugin {
         }
 
         // warn if has children and we're not explicitly deleting a top level claim
-        else if (claim.children.size() > 0 && !deleteTopLevelClaim) {
+        if (!claim.children.isEmpty() && !deleteTopLevelClaim) {
             GriefPrevention.sendMessage(player, TextMode.Instr, Messages.DeleteTopLevelClaim);
             return true;
         } else {
@@ -2796,23 +2822,12 @@ public class GriefPrevention extends JavaPlugin {
             if (!childClaim.getSubclaimRestrictions()) {
                 if (isAddingTrust) {
                     // Add trust to child claim
-                    if (permissionLevel == null) {
-                        // Manager permission
-                        if (!childClaim.managers.contains(identifier)) {
-                            childClaim.managers.add(identifier);
-                        }
-                    } else {
-                        // Regular permission
-                        childClaim.setPermission(identifier, permissionLevel);
-                    }
+                    childClaim.setPermission(identifier, permissionLevel);
                     this.dataStore.saveClaim(childClaim);
                 } else {
                     // Remove trust from child claim
-                    if (permissionLevel == null) {
-                        // Manager permission
-                        childClaim.managers.remove(identifier);
-                    } else {
-                        // Regular permission - only remove if it's not explicitly set in the child
+                    {
+                        // Only remove if it's explicitly set in the child
                         // Check if identifier is a UUID string or permission string
                         if (identifier.startsWith("[") && identifier.endsWith("]")) {
                             // Permission string - check if it exists in the child's permission map
@@ -2903,33 +2918,6 @@ public class GriefPrevention extends JavaPlugin {
                 targetClaims.add(claim);
             }
 
-            // see if the player has the level of permission he's trying to grant
-            Supplier<String> errorMessage = null;
-
-            // Only check permissions if we have a specific claim (not applying to all
-            // claims)
-            if (claim != null) {
-                // permission level null indicates granting permission trust
-                if (permissionLevel == null) {
-                    Supplier<String> permissionCheck = claim.checkPermission(player, ClaimPermission.Edit, null);
-                    if (permissionCheck != null) {
-                        errorMessage = () -> "Only " + claim.getOwnerName() + " can grant /PermissionTrust here.";
-                    } else {
-                        errorMessage = null;
-                    }
-                }
-                // otherwise just use the ClaimPermission enum values
-                else {
-                    errorMessage = claim.checkPermission(player, ClaimPermission.Manage, null);
-                }
-            }
-
-            // error message for trying to grant a permission the player doesn't have
-            if (errorMessage != null) {
-                GriefPrevention.sendMessage(player, TextMode.Err, Messages.CantGrantThatPermission);
-                return;
-            }
-
             String identifierToAdd = recipientName;
             if (permission != null) {
                 identifierToAdd = "[" + permission + "]";
@@ -2951,42 +2939,35 @@ public class GriefPrevention extends JavaPlugin {
 
             // apply changes
             for (Claim currentClaim : event.getClaims()) {
-                if (permissionLevel == null) {
-                    if (!currentClaim.managers.contains(identifierToAdd)) {
-                        currentClaim.managers.add(identifierToAdd);
-                    }
-                } else {
-                    currentClaim.setPermission(identifierToAdd, permissionLevel);
-                }
+                currentClaim.setPermission(identifierToAdd, permissionLevel);
                 this.dataStore.saveClaim(currentClaim);
 
                 // Propagate trust changes to child claims that inherit permissions
                 propagateTrustToChildren(currentClaim, identifierToAdd, permissionLevel, true);
             }
 
-            // notify player
-            if (recipientName.equals("public"))
-                recipientName = this.dataStore.getMessage(Messages.CollectivePublic);
-            String permissionDescription;
-            if (permissionLevel == null) {
-                permissionDescription = this.dataStore.getMessage(Messages.PermissionsPermission);
-            } else if (permissionLevel == ClaimPermission.Build) {
-                permissionDescription = this.dataStore.getMessage(Messages.BuildPermission);
-            } else if (permissionLevel == ClaimPermission.Access) {
-                permissionDescription = this.dataStore.getMessage(Messages.AccessPermission);
-            } else // ClaimPermission.Container
-            {
-                permissionDescription = this.dataStore.getMessage(Messages.ContainersPermission);
-            }
+        // notify player
+        if (recipientName.equals("public"))
+            recipientName = this.dataStore.getMessage(Messages.CollectivePublic);
+        String permissionDescription;
+        if (permissionLevel == ClaimPermission.Manage) {
+            permissionDescription = this.dataStore.getMessage(Messages.PermissionsPermission);
+        } else if (permissionLevel == ClaimPermission.Build) {
+            permissionDescription = this.dataStore.getMessage(Messages.BuildPermission);
+        } else if (permissionLevel == ClaimPermission.Access) {
+            permissionDescription = this.dataStore.getMessage(Messages.AccessPermission);
+        } else {
+            permissionDescription = this.dataStore.getMessage(Messages.ContainersPermission);
+        }
 
-            String location; // Declare variable in outer scope
-            if (claim == null) {
-                location = this.dataStore.getMessage(Messages.LocationAllClaims);
-            } else {
-                location = this.dataStore.getMessage(Messages.LocationCurrentClaim);
-            }
-            GriefPrevention.sendMessage(player, TextMode.Success, Messages.GrantPermissionConfirmation, recipientName,
-                    permissionDescription, location);
+        String location;
+        if (claim == null) {
+            location = this.dataStore.getMessage(Messages.LocationAllClaims);
+        } else {
+            location = this.dataStore.getMessage(Messages.LocationCurrentClaim);
+        }
+        GriefPrevention.sendMessage(player, TextMode.Success, Messages.GrantPermissionConfirmation, recipientName,
+                permissionDescription, location);
         }
     }
 
@@ -3537,6 +3518,10 @@ public class GriefPrevention extends JavaPlugin {
         }
     }
 
+    public int getMinY(World world) {
+        return this.config_claims_minYOverride.getOrDefault(world.getName(), this.config_claims_minY);
+    }
+
     public boolean containsBlockedIP(String message) {
         message = message.replace("\r\n", "");
         Pattern ipAddressPattern = Pattern.compile("([0-9]{1,3}\\.){3}[0-9]{1,3}");
@@ -3570,7 +3555,7 @@ public class GriefPrevention extends JavaPlugin {
             return false;
 
         PlayerData playerData = instance.dataStore.getPlayerData(player.getUniqueId());
-        if (playerData.getClaims().size() > 0)
+        if (!playerData.getClaims().isEmpty())
             return false;
 
         return true;

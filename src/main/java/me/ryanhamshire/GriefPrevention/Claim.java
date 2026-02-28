@@ -440,9 +440,12 @@ public class Claim
      public boolean hasExplicitPermission(@NotNull UUID uuid, @NotNull ClaimPermission level)
      {
          if (uuid.equals(this.getOwnerID())) return true;
- 
+
          if (level == ClaimPermission.Manage) return this.managers.contains(uuid.toString());
- 
+
+         // Managers have Manage, which hierarchically grants Build, Container, Access
+         if (this.managers.contains(uuid.toString())) return level.isGrantedBy(ClaimPermission.Manage);
+
          return level.isGrantedBy(this.playerIDToClaimPermissionMap.get(uuid.toString()));
      }
  
@@ -450,7 +453,10 @@ public class Claim
      {
          // Check explicit ClaimPermission for UUID
          if (this.hasExplicitPermission(player.getUniqueId(), level)) return true;
- 
+
+         // Managers have Manage, which hierarchically grants Build, Container, Access
+         if (level != ClaimPermission.Manage && this.hasExplicitPermission(player, ClaimPermission.Manage)) return true;
+
          // Special case managers - a separate list is used.
          if (level == ClaimPermission.Manage)
          {
@@ -655,9 +661,7 @@ public class Claim
 
             if (material != null && placeableForFarming(material)
                     && this.getDefaultDenial(player, uuid, ClaimPermission.Container, event) == null)
-            {
                 return null;
-            }
         }
 
         // First-child subdivisions inherit from parent; nested subdivisions do not.
@@ -735,7 +739,7 @@ public class Claim
      }
 
      /**
-      * @deprecated Check {@link ClaimPermission#Inventory} with {@link #checkPermission(Player, ClaimPermission, Event)}.
+      * @deprecated Check {@link ClaimPermission#Container} with {@link #checkPermission(Player, ClaimPermission, Event)}.
       * @param player the Player
       * @return the denial message, or null if the action is allowed
       */

@@ -28,22 +28,24 @@ public enum ClaimPermission
      */
     Edit(Messages.OnlyOwnersModifyClaims),
     /**
+     * ClaimPermission that allows users to grant ClaimPermissions. Grants {@link #Build}, {@link #Container},
+     * and {@link #Access}. Command: /permissiontrust or /managetrust
+     */
+    Manage(Messages.NoPermissionTrust),
+    /**
      * ClaimPermission used for building checks. Grants {@link #Container} and {@link #Access}.
+     * Command: /trust
      */
     Build(Messages.NoBuildPermission),
     /**
-     * ClaimPermission used for inventory management checks. Grants {@link #Access}.
+     * ClaimPermission used for inventory management, such as containers and farming. Grants {@link #Access}.
+     * Command: /containertrust
      */
     Container(Messages.NoContainersPermission),
     /**
-     * ClaimPermission used for basic access.
+     * ClaimPermission used for basic access. Command: /accesstrust
      */
     Access(Messages.NoAccessPermission),
-    /**
-     * ClaimPermission that allows users to grant ClaimPermissions. Uses a separate track from normal
-     * permissions and does not grant any other permissions.
-     */
-    Manage(Messages.NoPermissionTrust),
 
     /**
      * @deprecated Use {@link #Container} instead. This alias exists for backward compatibility only.
@@ -74,10 +76,11 @@ public enum ClaimPermission
      */
     public boolean isGrantedBy(ClaimPermission other)
     {
-        if (other == Manage || this == Manage) return other == this || other == Edit;
+        if (other == null) return false;
+        // This uses declaration order to compare! If trust levels are reordered this method must be rewritten.
         ClaimPermission thisNormalized = this == Inventory ? Container : this;
         ClaimPermission otherNormalized = other == Inventory ? Container : other;
-        return otherNormalized != null && otherNormalized.ordinal() <= thisNormalized.ordinal();
+        return otherNormalized.ordinal() <= thisNormalized.ordinal();
     }
 
 }

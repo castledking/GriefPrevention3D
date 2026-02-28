@@ -67,7 +67,7 @@ class DeliverClaimBlocksTask implements Runnable
         PlayerData playerData = dataStore.getPlayerData(player.getUniqueId());
 
         // check if player is idle (considered idle if player's facing direction has not changed)
-        boolean isIdle = playerData.lastAfkCheckLocation != null 
+        boolean isIdle = playerData.lastAfkCheckLocation != null
                 && playerData.lastAfkCheckLocation.getDirection().equals(player.getLocation().getDirection());
 
         //remember current location for next time

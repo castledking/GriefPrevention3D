@@ -18,6 +18,7 @@
 
 package me.ryanhamshire.GriefPrevention;
 
+import com.google.common.io.FileWriteMode;
 import com.google.common.io.Files;
 import com.griefprevention.visualization.BoundaryVisualization;
 import com.griefprevention.visualization.VisualizationType;
@@ -213,7 +214,7 @@ public abstract class DataStore {
                     nextID = inStream.readLine();
                 }
             } catch (Exception e) {
-                Bukkit.getLogger().info("Failed to read from the soft mute data file: " + e.toString());
+                GriefPrevention.AddLogEntry("Failed to read from the soft mute data file: " + e);
                 e.printStackTrace();
             }
 
@@ -239,7 +240,7 @@ public abstract class DataStore {
 
             return Files.readLines(bannedWordsFile, StandardCharsets.UTF_8);
         } catch (Exception e) {
-            Bukkit.getLogger().info("Failed to read from the banned words data file: " + e.toString());
+            GriefPrevention.AddLogEntry("Failed to read from the banned words data file: " + e);
             e.printStackTrace();
             return new ArrayList<>();
         }
@@ -274,7 +275,7 @@ public abstract class DataStore {
             outStream = new BufferedWriter(new FileWriter(softMuteFile));
 
             for (Map.Entry<UUID, Boolean> entry : softMuteMap.entrySet()) {
-                if (entry.getValue().booleanValue()) {
+                if (entry.getValue() == Boolean.TRUE) {
                     outStream.write(entry.getKey().toString());
                     outStream.newLine();
                 }
@@ -1431,7 +1432,7 @@ public abstract class DataStore {
 
                 // write data to file
                 File playerDataFile = new File(playerDataFolderPath + File.separator + playerID + ".ignore");
-                Files.write(fileContent.toString().trim().getBytes("UTF-8"), playerDataFile);
+                Files.write(fileContent.toString().trim().getBytes(StandardCharsets.UTF_8), playerDataFile);
             }
 
             // if any problem, log it
@@ -1489,6 +1490,8 @@ public abstract class DataStore {
         newDepth = Math.max(newDepth, GriefPrevention.instance.getMaxDepthForWorld(Objects.requireNonNull(claim.getLesserBoundaryCorner().getWorld())));
         // Cap the depth to the world's minimum height.
         World world = Objects.requireNonNull(claim.getLesserBoundaryCorner().getWorld());
+        // Cap depth to maximum depth allowed by the configuration.
+        newDepth = Math.max(newDepth, GriefPrevention.instance.getMinY(world));
         newDepth = Math.max(newDepth, world.getMinHeight());
 
         return newDepth;
@@ -1523,7 +1526,7 @@ public abstract class DataStore {
         // make a list of the player's claims
         ArrayList<Claim> claimsToDelete = new ArrayList<>();
         for (Claim claim : this.claims) {
-            if ((playerID == claim.ownerID || (playerID != null && playerID.equals(claim.ownerID))))
+            if (Objects.equals(playerID, claim.ownerID))
                 claimsToDelete.add(claim);
         }
 
@@ -1846,9 +1849,8 @@ public abstract class DataStore {
                         + ".");
             }
 
-            // if increased to a sufficiently large size and no subdivisions yet, send
-            // subdivision instructions
-            if (oldClaim.getArea() < 1000 && result.claim.getArea() >= 1000 && result.claim.children.size() == 0
+            // if increased to a sufficiently large size and no subdivisions yet, send subdivision instructions
+            if (oldClaim.getArea() < 1000 && result.claim.getArea() >= 1000 && result.claim.children.isEmpty()
                     && !player.hasPermission("griefprevention.adminclaims")) {
                 GriefPrevention.sendMessage(player, TextMode.Info, Messages.BecomeMayor, 200L);
                 GriefPrevention.sendMessage(player, TextMode.Instr, Messages.SubdivisionVideo2, 201L,

@@ -672,7 +672,7 @@ public class EntityEventHandler implements Listener
     {
         Item item = event.getEntity();
         List<MetadataValue> data = item.getMetadata("GP_ITEMOWNER");
-        event.setCancelled(data != null && data.size() > 0);
+        event.setCancelled(!data.isEmpty());
     }
 
     //when an entity picks up an item
@@ -713,13 +713,11 @@ public class EntityEventHandler implements Listener
         }
 
         //only allow players to break paintings, not anything else (like water and explosions)
-        if (!(event instanceof HangingBreakByEntityEvent))
+        if (!(event instanceof HangingBreakByEntityEvent entityEvent))
         {
             event.setCancelled(true);
             return;
         }
-
-        HangingBreakByEntityEvent entityEvent = (HangingBreakByEntityEvent) event;
 
         //who is removing it?
         Entity remover = entityEvent.getRemover();

@@ -98,7 +98,7 @@ class CustomLogger
         try
         {
             //if nothing to write, stop here
-            if (this.queuedEntries.length() == 0) return;
+            if (this.queuedEntries.isEmpty()) return;
 
             //determine filename based on date
             String filename = this.filenameFormat.format(new Date()) + ".log";

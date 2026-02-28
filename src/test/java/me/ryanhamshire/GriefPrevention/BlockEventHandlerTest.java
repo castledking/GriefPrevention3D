@@ -7,6 +7,7 @@ import org.bukkit.Tag;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.event.inventory.InventoryPickupItemEvent;
+import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.plugin.Plugin;
@@ -42,6 +43,11 @@ public class BlockEventHandlerTest
             return tag;
         }).when(server).getTag(notNull(), notNull(), notNull());
         Bukkit.setServer(server);
+
+        // Force initialization of InventoryType before tests run.
+        // In 1.21.10+, InventoryType depends on MenuType which requires registry lookups.
+        // Initializing here ensures this happens with proper mocks, not mid-stubbing.
+        InventoryType.values();
 
         // Touch class to load material list.
         //noinspection ResultOfMethodCallIgnored
