@@ -74,6 +74,8 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemHeldEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerKickEvent;
+import org.bukkit.event.entity.CreatureSpawnEvent;
+import org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason;
 import org.bukkit.event.entity.PlayerLeashEntityEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.inventory.InventoryType;
@@ -129,8 +131,10 @@ class PlayerEventHandler implements Listener {
     // timestamps of login and logout notifications in the last minute
     private final ArrayList<Long> recentLoginLogoutNotifications = new ArrayList<>();
 
-    // prevent duplicate rollbacks when multiple tick checks find player at denied destination
-    private final Set<UUID> pendingEnderPearlRollbacks = ConcurrentHashMap.newKeySet();
+    // Canvas fallback: track refunded pearl entity UUIDs to prevent dupe (one refund per pearl)
+    private final Set<UUID> refundedEnderPearlEntities = ConcurrentHashMap.newKeySet();
+    // Track players who were just rolled back from denied pearl - prevents endermite spawn at rollback location
+    private final Set<UUID> recentPearlRollbackPlayers = ConcurrentHashMap.newKeySet();
 
     // regex pattern for the "how do i claim land?" scanner
     private Pattern howToClaimPattern = null;
@@ -1056,65 +1060,11 @@ class PlayerEventHandler implements Listener {
         }
     }
 
-    /** Folia/Canvas-safe teleport: uses teleportAsync when in region threading, else teleport. */
-    private static void teleportFoliaSafe(Player player, Location location) {
-        try {
-            player.getClass().getMethod("teleportAsync", Location.class).invoke(player, location);
-        } catch (Exception e) {
-            player.teleport(location);
-        }
-    }
-
-    // Fallback for Canvas/Folia: PlayerTeleportEvent may not fire for ender pearls. Use
-    // ProjectileHitEvent to detect the landing, then verify/rollback on next tick.
-    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = false)
-    public void onProjectileHitEnderPearl(ProjectileHitEvent event) {
-        if (event.getEntity().getType() != EntityType.ENDER_PEARL) return;
-        if (!instance.config_claims_enderPearlsRequireAccessTrust) return;
-        if (!(event.getEntity().getShooter() instanceof Player shooter)) return;
-        if (!instance.claimsEnabledForWorld(event.getEntity().getWorld())) return;
-
-        // Player lands on top of hit block (or at pearl location if hit entity)
-        Block hitBlock = event.getHitBlock();
-        Location destLoc = hitBlock != null
-                ? hitBlock.getLocation().add(0.5, 1, 0.5)
-                : event.getEntity().getLocation();
-        Location fromLoc = shooter.getLocation().clone();
-        UUID playerID = shooter.getUniqueId();
-        // Canvas may teleport the player several ticks after ProjectileHitEvent. Run check at
-        // 1, 2, 3 ticks until we find the player at destination (tick+2 typically on Canvas).
-        for (long delay = 1; delay <= 3; delay++) {
-            final long d = delay;
-            SchedulerUtil.runLaterGlobal(instance, () -> {
-                Player p = instance.getServer().getPlayer(playerID);
-                if (p == null || !p.isOnline()) return;
-                Location now = p.getLocation();
-                if (now.getWorld() != destLoc.getWorld()) return;
-                double distSq = now.distanceSquared(destLoc);
-                if (distSq > 25) return; // not at pearl landing (5 block radius)
-                Supplier<String> noAccessReason = ProtectionHelper.checkPermission(p, now,
-                        ClaimPermission.Access, null);
-                if (noAccessReason != null) {
-                    // Only rollback once per pearl (multiple tick checks can fire before teleportAsync completes)
-                    if (!pendingEnderPearlRollbacks.add(playerID)) return;
-                    teleportFoliaSafe(p, fromLoc);
-                    GriefPrevention.sendMessage(p, TextMode.Err, noAccessReason.get());
-                    if (instance.config_claims_refundDeniedEnderPearls) {
-                        p.getInventory().addItem(new ItemStack(Material.ENDER_PEARL));
-                    }
-                    SchedulerUtil.runLaterGlobal(instance, () -> pendingEnderPearlRollbacks.remove(playerID), 15L);
-                }
-            }, d);
-        }
-    }
-
     // when a player teleports
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onPlayerTeleport(PlayerTeleportEvent event) {
         Player player = event.getPlayer();
         PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
-
-        TeleportCause cause = event.getCause();
 
         // Get the claim at the destination
         Claim toClaim = this.dataStore.getClaimAt(event.getTo(), false, playerData.lastClaim);
@@ -1123,64 +1073,22 @@ class PlayerEventHandler implements Listener {
         Claim fromClaim = playerData.lastClaim;
 
         // Special handling for ender pearls and chorus fruit to prevent gaining access
-        // to secured claims. On Folia/Canvas, the event may fire from a region thread
-        // where claim lookup fails; run the check on GlobalRegionScheduler so it executes
-        // in a context where getClaimAt returns correct results.
+        // to secured claims. Must run before updating lastClaim so we don't corrupt
+        // player state when cancelling. Use ProtectionHelper for proper 3D claim and
+        // parent inheritance handling.
         if (instance.config_claims_enderPearlsRequireAccessTrust) {
+            TeleportCause cause = event.getCause();
             if (cause == TeleportCause.CHORUS_FRUIT || cause == TeleportCause.ENDER_PEARL) {
-                Location to = event.getTo();
-                if (to == null || to.getWorld() == null) {
-                    // On Folia/Canvas, getTo() can be null or invalid from region thread
+                Supplier<String> noAccessReason = ProtectionHelper.checkPermission(player, event.getTo(),
+                        ClaimPermission.Access, event);
+                if (noAccessReason != null) {
+                    GriefPrevention.sendMessage(player, TextMode.Err, noAccessReason.get());
                     event.setCancelled(true);
                     if (cause == TeleportCause.ENDER_PEARL && instance.config_claims_refundDeniedEnderPearls) {
                         player.getInventory().addItem(new ItemStack(Material.ENDER_PEARL));
                     }
-                    return;
+                    return; // Don't update lastClaim when teleport is cancelled
                 }
-                event.setCancelled(true);
-                Location destination = to.clone();
-                Location fromLoc = player.getLocation().clone();
-                UUID playerID = player.getUniqueId();
-                boolean isEnderPearl = (cause == TeleportCause.ENDER_PEARL);
-                if (instance.config_logs_debugEnabled) {
-                    GriefPrevention.AddLogEntry("[DEBUG] EnderPearl/Chorus: cancelled event, scheduling GlobalRegionScheduler check for "
-                            + player.getName() + " -> " + GriefPrevention.getfriendlyLocationString(destination),
-                            CustomLogEntryTypes.Debug, true);
-                }
-                SchedulerUtil.runLaterGlobal(instance, () -> {
-                    Player p = instance.getServer().getPlayer(playerID);
-                    if (p == null || !p.isOnline()) return;
-                    PlayerData data = this.dataStore.getPlayerData(playerID);
-                    // Use actual location - on Folia/Canvas event.getTo() may be wrong; if cancel
-                    // didn't work, player has already teleported
-                    Location actualLoc = p.getLocation();
-                    Claim destClaim = this.dataStore.getClaimAt(actualLoc, false, data.lastClaim);
-                    Supplier<String> noAccessReason = ProtectionHelper.checkPermission(p, actualLoc,
-                            ClaimPermission.Access, null);
-                    if (instance.config_logs_debugEnabled) {
-                        GriefPrevention.AddLogEntry("[DEBUG] EnderPearl/Chorus: check ran for " + p.getName()
-                                + " destClaim=" + (destClaim != null ? "id=" + destClaim.id : "null")
-                                + " noAccessReason=" + (noAccessReason != null ? noAccessReason.get() : "null (allowed)"),
-                                CustomLogEntryTypes.Debug, true);
-                    }
-                    if (noAccessReason != null) {
-                        teleportFoliaSafe(p, fromLoc);
-                        GriefPrevention.sendMessage(p, TextMode.Err, noAccessReason.get());
-                        if (isEnderPearl && instance.config_claims_refundDeniedEnderPearls) {
-                            p.getInventory().addItem(new ItemStack(Material.ENDER_PEARL));
-                        }
-                        return;
-                    }
-                    // Only teleport if cancel worked (player still at origin)
-                    if (actualLoc.distanceSquared(fromLoc) < 1) {
-                        teleportFoliaSafe(p, destination);
-                    }
-                    data.lastClaim = this.dataStore.getClaimAt(p.getLocation(), false, data.lastClaim);
-                    if (data.lastClaim != fromClaim) {
-                        p.updateCommands();
-                    }
-                }, 1L);
-                return;
             }
         }
 
@@ -1192,6 +1100,112 @@ class PlayerEventHandler implements Listener {
         if (fromClaim != toClaim) {
             player.updateCommands();
         }
+    }
+
+    // Prevent endermite spawn at rollback location when pearl was denied in claim (Canvas: endermite spawns at player).
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = false)
+    public void onCreatureSpawnEndermite(CreatureSpawnEvent event) {
+        if (event.getEntityType() != EntityType.ENDERMITE) return;
+        if (event.getSpawnReason() != SpawnReason.ENDER_PEARL) return;
+        if (!instance.config_claims_enderPearlsRequireAccessTrust) return;
+        if (!instance.claimsEnabledForWorld(event.getLocation().getWorld())) return;
+
+        Location spawnLoc = event.getLocation();
+        Claim claim = this.dataStore.getClaimAt(spawnLoc, false, null);
+        if (claim == null) return;
+
+        for (UUID playerID : recentPearlRollbackPlayers) {
+            Player p = instance.getServer().getPlayer(playerID);
+            if (p != null && p.isOnline() && p.getWorld().equals(spawnLoc.getWorld())
+                    && p.getLocation().distanceSquared(spawnLoc) <= 25) {
+                event.setCancelled(true);
+                return;
+            }
+        }
+    }
+
+    // Cancel projectile landing when access denied - prevents endermite spawn and entity damage.
+    // Upstream uses PlayerTeleportEvent cancel; on Canvas that doesn't fire, so we cancel here.
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = false)
+    public void onProjectileHitEnderPearlCancel(ProjectileHitEvent event) {
+        if (event.getEntity().getType() != EntityType.ENDER_PEARL) return;
+        if (!instance.config_claims_enderPearlsRequireAccessTrust) return;
+        if (!(event.getEntity().getShooter() instanceof Player shooter)) return;
+        if (!instance.claimsEnabledForWorld(event.getEntity().getWorld())) return;
+
+        Block hitBlock = event.getHitBlock();
+        Location destLoc = hitBlock != null
+                ? hitBlock.getLocation().add(0.5, 1, 0.5)
+                : event.getEntity().getLocation();
+        Supplier<String> noAccessReason = ProtectionHelper.checkPermission(shooter, destLoc,
+                ClaimPermission.Access, null);
+        if (noAccessReason != null) {
+            event.setCancelled(true);
+            // Only message/refund once - ProjectileHitEvent can fire multiple times when pearl hits entity
+            UUID pearlID = event.getEntity().getUniqueId();
+            if (refundedEnderPearlEntities.add(pearlID)) {
+                recentPearlRollbackPlayers.add(shooter.getUniqueId());
+                SchedulerUtil.runLaterGlobal(instance, () -> recentPearlRollbackPlayers.remove(shooter.getUniqueId()), 20L);
+                GriefPrevention.sendMessage(shooter, TextMode.Err, noAccessReason.get());
+                if (instance.config_claims_refundDeniedEnderPearls) {
+                    shooter.getInventory().addItem(new ItemStack(Material.ENDER_PEARL));
+                }
+                // Never remove - stasis chambers keep pearl in motion, triggering many events over time
+            }
+        }
+    }
+
+    /** Folia/Canvas: use teleportAsync when in region threading. */
+    private static void teleportFoliaSafe(Player player, Location location) {
+        try {
+            player.getClass().getMethod("teleportAsync", Location.class).invoke(player, location);
+        } catch (Exception e) {
+            player.teleport(location);
+        }
+    }
+
+    // Canvas fallback: PlayerTeleportEvent may not fire for ender pearls. Run rollback at tick+1
+    // and tick+2 to minimize the window where the player can interact with boats/minecarts.
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = false)
+    public void onProjectileHitEnderPearl(ProjectileHitEvent event) {
+        if (event.getEntity().getType() != EntityType.ENDER_PEARL) return;
+        if (!instance.config_claims_enderPearlsRequireAccessTrust) return;
+        if (!(event.getEntity().getShooter() instanceof Player shooter)) return;
+        if (!instance.claimsEnabledForWorld(event.getEntity().getWorld())) return;
+
+        Block hitBlock = event.getHitBlock();
+        Location destLoc = hitBlock != null
+                ? hitBlock.getLocation().add(0.5, 1, 0.5)
+                : event.getEntity().getLocation();
+        Location fromLoc = shooter.getLocation().clone();
+        UUID playerID = shooter.getUniqueId();
+        UUID pearlEntityID = event.getEntity().getUniqueId();
+
+        Runnable rollbackTask = () -> {
+            Player p = instance.getServer().getPlayer(playerID);
+            if (p == null || !p.isOnline()) return;
+            Location now = p.getLocation();
+            if (now.getWorld() != destLoc.getWorld()) return;
+            if (now.distanceSquared(destLoc) > 25) return;
+            Supplier<String> noAccessReason = ProtectionHelper.checkPermission(p, now,
+                    ClaimPermission.Access, null);
+            if (noAccessReason != null) {
+                recentPearlRollbackPlayers.add(playerID);
+                SchedulerUtil.runLaterGlobal(instance, () -> recentPearlRollbackPlayers.remove(playerID), 20L);
+                // Run teleport on player's entity region for fastest possible rollback
+                SchedulerUtil.runLaterEntity(instance, p, () -> teleportFoliaSafe(p, fromLoc), 0L);
+                if (!refundedEnderPearlEntities.contains(pearlEntityID)) {
+                    GriefPrevention.sendMessage(p, TextMode.Err, noAccessReason.get());
+                    if (instance.config_claims_refundDeniedEnderPearls) {
+                        refundedEnderPearlEntities.add(pearlEntityID);
+                        p.getInventory().addItem(new ItemStack(Material.ENDER_PEARL));
+                        // Never remove - stasis chambers keep pearl in motion, triggering many events
+                    }
+                }
+            }
+        };
+        SchedulerUtil.runLaterGlobal(instance, rollbackTask, 1L);
+        SchedulerUtil.runLaterGlobal(instance, rollbackTask, 2L);
     }
 
     // when a player triggers a raid (in a claim)
