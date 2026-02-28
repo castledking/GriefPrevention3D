@@ -170,15 +170,6 @@ public class AutoExtendClaimTask implements Runnable
         return y;
     }
 
-    private int findBottomOfPlayerColumn(ChunkSnapshot chunk, int x, int y, int z)
-    {
-        while (y > this.minY && isPlayerBlock(chunk, x, y -1, z))
-        {
-            y--;
-        }
-        return y;
-    }
-
     private int scanLayerForPlayerColumn(ChunkSnapshot chunk, int layerY, int currentLowestY)
     {
         for (int x = 0; x < 16; x++)
@@ -192,6 +183,15 @@ public class AutoExtendClaimTask implements Runnable
             }
         }
         return currentLowestY;
+    }
+
+    private int findBottomOfPlayerColumn(ChunkSnapshot chunk, int x, int y, int z)
+    {
+        while (y > this.minY && isPlayerBlock(chunk, x, y - 1, z))
+        {
+            y--;
+        }
+        return y;
     }
 
     private boolean yTooSmall(int y)
@@ -373,6 +373,7 @@ public class AutoExtendClaimTask implements Runnable
             playerBlocks.add(Material.NETHER_BRICK);
             playerBlocks.add(Material.MAGMA_BLOCK);
             playerBlocks.add(Material.ANCIENT_DEBRIS);
+            playerBlocks.add(Material.IRON_CHAIN);
             playerBlocks.add(Material.SHROOMLIGHT);
             playerBlocks.add(Material.NETHER_GOLD_ORE);
             playerBlocks.add(Material.NETHER_SPROUTS);

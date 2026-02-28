@@ -814,6 +814,7 @@ public class GriefPrevention extends JavaPlugin {
                 outConfig.set(configPath, minYOverride);
                 this.config_claims_minYOverride.put(world.getName(), minYOverride);
             } else {
+                // Don't write default values to config - absence means "use global setting"
                 outConfig.set(configPath, null);
             }
         }

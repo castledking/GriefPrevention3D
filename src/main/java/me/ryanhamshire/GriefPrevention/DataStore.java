@@ -1486,12 +1486,10 @@ public abstract class DataStore {
 
         // Use the lowest of the old and new depths.
         newDepth = Math.min(newDepth, oldDepth);
-        // Cap depth to maximum depth allowed by the configuration.
-        newDepth = Math.max(newDepth, GriefPrevention.instance.getMaxDepthForWorld(Objects.requireNonNull(claim.getLesserBoundaryCorner().getWorld())));
         // Cap the depth to the world's minimum height.
         World world = Objects.requireNonNull(claim.getLesserBoundaryCorner().getWorld());
         // Cap depth to maximum depth allowed by the configuration.
-        newDepth = Math.max(newDepth, GriefPrevention.instance.getMinY(world));
+        newDepth = Math.max(newDepth, GriefPrevention.instance.getMaxDepthForWorld(world));
         newDepth = Math.max(newDepth, world.getMinHeight());
 
         return newDepth;
