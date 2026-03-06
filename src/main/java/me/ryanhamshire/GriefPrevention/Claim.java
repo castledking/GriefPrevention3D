@@ -218,6 +218,7 @@ public class Claim
         this.inheritNothing = claim.inheritNothing;
         this.children = new ArrayList<>(claim.children);
         this.doorsOpen = claim.doorsOpen;
+        this.is3D = claim.is3D;
     }
 
     //measurements.  all measurements are in blocks
