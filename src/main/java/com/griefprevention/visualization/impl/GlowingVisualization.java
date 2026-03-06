@@ -277,8 +277,13 @@ public class GlowingVisualization extends FakeBlockVisualization {
                 t.keyByEntity.clear();
             }
             for (BlockDisplay d : toRemove) {
+                if (d == null) continue;
                 try {
-                    if (d != null && d.isValid()) d.remove();
+                    SchedulerUtil.runLaterEntity(plugin, d, () -> {
+                        try {
+                            if (d.isValid()) d.remove();
+                        } catch (Exception ignored) {}
+                    }, 0L);
                 } catch (Exception ignored) {}
             }
         }
@@ -289,7 +294,13 @@ public class GlowingVisualization extends FakeBlockVisualization {
             try {
                 for (Entity entity : player.getWorld().getNearbyEntities(player.getLocation(), 32, 32, 32)) {
                     if (entity instanceof BlockDisplay && entity.getScoreboardTags().contains(playerTag)) {
-                        entity.remove();
+                        try {
+                            SchedulerUtil.runLaterEntity(plugin, entity, () -> {
+                                try {
+                                    if (entity.isValid()) entity.remove();
+                                } catch (Exception ignored) {}
+                            }, 0L);
+                        } catch (Exception ignored) {}
                     }
                 }
             } catch (Exception ignored) {}
