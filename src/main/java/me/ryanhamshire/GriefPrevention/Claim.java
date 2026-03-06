@@ -91,7 +91,7 @@ public class Claim
     private boolean inheritNothing = false;
 
     //children (subdivisions)
-    //note subdivisions themselves never have children
+    //Non-3D subdivisions are flat and never have children. 3D subdivisions may contain nested 3D children.
     public ArrayList<Claim> children = new ArrayList<>();
 
     //following a siege, buttons/levers are unlocked temporarily.  this represents that state

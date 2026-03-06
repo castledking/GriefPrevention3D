@@ -234,6 +234,7 @@ public abstract class BoundaryVisualization
 
         // Gather all boundaries. It's important that children override parent so
         // that users can always find children, no matter how oddly sized or positioned.
+        // Recursively include descendants (3D subdivisions may have nested children).
         Set<Boundary> boundaries = new HashSet<>();
         boundaries.add(new Boundary(root, type));
         for (Claim child : root.children)
@@ -251,6 +252,7 @@ public abstract class BoundaryVisualization
 
     /**
      * Recursively add a claim and all its descendants to the boundaries set.
+     * Recursion is required because 3D subdivisions may have nested children, unlike flat subdivisions.
      *
      * @param boundaries the set to add to
      * @param claim the claim to add
