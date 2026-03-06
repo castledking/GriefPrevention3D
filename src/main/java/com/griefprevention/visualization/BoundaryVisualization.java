@@ -210,11 +210,15 @@ public abstract class BoundaryVisualization
         if (claim == null) return Set.of();
 
         // When targeting a 3D claim, visualize it (and its descendants) without promoting to the parent
-        // so inner 3D subdivisions render correctly.
+        // so inner 3D subdivisions render correctly. Preserve semantic types (e.g. CONFLICT_ZONE) so
+        // conflict and other visualizations use the correct materials; use SUBDIVISION_3D only for normal boundaries.
         if (claim.is3D())
         {
             Set<Boundary> boundaries = new HashSet<>();
-            addClaimWithDescendants(boundaries, claim, VisualizationType.SUBDIVISION_3D);
+            VisualizationType effectiveType = (type == VisualizationType.CLAIM || type == VisualizationType.SUBDIVISION)
+                    ? VisualizationType.SUBDIVISION_3D
+                    : type;
+            addClaimWithDescendants(boundaries, claim, effectiveType);
             return boundaries;
         }
 
@@ -258,9 +262,10 @@ public abstract class BoundaryVisualization
         for (Claim child : claim.children)
         {
             if (!child.inDataStore) continue;
-            VisualizationType childType = child.is3D()
-                    ? VisualizationType.SUBDIVISION_3D
-                    : VisualizationType.SUBDIVISION;
+            // Preserve semantic types (e.g. CONFLICT_ZONE, INITIALIZE_ZONE) for all descendants.
+            VisualizationType childType = (type == VisualizationType.CONFLICT_ZONE || type == VisualizationType.INITIALIZE_ZONE)
+                    ? type
+                    : (child.is3D() ? VisualizationType.SUBDIVISION_3D : VisualizationType.SUBDIVISION);
             addClaimWithDescendants(boundaries, child, childType);
         }
     }
