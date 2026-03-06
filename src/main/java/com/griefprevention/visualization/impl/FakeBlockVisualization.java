@@ -125,10 +125,23 @@ public class FakeBlockVisualization extends BlockBoundaryVisualization
         Consumer<@NotNull IntVector> addSide = addSideElements(boundary);
 
         // Render at top and bottom Y boundaries for 3D subdivisions
+        int step = getStep();
         int[] yLevels = new int[] { claimMinY, claimMaxY };
         for (int y : yLevels)
         {
             if (y < world.getMinHeight() || y > world.getMaxHeight()) continue;
+
+            // Periodic step markers along edges (same interval as 2D visualization)
+            for (int x = Math.max(area.getMinX() + step, displayZone.getMinX()); x < area.getMaxX() - step / 2 && x < displayZone.getMaxX(); x += step)
+            {
+                addDisplayed3D(displayZone, new IntVector(x, y, area.getMaxZ()), addSide);
+                addDisplayed3D(displayZone, new IntVector(x, y, area.getMinZ()), addSide);
+            }
+            for (int z = Math.max(area.getMinZ() + step, displayZone.getMinZ()); z < area.getMaxZ() - step / 2 && z < displayZone.getMaxZ(); z += step)
+            {
+                addDisplayed3D(displayZone, new IntVector(area.getMinX(), y, z), addSide);
+                addDisplayed3D(displayZone, new IntVector(area.getMaxX(), y, z), addSide);
+            }
 
             // Short directional side markers next to corners
             if (area.getLength() > 2)
