@@ -24,6 +24,7 @@ import com.griefprevention.commands.ClaimCommand;
 import com.griefprevention.metrics.MetricsHandler;
 import com.griefprevention.platform.knockback.KnockbackProtectionListener;
 import com.griefprevention.protection.InteractionProtectionHandler;
+import com.griefprevention.visualization.VisualizationStyleRegistry;
 import com.griefprevention.protection.ProtectionHelper;
 import me.ryanhamshire.GriefPrevention.DataStore.NoTransferException;
 import me.ryanhamshire.GriefPrevention.events.SaveTrappedPlayerEvent;
@@ -87,12 +88,18 @@ public class GriefPrevention extends JavaPlugin
 {
     //for convenience, a reference to the instance of this plugin
     public static GriefPrevention instance;
+    private final VisualizationStyleRegistry visualizationStyleRegistry = new VisualizationStyleRegistry();
 
     //for logging to the console and log file
     private static Logger log;
 
     //this handles data storage, like player and region data
     public DataStore dataStore;
+
+    public @NotNull VisualizationStyleRegistry getVisualizationStyleRegistry()
+    {
+        return visualizationStyleRegistry;
+    }
 
     // Event handlers with common functionality
     EntityEventHandler entityEventHandler;

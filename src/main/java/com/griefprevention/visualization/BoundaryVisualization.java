@@ -141,11 +141,25 @@ public abstract class BoundaryVisualization
     public static void visualizeArea(
             @NotNull Player player,
             @NotNull BoundingBox boundingBox,
-            @NotNull VisualizationType type) {
+            @NotNull VisualizationStyle style) {
         BoundaryVisualizationEvent event = new BoundaryVisualizationEvent(player,
-                Set.of(new Boundary(boundingBox, type)),
+                Set.of(new Boundary(boundingBox, style)),
                 player.getEyeLocation().getBlockY());
         callAndVisualize(event);
+    }
+
+    /**
+     * Helper method for quickly visualizing an area.
+     *
+     * @param player the {@link Player} visualizing the area
+     * @param boundingBox the {@link BoundingBox} being visualized
+     * @param type the built-in {@link VisualizationType type of visualization}
+     */
+    public static void visualizeArea(
+            @NotNull Player player,
+            @NotNull BoundingBox boundingBox,
+            @NotNull VisualizationType type) {
+        visualizeArea(player, boundingBox, (VisualizationStyle) type);
     }
 
     /**
@@ -158,9 +172,24 @@ public abstract class BoundaryVisualization
     public static void visualizeClaim(
             @NotNull Player player,
             @NotNull Claim claim,
+            @NotNull VisualizationStyle style)
+    {
+        visualizeClaim(player, claim, style, player.getEyeLocation().getBlockY());
+    }
+
+    /**
+     * Helper method for quickly visualizing a claim and all its children.
+     *
+     * @param player the {@link Player} visualizing the area
+     * @param claim the {@link Claim} being visualized
+     * @param type the built-in {@link VisualizationType type of visualization}
+     */
+    public static void visualizeClaim(
+            @NotNull Player player,
+            @NotNull Claim claim,
             @NotNull VisualizationType type)
     {
-        visualizeClaim(player, claim, type, player.getEyeLocation().getBlockY());
+        visualizeClaim(player, claim, (VisualizationStyle) type);
     }
 
     /**
@@ -174,10 +203,27 @@ public abstract class BoundaryVisualization
     public static void visualizeClaim(
             @NotNull Player player,
             @NotNull Claim claim,
+            @NotNull VisualizationStyle style,
+            @NotNull Block block)
+    {
+        visualizeClaim(player, claim, style, block.getY());
+    }
+
+    /**
+     * Helper method for quickly visualizing a claim and all its children.
+     *
+     * @param player the {@link Player} visualizing the area
+     * @param claim the {@link Claim} being visualized
+     * @param type the built-in {@link VisualizationType type of visualization}
+     * @param block the {@link Block} on which the visualization was initiated
+     */
+    public static void visualizeClaim(
+            @NotNull Player player,
+            @NotNull Claim claim,
             @NotNull VisualizationType type,
             @NotNull Block block)
     {
-        visualizeClaim(player, claim, type, block.getY());
+        visualizeClaim(player, claim, (VisualizationStyle) type, block);
     }
 
     /**
@@ -191,10 +237,10 @@ public abstract class BoundaryVisualization
     private static void visualizeClaim(
             @NotNull Player player,
             @NotNull Claim claim,
-            @NotNull VisualizationType type,
+            @NotNull VisualizationStyle style,
             int height)
     {
-        BoundaryVisualizationEvent event = new BoundaryVisualizationEvent(player, defineBoundaries(claim, type), height);
+        BoundaryVisualizationEvent event = new BoundaryVisualizationEvent(player, defineBoundaries(claim, style), height);
         callAndVisualize(event);
     }
 
@@ -202,10 +248,10 @@ public abstract class BoundaryVisualization
      * Define {@link Boundary Boundaries} for a claim and its children.
      *
      * @param claim the {@link Claim}
-     * @param type the {@link VisualizationType}
+     * @param style the {@link VisualizationStyle}
      * @return the resulting {@code Boundary} values
      */
-    private static Collection<Boundary> defineBoundaries(Claim claim, VisualizationType type)
+    private static Collection<Boundary> defineBoundaries(Claim claim, VisualizationStyle style)
     {
         if (claim == null) return Set.of();
 
@@ -213,12 +259,12 @@ public abstract class BoundaryVisualization
         if (claim.parent != null) claim = claim.parent;
 
         // Correct visualization type for claim type for simplicity.
-        if (type == VisualizationType.CLAIM && claim.isAdminClaim()) type = VisualizationType.ADMIN_CLAIM;
+        if (style == VisualizationType.CLAIM && claim.isAdminClaim()) style = VisualizationType.ADMIN_CLAIM;
 
         // Gather all boundaries. It's important that children override parent so
         // that users can always find children, no matter how oddly sized or positioned.
         return Stream.concat(
-                Stream.of(new Boundary(claim, type)),
+                Stream.of(new Boundary(claim, style)),
                 claim.children.stream().map(child -> new Boundary(child, VisualizationType.SUBDIVISION)))
                 .collect(Collectors.toSet());
     }
