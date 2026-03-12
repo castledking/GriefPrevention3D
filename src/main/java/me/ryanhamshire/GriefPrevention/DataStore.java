@@ -20,6 +20,7 @@ package me.ryanhamshire.GriefPrevention;
 
 import com.google.common.io.FileWriteMode;
 import com.google.common.io.Files;
+import com.griefprevention.api.claim.ClaimCreationCustomizer;
 import com.griefprevention.api.claim.ClaimGeometry;
 import com.griefprevention.visualization.BoundaryVisualization;
 import com.griefprevention.visualization.VisualizationType;
@@ -849,7 +850,7 @@ public abstract class DataStore
      */
     synchronized public CreateClaimResult createClaim(World world, int x1, int x2, int y1, int y2, int z1, int z2, UUID ownerID, Claim parent, Long id, Player creatingPlayer)
     {
-        return createClaim(world, x1, x2, y1, y2, z1, z2, ownerID, parent, id, creatingPlayer, false);
+        return createClaim(world, x1, x2, y1, y2, z1, z2, ownerID, parent, id, creatingPlayer, false, null);
     }
 
     //creates a claim.
@@ -864,6 +865,29 @@ public abstract class DataStore
     //does NOT check minimum claim size constraints
     //does NOT visualize the new claim for any players
     synchronized public CreateClaimResult createClaim(World world, int x1, int x2, int y1, int y2, int z1, int z2, UUID ownerID, Claim parent, Long id, Player creatingPlayer, boolean dryRun)
+    {
+        return createClaim(world, x1, x2, y1, y2, z1, z2, ownerID, parent, id, creatingPlayer, dryRun, null);
+    }
+
+    /**
+     * Creates a claim and allows addons to customize it before validation.
+     *
+     * @param customizer optional claim customizer applied before parent and overlap checks
+     */
+    synchronized public CreateClaimResult createClaim(
+            World world,
+            int x1,
+            int x2,
+            int y1,
+            int y2,
+            int z1,
+            int z2,
+            UUID ownerID,
+            Claim parent,
+            Long id,
+            Player creatingPlayer,
+            boolean dryRun,
+            ClaimCreationCustomizer customizer)
     {
         CreateClaimResult result = new CreateClaimResult();
 
@@ -907,32 +931,14 @@ public abstract class DataStore
             bigz = z1;
         }
 
-        if (parent != null)
-        {
-            ClaimGeometry parentGeometry = parent.getGeometry();
-            BoundingBox requestedBounds = new BoundingBox(smallx, smally, smallz, bigx, bigy, bigz);
-            if (!parentGeometry.contains(parent, requestedBounds, true))
-            {
-                result.succeeded = false;
-                result.claim = parent;
-                return result;
-            }
-            smally = sanitizeClaimDepth(parent, smally);
-        }
-
-        //claims can't be made outside the world border
-        final Location smallerBoundaryCorner = new Location(world, smallx, smally, smallz);
-        final Location greaterBoundaryCorner = new Location(world, bigx, bigy, bigz);
-        if(!world.getWorldBorder().isInside(smallerBoundaryCorner) || !world.getWorldBorder().isInside(greaterBoundaryCorner)){
-            result.succeeded = false;
-            return result;
-        }
-
         //creative mode claims always go to bedrock
         if (GriefPrevention.instance.config_claims_worldModes.get(world) == ClaimsMode.Creative)
         {
             smally = world.getMinHeight();
         }
+
+        Location smallerBoundaryCorner = new Location(world, smallx, smally, smallz);
+        Location greaterBoundaryCorner = new Location(world, bigx, bigy, bigz);
 
         //create a new claim instance (but don't save it, yet)
         Claim newClaim = new Claim(
@@ -946,6 +952,38 @@ public abstract class DataStore
                 id);
 
         newClaim.parent = parent;
+
+        if (customizer != null)
+        {
+            customizer.customize(newClaim);
+        }
+
+        if (parent != null)
+        {
+            if (GriefPrevention.instance.getClaimGeometryRegistry().getDefaultGeometry().getKey().equals(newClaim.getGeometryKey()))
+            {
+                int sanitizedDepth = sanitizeClaimDepth(parent, newClaim.getLesserBoundaryCorner().getBlockY());
+                newClaim.lesserBoundaryCorner.setY(sanitizedDepth);
+                newClaim.greaterBoundaryCorner.setY(Math.max(newClaim.getGreaterBoundaryCorner().getBlockY(), sanitizedDepth));
+            }
+
+            ClaimGeometry parentGeometry = parent.getGeometry();
+            if (!parentGeometry.contains(parent, newClaim.getLookupBounds(), true))
+            {
+                result.succeeded = false;
+                result.claim = parent;
+                return result;
+            }
+        }
+
+        //claims can't be made outside the world border
+        BoundingBox lookupBounds = newClaim.getLookupBounds();
+        final Location lookupMinCorner = new Location(world, lookupBounds.getMinX(), lookupBounds.getMinY(), lookupBounds.getMinZ());
+        final Location lookupMaxCorner = new Location(world, lookupBounds.getMaxX(), lookupBounds.getMaxY(), lookupBounds.getMaxZ());
+        if(!world.getWorldBorder().isInside(lookupMinCorner) || !world.getWorldBorder().isInside(lookupMaxCorner)){
+            result.succeeded = false;
+            return result;
+        }
 
         //ensure this new claim won't overlap any existing claims
         ArrayList<Claim> claimsToCheck;
