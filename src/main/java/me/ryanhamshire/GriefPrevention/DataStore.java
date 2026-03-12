@@ -20,6 +20,7 @@ package me.ryanhamshire.GriefPrevention;
 
 import com.google.common.io.FileWriteMode;
 import com.google.common.io.Files;
+import com.griefprevention.api.claim.ClaimGeometry;
 import com.griefprevention.visualization.BoundaryVisualization;
 import com.griefprevention.visualization.VisualizationType;
 import me.ryanhamshire.GriefPrevention.events.ClaimCreatedEvent;
@@ -817,15 +818,20 @@ public abstract class DataStore
     }
 
     public static ArrayList<Long> getChunkHashes(Claim claim) {
-        return getChunkHashes(claim.getLesserBoundaryCorner(), claim.getGreaterBoundaryCorner());
+        return getChunkHashes(claim.getLookupBounds());
     }
 
     public static ArrayList<Long> getChunkHashes(Location min, Location max) {
+        return getChunkHashes(new BoundingBox(min, max));
+    }
+
+    public static ArrayList<Long> getChunkHashes(@NotNull BoundingBox bounds)
+    {
         ArrayList<Long> hashes = new ArrayList<>();
-        int smallX = min.getBlockX() >> 4;
-        int smallZ = min.getBlockZ() >> 4;
-        int largeX = max.getBlockX() >> 4;
-        int largeZ = max.getBlockZ() >> 4;
+        int smallX = bounds.getMinX() >> 4;
+        int smallZ = bounds.getMinZ() >> 4;
+        int largeX = bounds.getMaxX() >> 4;
+        int largeZ = bounds.getMaxZ() >> 4;
 
         for (int x = smallX; x <= largeX; x++)
         {
@@ -903,9 +909,9 @@ public abstract class DataStore
 
         if (parent != null)
         {
-            Location lesser = parent.getLesserBoundaryCorner();
-            Location greater = parent.getGreaterBoundaryCorner();
-            if (smallx < lesser.getX() || smallz < lesser.getZ() || bigx > greater.getX() || bigz > greater.getZ())
+            ClaimGeometry parentGeometry = parent.getGeometry();
+            BoundingBox requestedBounds = new BoundingBox(smallx, smally, smallz, bigx, bigy, bigz);
+            if (!parentGeometry.contains(parent, requestedBounds, true))
             {
                 result.succeeded = false;
                 result.claim = parent;
