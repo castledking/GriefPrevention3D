@@ -161,9 +161,14 @@ commands:
     permission: griefprevention.claims
   claimexplosions:
     description: Toggles whether explosives may be used in a specific land claim.
-    usage: /<command>
+    usage: /<command> [on|off]
     permission: griefprevention.claims
     aliases: claimexplosion
+  witherexplosions:
+    description: Toggles whether wither explosions may damage a specific land claim.
+    usage: /<command> [on|off]
+    permission: griefprevention.witherexplosions
+    aliases: witherexplosion
   softmute:
     description: Toggles whether a player's messages will only reach other soft-muted players.
     usage: /<command> <player>
@@ -227,6 +232,9 @@ commands:
 permissions:
   griefprevention.createclaims:
     description: Grants permission to create claims.
+    default: true
+  griefprevention.witherexplosions:
+    description: Grants permission to toggle wither explosions in claims.
     default: true
   griefprevention.admin.*:
     description: Grants all administrative functionality.

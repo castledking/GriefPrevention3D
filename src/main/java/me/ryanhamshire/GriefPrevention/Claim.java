@@ -88,6 +88,7 @@ public class Claim
      public boolean inDataStore = false;
  
      public boolean areExplosivesAllowed = false;
+     public boolean areWitherExplosionsAllowed = false;
  
      //parent claim
      //only used for claim subdivisions.  top level claims have null here
@@ -222,6 +223,7 @@ public class Claim
         this.deniedPermissions.addAll(claim.deniedPermissions);
          this.inDataStore = false; //since it's a copy of a claim, not in datastore!
          this.areExplosivesAllowed = claim.areExplosivesAllowed;
+         this.areWitherExplosionsAllowed = claim.areWitherExplosionsAllowed;
          this.parent = claim.parent;
          this.inheritNothing = claim.inheritNothing;
          this.children = new ArrayList<>(claim.children);

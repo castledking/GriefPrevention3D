@@ -151,6 +151,8 @@ public enum Messages
     ClaimsListNoPermission("You don't have permission to get information about another player's land claims."),
     ExplosivesDisabled("This claim is now protected from explosions.  Use /claimexplosions again to disable."),
     ExplosivesEnabled("This claim is now vulnerable to explosions.  Use /claimexplosions again to re-enable protections."),
+    WitherExplosionsDisabled("This claim is now protected from wither explosions.  Use /witherexplosions again to disable protections."),
+    WitherExplosionsEnabled("This claim is now vulnerable to wither explosions.  Use /witherexplosions again to re-enable protections."),
     ClaimExplosivesAdvertisement("To allow explosives to destroy blocks in this land claim, use /claimexplosions."),
     PlayerInPvPSafeZone("That player is in a PvP safe zone."),
     NoPistonsOutsideClaims("Warning: Pistons won't move blocks outside land claims."),

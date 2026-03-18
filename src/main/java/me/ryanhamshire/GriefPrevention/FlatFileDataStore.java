@@ -554,12 +554,14 @@ public class FlatFileDataStore extends DataStore
 
         // Load explosives allowed setting (default false = protected)
         boolean explosivesAllowed = yaml.getBoolean("Explosives Allowed", false);
+        boolean witherExplosionsAllowed = yaml.getBoolean("Wither Explosions Allowed", false);
 
         //instantiate
         claim = new Claim(lesserBoundaryCorner, greaterBoundaryCorner, ownerID, builders, containers, accessors, managers, inheritNothing, claimID, is3D);
         claim.modifiedDate = new Date(lastModifiedDate);
         claim.id = claimID;
         claim.areExplosivesAllowed = explosivesAllowed;
+        claim.areWitherExplosionsAllowed = witherExplosionsAllowed;
         claim.setInheritNothingForNewSubdivisions(inheritNothingForNewSubdivisions);
 
         ConfigurationSection childrenSection = yaml.getConfigurationSection("Children");
@@ -617,6 +619,7 @@ public class FlatFileDataStore extends DataStore
         boolean inheritNothing = section.getBoolean("inheritNothing");
         boolean is3D = section.getBoolean("Is3D", false);
         boolean explosivesAllowed = section.getBoolean("Explosives Allowed", false);
+        boolean witherExplosionsAllowed = section.getBoolean("Wither Explosions Allowed", false);
 
         Long childID = null;
         if (section.contains("Claim ID"))
@@ -636,6 +639,7 @@ public class FlatFileDataStore extends DataStore
         child.parent = parent;
         child.inDataStore = true;
         child.areExplosivesAllowed = explosivesAllowed;
+        child.areWitherExplosionsAllowed = witherExplosionsAllowed;
 
         if (!child.getSubclaimRestrictions())
         {
@@ -704,6 +708,7 @@ public class FlatFileDataStore extends DataStore
         section.set("inheritNothingForNewSubdivisions", claim.getInheritNothingForNewSubdivisions());
         section.set("Is3D", claim.is3D());
         section.set("Explosives Allowed", claim.areExplosivesAllowed);
+        section.set("Wither Explosions Allowed", claim.areWitherExplosionsAllowed);
         section.set("Modified Date", claim.modifiedDate != null ? claim.modifiedDate.getTime() : System.currentTimeMillis());
 
         ArrayList<Claim> persistedChildren = new ArrayList<>();

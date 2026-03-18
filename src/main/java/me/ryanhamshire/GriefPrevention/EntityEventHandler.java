@@ -139,7 +139,9 @@ public class EntityEventHandler implements Listener
         else if (event.getEntityType() == EntityType.WITHER)
         {
             Claim claim = this.dataStore.getClaimAt(event.getBlock().getLocation(), false, null);
-            if (claim == null || !claim.areExplosivesAllowed || !GriefPrevention.instance.config_blockClaimExplosions)
+            if (claim != null
+                    && GriefPrevention.instance.config_blockClaimExplosions
+                    && !claim.areWitherExplosionsAllowed)
             {
                 event.setCancelled(true);
             }
@@ -474,6 +476,7 @@ public class EntityEventHandler implements Listener
 
         //FEATURE: explosions don't destroy surface blocks by default
         boolean isCreeper = (entity != null && entity.getType() == EntityType.CREEPER);
+        boolean isWitherExplosion = isWitherExplosion(entity);
 
         boolean applySurfaceRules = world.getEnvironment() == Environment.NORMAL && ((isCreeper && GriefPrevention.instance.config_blockSurfaceCreeperExplosions) || (!isCreeper && GriefPrevention.instance.config_blockSurfaceOtherExplosions));
 
@@ -504,7 +507,9 @@ public class EntityEventHandler implements Listener
             }
 
             //if yes, apply claim exemptions if they should apply
-            if (claim != null && (claim.areExplosivesAllowed || !GriefPrevention.instance.config_blockClaimExplosions))
+            if (claim != null && (claim.areExplosivesAllowed
+                    || (isWitherExplosion && claim.areWitherExplosionsAllowed)
+                    || !GriefPrevention.instance.config_blockClaimExplosions))
             {
                 explodedBlocks.add(block);
                 continue;
@@ -523,6 +528,16 @@ public class EntityEventHandler implements Listener
         //clear original damage list and replace with allowed damage list
         blocks.clear();
         blocks.addAll(explodedBlocks);
+    }
+
+    private boolean isWitherExplosion(@Nullable Entity entity)
+    {
+        if (entity == null)
+        {
+            return false;
+        }
+
+        return entity.getType() == EntityType.WITHER || entity.getType() == EntityType.WITHER_SKULL;
     }
 
     //when an item spawns...

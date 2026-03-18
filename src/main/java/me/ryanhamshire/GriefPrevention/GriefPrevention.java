@@ -1973,31 +1973,9 @@ public class GriefPrevention extends JavaPlugin {
 
             return true;
         } else if (cmd.getName().equalsIgnoreCase("claimexplosions") && player != null) {
-            // determine which claim the player is standing in
-            Claim claim = this.dataStore.getClaimAt(player.getLocation(), false /* ignore height */, null);
-
-            if (claim == null) {
-                GriefPrevention.sendMessage(player, TextMode.Err, Messages.DeleteClaimMissing);
-            } else {
-                Supplier<String> noBuildReason = claim.checkPermission(player, ClaimPermission.Build, null);
-                if (noBuildReason != null) {
-                    GriefPrevention.sendMessage(player, TextMode.Err, noBuildReason.get());
-                    return true;
-                }
-
-                if (claim.areExplosivesAllowed) {
-                    claim.areExplosivesAllowed = false;
-                    GriefPrevention.sendMessage(player, TextMode.Success, Messages.ExplosivesDisabled);
-                } else {
-                    claim.areExplosivesAllowed = true;
-                    GriefPrevention.sendMessage(player, TextMode.Success, Messages.ExplosivesEnabled);
-                }
-
-                // Save the claim to persist the change
-                this.dataStore.saveClaim(claim);
-            }
-
-            return true;
+            return this.handleClaimExplosionsCommand(sender, args);
+        } else if (cmd.getName().equalsIgnoreCase("witherexplosions") && player != null) {
+            return this.handleWitherExplosionsCommand(sender, args);
         }
 
         // checkclaimexpiry
@@ -4204,8 +4182,21 @@ public class GriefPrevention extends JavaPlugin {
     }
 
     public boolean handleClaimExplosionsCommand(CommandSender sender, String[] args) {
+        return this.handleClaimExplosionToggleCommand(sender, args, false);
+    }
+
+    public boolean handleWitherExplosionsCommand(CommandSender sender, String[] args) {
+        return this.handleClaimExplosionToggleCommand(sender, args, true);
+    }
+
+    private boolean handleClaimExplosionToggleCommand(CommandSender sender, String[] args, boolean witherOnly) {
         if (!(sender instanceof Player player))
             return false;
+
+        if (witherOnly && !player.hasPermission("griefprevention.witherexplosions")) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+            return true;
+        }
 
         Claim claim = this.dataStore.getClaimAt(player.getLocation(), false, null);
         if (claim == null) {
@@ -4219,12 +4210,32 @@ public class GriefPrevention extends JavaPlugin {
             return true;
         }
 
-        if (claim.areExplosivesAllowed) {
-            claim.areExplosivesAllowed = false;
-            GriefPrevention.sendMessage(player, TextMode.Success, Messages.ExplosivesDisabled);
+        Boolean enabled = null;
+        if (args.length > 1) {
+            return false;
+        }
+        if (args.length == 1) {
+            if ("on".equalsIgnoreCase(args[0])) {
+                enabled = true;
+            } else if ("off".equalsIgnoreCase(args[0])) {
+                enabled = false;
+            } else {
+                return false;
+            }
+        }
+
+        if (enabled == null) {
+            enabled = witherOnly ? !claim.areWitherExplosionsAllowed : !claim.areExplosivesAllowed;
+        }
+
+        if (witherOnly) {
+            claim.areWitherExplosionsAllowed = enabled;
+            GriefPrevention.sendMessage(player, TextMode.Success,
+                    enabled ? Messages.WitherExplosionsEnabled : Messages.WitherExplosionsDisabled);
         } else {
-            claim.areExplosivesAllowed = true;
-            GriefPrevention.sendMessage(player, TextMode.Success, Messages.ExplosivesEnabled);
+            claim.areExplosivesAllowed = enabled;
+            GriefPrevention.sendMessage(player, TextMode.Success,
+                    enabled ? Messages.ExplosivesEnabled : Messages.ExplosivesDisabled);
         }
 
         // Save the claim to persist the change

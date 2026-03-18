@@ -47,9 +47,9 @@ public class DatabaseDataStore extends DataStore
     private static final String SQL_UPDATE_NAME =
             "UPDATE griefprevention_playerdata SET name = ? WHERE name = ?";
     private static final String SQL_UPDATE_CLAIM =
-            "UPDATE griefprevention_claimdata SET owner = ?, lessercorner = ?, greatercorner = ?, builders = ?, containers = ?, accessors = ?, managers = ?, inheritnothing = ?, parentid = ?, expiration = ?, explosivesallowed = ? WHERE id = ?";
+            "UPDATE griefprevention_claimdata SET owner = ?, lessercorner = ?, greatercorner = ?, builders = ?, containers = ?, accessors = ?, managers = ?, inheritnothing = ?, inheritnothingfornewsubdivisions = ?, parentid = ?, expiration = ?, explosivesallowed = ?, witherexplosionsallowed = ? WHERE id = ?";
     private static final String SQL_INSERT_CLAIM =
-            "INSERT INTO griefprevention_claimdata (id, owner, lessercorner, greatercorner, builders, containers, accessors, managers, inheritnothing, parentid, expiration, explosivesallowed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            "INSERT INTO griefprevention_claimdata (id, owner, lessercorner, greatercorner, builders, containers, accessors, managers, inheritnothing, inheritnothingfornewsubdivisions, parentid, expiration, explosivesallowed, witherexplosionsallowed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     private static final String SQL_DELETE_CLAIM =
             "DELETE FROM griefprevention_claimdata WHERE id = ?";
     private static final String SQL_SELECT_PLAYER_DATA =
@@ -76,6 +76,8 @@ public class DatabaseDataStore extends DataStore
             "ALTER TABLE griefprevention_claimdata ADD COLUMN IF NOT EXISTS expiration BIGINT DEFAULT 0";
     private static final String SQL_UPDATE_SCHEMA_ADD_EXPLOSIVES =
             "ALTER TABLE griefprevention_claimdata ADD COLUMN IF NOT EXISTS explosivesallowed BOOLEAN DEFAULT 0";
+    private static final String SQL_UPDATE_SCHEMA_ADD_WITHER_EXPLOSIONS =
+            "ALTER TABLE griefprevention_claimdata ADD COLUMN IF NOT EXISTS witherexplosionsallowed BOOLEAN DEFAULT 0";
 
     private Connection databaseConnection = null;
 
@@ -109,7 +111,7 @@ public class DatabaseDataStore extends DataStore
         {
             //ensure the data tables exist
             statement.execute("CREATE TABLE IF NOT EXISTS griefprevention_nextclaimid (nextid INTEGER)");
-            statement.execute("CREATE TABLE IF NOT EXISTS griefprevention_claimdata (id INTEGER, owner VARCHAR(50), lessercorner VARCHAR(100), greatercorner VARCHAR(100), builders TEXT, containers TEXT, accessors TEXT, managers TEXT, inheritnothing BOOLEAN, parentid INTEGER, expiration BIGINT, explosivesallowed BOOLEAN, inheritnothingfornewsubdivisions BOOLEAN)");
+            statement.execute("CREATE TABLE IF NOT EXISTS griefprevention_claimdata (id INTEGER, owner VARCHAR(50), lessercorner VARCHAR(100), greatercorner VARCHAR(100), builders TEXT, containers TEXT, accessors TEXT, managers TEXT, inheritnothing BOOLEAN, parentid INTEGER, expiration BIGINT, explosivesallowed BOOLEAN, inheritnothingfornewsubdivisions BOOLEAN, witherexplosionsallowed BOOLEAN)");
             statement.execute("CREATE TABLE IF NOT EXISTS griefprevention_playerdata (name VARCHAR(50), lastlogin DATETIME, accruedblocks INTEGER, bonusblocks INTEGER)");
             statement.execute("CREATE TABLE IF NOT EXISTS griefprevention_schemaversion (version INTEGER)");
 
@@ -284,6 +286,12 @@ public class DatabaseDataStore extends DataStore
             statement.execute("ALTER TABLE griefprevention_claimdata ADD inheritNothingForNewSubdivisions BOOLEAN DEFAULT 0 AFTER inheritNothing");
         }
 
+        if (this.getSchemaVersion() <= 6)
+        {
+            statement = this.databaseConnection.createStatement();
+            statement.execute(SQL_UPDATE_SCHEMA_ADD_WITHER_EXPLOSIONS);
+        }
+
         //load claims data into memory
 
         results = statement.executeQuery("SELECT * FROM griefprevention_claimdata");
@@ -378,10 +386,12 @@ public class DatabaseDataStore extends DataStore
                 List<String> managerNames = Arrays.asList(managersString.split(";"));
                 managerNames = this.convertNameListToUUIDList(managerNames);
                 boolean explosivesAllowed = results.getBoolean("explosivesallowed");
+                boolean witherExplosionsAllowed = results.getBoolean("witherexplosionsallowed");
 
                 Claim claim = new Claim(lesserBoundaryCorner, greaterBoundaryCorner, ownerID, builderNames, containerNames, accessorNames, managerNames, inheritNothing, claimID, false);
                 claim.setExpirationDate(expirationDate);
                 claim.areExplosivesAllowed = explosivesAllowed;
+                claim.areWitherExplosionsAllowed = witherExplosionsAllowed;
                 claim.setInheritNothingForNewSubdivisions(inheritNothingForNewSubdivisions);
 
                 if (removeClaim)
@@ -484,6 +494,7 @@ public class DatabaseDataStore extends DataStore
         long parentId = claim.parent == null ? -1 : claim.parent.id;
         long expirationDate = claim.getExpirationDate();
         boolean explosivesAllowed = claim.areExplosivesAllowed;
+        boolean witherExplosionsAllowed = claim.areWitherExplosionsAllowed;
 
         try (PreparedStatement insertStmt = this.databaseConnection.prepareStatement(SQL_INSERT_CLAIM))
         {
@@ -497,10 +508,11 @@ public class DatabaseDataStore extends DataStore
             insertStmt.setString(7, accessorsString);
             insertStmt.setString(8, managersString);
             insertStmt.setBoolean(9, inheritNothing);
-            insertStmt.setLong(10, parentId);
-            insertStmt.setLong(11, expirationDate);
-            insertStmt.setBoolean(12, explosivesAllowed);
-            insertStmt.setBoolean(13, inheritNothingForNewSubdivisions);
+            insertStmt.setBoolean(10, inheritNothingForNewSubdivisions);
+            insertStmt.setLong(11, parentId);
+            insertStmt.setLong(12, expirationDate);
+            insertStmt.setBoolean(13, explosivesAllowed);
+            insertStmt.setBoolean(14, witherExplosionsAllowed);
             insertStmt.executeUpdate();
         }
         catch (SQLException e)

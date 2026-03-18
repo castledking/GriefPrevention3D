@@ -31,7 +31,8 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
         registerSubcommand("list", this::handleList);
         registerSubcommand("mode", createModeTabExecutor());
         registerSubcommand("restrictsubclaim", this::handleRestrictSubclaim);
-        registerSubcommand("explosions", this::handleExplosions);
+        registerSubcommand("explosions", createExplosionsTabExecutor());
+        registerSubcommand("witherexplosions", createWitherExplosionsTabExecutor(), "witherexplosion");
         registerSubcommand("buyblocks", createBuyBlocksTabExecutor());
         registerSubcommand("sellblocks", createSellBlocksTabExecutor());
         registerSubcommand("abandon", this::handleAbandon, "abandonall");
@@ -49,6 +50,7 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
         registerStandaloneCommand(Alias.ClaimMode, createModeTabExecutor());
         registerStandaloneCommand(Alias.ClaimRestrictSubclaim, this::handleRestrictSubclaim);
         registerStandaloneCommand(Alias.ClaimExplosions, this::handleExplosions);
+        registerStandaloneCommand(Alias.ClaimWitherExplosions, this::handleWitherExplosions);
         registerStandaloneCommand(Alias.ClaimBuyBlocks, createBuyBlocksTabExecutor());
         registerStandaloneCommand(Alias.ClaimSellBlocks, createSellBlocksTabExecutor());
         registerStandaloneCommand(Alias.ClaimAbandon, this::handleAbandon);
@@ -327,10 +329,54 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
         return plugin.handleRestrictSubclaimCommand(sender, args);
     }
 
-    
     private boolean handleExplosions(CommandSender sender, String[] args) {
-        // Delegate to existing claimexplosions command logic
         return plugin.handleClaimExplosionsCommand(sender, args);
+    }
+
+    private boolean handleWitherExplosions(CommandSender sender, String[] args) {
+        return plugin.handleWitherExplosionsCommand(sender, args);
+    }
+
+    private TabExecutor createExplosionsTabExecutor() {
+        return new TabExecutor() {
+            @Override
+            public boolean onCommand(@NotNull CommandSender sender, @NotNull org.bukkit.command.Command command,
+                    @NotNull String alias, @NotNull String[] args) {
+                return handleExplosions(sender, args);
+            }
+
+            @Override
+            public @Nullable List<String> onTabComplete(@NotNull CommandSender sender,
+                    @NotNull org.bukkit.command.Command command, @NotNull String alias, @NotNull String[] args) {
+                if (args.length == 1) {
+                    return java.util.Arrays.asList("on", "off").stream()
+                            .filter(option -> option.startsWith(args[0].toLowerCase()))
+                            .collect(java.util.stream.Collectors.toList());
+                }
+                return java.util.Collections.emptyList();
+            }
+        };
+    }
+
+    private TabExecutor createWitherExplosionsTabExecutor() {
+        return new TabExecutor() {
+            @Override
+            public boolean onCommand(@NotNull CommandSender sender, @NotNull org.bukkit.command.Command command,
+                    @NotNull String alias, @NotNull String[] args) {
+                return handleWitherExplosions(sender, args);
+            }
+
+            @Override
+            public @Nullable List<String> onTabComplete(@NotNull CommandSender sender,
+                    @NotNull org.bukkit.command.Command command, @NotNull String alias, @NotNull String[] args) {
+                if (args.length == 1) {
+                    return java.util.Arrays.asList("on", "off").stream()
+                            .filter(option -> option.startsWith(args[0].toLowerCase()))
+                            .collect(java.util.stream.Collectors.toList());
+                }
+                return java.util.Collections.emptyList();
+            }
+        };
     }
 
     private org.bukkit.command.TabExecutor createBuyBlocksTabExecutor() {

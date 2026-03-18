@@ -194,6 +194,23 @@ public enum Alias {
         "explosions"
     ),
 
+    ClaimWitherExplosions(
+        """
+        enable: true
+        commands: [witherexplosions]
+        standalone: [witherexplosions, witherexplosion]
+        usage: "/claim witherexplosions [on|off]"
+        description: Toggle wither explosions inside your current claim.
+        permission: griefprevention.witherexplosions
+        arguments:
+          state:
+            options:
+              on: [on]
+              off: [off]
+        """,
+        "witherexplosions"
+    ),
+
     ClaimAbandon(
         """
         enable: true
@@ -552,6 +569,19 @@ public enum Alias {
               standalone: [claimexplosions]
               usage: "/claim explosions [on|off]"
               description: Toggle explosions inside your current claim.
+              arguments:
+                state:
+                  options:
+                    on: [on]
+                    off: [off]
+
+            witherexplosions:
+              enable: true
+              commands: [witherexplosions]
+              standalone: [witherexplosions, witherexplosion]
+              usage: "/claim witherexplosions [on|off]"
+              description: Toggle wither explosions inside your current claim.
+              permission: griefprevention.witherexplosions
               arguments:
                 state:
                   options:
