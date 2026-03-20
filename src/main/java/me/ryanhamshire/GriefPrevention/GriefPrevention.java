@@ -2549,15 +2549,75 @@ public class GriefPrevention extends JavaPlugin
 
     private @Nullable Claim getTrustTargetClaim(@NotNull Player player)
     {
+        Location location = player.getLocation();
+
         // Prefer an exact-Y lookup so stacked 3D subdivisions are targeted precisely.
-        Claim claim = this.dataStore.getClaimAt(player.getLocation(), false, null);
+        Claim claim = this.dataStore.getClaimAt(location, false, null);
         if (claim != null)
         {
             return claim;
         }
 
-        // Fallback preserves legacy behavior when players are directly below a claim column.
-        return this.dataStore.getClaimAt(player.getLocation(), true, null);
+        Claim horizontalMatch = this.dataStore.getClaimAt(location, true, null);
+        if (horizontalMatch == null)
+        {
+            return null;
+        }
+
+        if (horizontalMatch.parent != null)
+        {
+            return horizontalMatch;
+        }
+
+        Claim nearestSubdivision = getNearestSubdivisionByVerticalDistance(horizontalMatch, location);
+        return nearestSubdivision != null ? nearestSubdivision : horizontalMatch;
+    }
+
+    private @Nullable Claim getNearestSubdivisionByVerticalDistance(@NotNull Claim claim, @NotNull Location location)
+    {
+        Claim nearest = null;
+        int nearestDistance = Integer.MAX_VALUE;
+        int nearestHeightSpan = Integer.MAX_VALUE;
+        int y = location.getBlockY();
+
+        for (Claim child : claim.children)
+        {
+            if (!child.inDataStore || !child.contains(location, true, false))
+            {
+                continue;
+            }
+
+            int minY = child.getLookupBounds().getMinY();
+            int maxY = child.getLookupBounds().getMaxY();
+            int distance = (y < minY) ? (minY - y) : Math.max(0, y - maxY);
+            int heightSpan = Math.max(0, maxY - minY);
+
+            if (distance < nearestDistance || (distance == nearestDistance && heightSpan < nearestHeightSpan))
+            {
+                nearest = child;
+                nearestDistance = distance;
+                nearestHeightSpan = heightSpan;
+            }
+
+            Claim nested = getNearestSubdivisionByVerticalDistance(child, location);
+            if (nested == null)
+            {
+                continue;
+            }
+
+            int nestedMinY = nested.getLookupBounds().getMinY();
+            int nestedMaxY = nested.getLookupBounds().getMaxY();
+            int nestedDistance = (y < nestedMinY) ? (nestedMinY - y) : Math.max(0, y - nestedMaxY);
+            int nestedHeightSpan = Math.max(0, nestedMaxY - nestedMinY);
+            if (nestedDistance < nearestDistance || (nestedDistance == nearestDistance && nestedHeightSpan < nearestHeightSpan))
+            {
+                nearest = nested;
+                nearestDistance = nestedDistance;
+                nearestHeightSpan = nestedHeightSpan;
+            }
+        }
+
+        return nearest;
     }
 
     //helper method to resolve a player by name
