@@ -1119,11 +1119,18 @@ public abstract class DataStore
     private int sanitizeClaimDepth(Claim claim, int newDepth) {
         if (claim.parent != null) claim = claim.parent;
 
-        // Get the old depth including the depth of the lowest subdivision.
-        int oldDepth = Math.min(
-                claim.getLesserBoundaryCorner().getBlockY(),
-                claim.children.stream().mapToInt(child -> child.getLesserBoundaryCorner().getBlockY())
-                        .min().orElse(Integer.MAX_VALUE));
+        int oldDepth = claim.getLesserBoundaryCorner().getBlockY();
+        if (usesDefaultDepthPolicy(claim))
+        {
+            // Legacy rectangular claims share depth with rectangular subdivisions only.
+            oldDepth = Math.min(
+                    oldDepth,
+                    claim.children.stream()
+                            .filter(this::usesDefaultDepthPolicy)
+                            .mapToInt(child -> child.getLesserBoundaryCorner().getBlockY())
+                            .min()
+                            .orElse(Integer.MAX_VALUE));
+        }
 
         // Use the lowest of the old and new depths.
         newDepth = Math.min(newDepth, oldDepth);
@@ -1147,11 +1154,18 @@ public abstract class DataStore
 
         final int depth = sanitizeClaimDepth(claim, newDepth);
 
-        Stream.concat(Stream.of(claim), claim.children.stream()).forEach(localClaim -> {
-            localClaim.lesserBoundaryCorner.setY(depth);
-            localClaim.greaterBoundaryCorner.setY(Math.max(localClaim.greaterBoundaryCorner.getBlockY(), depth));
-            this.saveClaim(localClaim);
-        });
+        Stream.concat(Stream.of(claim), claim.children.stream())
+                .filter(this::usesDefaultDepthPolicy)
+                .forEach(localClaim -> {
+                    localClaim.lesserBoundaryCorner.setY(depth);
+                    localClaim.greaterBoundaryCorner.setY(Math.max(localClaim.greaterBoundaryCorner.getBlockY(), depth));
+                    this.saveClaim(localClaim);
+                });
+    }
+
+    private boolean usesDefaultDepthPolicy(@NotNull Claim claim)
+    {
+        return GriefPrevention.instance.getClaimGeometryRegistry().getDefaultGeometry().getKey().equals(claim.getGeometryKey());
     }
 
     //deletes all claims owned by a player

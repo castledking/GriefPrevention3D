@@ -1231,7 +1231,7 @@ public class GriefPrevention extends JavaPlugin
         else if (cmd.getName().equalsIgnoreCase("transferclaim") && player != null)
         {
             //which claim is the user in?
-            Claim claim = this.dataStore.getClaimAt(player.getLocation(), true, null);
+            Claim claim = getTrustTargetClaim(player);
             if (claim == null)
             {
                 GriefPrevention.sendMessage(player, TextMode.Instr, Messages.TransferClaimMissing);
@@ -1370,7 +1370,7 @@ public class GriefPrevention extends JavaPlugin
             if (args.length != 1) return false;
 
             //determine which claim the player is standing in
-            Claim claim = this.dataStore.getClaimAt(player.getLocation(), true /*ignore height*/, null);
+            Claim claim = getTrustTargetClaim(player);
 
             //determine whether a single player or clearing permissions entirely
             boolean clearPermissions = false;
@@ -2362,7 +2362,7 @@ public class GriefPrevention extends JavaPlugin
         PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
 
         //which claim is being abandoned?
-        Claim claim = this.dataStore.getClaimAt(player.getLocation(), true /*ignore height*/, null);
+        Claim claim = getTrustTargetClaim(player);
         if (claim == null)
         {
             GriefPrevention.sendMessage(player, TextMode.Instr, Messages.AbandonClaimMissing);
@@ -2545,6 +2545,19 @@ public class GriefPrevention extends JavaPlugin
         }
 
         GriefPrevention.sendMessage(player, TextMode.Success, Messages.GrantPermissionConfirmation, recipientName, permissionDescription, location);
+    }
+
+    private @Nullable Claim getTrustTargetClaim(@NotNull Player player)
+    {
+        // Prefer an exact-Y lookup so stacked 3D subdivisions are targeted precisely.
+        Claim claim = this.dataStore.getClaimAt(player.getLocation(), false, null);
+        if (claim != null)
+        {
+            return claim;
+        }
+
+        // Fallback preserves legacy behavior when players are directly below a claim column.
+        return this.dataStore.getClaimAt(player.getLocation(), true, null);
     }
 
     //helper method to resolve a player by name
