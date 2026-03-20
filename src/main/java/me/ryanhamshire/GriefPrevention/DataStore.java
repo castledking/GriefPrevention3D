@@ -1186,9 +1186,17 @@ public abstract class DataStore
             // copy the boundary from the claim created in the dry run of createClaim() to our existing claim
             claim.lesserBoundaryCorner = result.claim.lesserBoundaryCorner;
             claim.greaterBoundaryCorner = result.claim.greaterBoundaryCorner;
-            // Sanitize claim depth, expanding parent down to the lowest subdivision and subdivisions down to parent.
-            // Also saves affected claims.
-            setNewDepth(claim, claim.getLesserBoundaryCorner().getBlockY());
+            if (GriefPrevention.instance.getClaimGeometryRegistry().getDefaultGeometry().getKey().equals(claim.getGeometryKey()))
+            {
+                // Legacy rectangular claims share a common depth between parent and subdivisions.
+                // Sanitize and propagate that depth across the claim tree.
+                setNewDepth(claim, claim.getLesserBoundaryCorner().getBlockY());
+            }
+            else
+            {
+                // Non-default geometries own their vertical bounds.
+                this.saveClaim(claim);
+            }
             result.claim = claim;
             addToChunkClaimMap(claim); // add the new boundary to the chunk cache
         }
