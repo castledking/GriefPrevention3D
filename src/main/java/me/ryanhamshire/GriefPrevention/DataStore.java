@@ -1177,7 +1177,25 @@ public abstract class DataStore
     synchronized public CreateClaimResult resizeClaim(Claim claim, int newx1, int newx2, int newy1, int newy2, int newz1, int newz2, Player resizingPlayer)
     {
         //try to create this new claim, ignoring the original when checking for overlap
-        CreateClaimResult result = this.createClaim(claim.getLesserBoundaryCorner().getWorld(), newx1, newx2, newy1, newy2, newz1, newz2, claim.ownerID, claim.parent, claim.id, resizingPlayer, true);
+        CreateClaimResult result = this.createClaim(
+                claim.getLesserBoundaryCorner().getWorld(),
+                newx1,
+                newx2,
+                newy1,
+                newy2,
+                newz1,
+                newz2,
+                claim.ownerID,
+                claim.parent,
+                claim.id,
+                resizingPlayer,
+                true,
+                resized -> {
+                    // Preserve geometry/metadata during resize dry-run so parent-depth and overlap checks
+                    // use the claim's actual behavior (not default rectangular assumptions).
+                    resized.setGeometryKey(claim.getGeometryKey());
+                    resized.getMetadata().setAll(claim.getMetadata());
+                });
 
         //if succeeded
         if (result.succeeded)
