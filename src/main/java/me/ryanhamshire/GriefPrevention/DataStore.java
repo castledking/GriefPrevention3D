@@ -40,6 +40,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -736,14 +737,9 @@ public abstract class DataStore
                 // If ignoring subclaims, claim is a match.
                 if (ignoreSubclaims) return claim;
 
-                //when we find a top level claim, if the location is in one of its subdivisions,
-                //return the SUBDIVISION, not the top level claim
-                for (int j = 0; j < claim.children.size(); j++)
-                {
-                    Claim subdivision = claim.children.get(j);
-                    if (subdivision.inDataStore && subdivision.contains(location, ignoreHeight, false))
-                        return subdivision;
-                }
+                // For stacked/overlapping subdivisions, prefer the most specific matching subdivision.
+                Claim subdivision = getBestSubdivisionMatch(claim, location, ignoreHeight);
+                if (subdivision != null) return subdivision;
 
                 return claim;
             }
@@ -751,6 +747,59 @@ public abstract class DataStore
 
         //if no claim found, return null
         return null;
+    }
+
+    private @Nullable Claim getBestSubdivisionMatch(
+            @NotNull Claim topLevelClaim,
+            @NotNull Location location,
+            boolean ignoreHeight)
+    {
+        Claim best = null;
+        for (Claim subdivision : topLevelClaim.children)
+        {
+            if (!subdivision.inDataStore || !subdivision.contains(location, ignoreHeight, false))
+            {
+                continue;
+            }
+
+            best = chooseMoreSpecificSubdivision(best, subdivision, location);
+        }
+
+        return best;
+    }
+
+    private @NotNull Claim chooseMoreSpecificSubdivision(
+            @Nullable Claim current,
+            @NotNull Claim candidate,
+            @NotNull Location location)
+    {
+        if (current == null)
+        {
+            return candidate;
+        }
+
+        boolean currentExact = current.contains(location, false, false);
+        boolean candidateExact = candidate.contains(location, false, false);
+        if (candidateExact != currentExact)
+        {
+            return candidateExact ? candidate : current;
+        }
+
+        int currentArea = current.getArea();
+        int candidateArea = candidate.getArea();
+        if (candidateArea != currentArea)
+        {
+            return candidateArea < currentArea ? candidate : current;
+        }
+
+        int currentSpan = Math.max(0, current.getLookupBounds().getMaxY() - current.getLookupBounds().getMinY());
+        int candidateSpan = Math.max(0, candidate.getLookupBounds().getMaxY() - candidate.getLookupBounds().getMinY());
+        if (candidateSpan != currentSpan)
+        {
+            return candidateSpan < currentSpan ? candidate : current;
+        }
+
+        return current;
     }
 
     //finds a claim by ID

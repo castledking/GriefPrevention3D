@@ -1281,7 +1281,7 @@ public class GriefPrevention extends JavaPlugin
         //trustlist
         else if (cmd.getName().equalsIgnoreCase("trustlist") && player != null)
         {
-            Claim claim = this.dataStore.getClaimAt(player.getLocation(), true, null);
+            Claim claim = getTrustTargetClaim(player);
 
             //if no claim here, error message
             if (claim == null)
@@ -2409,7 +2409,7 @@ public class GriefPrevention extends JavaPlugin
     private void handleTrustCommand(Player player, ClaimPermission permissionLevel, String recipientName)
     {
         //determine which claim the player is standing in
-        Claim claim = this.dataStore.getClaimAt(player.getLocation(), true /*ignore height*/, null);
+        Claim claim = getTrustTargetClaim(player);
 
         //validate player or group argument
         String permission = null;
