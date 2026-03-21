@@ -1,0 +1,16 @@
+name: GP3DAddon
+main: com.griefprevention.addon.gp3d.GP3DAddon
+version: '${project.version}'
+api-version: '1.21.11'
+depend: [GriefPrevention]
+description: GP3D addon implementing exact-Y stacked subdivisions on top of GriefPrevention APIs.
+commands:
+  3dsubdivideclaims:
+    description: Enables stacked 3D subdivision mode.
+    usage: /<command> [off|cancel]
+    aliases: [3dsubdivideclaim, 3dsub]
+    permission: griefprevention.subdivide3d
+permissions:
+  griefprevention.subdivide3d:
+    description: Allows players to use the GP3D subdivision mode commands.
+    default: true

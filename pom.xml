@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>io.castledking</groupId>
+    <artifactId>gpapiaddon-parent</artifactId>
+    <version>1.0.0-SNAPSHOT</version>
+    <packaging>pom</packaging>
+
+    <name>GPAPIAddon Workspace</name>
+    <description>Combined workspace for API-extended GriefPrevention and the GP3D addon proof-of-concept.</description>
+
+    <modules>
+        <module>griefprevention</module>
+        <module>gpapi-addon</module>
+    </modules>
+
+    <properties>
+        <maven.compiler.release>21</maven.compiler.release>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <spigot.api.version>1.21.11-R0.1-SNAPSHOT</spigot.api.version>
+        <paper.api.version>1.21.11-R0.1-SNAPSHOT</paper.api.version>
+        <griefprevention.version>18.0.0-SNAPSHOT</griefprevention.version>
+        <jetbrains.annotations.version>26.0.2</jetbrains.annotations.version>
+    </properties>
+</project>
