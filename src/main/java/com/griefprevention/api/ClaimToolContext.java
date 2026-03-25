@@ -7,9 +7,6 @@ import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.block.Action;
-import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.inventory.EquipmentSlot;
-import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -23,9 +20,8 @@ public final class ClaimToolContext
     private final @NotNull DataStore dataStore;
     private final @NotNull Player player;
     private final @NotNull PlayerData playerData;
-    private final @NotNull PlayerInteractEvent event;
-    private final @NotNull EquipmentSlot hand;
-    private final @NotNull ItemStack itemInHand;
+    private final @NotNull Action action;
+    private final @NotNull Material itemType;
     private final @Nullable Block clickedBlock;
     private final @NotNull Material clickedBlockType;
 
@@ -34,9 +30,8 @@ public final class ClaimToolContext
             @NotNull DataStore dataStore,
             @NotNull Player player,
             @NotNull PlayerData playerData,
-            @NotNull PlayerInteractEvent event,
-            @NotNull EquipmentSlot hand,
-            @NotNull ItemStack itemInHand,
+            @NotNull Action action,
+            @NotNull Material itemType,
             @Nullable Block clickedBlock,
             @NotNull Material clickedBlockType)
     {
@@ -44,9 +39,8 @@ public final class ClaimToolContext
         this.dataStore = dataStore;
         this.player = player;
         this.playerData = playerData;
-        this.event = event;
-        this.hand = hand;
-        this.itemInHand = itemInHand;
+        this.action = action;
+        this.itemType = itemType;
         this.clickedBlock = clickedBlock;
         this.clickedBlockType = clickedBlockType;
     }
@@ -71,29 +65,14 @@ public final class ClaimToolContext
         return playerData;
     }
 
-    public @NotNull PlayerInteractEvent getEvent()
-    {
-        return event;
-    }
-
     public @NotNull Action getAction()
     {
-        return event.getAction();
-    }
-
-    public @NotNull EquipmentSlot getHand()
-    {
-        return hand;
-    }
-
-    public @NotNull ItemStack getItemInHand()
-    {
-        return itemInHand;
+        return action;
     }
 
     public @NotNull Material getItemType()
     {
-        return itemInHand.getType();
+        return itemType;
     }
 
     public @Nullable Block getClickedBlock()

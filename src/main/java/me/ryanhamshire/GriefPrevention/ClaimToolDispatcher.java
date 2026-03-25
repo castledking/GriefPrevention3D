@@ -33,7 +33,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.BlockIterator;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -73,8 +72,7 @@ final class ClaimToolDispatcher
         }
 
         Player player = event.getPlayer();
-        ItemStack itemInHand = instance.getItemInHand(player, hand);
-        Material materialInHand = itemInHand.getType();
+        Material materialInHand = instance.getItemInHand(player, hand).getType();
         if (materialInHand != instance.config_claims_investigationTool
                 && materialInHand != instance.config_claims_modificationTool)
         {
@@ -87,9 +85,8 @@ final class ClaimToolDispatcher
                 dataStore,
                 player,
                 playerData,
-                event,
-                hand,
-                itemInHand,
+                action,
+                materialInHand,
                 clickedBlock,
                 clickedBlockType);
 
