@@ -87,12 +87,14 @@ final class ClaimToolDispatcher implements Listener
         event.setCancelled(true);
 
         PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
+        //if he's investigating a claim
         if (materialInHand == instance.config_claims_investigationTool)
         {
             handleInvestigationTool(event, player, playerData, clickedBlock, clickedBlockType);
             return;
         }
 
+        //if it's a golden shovel
         handleModificationTool(event, player, playerData, clickedBlock, clickedBlockType);
     }
 
@@ -148,19 +150,24 @@ final class ClaimToolDispatcher implements Listener
             clickedBlockType = clickedBlock.getType();
         }
 
+        //if no block, stop here
         if (clickedBlock == null)
         {
             return;
         }
 
+        //air indicates too far away
         if (clickedBlockType == Material.AIR)
         {
             GriefPrevention.sendMessage(player, TextMode.Err, Messages.TooFarAway);
+
+            // Remove visualizations
             playerData.setVisibleBoundaries(null);
             return;
         }
 
         Claim claim = this.dataStore.getClaimAt(clickedBlock.getLocation(), false, playerData.lastClaim);
+        //no claim case
         if (claim == null)
         {
             // alert plugins of a claim inspection, return if cancelled
@@ -176,6 +183,7 @@ final class ClaimToolDispatcher implements Listener
             return;
         }
 
+        //claim case
         // alert plugins of a claim inspection, return if cancelled
         ClaimInspectionEvent inspectionEvent = new ClaimInspectionEvent(player, clickedBlock, claim);
         Bukkit.getPluginManager().callEvent(inspectionEvent);
@@ -186,6 +194,8 @@ final class ClaimToolDispatcher implements Listener
 
         playerData.lastClaim = claim;
         GriefPrevention.sendMessage(player, TextMode.Info, Messages.BlockClaimed, claim.getOwnerName());
+
+        //visualize boundary
         BoundaryVisualization.visualizeClaim(player, claim, VisualizationType.CLAIM);
 
         if (player.hasPermission("griefprevention.seeclaimsize"))
@@ -193,6 +203,7 @@ final class ClaimToolDispatcher implements Listener
             GriefPrevention.sendMessage(player, TextMode.Info, "  " + claim.getWidth() + "x" + claim.getHeight() + "=" + claim.getArea());
         }
 
+        //if permission, tell about the player's offline time
         if (!claim.isAdminClaim() && (player.hasPermission("griefprevention.deleteclaims")
                 || player.hasPermission("griefprevention.seeinactivity")))
         {
@@ -206,6 +217,7 @@ final class ClaimToolDispatcher implements Listener
             long daysElapsed = (now.getTime() - lastLogin.getTime()) / (1000 * 60 * 60 * 24);
             GriefPrevention.sendMessage(player, TextMode.Info, Messages.PlayerOfflineTime, String.valueOf(daysElapsed));
 
+            //drop the data we just loaded, if the player isn't online
             if (instance.getServer().getPlayer(claim.ownerID) == null)
             {
                 this.dataStore.clearCachedPlayerData(claim.ownerID);
@@ -220,6 +232,8 @@ final class ClaimToolDispatcher implements Listener
             @Nullable Block clickedBlock,
             @NotNull Material clickedBlockType)
     {
+        event.setCancelled(true);  //GriefPrevention exclusively reserves this tool  (e.g. no grass path creation for golden shovel)
+
         //FEATURE: shovel and stick can be used from a distance away
         if (event.getAction() == Action.RIGHT_CLICK_AIR)
         {
@@ -228,24 +242,27 @@ final class ClaimToolDispatcher implements Listener
             clickedBlockType = clickedBlock.getType();
         }
 
+        //if no block, stop here
         if (clickedBlock == null)
         {
             return;
         }
 
+        //can't use the shovel from too far away
         if (clickedBlockType == Material.AIR)
         {
             GriefPrevention.sendMessage(player, TextMode.Err, Messages.TooFarAway);
             return;
         }
 
+        //if the player doesn't have claims permission, don't do anything
         if (!player.hasPermission("griefprevention.createclaims"))
         {
             GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoCreateClaimPermission);
             return;
         }
 
-        //if he's resizing a claim
+        //if he's resizing a claim and that claim hasn't been deleted since he started resizing it
         if (playerData.claimResizing != null && playerData.claimResizing.inDataStore)
         {
             if (clickedBlock.getLocation().equals(playerData.lastShovelLocation))
@@ -253,6 +270,7 @@ final class ClaimToolDispatcher implements Listener
                 return;
             }
 
+            //figure out what the coords of his new claim would be
             int newx1;
             int newx2;
             int newz1;
@@ -288,9 +306,12 @@ final class ClaimToolDispatcher implements Listener
             return;
         }
 
+        //otherwise, since not currently resizing a claim, must be starting a resize, creating a new claim, or creating a subdivision
         Claim claim = this.dataStore.getClaimAt(clickedBlock.getLocation(), true, playerData.lastClaim);
+        //if within an existing claim, he's not creating a new one
         if (claim != null)
         {
+            //if the player has permission to edit the claim or subdivision
             Supplier<String> noEditReason = claim.checkPermission(
                     player,
                     ClaimPermission.Edit,
@@ -298,6 +319,7 @@ final class ClaimToolDispatcher implements Listener
                     () -> instance.dataStore.getMessage(Messages.CreateClaimFailOverlapOtherPlayer, claim.getOwnerName()));
             if (noEditReason == null)
             {
+                //if he clicked on a corner, start resizing it
                 boolean clickedCorner = (clickedBlock.getX() == claim.getLesserBoundaryCorner().getBlockX()
                         || clickedBlock.getX() == claim.getGreaterBoundaryCorner().getBlockX())
                         && (clickedBlock.getZ() == claim.getLesserBoundaryCorner().getBlockZ()
@@ -308,14 +330,18 @@ final class ClaimToolDispatcher implements Listener
                     playerData.lastShovelLocation = clickedBlock.getLocation();
                     GriefPrevention.sendMessage(player, TextMode.Instr, Messages.ResizeStart);
                 }
+                //if he didn't click on a corner and is in subdivision mode, he's creating a new subdivision
                 else if (playerData.shovelMode == ShovelMode.Subdivide)
                 {
+                    //if it's the first click, he's trying to start a new subdivision
                     if (playerData.lastShovelLocation == null)
                     {
+                        //if the clicked claim was a subdivision, tell him he can't start a new subdivision here
                         if (claim.parent != null)
                         {
                             GriefPrevention.sendMessage(player, TextMode.Err, Messages.ResizeFailOverlapSubdivision);
                         }
+                        //otherwise start a new subdivision
                         else
                         {
                             GriefPrevention.sendMessage(player, TextMode.Instr, Messages.SubdivisionStart);
@@ -323,8 +349,10 @@ final class ClaimToolDispatcher implements Listener
                             playerData.claimSubdividing = claim;
                         }
                     }
+                    //otherwise, he's trying to finish creating a subdivision by setting the other boundary corner
                     else
                     {
+                        //if last shovel location was in a different world, assume the player is starting the create-claim workflow over
                         if (!playerData.lastShovelLocation.getWorld().equals(clickedBlock.getWorld()))
                         {
                             playerData.lastShovelLocation = null;
@@ -332,6 +360,7 @@ final class ClaimToolDispatcher implements Listener
                             return;
                         }
 
+                        //try to create a new claim (will return null if this subdivision overlaps another)
                         CreateClaimResult result = this.dataStore.createClaim(
                                 player.getWorld(),
                                 playerData.lastShovelLocation.getBlockX(), clickedBlock.getX(),
@@ -343,6 +372,7 @@ final class ClaimToolDispatcher implements Listener
                                 null,
                                 player);
 
+                        //if it didn't succeed, tell the player why
                         if (!result.succeeded || result.claim == null)
                         {
                             if (result.claim != null)
@@ -358,18 +388,22 @@ final class ClaimToolDispatcher implements Listener
                             return;
                         }
 
+                        //otherwise, advise him on the /trust command and show him his new subdivision
                         GriefPrevention.sendMessage(player, TextMode.Success, Messages.SubdivisionSuccess);
                         BoundaryVisualization.visualizeClaim(player, result.claim, VisualizationType.CLAIM, clickedBlock);
                         playerData.lastShovelLocation = null;
                         playerData.claimSubdividing = null;
                     }
                 }
+                //otherwise tell him he can't create a claim here, and show him the existing claim
+                //also advise him to consider /abandonclaim or resizing the existing claim
                 else
                 {
                     GriefPrevention.sendMessage(player, TextMode.Err, Messages.CreateClaimFailOverlap);
                     BoundaryVisualization.visualizeClaim(player, claim, VisualizationType.CLAIM, clickedBlock);
                 }
             }
+            //otherwise tell the player he can't claim here because it's someone else's claim, and show him the claim
             else
             {
                 GriefPrevention.sendMessage(player, TextMode.Err, noEditReason.get());
@@ -379,16 +413,19 @@ final class ClaimToolDispatcher implements Listener
             return;
         }
 
-        //otherwise, he must be creating a new claim
+        //otherwise, the player isn't in an existing claim!
+        //if he hasn't already start a claim with a previous shovel action
         Location lastShovelLocation = playerData.lastShovelLocation;
         if (lastShovelLocation == null)
         {
+            //if claims are not enabled in this world and it's not an administrative claim, display an error message and stop
             if (!instance.claimsEnabledForWorld(player.getWorld()))
             {
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.ClaimsDisabledWorld);
                 return;
             }
 
+            //if he's at the claim count per player limit already and doesn't have permission to bypass, display an error message
             if (instance.config_claims_maxClaimsPerPlayer > 0
                     && !player.hasPermission("griefprevention.overrideclaimcountlimit")
                     && playerData.getClaims().size() >= instance.config_claims_maxClaimsPerPlayer)
@@ -397,12 +434,17 @@ final class ClaimToolDispatcher implements Listener
                 return;
             }
 
+            //remember it, and start him on the new claim
             playerData.lastShovelLocation = clickedBlock.getLocation();
             GriefPrevention.sendMessage(player, TextMode.Instr, Messages.ClaimStart);
+
+            //show him where he's working
             BoundaryVisualization.visualizeArea(player, new BoundingBox(clickedBlock), VisualizationType.INITIALIZE_ZONE);
             return;
         }
 
+        //otherwise, he's trying to finish creating a claim by setting the other boundary corner
+        //if last shovel location was in a different world, assume the player is starting the create-claim workflow over
         if (!lastShovelLocation.getWorld().equals(clickedBlock.getWorld()))
         {
             playerData.lastShovelLocation = null;
@@ -410,6 +452,7 @@ final class ClaimToolDispatcher implements Listener
             return;
         }
 
+        //apply pvp rule
         if (playerData.inPvpCombat())
         {
             GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoClaimDuringPvP);
@@ -419,10 +462,12 @@ final class ClaimToolDispatcher implements Listener
         int newClaimWidth = Math.abs(playerData.lastShovelLocation.getBlockX() - clickedBlock.getX()) + 1;
         int newClaimHeight = Math.abs(playerData.lastShovelLocation.getBlockZ() - clickedBlock.getZ()) + 1;
 
+        //apply minimum claim dimensions rule
         if (playerData.shovelMode != ShovelMode.Admin)
         {
             if (newClaimWidth < instance.config_claims_minWidth || newClaimHeight < instance.config_claims_minWidth)
             {
+                //this IF block is a workaround for craftbukkit bug which fires two events for one interaction
                 if (newClaimWidth != 1 && newClaimHeight != 1)
                 {
                     GriefPrevention.sendMessage(player, TextMode.Err, Messages.NewClaimTooNarrow, String.valueOf(instance.config_claims_minWidth));
@@ -442,6 +487,7 @@ final class ClaimToolDispatcher implements Listener
         }
 
         UUID playerID = player.getUniqueId();
+        //if not an administrative claim, verify the player has enough claim blocks for this new claim
         if (playerData.shovelMode != ShovelMode.Admin)
         {
             int newClaimArea = newClaimWidth * newClaimHeight;
@@ -458,6 +504,7 @@ final class ClaimToolDispatcher implements Listener
             playerID = null;
         }
 
+        //try to create a new claim
         CreateClaimResult result = this.dataStore.createClaim(
                 player.getWorld(),
                 lastShovelLocation.getBlockX(), clickedBlock.getX(),
@@ -469,6 +516,7 @@ final class ClaimToolDispatcher implements Listener
                 null,
                 player);
 
+        //if it didn't succeed, tell the player why
         if (!result.succeeded || result.claim == null)
         {
             if (result.claim != null)
@@ -484,10 +532,12 @@ final class ClaimToolDispatcher implements Listener
             return;
         }
 
+        //otherwise, advise him on the /trust command and show him his new claim
         GriefPrevention.sendMessage(player, TextMode.Success, Messages.CreateClaimSuccess);
         BoundaryVisualization.visualizeClaim(player, result.claim, VisualizationType.CLAIM, clickedBlock);
         playerData.lastShovelLocation = null;
 
+        //if it's a big claim, tell the player about subdivisions
         if (!player.hasPermission("griefprevention.adminclaims") && result.claim.getArea() >= 1000)
         {
             GriefPrevention.sendMessage(player, TextMode.Info, Messages.BecomeMayor, 200L);
