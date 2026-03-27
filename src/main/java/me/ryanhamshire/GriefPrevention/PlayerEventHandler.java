@@ -105,7 +105,6 @@ class PlayerEventHandler implements Listener
 {
     private final DataStore dataStore;
     private final GriefPrevention instance;
-    private final ClaimToolDispatcher claimToolDispatcher;
 
     //list of temporarily banned ip's
     private final ArrayList<IpBanInfo> tempBannedIps = new ArrayList<>();
@@ -137,7 +136,6 @@ class PlayerEventHandler implements Listener
     {
         this.dataStore = dataStore;
         this.instance = plugin;
-        this.claimToolDispatcher = new ClaimToolDispatcher(dataStore, plugin);
         // Initialize empty on load so never null just in case. Reload after plugins enable.
         this.bannedWordFinder = new WordFinder(List.of());
         this.pvpBlockedCommands = new MonitoredCommands(List.of());
@@ -1490,7 +1488,7 @@ class PlayerEventHandler implements Listener
     }
 
     //when a player interacts with the world
-    @EventHandler(priority = EventPriority.LOW)
+    @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
     void onPlayerInteract(PlayerInteractEvent event)
     {
         //not interested in left-click-on-air actions
@@ -1568,11 +1566,6 @@ class PlayerEventHandler implements Listener
                                 clickedBlockType == Material.DECORATED_POT
                         )))
         {
-            if (this.claimToolDispatcher.handle(event, clickedBlock, clickedBlockType))
-            {
-                return;
-            }
-
             if (playerData == null) playerData = this.dataStore.getPlayerData(player.getUniqueId());
 
             //check if player is in a claim for pvp and permission checks below
@@ -1775,10 +1768,6 @@ class PlayerEventHandler implements Listener
                 return;
             }
 
-            else if (this.claimToolDispatcher.handle(event, clickedBlock, clickedBlockType))
-            {
-                return;
-            }
         }
     }
 

@@ -17,6 +17,7 @@
  */
 
 package me.ryanhamshire.GriefPrevention;
+
 import com.griefprevention.visualization.BoundaryVisualization;
 import com.griefprevention.visualization.VisualizationType;
 import me.ryanhamshire.GriefPrevention.events.ClaimInspectionEvent;
@@ -28,6 +29,9 @@ import org.bukkit.Tag;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
@@ -43,7 +47,7 @@ import java.util.function.Supplier;
 /**
  * Handles claim tool interactions outside of PlayerEventHandler.
  */
-final class ClaimToolDispatcher
+final class ClaimToolDispatcher implements Listener
 {
     private final @NotNull DataStore dataStore;
     private final @NotNull GriefPrevention instance;
@@ -54,111 +58,130 @@ final class ClaimToolDispatcher
         this.instance = instance;
     }
 
-    boolean handle(@NotNull PlayerInteractEvent event, @Nullable Block clickedBlock, @NotNull Material clickedBlockType)
+    @EventHandler(priority = EventPriority.LOW)
+    void onPlayerInteract(PlayerInteractEvent event)
     {
         Action action = event.getAction();
         if (action != Action.RIGHT_CLICK_BLOCK && action != Action.RIGHT_CLICK_AIR)
         {
-            return false;
+            return;
         }
 
         EquipmentSlot hand = event.getHand();
         if (hand != EquipmentSlot.HAND)
         {
-            return false;
+            return;
         }
 
         Player player = event.getPlayer();
+        Block clickedBlock = event.getClickedBlock();
+        Material clickedBlockType = clickedBlock != null ? clickedBlock.getType() : Material.AIR;
         Material materialInHand = instance.getItemInHand(player, hand).getType();
         if (materialInHand != instance.config_claims_investigationTool
                 && materialInHand != instance.config_claims_modificationTool)
         {
-            return false;
+            return;
         }
+
+        // Claim tools should not continue into the general interaction listener.
+        event.setCancelled(true);
 
         PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
         if (materialInHand == instance.config_claims_investigationTool)
         {
-            return handleInvestigationTool(event, player, playerData, clickedBlock, clickedBlockType);
+            handleInvestigationTool(event, player, playerData, clickedBlock, clickedBlockType);
+            return;
         }
 
-        return handleModificationTool(event, player, playerData, clickedBlock, clickedBlockType);
+        handleModificationTool(event, player, playerData, clickedBlock, clickedBlockType);
     }
 
-    private boolean handleInvestigationTool(
+    private void handleInvestigationTool(
             @NotNull PlayerInteractEvent event,
             @NotNull Player player,
             @NotNull PlayerData playerData,
             @Nullable Block clickedBlock,
             @NotNull Material clickedBlockType)
     {
+        //if claims are disabled in this world, do nothing
         if (!instance.claimsEnabledForWorld(player.getWorld()))
         {
-            return true;
+            return;
         }
 
+        // If investigation tool is on cooldown, do nothing.
         if (player.getCooldown(instance.config_claims_investigationTool) > 0)
         {
-            return true;
+            return;
         }
+        // Set investigation tool on cooldown to prevent spamming.
         player.setCooldown(instance.config_claims_investigationTool, 1);
 
+        //if holding shift (sneaking), show all claims in area
         if (player.isSneaking() && player.hasPermission("griefprevention.visualizenearbyclaims"))
         {
+            //find nearby claims
             Set<Claim> claims = this.dataStore.getNearbyClaims(player.getLocation());
+
+            // alert plugins of a claim inspection, return if cancelled
             ClaimInspectionEvent inspectionEvent = new ClaimInspectionEvent(player, null, claims, true);
             Bukkit.getPluginManager().callEvent(inspectionEvent);
             if (inspectionEvent.isCancelled())
             {
-                return true;
+                return;
             }
 
+            //visualize boundaries
             BoundaryVisualization.visualizeNearbyClaims(
                     player,
                     inspectionEvent.getClaims(),
                     player.getEyeLocation().getBlockY());
             GriefPrevention.sendMessage(player, TextMode.Info, Messages.ShowNearbyClaims, String.valueOf(claims.size()));
-            return true;
+            return;
         }
 
+        //FEATURE: shovel and stick can be used from a distance away
         if (event.getAction() == Action.RIGHT_CLICK_AIR)
         {
+            //try to find a far away non-air block along line of sight
             clickedBlock = getTargetBlock(player, 100);
             clickedBlockType = clickedBlock.getType();
         }
 
         if (clickedBlock == null)
         {
-            return true;
+            return;
         }
 
         if (clickedBlockType == Material.AIR)
         {
             GriefPrevention.sendMessage(player, TextMode.Err, Messages.TooFarAway);
             playerData.setVisibleBoundaries(null);
-            return true;
+            return;
         }
 
         Claim claim = this.dataStore.getClaimAt(clickedBlock.getLocation(), false, playerData.lastClaim);
         if (claim == null)
         {
+            // alert plugins of a claim inspection, return if cancelled
             ClaimInspectionEvent inspectionEvent = new ClaimInspectionEvent(player, clickedBlock, null);
             Bukkit.getPluginManager().callEvent(inspectionEvent);
             if (inspectionEvent.isCancelled())
             {
-                return true;
+                return;
             }
 
             GriefPrevention.sendMessage(player, TextMode.Info, Messages.BlockNotClaimed);
             playerData.setVisibleBoundaries(null);
-            return true;
+            return;
         }
 
+        // alert plugins of a claim inspection, return if cancelled
         ClaimInspectionEvent inspectionEvent = new ClaimInspectionEvent(player, clickedBlock, claim);
         Bukkit.getPluginManager().callEvent(inspectionEvent);
         if (inspectionEvent.isCancelled())
         {
-            return true;
+            return;
         }
 
         playerData.lastClaim = claim;
@@ -188,47 +211,46 @@ final class ClaimToolDispatcher
                 this.dataStore.clearCachedPlayerData(claim.ownerID);
             }
         }
-
-        return true;
     }
 
-    private boolean handleModificationTool(
+    private void handleModificationTool(
             @NotNull PlayerInteractEvent event,
             @NotNull Player player,
             @NotNull PlayerData playerData,
             @Nullable Block clickedBlock,
             @NotNull Material clickedBlockType)
     {
-        event.setCancelled(true);
-
+        //FEATURE: shovel and stick can be used from a distance away
         if (event.getAction() == Action.RIGHT_CLICK_AIR)
         {
+            //try to find a far away non-air block along line of sight
             clickedBlock = getTargetBlock(player, 100);
             clickedBlockType = clickedBlock.getType();
         }
 
         if (clickedBlock == null)
         {
-            return true;
+            return;
         }
 
         if (clickedBlockType == Material.AIR)
         {
             GriefPrevention.sendMessage(player, TextMode.Err, Messages.TooFarAway);
-            return true;
+            return;
         }
 
         if (!player.hasPermission("griefprevention.createclaims"))
         {
             GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoCreateClaimPermission);
-            return true;
+            return;
         }
 
+        //if he's resizing a claim
         if (playerData.claimResizing != null && playerData.claimResizing.inDataStore)
         {
             if (clickedBlock.getLocation().equals(playerData.lastShovelLocation))
             {
-                return true;
+                return;
             }
 
             int newx1;
@@ -263,7 +285,7 @@ final class ClaimToolDispatcher
             newy2 = clickedBlock.getY() - instance.config_claims_claimsExtendIntoGroundDistance;
 
             this.dataStore.resizeClaimWithChecks(player, playerData, newx1, newx2, newy1, newy2, newz1, newz2);
-            return true;
+            return;
         }
 
         Claim claim = this.dataStore.getClaimAt(clickedBlock.getLocation(), true, playerData.lastClaim);
@@ -306,7 +328,8 @@ final class ClaimToolDispatcher
                         if (!playerData.lastShovelLocation.getWorld().equals(clickedBlock.getWorld()))
                         {
                             playerData.lastShovelLocation = null;
-                            return handleModificationTool(event, player, playerData, clickedBlock, clickedBlockType);
+                            handleModificationTool(event, player, playerData, clickedBlock, clickedBlockType);
+                            return;
                         }
 
                         CreateClaimResult result = this.dataStore.createClaim(
@@ -332,7 +355,7 @@ final class ClaimToolDispatcher
                                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.CreateClaimFailOverlapRegion);
                             }
 
-                            return true;
+                            return;
                         }
 
                         GriefPrevention.sendMessage(player, TextMode.Success, Messages.SubdivisionSuccess);
@@ -353,16 +376,17 @@ final class ClaimToolDispatcher
                 BoundaryVisualization.visualizeClaim(player, claim, VisualizationType.CONFLICT_ZONE, clickedBlock);
             }
 
-            return true;
+            return;
         }
 
+        //otherwise, he must be creating a new claim
         Location lastShovelLocation = playerData.lastShovelLocation;
         if (lastShovelLocation == null)
         {
             if (!instance.claimsEnabledForWorld(player.getWorld()))
             {
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.ClaimsDisabledWorld);
-                return true;
+                return;
             }
 
             if (instance.config_claims_maxClaimsPerPlayer > 0
@@ -370,25 +394,26 @@ final class ClaimToolDispatcher
                     && playerData.getClaims().size() >= instance.config_claims_maxClaimsPerPlayer)
             {
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.ClaimCreationFailedOverClaimCountLimit);
-                return true;
+                return;
             }
 
             playerData.lastShovelLocation = clickedBlock.getLocation();
             GriefPrevention.sendMessage(player, TextMode.Instr, Messages.ClaimStart);
             BoundaryVisualization.visualizeArea(player, new BoundingBox(clickedBlock), VisualizationType.INITIALIZE_ZONE);
-            return true;
+            return;
         }
 
         if (!lastShovelLocation.getWorld().equals(clickedBlock.getWorld()))
         {
             playerData.lastShovelLocation = null;
-            return handleModificationTool(event, player, playerData, clickedBlock, clickedBlockType);
+            handleModificationTool(event, player, playerData, clickedBlock, clickedBlockType);
+            return;
         }
 
         if (playerData.inPvpCombat())
         {
             GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoClaimDuringPvP);
-            return true;
+            return;
         }
 
         int newClaimWidth = Math.abs(playerData.lastShovelLocation.getBlockX() - clickedBlock.getX()) + 1;
@@ -402,7 +427,7 @@ final class ClaimToolDispatcher
                 {
                     GriefPrevention.sendMessage(player, TextMode.Err, Messages.NewClaimTooNarrow, String.valueOf(instance.config_claims_minWidth));
                 }
-                return true;
+                return;
             }
 
             int newArea = newClaimWidth * newClaimHeight;
@@ -412,7 +437,7 @@ final class ClaimToolDispatcher
                 {
                     GriefPrevention.sendMessage(player, TextMode.Err, Messages.ResizeClaimInsufficientArea, String.valueOf(instance.config_claims_minArea));
                 }
-                return true;
+                return;
             }
         }
 
@@ -425,7 +450,7 @@ final class ClaimToolDispatcher
             {
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.CreateClaimInsufficientBlocks, String.valueOf(newClaimArea - remainingBlocks));
                 instance.dataStore.tryAdvertiseAdminAlternatives(player);
-                return true;
+                return;
             }
         }
         else
@@ -456,7 +481,7 @@ final class ClaimToolDispatcher
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.CreateClaimFailOverlapRegion);
             }
 
-            return true;
+            return;
         }
 
         GriefPrevention.sendMessage(player, TextMode.Success, Messages.CreateClaimSuccess);
@@ -470,7 +495,6 @@ final class ClaimToolDispatcher
         }
 
         AutoExtendClaimTask.scheduleAsync(result.claim);
-        return true;
     }
 
     private static @NotNull Block getTargetBlock(@NotNull Player player, int maxDistance) throws IllegalStateException
