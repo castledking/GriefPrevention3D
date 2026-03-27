@@ -20,7 +20,6 @@ package me.ryanhamshire.GriefPrevention;
 
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
-import com.griefprevention.api.ClaimToolHandlerRegistry;
 import com.griefprevention.commands.ClaimCommand;
 import com.griefprevention.metrics.MetricsHandler;
 import com.griefprevention.platform.knockback.KnockbackProtectionListener;
@@ -88,18 +87,12 @@ public class GriefPrevention extends JavaPlugin
 {
     //for convenience, a reference to the instance of this plugin
     public static GriefPrevention instance;
-    private final ClaimToolHandlerRegistry claimToolHandlerRegistry = new ClaimToolHandlerRegistry();
 
     //for logging to the console and log file
     private static Logger log;
 
     //this handles data storage, like player and region data
     public DataStore dataStore;
-
-    public @NotNull ClaimToolHandlerRegistry getClaimToolHandlerRegistry()
-    {
-        return claimToolHandlerRegistry;
-    }
 
     // Event handlers with common functionality
     EntityEventHandler entityEventHandler;

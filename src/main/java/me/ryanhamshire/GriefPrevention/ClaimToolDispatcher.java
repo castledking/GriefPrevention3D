@@ -17,8 +17,6 @@
  */
 
 package me.ryanhamshire.GriefPrevention;
-
-import com.griefprevention.api.ClaimToolContext;
 import com.griefprevention.visualization.BoundaryVisualization;
 import com.griefprevention.visualization.VisualizationType;
 import me.ryanhamshire.GriefPrevention.events.ClaimInspectionEvent;
@@ -41,10 +39,9 @@ import java.util.Date;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
-import java.util.logging.Level;
 
 /**
- * Dispatches claim tool interactions to addon handlers and then GP's built-in logic.
+ * Handles claim tool interactions outside of PlayerEventHandler.
  */
 final class ClaimToolDispatcher
 {
@@ -80,32 +77,6 @@ final class ClaimToolDispatcher
         }
 
         PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
-        ClaimToolContext context = new ClaimToolContext(
-                instance,
-                dataStore,
-                player,
-                playerData,
-                action,
-                materialInHand,
-                clickedBlock,
-                clickedBlockType);
-
-        try
-        {
-            if (instance.getClaimToolHandlerRegistry().dispatch(context))
-            {
-                return true;
-            }
-        }
-        catch (Exception exception)
-        {
-            GriefPrevention.AddLogEntry(
-                    "ClaimToolHandler dispatch failed: " + exception.getMessage(),
-                    CustomLogEntryTypes.Debug,
-                    true);
-            instance.getLogger().log(Level.WARNING, "ClaimToolHandler dispatch failed.", exception);
-        }
-
         if (materialInHand == instance.config_claims_investigationTool)
         {
             return handleInvestigationTool(event, player, playerData, clickedBlock, clickedBlockType);
