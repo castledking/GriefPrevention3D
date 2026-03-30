@@ -16,7 +16,6 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
 import org.bukkit.block.data.Directional;
-import org.bukkit.block.data.Lightable;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 
@@ -42,44 +41,26 @@ public class FakeBlockVisualization extends BlockBoundaryVisualization {
     }
 
     @Override
-    protected @NotNull Consumer<@NotNull IntVector> addCornerElements(@NotNull Boundary boundary) {
-        VisualizationType type = boundary.type();
-
-        return switch (type) {
-            case SUBDIVISION_3D -> createElementAdder(Material.IRON_BLOCK.createBlockData(), type, true);
-            case SUBDIVISION -> createElementAdder(Material.IRON_BLOCK.createBlockData(), type, false);
-            case ADMIN_CLAIM -> createElementAdder(Material.GLOWSTONE.createBlockData(), type, false);
-            case INITIALIZE_ZONE -> createElementAdder(Material.DIAMOND_BLOCK.createBlockData(), type, false);
-            case CONFLICT_ZONE -> {
-                BlockData fakeData = Material.REDSTONE_ORE.createBlockData();
-                ((Lightable) fakeData).setLit(true);
-                yield createElementAdder(fakeData, type, false);
-            }
-            case CONFLICT_ZONE_3D -> createElementAdder(Material.REDSTONE_ORE.createBlockData(), type, true);
-            case RESTORE_NATURE -> {
-                // Special handling - corners need directional facing, handled in draw()
-                // Return a dummy adder that will be overridden
-                yield createElementAdder(Material.LIME_GLAZED_TERRACOTTA.createBlockData(), type, false);
-            }
-            default -> createElementAdder(Material.GLOWSTONE.createBlockData(), type, false);
-        };
+    protected @NotNull Consumer<@NotNull IntVector> addCornerElements(@NotNull Boundary boundary)
+    {
+        return createElementAdder(
+                boundary.type().getBlockRenderer().createCornerBlockData(boundary),
+                boundary.type(),
+                usesExactPlacement(boundary.type()));
     }
 
     @Override
-    protected @NotNull Consumer<@NotNull IntVector> addSideElements(@NotNull Boundary boundary) {
-        // Determine BlockData from boundary type to cache for reuse in function.
-        VisualizationType type = boundary.type();
+    protected @NotNull Consumer<@NotNull IntVector> addSideElements(@NotNull Boundary boundary)
+    {
+        return createElementAdder(
+                boundary.type().getBlockRenderer().createSideBlockData(boundary),
+                boundary.type(),
+                usesExactPlacement(boundary.type()));
+    }
 
-        return switch (type) {
-            case ADMIN_CLAIM -> createElementAdder(Material.PUMPKIN.createBlockData(), type, false);
-            case SUBDIVISION -> createElementAdder(Material.WHITE_WOOL.createBlockData(), type, false);
-            case SUBDIVISION_3D -> createElementAdder(Material.WHITE_WOOL.createBlockData(), type, true);
-            case INITIALIZE_ZONE -> createElementAdder(Material.DIAMOND_BLOCK.createBlockData(), type, false);
-            case CONFLICT_ZONE -> createElementAdder(Material.NETHERRACK.createBlockData(), type, false);
-            case CONFLICT_ZONE_3D -> createElementAdder(Material.NETHERRACK.createBlockData(), type, true);
-            case RESTORE_NATURE -> createElementAdder(Material.EMERALD_BLOCK.createBlockData(), type, false);
-            default -> createElementAdder(Material.GOLD_BLOCK.createBlockData(), type, false);
-        };
+    private boolean usesExactPlacement(@NotNull VisualizationType type)
+    {
+        return type == VisualizationType.SUBDIVISION_3D || type == VisualizationType.CONFLICT_ZONE_3D;
     }
 
     /**

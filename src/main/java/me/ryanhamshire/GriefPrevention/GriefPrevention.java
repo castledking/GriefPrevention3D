@@ -412,8 +412,9 @@ public class GriefPrevention extends JavaPlugin {
         // register for events
         PluginManager pluginManager = this.getServer().getPluginManager();
 
-        // player events
+        // player and claim tool events
         playerEventHandler = new PlayerEventHandler(this.dataStore, this);
+        pluginManager.registerEvents(new ClaimToolDispatcher(this, playerEventHandler), this);
         pluginManager.registerEvents(playerEventHandler, this);
         // Load monitored commands on a 1-tick delay to allow plugins to enable and
         // Bukkit to load commands.yml.

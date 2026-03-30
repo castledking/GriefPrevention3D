@@ -1717,7 +1717,7 @@ class PlayerEventHandler implements Listener {
     }
 
     // when a player interacts with the world
-    @EventHandler(priority = EventPriority.LOW)
+    @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
     void onPlayerInteract(PlayerInteractEvent event) {
         // not interested in left-click-on-air actions
         Action action = event.getAction();
