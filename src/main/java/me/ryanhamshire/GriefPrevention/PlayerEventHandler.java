@@ -97,6 +97,7 @@ import org.bukkit.profile.PlayerProfile;
 import org.bukkit.util.BlockIterator;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.net.InetAddress;
 import java.util.ArrayDeque;
@@ -164,6 +165,7 @@ class PlayerEventHandler implements Listener {
     // Definitions for specific material groups that do not have a tag
     private final Set<Material> spawnEggs;
     private final Set<Material> dyes;
+    private static final @Nullable Tag<Material> copperGolemStatuesTag = resolveMaterialTag("COPPER_GOLEM_STATUES");
 
     // typical constructor, yawn
     PlayerEventHandler(DataStore dataStore, GriefPrevention plugin) {
@@ -2109,7 +2111,7 @@ class PlayerEventHandler implements Listener {
                         clickedBlockType == Material.REDSTONE_WIRE ||
                         Tag.FLOWER_POTS.isTagged(clickedBlockType) ||
                         Tag.CANDLES.isTagged(clickedBlockType) ||
-                        Tag.COPPER_GOLEM_STATUES.isTagged(clickedBlockType)
+                        isTaggedBy(copperGolemStatuesTag, clickedBlockType)
                 ))
         {
             if (playerData == null)
@@ -3179,6 +3181,19 @@ class PlayerEventHandler implements Listener {
             default:
                 return false;
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static @Nullable Tag<Material> resolveMaterialTag(@NotNull String fieldName) {
+        try {
+            return (Tag<Material>) Tag.class.getField(fieldName).get(null);
+        } catch (ReflectiveOperationException | RuntimeException ignored) {
+            return null;
+        }
+    }
+
+    private static boolean isTaggedBy(@Nullable Tag<Material> tag, @NotNull Material material) {
+        return tag != null && tag.isTagged(material);
     }
 
     static Block getTargetBlock(Player player, int maxDistance) throws IllegalStateException {
