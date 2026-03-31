@@ -72,6 +72,12 @@ public class PlayerData
     //transient in-memory shaped-mode session state for the recode branch
     private transient @Nullable ClaimEditorSession claimEditorSession = null;
 
+    /**
+     * True while a boundary segment was selected via shift+right-click in basic mode (preview only; cleared when viz
+     * clears or session is reset).
+     */
+    private transient boolean ephemeralBasicShapedSegmentPreview = false;
+
     //whether or not the player has a pending /trapped rescue
     public boolean pendingTrapped = false;
 
@@ -171,6 +177,19 @@ public class PlayerData
     public void setClaimEditorSession(@Nullable ClaimEditorSession claimEditorSession)
     {
         this.claimEditorSession = claimEditorSession;
+        if (claimEditorSession == null) {
+            this.ephemeralBasicShapedSegmentPreview = false;
+        }
+    }
+
+    public void setEphemeralBasicShapedSegmentPreview(boolean ephemeralBasicShapedSegmentPreview)
+    {
+        this.ephemeralBasicShapedSegmentPreview = ephemeralBasicShapedSegmentPreview;
+    }
+
+    public boolean isEphemeralBasicShapedSegmentPreview()
+    {
+        return this.ephemeralBasicShapedSegmentPreview;
     }
 
     //the number of claim blocks a player has available for claiming land
@@ -407,6 +426,10 @@ public class PlayerData
         }
 
         this.visibleBoundaries = visibleBoundaries;
+
+        if (visibleBoundaries == null && this.ephemeralBasicShapedSegmentPreview) {
+            this.setClaimEditorSession(null);
+        }
     }
 
 }

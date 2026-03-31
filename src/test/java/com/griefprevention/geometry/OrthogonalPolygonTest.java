@@ -261,6 +261,31 @@ public class OrthogonalPolygonTest
     }
 
     @Test
+    void cardinalMoveCornerOntoExistingVertexSmoothsNib()
+    {
+        // Inner corner (4,4) merged onto (8,4) — pure X move; resize routing used to miss exact corner targets.
+        OrthogonalPolygon polygon = OrthogonalPolygon.fromClosedPath(List.of(
+                new OrthogonalPoint2i(0, 0),
+                new OrthogonalPoint2i(8, 0),
+                new OrthogonalPoint2i(8, 4),
+                new OrthogonalPoint2i(4, 4),
+                new OrthogonalPoint2i(4, 8),
+                new OrthogonalPoint2i(0, 8),
+                new OrthogonalPoint2i(0, 0)
+        ));
+
+        OrthogonalPolygonValidationResult result = polygon.moveCorner(3, new OrthogonalPoint2i(8, 4));
+
+        assertTrue(result.isValid());
+        assertEquals(List.of(
+                new OrthogonalPoint2i(0, 0),
+                new OrthogonalPoint2i(8, 0),
+                new OrthogonalPoint2i(8, 8),
+                new OrthogonalPoint2i(0, 8)
+        ), result.polygon().corners());
+    }
+
+    @Test
     void movingWholeSegmentedFaceResolvesMarkerIntoCleanSide()
     {
         OrthogonalPolygon polygon = OrthogonalPolygon.fromClosedPath(List.of(

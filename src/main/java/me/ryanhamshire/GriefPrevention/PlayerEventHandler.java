@@ -24,6 +24,7 @@ import com.griefprevention.claims.editor.ClaimEditPreview;
 import com.griefprevention.claims.editor.ClaimEditResult;
 import com.griefprevention.claims.editor.ClaimEditSource;
 import com.griefprevention.claims.editor.ClaimEditTarget;
+import com.griefprevention.claims.editor.ClaimEditorMode;
 import com.griefprevention.claims.editor.ClaimEditTargetType;
 import com.griefprevention.claims.editor.ClaimEditor;
 import com.griefprevention.claims.editor.ClaimEditorSession;
@@ -2388,6 +2389,7 @@ class PlayerEventHandler implements Listener {
             }
 
             if (playerData.shovelMode == ShovelMode.Shaped) {
+                playerData.setEphemeralBasicShapedSegmentPreview(false);
                 if (!GriefPrevention.instance.config_claims_allowShapedClaims) {
                     playerData.shovelMode = ShovelMode.Basic;
                     playerData.claimSubdividing = null;
@@ -2533,6 +2535,15 @@ class PlayerEventHandler implements Listener {
                 Supplier<String> noEditReason = claim.checkPermission(player, ClaimPermission.Edit, event,
                         () -> instance.dataStore.getMessage(Messages.CreateClaimFailOverlapOtherPlayer, ownerName));
                 if (noEditReason == null) {
+                    // Shift+right-click on a top-level shaped claim edge (basic mode): ephemeral segment selection for
+                    // later expansion in shaped mode. Requires AllowShapedClaims; corners use normal resize below.
+                    if (playerData.shovelMode == ShovelMode.Basic
+                            && player.isSneaking()
+                            && instance.config_claims_allowShapedClaims
+                            && trySelectShapedBoundarySegmentBasicMode(player, playerData, claim, clickedBlock)) {
+                        return;
+                    }
+
                     // if he clicked on a corner, start resizing it
                     boolean isCorner = isCornerMatch(claim, clickedBlock);
                     if (isCorner) {
@@ -3127,6 +3138,23 @@ class PlayerEventHandler implements Listener {
         int deltaX = target.x() - anchor.x();
         int deltaZ = target.z() - anchor.z();
 
+        if (deltaX == 0 && deltaZ == 0)
+        {
+            return polygon.moveCorner(cornerIndex, anchor);
+        }
+
+        // Dragging a corner onto another vertex of the same claim (flattening a nib / collinear bump).
+        // Must use moveCorner: face-run logic uses expandEdge/moveEdgeRun and (a) locateResizeSubsegment only
+        // matches strictly interior edge points, so exact corner clicks miss, and (b) moveEdgeRun can reject
+        // or distort a merge that moveCorner + normalization already handles.
+        for (int i = 0; i < polygon.corners().size(); i++)
+        {
+            if (i != cornerIndex && polygon.corners().get(i).equals(target))
+            {
+                return polygon.moveCorner(cornerIndex, target);
+            }
+        }
+
         if (deltaX != 0 && deltaZ != 0)
         {
             if (polygon.isRemovableNode(cornerIndex))
@@ -3138,11 +3166,6 @@ class PlayerEventHandler implements Listener {
                 }
             }
             return polygon.moveCorner(cornerIndex, target);
-        }
-
-        if (deltaX == 0 && deltaZ == 0)
-        {
-            return polygon.moveCorner(cornerIndex, anchor);
         }
 
         FaceRun faceRun = findStraightFaceRun(polygon, cornerIndex, deltaX != 0);
@@ -3513,6 +3536,82 @@ class PlayerEventHandler implements Listener {
             visualizationType = selection.is3D() ? VisualizationType.SUBDIVISION_3D : VisualizationType.SUBDIVISION;
         }
         BoundaryVisualization.visualizeClaim(player, selection, visualizationType, clickedBlock);
+    }
+
+    /**
+     * Shift+right-click on a single edge of your top-level 2D shaped claim (basic mode): select that segment in memory
+     * for shaped expansion later. No claim update until you expand from shaped mode. Cleared when visualization
+     * reverts or session is reset. Gated by {@code AllowShapedClaims}.
+     *
+     * @return true if this path handled the click (including failure feedback)
+     */
+    private boolean trySelectShapedBoundarySegmentBasicMode(
+            @NotNull Player player,
+            @NotNull PlayerData playerData,
+            @NotNull Claim deepestClaim,
+            @NotNull Block clickedBlock)
+    {
+        Claim claim = deepestClaim;
+        while (claim != null && claim.parent != null)
+        {
+            claim = claim.parent;
+        }
+        if (claim == null || !claim.isShaped() || claim.is3D())
+        {
+            return false;
+        }
+        Supplier<String> noEdit = claim.checkPermission(player, ClaimPermission.Edit, null);
+        if (noEdit != null)
+        {
+            return false;
+        }
+
+        OrthogonalPoint2i point = new OrthogonalPoint2i(clickedBlock.getX(), clickedBlock.getZ());
+        if (claim.getCornerIndexAt(point.x(), point.z()) >= 0)
+        {
+            return false;
+        }
+
+        OrthogonalPolygon polygon = claim.getBoundaryPolygon();
+        List<Integer> matches = polygon.edgeIndexesContainingInteriorPoint(point);
+        if (matches.size() != 1)
+        {
+            return false;
+        }
+
+        ClaimEditorSession session = ClaimEditorSession.idle(player.getUniqueId())
+                .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.TOOL);
+        session = loadClaimIntoShapedSession(session, claim);
+
+        ClaimEditResult result = claimEditor.apply(
+                session,
+                new ClaimEditIntent(
+                        ClaimEditIntentType.SELECT_SEGMENT,
+                        ClaimEditSource.TOOL,
+                        null,
+                        claim.getID(),
+                        point,
+                        null,
+                        true,
+                        List.of()
+                )
+        );
+
+        if (!result.success())
+        {
+            applyClaimEditResult(player, playerData, result);
+            return true;
+        }
+
+        applyClaimEditResult(player, playerData, result);
+        playerData.setEphemeralBasicShapedSegmentPreview(true);
+        playerData.lastClaim = claim;
+        BoundaryVisualization.visualizeClaim(
+                player,
+                claim,
+                claim.isAdminClaim() ? VisualizationType.ADMIN_CLAIM : VisualizationType.CLAIM,
+                clickedBlock);
+        return true;
     }
 
     private void handleShapedModeInteraction(@NotNull Player player, @NotNull PlayerData playerData, @NotNull Block clickedBlock) {
