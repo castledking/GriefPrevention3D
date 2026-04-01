@@ -3862,6 +3862,13 @@ class PlayerEventHandler implements Listener {
             return;
         }
 
+        // Normalize the polygon to clean up collinear boundary markers
+        // This removes intermediate points on straight edges for a cleaner boundary
+        OrthogonalPolygonValidationResult normalizedResult = OrthogonalPolygon.validatePath(polygon.closedPath());
+        if (normalizedResult.isValid() && normalizedResult.polygon() != null) {
+            polygon = normalizedResult.polygon();
+        }
+
         int claimDepth = clickedBlock.getY() - instance.config_claims_claimsExtendIntoGroundDistance;
         CreateClaimResult createResult = this.dataStore.createShapedClaim(
                 player.getWorld(),
@@ -3908,6 +3915,13 @@ class PlayerEventHandler implements Listener {
         OrthogonalPolygon polygon = result.preview().polygon();
         if (polygon == null) {
             return;
+        }
+
+        // Normalize the polygon to clean up collinear boundary markers
+        // This removes intermediate points on straight edges for a cleaner boundary
+        OrthogonalPolygonValidationResult normalizedResult = OrthogonalPolygon.validatePath(polygon.closedPath());
+        if (normalizedResult.isValid() && normalizedResult.polygon() != null) {
+            polygon = normalizedResult.polygon();
         }
 
         CreateClaimResult updateResult = this.dataStore.updateShapedClaim(player, playerData, claim, polygon);
