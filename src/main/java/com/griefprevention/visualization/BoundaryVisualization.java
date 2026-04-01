@@ -318,11 +318,17 @@ public abstract class BoundaryVisualization
         Collection<Boundary> boundaries = event.getBoundaries();
         boundaries.removeIf(Objects::isNull);
 
+        // Check if water transparency state has changed (player entered/exited water)
+        boolean currentWaterTransparent = event.getCenter().toBlock(player.getWorld()).getType() == org.bukkit.Material.WATER;
+        boolean cachedWaterTransparent = currentVisualization instanceof com.griefprevention.visualization.impl.FakeBlockVisualization
+                && ((com.griefprevention.visualization.impl.FakeBlockVisualization) currentVisualization).isWaterTransparent();
+
         // If this is effectively the same visualization, keep the current one instead of
         // reverting and reapplying it.
         if (boundaries.isEmpty() || (currentVisualization != null
                 && currentVisualization.elements.equals(boundaries)
                 && !containsShapedClaim(boundaries)
+                && currentWaterTransparent == cachedWaterTransparent
                 && currentVisualization.visualizeFrom.distanceSquared(event.getCenter()) < 165))
         {
             return;

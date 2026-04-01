@@ -36,8 +36,13 @@ public class FakeBlockVisualization extends BlockBoundaryVisualization {
      */
     public FakeBlockVisualization(@NotNull World world, @NotNull IntVector visualizeFrom, int height) {
         super(world, visualizeFrom, height);
-        // Water is considered transparent based on whether the visualization is initiated in water.
+        // Water is considered transparent based on whether the player's feet are in water.
+        // This matches upstream behavior for determining submerged state.
         waterTransparent = visualizeFrom.toBlock(world).getType() == Material.WATER;
+    }
+
+    public boolean isWaterTransparent() {
+        return waterTransparent;
     }
 
     @Override
