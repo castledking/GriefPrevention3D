@@ -459,3 +459,25 @@ subcommands:
       arguments:
         player:
           type: player
+
+    # ------------------------------------------------------------------------
+    # /aclaim makeadmin - Convert current claim to admin claim
+    # ------------------------------------------------------------------------
+    makeadmin:
+      enable: true
+      commands: [makeadmin]
+      standalone: [makeadmin]
+      usage: "/aclaim makeadmin"
+      description: Convert the current top-level claim to an administrative claim.
+      permission: griefprevention.adminclaims.convert
+
+    # ------------------------------------------------------------------------
+    # /aclaim makebasic - Convert current admin claim to basic claim
+    # ------------------------------------------------------------------------
+    makebasic:
+      enable: true
+      commands: [makebasic]
+      standalone: [makebasic]
+      usage: "/aclaim makebasic"
+      description: Convert the current top-level administrative claim to a basic claim you own.
+      permission: griefprevention.adminclaims.convert

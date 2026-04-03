@@ -33,6 +33,8 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
             "deletealladminclaims"
         );
         registerSubcommand("transfer", this::handleTransfer);
+        registerSubcommand("makeadmin", this::handleMakeAdmin);
+        registerSubcommand("makebasic", this::handleMakeBasic);
         registerSubcommand("help", this::handleHelp);
 
         // Register standalone commands from Alias enum
@@ -106,6 +108,8 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
         );
         registerStandaloneCommand(Alias.AClaimDelete, this::handleDelete);
         registerStandaloneCommand(Alias.AClaimTransfer, this::handleTransfer);
+        registerStandaloneCommand(Alias.AClaimMakeAdmin, this::handleMakeAdmin);
+        registerStandaloneCommand(Alias.AClaimMakeBasic, this::handleMakeBasic);
         registerStandaloneCommand(Alias.AClaimHelp, this::handleHelp);
     }
 
@@ -634,6 +638,94 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
             CustomLogEntryTypes.AdminActivity
         );
 
+        return true;
+    }
+
+    private boolean handleMakeAdmin(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage("This command can only be used by players.");
+            return true;
+        }
+
+        if (!player.hasPermission("griefprevention.adminclaims.convert")) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+            return true;
+        }
+
+        if (args.length > 0) {
+            return false;
+        }
+
+        Claim claim = plugin.getSelectedOrCurrentClaim(player, false);
+        if (claim == null) {
+            GriefPrevention.sendMessage(player, TextMode.Instr, Messages.ConvertClaimMissing);
+            return true;
+        }
+
+        if (claim.isAdminClaim()) {
+            GriefPrevention.sendMessage(player, TextMode.Instr, Messages.ConvertClaimAlreadyAdmin);
+            return true;
+        }
+
+        try {
+            plugin.changeClaimOwnerPublic(claim, null);
+        } catch (NoTransferException e) {
+            GriefPrevention.sendMessage(player, TextMode.Instr, Messages.TransferTopLevel);
+            return true;
+        }
+
+        GriefPrevention.sendMessage(player, TextMode.Success, Messages.ConvertClaimAdminSuccess);
+        GriefPrevention.AddLogEntry(
+            player.getName() +
+                " converted claim at " +
+                GriefPrevention.getfriendlyLocationString(claim.getLesserBoundaryCorner()) +
+                " to administrative ownership.",
+            CustomLogEntryTypes.AdminActivity
+        );
+        return true;
+    }
+
+    private boolean handleMakeBasic(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage("This command can only be used by players.");
+            return true;
+        }
+
+        if (!player.hasPermission("griefprevention.adminclaims.convert")) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+            return true;
+        }
+
+        if (args.length > 0) {
+            return false;
+        }
+
+        Claim claim = plugin.getSelectedOrCurrentClaim(player, false);
+        if (claim == null) {
+            GriefPrevention.sendMessage(player, TextMode.Instr, Messages.ConvertClaimMissing);
+            return true;
+        }
+
+        if (!claim.isAdminClaim()) {
+            GriefPrevention.sendMessage(player, TextMode.Instr, Messages.ConvertClaimAlreadyBasic);
+            return true;
+        }
+
+        try {
+            plugin.changeClaimOwnerPublic(claim, player.getUniqueId());
+        } catch (NoTransferException e) {
+            GriefPrevention.sendMessage(player, TextMode.Instr, Messages.TransferTopLevel);
+            return true;
+        }
+
+        GriefPrevention.sendMessage(player, TextMode.Success, Messages.ConvertClaimBasicSuccess);
+        GriefPrevention.AddLogEntry(
+            player.getName() +
+                " converted administrative claim at " +
+                GriefPrevention.getfriendlyLocationString(claim.getLesserBoundaryCorner()) +
+                " to a basic claim they own.",
+            CustomLogEntryTypes.AdminActivity
+        );
         return true;
     }
 

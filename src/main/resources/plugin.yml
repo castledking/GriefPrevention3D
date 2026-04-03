@@ -155,6 +155,14 @@ commands:
     usage: /<command> <player>
     aliases: giveclaim
     permission: griefprevention.transferclaim
+  makeadmin:
+    description: Converts the claim you're standing in to an administrative claim.
+    usage: /<command>
+    permission: griefprevention.adminclaims.convert
+  makebasic:
+    description: Converts the administrative claim you're standing in to a basic claim you own.
+    usage: /<command>
+    permission: griefprevention.adminclaims.convert
   unlockdrops:
     description: Allows other players to pick up the items you dropped when you died.
     usage: /<command>
@@ -246,6 +254,7 @@ permissions:
     children:
       griefprevention.ignoreclaims: true
       griefprevention.adminclaims: true
+      griefprevention.adminclaims.convert: true
       griefprevention.adjustclaimblocks: true
       griefprevention.deleteclaims: true
       griefprevention.spam: true
@@ -297,6 +306,9 @@ permissions:
     default: op
   griefprevention.adminclaims:
     description: Grants permission to create administrative claims.
+    default: op
+  griefprevention.adminclaims.convert:
+    description: Grants permission to convert claims between basic and administrative ownership.
     default: op
   griefprevention.deleteclaims:
     description: Grants permission to delete other players' claims.
