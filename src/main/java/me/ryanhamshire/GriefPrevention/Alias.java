@@ -418,6 +418,30 @@ public enum Alias {
         "transferclaim"
     ),
 
+    AClaimMakeAdmin(
+        """
+        enable: true
+        commands: [makeadmin]
+        standalone: [makeadmin]
+        usage: "/aclaim makeadmin"
+        description: Convert the current top-level claim to an administrative claim.
+        permission: griefprevention.adminclaims.convert
+        """,
+        "makeadmin"
+    ),
+
+    AClaimMakeBasic(
+        """
+        enable: true
+        commands: [makebasic]
+        standalone: [makebasic]
+        usage: "/aclaim makebasic"
+        description: Convert the current top-level administrative claim to a basic claim you own.
+        permission: griefprevention.adminclaims.convert
+        """,
+        "makebasic"
+    ),
+
     AClaimHelp(
         """
         enable: true
@@ -759,6 +783,22 @@ public enum Alias {
               arguments:
                 player:
                   type: player
+
+            makeadmin:
+              enable: true
+              commands: [makeadmin]
+              standalone: [makeadmin]
+              usage: "/aclaim makeadmin"
+              description: Convert the current top-level claim to an administrative claim.
+              permission: griefprevention.adminclaims.convert
+
+            makebasic:
+              enable: true
+              commands: [makebasic]
+              standalone: [makebasic]
+              usage: "/aclaim makebasic"
+              description: Convert the current top-level administrative claim to a basic claim you own.
+              permission: griefprevention.adminclaims.convert
 
             help:
               enable: true
