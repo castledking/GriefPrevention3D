@@ -3210,7 +3210,7 @@ class PlayerEventHandler implements Listener {
 
         if (deltaX != 0 && deltaZ != 0)
         {
-            if (polygon.isRemovableNode(cornerIndex))
+            if (polygon.isRemovableNode(cornerIndex) || isConcaveCorner(polygon, cornerIndex))
             {
                 OrthogonalPolygonValidationResult nibResult = resolveShapedNibResizeMove(player, claim, polygon, cornerIndex, target);
                 if (nibResult.isValid())
@@ -3232,6 +3232,20 @@ class PlayerEventHandler implements Listener {
         if (selectedEdgeIndex != null)
         {
             return polygon.expandEdge(selectedEdgeIndex, amount);
+        }
+
+        if (polygon.isRemovableNode(cornerIndex) || isConcaveCorner(polygon, cornerIndex))
+        {
+            OrthogonalPolygonValidationResult orthogonalNibResult = resolveOrthogonalShapedNibResizeMove(
+                    player,
+                    claim,
+                    polygon,
+                    cornerIndex,
+                    target);
+            if (orthogonalNibResult != null && orthogonalNibResult.isValid())
+            {
+                return orthogonalNibResult;
+            }
         }
 
         // If no subsegment selected but target equals a corner on the face run, use moveCorner
@@ -3276,16 +3290,125 @@ class PlayerEventHandler implements Listener {
             @NotNull OrthogonalPoint2i target)
     {
         OrthogonalPoint2i anchor = polygon.corners().get(cornerIndex);
-        OrthogonalPoint2i previous = polygon.corners().get(Math.floorMod(cornerIndex - 1, polygon.corners().size()));
-        OrthogonalPoint2i next = polygon.corners().get((cornerIndex + 1) % polygon.corners().size());
+        List<ShapedNibResizeAttempt> attempts = new ArrayList<>(2);
+        addShapedNibResizeAttempt(
+                attempts,
+                polygon,
+                tryShapedNibResizeCandidate(
+                        player,
+                        claim,
+                        polygon,
+                        anchor,
+                        new OrthogonalPoint2i(anchor.x(), target.z()),
+                        target,
+                        new OrthogonalPoint2i(target.x(), anchor.z()))
+        );
+        addShapedNibResizeAttempt(
+                attempts,
+                polygon,
+                tryShapedNibResizeCandidate(
+                        player,
+                        claim,
+                        polygon,
+                        anchor,
+                        new OrthogonalPoint2i(target.x(), anchor.z()),
+                        target,
+                        new OrthogonalPoint2i(anchor.x(), target.z()))
+        );
 
-        boolean horizontalFace = previous.z() == anchor.z() && next.z() == anchor.z();
-        OrthogonalPoint2i firstStep = horizontalFace
-                ? new OrthogonalPoint2i(anchor.x(), target.z())
-                : new OrthogonalPoint2i(target.x(), anchor.z());
-        OrthogonalPoint2i reconnect = horizontalFace
-                ? new OrthogonalPoint2i(target.x(), anchor.z())
-                : new OrthogonalPoint2i(anchor.x(), target.z());
+        ShapedNibResizeAttempt bestAttempt = selectBestShapedNibResizeAttempt(attempts);
+        if (bestAttempt != null)
+        {
+            return bestAttempt.result();
+        }
+
+        return polygon.moveCorner(cornerIndex, target);
+    }
+
+    private boolean isConcaveCorner(@NotNull OrthogonalPolygon polygon, int cornerIndex)
+    {
+        List<OrthogonalPoint2i> corners = polygon.corners();
+        if (cornerIndex < 0 || cornerIndex >= corners.size() || corners.size() < 4)
+        {
+            return false;
+        }
+
+        OrthogonalPoint2i previous = corners.get(Math.floorMod(cornerIndex - 1, corners.size()));
+        OrthogonalPoint2i current = corners.get(cornerIndex);
+        OrthogonalPoint2i next = corners.get((cornerIndex + 1) % corners.size());
+
+        long edgeAX = current.x() - previous.x();
+        long edgeAZ = current.z() - previous.z();
+        long edgeBX = next.x() - current.x();
+        long edgeBZ = next.z() - current.z();
+        long cross = edgeAX * edgeBZ - edgeAZ * edgeBX;
+        int crossSign = Long.compare(cross, 0L);
+        if (crossSign == 0)
+        {
+            return false;
+        }
+
+        int winding = polygonWindingSign(polygon.corners());
+        return winding != 0 && crossSign != winding;
+    }
+
+    private int polygonWindingSign(@NotNull List<OrthogonalPoint2i> corners)
+    {
+        long area2 = 0L;
+        for (int i = 0; i < corners.size(); i++)
+        {
+            OrthogonalPoint2i current = corners.get(i);
+            OrthogonalPoint2i next = corners.get((i + 1) % corners.size());
+            area2 += (long) current.x() * next.z() - (long) next.x() * current.z();
+        }
+
+        return Long.compare(area2, 0L);
+    }
+
+    private @Nullable OrthogonalPolygonValidationResult resolveOrthogonalShapedNibResizeMove(
+            @NotNull Player player,
+            @NotNull Claim claim,
+            @NotNull OrthogonalPolygon polygon,
+            int cornerIndex,
+            @NotNull OrthogonalPoint2i target)
+    {
+        OrthogonalPoint2i anchor = polygon.corners().get(cornerIndex);
+        int deltaX = target.x() - anchor.x();
+        int deltaZ = target.z() - anchor.z();
+        if ((deltaX == 0) == (deltaZ == 0))
+        {
+            return null;
+        }
+
+        OrthogonalPoint2i secondOutside;
+        OrthogonalPoint2i reconnectProbe;
+        if (deltaX == 0)
+        {
+            int playerX = player.getLocation().getBlockX();
+            if (playerX == anchor.x())
+            {
+                return null;
+            }
+
+            secondOutside = new OrthogonalPoint2i(playerX, target.z());
+            reconnectProbe = new OrthogonalPoint2i(playerX, anchor.z());
+        }
+        else
+        {
+            int playerZ = player.getLocation().getBlockZ();
+            if (playerZ == anchor.z())
+            {
+                return null;
+            }
+
+            secondOutside = new OrthogonalPoint2i(target.x(), playerZ);
+            reconnectProbe = new OrthogonalPoint2i(anchor.x(), playerZ);
+        }
+
+        if (secondOutside.equals(anchor) || secondOutside.equals(target) || reconnectProbe.equals(secondOutside))
+        {
+            return null;
+        }
 
         ClaimEditorSession session = ClaimEditorSession.idle(player.getUniqueId())
                 .withMode(com.griefprevention.claims.editor.ClaimEditorMode.SHAPED, ClaimEditSource.TOOL)
@@ -3300,7 +3423,7 @@ class PlayerEventHandler implements Listener {
                         ClaimEditSource.TOOL,
                         null,
                         claim.getID(),
-                        firstStep,
+                        target,
                         null,
                         true,
                         List.of()
@@ -3308,11 +3431,84 @@ class PlayerEventHandler implements Listener {
         );
         if (!first.success())
         {
-            return polygon.moveCorner(cornerIndex, target);
+            return null;
         }
 
         ClaimEditResult second = claimEditor.apply(
                 first.session(),
+                new ClaimEditIntent(
+                        ClaimEditIntentType.ADD_CORNER,
+                        ClaimEditSource.TOOL,
+                        null,
+                        claim.getID(),
+                        secondOutside,
+                        null,
+                        true,
+                        List.of()
+                )
+        );
+        if (!second.success())
+        {
+            return null;
+        }
+
+        ClaimEditResult merged = claimEditor.apply(
+                second.session(),
+                new ClaimEditIntent(
+                        ClaimEditIntentType.ADD_CORNER,
+                        ClaimEditSource.TOOL,
+                        null,
+                        claim.getID(),
+                        reconnectProbe,
+                        null,
+                        true,
+                        List.of()
+                )
+        );
+        if (!merged.success() || merged.preview().polygon() == null)
+        {
+            return null;
+        }
+
+        OrthogonalPolygonValidationResult result = OrthogonalPolygon.validatePath(merged.preview().polygon().closedPath());
+        if (!result.isValid() || result.polygon() == null || !polygonContainsPolygon(result.polygon(), polygon))
+        {
+            return null;
+        }
+
+        return result;
+    }
+
+    private @Nullable OrthogonalPolygonValidationResult tryShapedNibResizeCandidate(
+            @NotNull Player player,
+            @NotNull Claim claim,
+            @NotNull OrthogonalPolygon polygon,
+            @NotNull OrthogonalPoint2i anchor,
+            @NotNull OrthogonalPoint2i firstStep,
+            @NotNull OrthogonalPoint2i target,
+            @NotNull OrthogonalPoint2i reconnect)
+    {
+        if (firstStep.equals(anchor)
+                || firstStep.equals(target)
+                || reconnect.equals(anchor)
+                || reconnect.equals(firstStep)
+                || reconnect.equals(target))
+        {
+            return null;
+        }
+
+        ClaimEditorSession session = ClaimEditorSession.idle(player.getUniqueId())
+                .withMode(com.griefprevention.claims.editor.ClaimEditorMode.SHAPED, ClaimEditSource.TOOL)
+                .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, claim.getID()))
+                .withPreview(new ClaimEditPreview(polygon, null, List.of(), null, List.of(), List.of(), List.of()))
+                .withOpenPath(new com.griefprevention.claims.editor.ShapedPathDraft(
+                        claim.getID(),
+                        List.of(anchor, firstStep),
+                        null,
+                        false));
+
+        ClaimEditResult second = claimEditor.apply(
+                session,
                 new ClaimEditIntent(
                         ClaimEditIntentType.ADD_CORNER,
                         ClaimEditSource.TOOL,
@@ -3326,7 +3522,7 @@ class PlayerEventHandler implements Listener {
         );
         if (!second.success())
         {
-            return polygon.moveCorner(cornerIndex, target);
+            return null;
         }
 
         ClaimEditResult merged = claimEditor.apply(
@@ -3344,10 +3540,166 @@ class PlayerEventHandler implements Listener {
         );
         if (!merged.success() || merged.preview().polygon() == null)
         {
-            return polygon.moveCorner(cornerIndex, target);
+            return null;
         }
 
         return OrthogonalPolygon.validatePath(merged.preview().polygon().closedPath());
+    }
+
+    private void addShapedNibResizeAttempt(
+            @NotNull List<ShapedNibResizeAttempt> attempts,
+            @NotNull OrthogonalPolygon originalPolygon,
+            @Nullable OrthogonalPolygonValidationResult result)
+    {
+        if (result == null || !result.isValid() || result.polygon() == null)
+        {
+            return;
+        }
+
+        attempts.add(new ShapedNibResizeAttempt(
+                result,
+                polygonContainsPolygon(result.polygon(), originalPolygon),
+                polygonArea(result.polygon()),
+                polygonOverlapArea(originalPolygon, result.polygon())
+        ));
+    }
+
+    private @Nullable ShapedNibResizeAttempt selectBestShapedNibResizeAttempt(
+            @NotNull List<ShapedNibResizeAttempt> attempts)
+    {
+        ShapedNibResizeAttempt best = null;
+        for (ShapedNibResizeAttempt attempt : attempts)
+        {
+            if (!attempt.containsOriginal())
+            {
+                continue;
+            }
+
+            if (best == null || compareShapedNibResizeAttempts(attempt, best) < 0)
+            {
+                best = attempt;
+            }
+        }
+
+        return best;
+    }
+
+    private int compareShapedNibResizeAttempts(
+            @NotNull ShapedNibResizeAttempt first,
+            @NotNull ShapedNibResizeAttempt second)
+    {
+        if (first.area() != second.area())
+        {
+            return Integer.compare(second.area(), first.area());
+        }
+
+        if (first.overlap() != second.overlap())
+        {
+            return Integer.compare(second.overlap(), first.overlap());
+        }
+
+        return 0;
+    }
+
+    private boolean polygonContains(@NotNull OrthogonalPolygon polygon, @NotNull OrthogonalPoint2i point)
+    {
+        if (polygon.corners().contains(point))
+        {
+            return true;
+        }
+
+        if (!polygon.edgeIndexesContainingInteriorPoint(point).isEmpty())
+        {
+            return true;
+        }
+
+        double sampleX = point.x() + 0.5D;
+        double sampleZ = point.z() + 0.5D;
+        boolean inside = false;
+        List<OrthogonalPoint2i> corners = polygon.corners();
+        for (int i = 0, j = corners.size() - 1; i < corners.size(); j = i++)
+        {
+            OrthogonalPoint2i a = corners.get(i);
+            OrthogonalPoint2i b = corners.get(j);
+            boolean crosses = (a.z() > sampleZ) != (b.z() > sampleZ);
+            if (!crosses)
+            {
+                continue;
+            }
+
+            double intersectionX = (double) (b.x() - a.x()) * (sampleZ - a.z()) / (double) (b.z() - a.z()) + a.x();
+            if (sampleX < intersectionX)
+            {
+                inside = !inside;
+            }
+        }
+
+        return inside;
+    }
+
+    private int polygonArea(@NotNull OrthogonalPolygon polygon)
+    {
+        int area = 0;
+        for (int x = polygon.minX(); x <= polygon.maxX(); x++)
+        {
+            for (int z = polygon.minZ(); z <= polygon.maxZ(); z++)
+            {
+                if (polygonContains(polygon, new OrthogonalPoint2i(x, z)))
+                {
+                    area++;
+                }
+            }
+        }
+
+        return area;
+    }
+
+    private boolean polygonContainsPolygon(@NotNull OrthogonalPolygon container, @NotNull OrthogonalPolygon contents)
+    {
+        for (int x = contents.minX(); x <= contents.maxX(); x++)
+        {
+            for (int z = contents.minZ(); z <= contents.maxZ(); z++)
+            {
+                OrthogonalPoint2i point = new OrthogonalPoint2i(x, z);
+                if (polygonContains(contents, point) && !polygonContains(container, point))
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private int polygonOverlapArea(@NotNull OrthogonalPolygon first, @NotNull OrthogonalPolygon second)
+    {
+        int area = 0;
+        int minX = Math.max(first.minX(), second.minX());
+        int maxX = Math.min(first.maxX(), second.maxX());
+        int minZ = Math.max(first.minZ(), second.minZ());
+        int maxZ = Math.min(first.maxZ(), second.maxZ());
+
+        for (int x = minX; x <= maxX; x++)
+        {
+            for (int z = minZ; z <= maxZ; z++)
+            {
+                OrthogonalPoint2i point = new OrthogonalPoint2i(x, z);
+                if (polygonContains(first, point) && polygonContains(second, point))
+                {
+                    area++;
+                }
+            }
+        }
+
+        return area;
+    }
+
+    private record ShapedNibResizeAttempt(
+            @NotNull OrthogonalPolygonValidationResult result,
+            boolean containsOriginal,
+            int area,
+            int overlap)
+    {
     }
 
     private @Nullable FaceRun findStraightFaceRun(
@@ -3994,10 +4346,6 @@ class PlayerEventHandler implements Listener {
             @NotNull OrthogonalPoint2i clickedPoint)
     {
         int minimumEdgeLength = Math.max(0, GriefPrevention.instance.config_claims_shapedMinWidth - 1);
-        if (minimumEdgeLength <= 0)
-        {
-            return clickedPoint;
-        }
 
         if (session.openPath() == null || session.openPath().points().size() != 1)
         {
@@ -4033,11 +4381,31 @@ class PlayerEventHandler implements Listener {
         if (Math.abs(deltaX) < Math.abs(deltaZ))
         {
             int direction = Integer.signum(deltaZ);
+            if (direction == 0)
+            {
+                return clickedPoint;
+            }
+
+            // Keep the first outside step pointed away from the claim boundary.
+            if (claim.contains(new Location(world, anchor.x(), claim.getLesserBoundaryCorner().getBlockY(), anchor.z() + direction), true, false))
+            {
+                direction *= -1;
+            }
             int snappedDistance = Math.max(Math.abs(deltaZ), minimumEdgeLength);
             return new OrthogonalPoint2i(anchor.x(), anchor.z() + direction * snappedDistance);
         }
 
         int direction = Integer.signum(deltaX);
+        if (direction == 0)
+        {
+            return clickedPoint;
+        }
+
+        // Keep the first outside step pointed away from the claim boundary.
+        if (claim.contains(new Location(world, anchor.x() + direction, claim.getLesserBoundaryCorner().getBlockY(), anchor.z()), true, false))
+        {
+            direction *= -1;
+        }
         int snappedDistance = Math.max(Math.abs(deltaX), minimumEdgeLength);
         return new OrthogonalPoint2i(anchor.x() + direction * snappedDistance, anchor.z());
     }

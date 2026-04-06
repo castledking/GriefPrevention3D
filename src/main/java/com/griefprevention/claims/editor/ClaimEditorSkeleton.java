@@ -356,15 +356,20 @@ public final class ClaimEditorSkeleton implements ClaimEditor
         }
 
         List<OrthogonalPoint2i> candidatePoints = new ArrayList<>(points);
+        List<OrthogonalPoint2i> reconnectCandidates = List.of();
         OrthogonalPoint2i mergeBoundaryPoint = null;
         if (basePolygon != null)
         {
-            mergeBoundaryPoint = findBoundaryReconnectPoint(
+            reconnectCandidates = findBoundaryReconnectPoints(
                     basePolygon,
                     lastPoint,
                     point,
                     point.equals(firstPoint) ? firstPoint : null
             );
+            if (!reconnectCandidates.isEmpty())
+            {
+                mergeBoundaryPoint = reconnectCandidates.getFirst();
+            }
         }
 
         OrthogonalPoint2i appliedPoint = mergeBoundaryPoint == null ? point : mergeBoundaryPoint;
@@ -372,46 +377,33 @@ public final class ClaimEditorSkeleton implements ClaimEditor
 
         boolean reshapeLeavesBoundary = basePolygon != null && reshapeLeavesBoundary(basePolygon, candidatePoints);
 
-        if (basePolygon != null && mergeBoundaryPoint != null && reshapeLeavesBoundary)
+        if (basePolygon != null && !reconnectCandidates.isEmpty() && reshapeLeavesBoundary)
         {
-            OrthogonalPolygonValidationResult mergeResult;
-            try
+            BoundaryMergeAttempt bestMerge = selectBestBoundaryMerge(basePolygon, points, reconnectCandidates);
+            if (bestMerge != null)
             {
-                mergeResult = mergeDraftIntoExistingPolygon(basePolygon, candidatePoints);
-            }
-            catch (IllegalArgumentException exception)
-            {
-                return ClaimEditResult.failure(
-                        ClaimEditFailureType.INVALID_GEOMETRY,
-                        null,
-                        session,
-                        session.preview(),
-                        List.of(exception.getMessage())
+                ShapedPathDraft updatedDraft = new ShapedPathDraft(draft.claimId(), bestMerge.candidatePoints(), null, true);
+                ClaimEditPreview preview = closedPreview(
+                        updatedDraft,
+                        bestMerge.result().polygon(),
+                        List.of("Boundary reshape path merged.")
                 );
-            }
-            if (!mergeResult.isValid())
-            {
-                ClaimEditPreview preview = previewFromValidation(
-                        new ShapedPathDraft(draft.claimId(), candidatePoints, null, false),
-                        basePolygon,
-                        mergeResult,
-                        List.of("That reshape path cannot merge cleanly into the existing claim boundary.")
+                return ClaimEditResult.success(
+                        session.withOpenPath(updatedDraft).withPreview(preview),
+                        preview,
+                        preview.messages()
                 );
-                ClaimEditFailureType failureType = mergeResult.issues().stream()
-                        .anyMatch(issue -> issue.type() == OrthogonalPolygonValidationIssueType.SELF_INTERSECTION)
-                        ? ClaimEditFailureType.SELF_INTERSECTION
-                        : ClaimEditFailureType.INVALID_GEOMETRY;
-                return ClaimEditResult.failure(failureType, null, session.withPreview(preview), preview, preview.messages());
             }
 
-            ShapedPathDraft updatedDraft = new ShapedPathDraft(draft.claimId(), candidatePoints, null, true);
-            ClaimEditPreview preview = closedPreview(
-                    updatedDraft,
-                    mergeResult.polygon(),
-                    List.of("Boundary reshape path merged.")
+            ClaimEditPreview preview = draftPreview(
+                    new ShapedPathDraft(draft.claimId(), candidatePoints, null, false),
+                    basePolygon,
+                    List.of("That reshape path cannot merge cleanly into the existing claim boundary.")
             );
-            return ClaimEditResult.success(
-                    session.withOpenPath(updatedDraft).withPreview(preview),
+            return ClaimEditResult.failure(
+                    ClaimEditFailureType.INVALID_GEOMETRY,
+                    null,
+                    session.withPreview(preview),
                     preview,
                     preview.messages()
             );
@@ -477,7 +469,18 @@ public final class ClaimEditorSkeleton implements ClaimEditor
         );
     }
 
-    private @Nullable OrthogonalPoint2i findBoundaryReconnectPoint(
+    private record BoundaryMergeAttempt(
+            @NotNull OrthogonalPoint2i reconnectPoint,
+            @NotNull List<OrthogonalPoint2i> candidatePoints,
+            @NotNull OrthogonalPolygonValidationResult result,
+            boolean containsOriginal,
+            int area,
+            int overlap,
+            int distance)
+    {
+    }
+
+    private @NotNull List<OrthogonalPoint2i> findBoundaryReconnectPoints(
             @NotNull OrthogonalPolygon polygon,
             @NotNull OrthogonalPoint2i from,
             @NotNull OrthogonalPoint2i to,
@@ -486,28 +489,107 @@ public final class ClaimEditorSkeleton implements ClaimEditor
         OrthogonalEdge2i segment = new OrthogonalEdge2i(from, to);
         if (!segment.isOrthogonal())
         {
-            return null;
+            return List.of();
         }
 
-        OrthogonalPoint2i bestPoint = null;
-        int bestDistance = Integer.MAX_VALUE;
+        List<OrthogonalPoint2i> candidates = new ArrayList<>();
         for (OrthogonalEdge2i edge : polygon.edges())
         {
             OrthogonalPoint2i candidate = nearestIntersectionPoint(segment, edge, excludedPoint);
-            if (candidate == null || candidate.equals(from))
+            if (candidate == null || candidate.equals(from) || candidates.contains(candidate))
+            {
+                continue;
+            }
+            candidates.add(candidate);
+        }
+
+        candidates.sort(Comparator
+                .comparingInt((OrthogonalPoint2i candidate) -> Math.abs(candidate.x() - from.x()) + Math.abs(candidate.z() - from.z()))
+                .thenComparingInt(OrthogonalPoint2i::x)
+                .thenComparingInt(OrthogonalPoint2i::z));
+        return List.copyOf(candidates);
+    }
+
+    private @Nullable BoundaryMergeAttempt selectBestBoundaryMerge(
+            @NotNull OrthogonalPolygon basePolygon,
+            @NotNull List<OrthogonalPoint2i> draftPoints,
+            @NotNull List<OrthogonalPoint2i> reconnectCandidates)
+    {
+        BoundaryMergeAttempt best = null;
+        OrthogonalPoint2i lastPoint = draftPoints.getLast();
+        for (OrthogonalPoint2i reconnectPoint : reconnectCandidates)
+        {
+            List<OrthogonalPoint2i> candidatePoints = new ArrayList<>(draftPoints);
+            candidatePoints.add(reconnectPoint);
+            if (!reshapeLeavesBoundary(basePolygon, candidatePoints))
             {
                 continue;
             }
 
-            int distance = Math.abs(candidate.x() - from.x()) + Math.abs(candidate.z() - from.z());
-            if (distance < bestDistance)
+            OrthogonalPolygonValidationResult mergeResult;
+            try
             {
-                bestDistance = distance;
-                bestPoint = candidate;
+                mergeResult = mergeDraftIntoExistingPolygon(basePolygon, candidatePoints);
+            }
+            catch (IllegalArgumentException ignored)
+            {
+                continue;
+            }
+
+            if (!mergeResult.isValid() || mergeResult.polygon() == null)
+            {
+                continue;
+            }
+
+            boolean containsOriginal = polygonContainsPolygon(mergeResult.polygon(), basePolygon);
+            int area = polygonArea(mergeResult.polygon());
+            int overlap = polygonOverlapArea(basePolygon, mergeResult.polygon());
+            int distance = Math.abs(reconnectPoint.x() - lastPoint.x()) + Math.abs(reconnectPoint.z() - lastPoint.z());
+            BoundaryMergeAttempt attempt = new BoundaryMergeAttempt(
+                    reconnectPoint,
+                    List.copyOf(candidatePoints),
+                    mergeResult,
+                    containsOriginal,
+                    area,
+                    overlap,
+                    distance
+            );
+
+            if (best == null
+                    || compareBoundaryMergeAttempts(attempt, best) < 0)
+            {
+                best = attempt;
             }
         }
 
-        return bestPoint;
+        return best;
+    }
+
+    private int compareBoundaryMergeAttempts(
+            @NotNull BoundaryMergeAttempt first,
+            @NotNull BoundaryMergeAttempt second)
+    {
+        if (first.containsOriginal() != second.containsOriginal())
+        {
+            return first.containsOriginal() ? -1 : 1;
+        }
+
+        if (first.area() != second.area())
+        {
+            return Integer.compare(second.area(), first.area());
+        }
+
+        if (first.overlap() != second.overlap())
+        {
+            return Integer.compare(second.overlap(), first.overlap());
+        }
+
+        if (first.distance() != second.distance())
+        {
+            return Integer.compare(first.distance(), second.distance());
+        }
+
+        return 0;
     }
 
     private @Nullable OrthogonalPoint2i nearestIntersectionPoint(
@@ -1002,119 +1084,245 @@ public final class ClaimEditorSkeleton implements ClaimEditor
 
     private @NotNull OrthogonalPolygon polygonFromOccupiedPoints(@NotNull Set<OrthogonalPoint2i> occupied)
     {
-        Set<OrthogonalPoint2i> boundary = occupied.stream()
-                .filter(point -> isBoundaryOccupiedPoint(occupied, point))
-                .collect(HashSet::new, Set::add, Set::addAll);
-        debug("polygonFromOccupiedPoints occupied=%s boundary=%s", occupied, boundary);
-        if (boundary.isEmpty())
+        List<ContourVertex> tracedContour = traceOccupiedContour(occupied);
+        List<ContourVertex> compressedContour = compressContourPath(tracedContour);
+        List<OrthogonalPoint2i> mappedCorners = mapContourCornersToOccupiedPoints(compressedContour, occupied);
+        List<OrthogonalPoint2i> normalizedCorners = compressOccupiedBoundaryPath(mappedCorners);
+
+        debug("polygonFromOccupiedPoints occupied=%s tracedContour=%s compressedContour=%s mappedCorners=%s normalized=%s",
+                occupied,
+                tracedContour,
+                compressedContour,
+                mappedCorners,
+                normalizedCorners);
+        return OrthogonalPolygon.fromClosedPath(normalizedCorners);
+    }
+
+    private @NotNull List<ContourVertex> traceOccupiedContour(@NotNull Set<OrthogonalPoint2i> occupied)
+    {
+        List<ContourEdge> edges = new ArrayList<>();
+        for (OrthogonalPoint2i point : occupied)
+        {
+            addContourEdgesForPoint(occupied, point, edges);
+        }
+
+        if (edges.isEmpty())
         {
             throw new IllegalArgumentException("Unable to trace merged claim boundary.");
         }
 
-        Map<OrthogonalPoint2i, List<OrthogonalPoint2i>> neighbors = new HashMap<>();
-        for (OrthogonalPoint2i point : boundary)
+        Map<ContourVertex, List<ContourEdge>> outgoing = new HashMap<>();
+        for (ContourEdge edge : edges)
         {
-            List<OrthogonalPoint2i> adjacent = new ArrayList<>(4);
-            addBoundaryNeighbor(boundary, point, 1, 0, adjacent);
-            addBoundaryNeighbor(boundary, point, 0, 1, adjacent);
-            addBoundaryNeighbor(boundary, point, -1, 0, adjacent);
-            addBoundaryNeighbor(boundary, point, 0, -1, adjacent);
-            neighbors.put(point, adjacent);
+            outgoing.computeIfAbsent(edge.start(), ignored -> new ArrayList<>()).add(edge);
         }
 
-        OrthogonalPoint2i start = boundary.stream()
-                .filter(point -> isCornerPoint(neighbors.get(point)))
-                .min(Comparator.<OrthogonalPoint2i>comparingInt(OrthogonalPoint2i::z)
-                        .thenComparingInt(OrthogonalPoint2i::x))
-                .orElseGet(() -> boundary.stream()
-                        .min(Comparator.<OrthogonalPoint2i>comparingInt(OrthogonalPoint2i::z)
-                                .thenComparingInt(OrthogonalPoint2i::x))
-                        .orElseThrow());
-
-        List<OrthogonalPoint2i> startNeighbors = neighbors.get(start);
-        if (startNeighbors == null || startNeighbors.isEmpty())
-        {
-            throw new IllegalArgumentException("Merged claim boundary is disconnected.");
-        }
-        debug("polygonFromOccupiedPoints start=%s startNeighbors=%s", start, startNeighbors);
-
-        OrthogonalPoint2i previous = start;
-        OrthogonalPoint2i current = startNeighbors.stream()
-                .min(Comparator.comparingInt(candidate -> initialDirectionPriority(start, candidate)))
+        ContourEdge startEdge = edges.stream()
+                .min(Comparator.comparingInt((ContourEdge edge) -> edge.start().z())
+                        .thenComparingInt(edge -> edge.start().x())
+                        .thenComparingInt(edge -> edge.end().x())
+                        .thenComparingInt(edge -> edge.end().z()))
                 .orElseThrow();
-        List<OrthogonalPoint2i> traced = new ArrayList<>();
-        traced.add(start);
-        int guard = boundary.size() * 4 + 4;
+
+        List<ContourVertex> traced = new ArrayList<>();
+        traced.add(startEdge.start());
+
+        Set<ContourEdge> visited = new HashSet<>();
+        ContourEdge current = startEdge;
+        int guard = edges.size() + 1;
         while (guard-- > 0)
         {
-            traced.add(current);
-            if (current.equals(start))
+            if (!visited.add(current))
+            {
+                throw new IllegalArgumentException("Merged claim boundary could not be followed.");
+            }
+
+            traced.add(current.end());
+            if (current.end().equals(startEdge.start()))
             {
                 break;
             }
 
-            List<OrthogonalPoint2i> currentNeighbors = neighbors.get(current);
-            OrthogonalPoint2i from = previous;
-            OrthogonalPoint2i at = current;
-            OrthogonalPoint2i next = currentNeighbors.stream()
-                    .filter(candidate -> !candidate.equals(from))
-                    .min(Comparator.comparingInt(candidate -> pointTurnPriority(from, at, candidate)))
-                    .orElse(null);
-
-            if (next == null)
+            List<ContourEdge> nextEdges = outgoing.get(current.end());
+            if (nextEdges == null || nextEdges.size() != 1)
             {
-                debug("polygonFromOccupiedPoints follow-failure previous=%s current=%s currentNeighbors=%s traced=%s",
-                        previous,
+                debug("traceOccupiedContour follow-failure current=%s nextEdges=%s traced=%s",
                         current,
-                        currentNeighbors,
+                        nextEdges,
                         traced);
                 throw new IllegalArgumentException("Merged claim boundary could not be followed.");
             }
 
-            previous = current;
-            current = next;
+            current = nextEdges.getFirst();
         }
 
-        if (!traced.getLast().equals(start))
+        if (!traced.getLast().equals(startEdge.start()))
         {
-            debug("polygonFromOccupiedPoints close-failure traced=%s", traced);
+            debug("traceOccupiedContour close-failure traced=%s", traced);
             throw new IllegalArgumentException("Merged claim boundary did not close.");
         }
 
-        List<OrthogonalPoint2i> compressed = compressBoundaryPath(traced);
-        debug("polygonFromOccupiedPoints traced=%s compressed=%s", traced, compressed);
-        return OrthogonalPolygon.fromClosedPath(compressed);
-    }
-
-    private int initialDirectionPriority(@NotNull OrthogonalPoint2i start, @NotNull OrthogonalPoint2i next)
-    {
-        return switch (directionIndex(start, next))
+        if (visited.size() != edges.size())
         {
-            case 0 -> 0;
-            case 1 -> 1;
-            case 2 -> 2;
-            default -> 3;
-        };
+            debug("traceOccupiedContour multi-loop edges=%s visited=%s traced=%s", edges, visited, traced);
+            throw new IllegalArgumentException("Merged claim boundary is disconnected.");
+        }
+
+        return traced;
     }
 
-    private int pointTurnPriority(
-            @NotNull OrthogonalPoint2i previous,
-            @NotNull OrthogonalPoint2i current,
-            @NotNull OrthogonalPoint2i candidate)
+    private void addContourEdgesForPoint(
+            @NotNull Set<OrthogonalPoint2i> occupied,
+            @NotNull OrthogonalPoint2i point,
+            @NotNull List<ContourEdge> edges)
     {
-        int currentDirection = directionIndex(previous, current);
-        int candidateDirection = directionIndex(current, candidate);
-        int delta = Math.floorMod(candidateDirection - currentDirection, 4);
-        return switch (delta)
+        int x = point.x();
+        int z = point.z();
+
+        if (!occupied.contains(new OrthogonalPoint2i(x, z - 1)))
         {
-            case 1 -> 0;
-            case 0 -> 1;
-            case 3 -> 2;
-            default -> 3;
-        };
+            edges.add(new ContourEdge(
+                    new ContourVertex(2 * x - 1, 2 * z - 1),
+                    new ContourVertex(2 * x + 1, 2 * z - 1)
+            ));
+        }
+
+        if (!occupied.contains(new OrthogonalPoint2i(x + 1, z)))
+        {
+            edges.add(new ContourEdge(
+                    new ContourVertex(2 * x + 1, 2 * z - 1),
+                    new ContourVertex(2 * x + 1, 2 * z + 1)
+            ));
+        }
+
+        if (!occupied.contains(new OrthogonalPoint2i(x, z + 1)))
+        {
+            edges.add(new ContourEdge(
+                    new ContourVertex(2 * x + 1, 2 * z + 1),
+                    new ContourVertex(2 * x - 1, 2 * z + 1)
+            ));
+        }
+
+        if (!occupied.contains(new OrthogonalPoint2i(x - 1, z)))
+        {
+            edges.add(new ContourEdge(
+                    new ContourVertex(2 * x - 1, 2 * z + 1),
+                    new ContourVertex(2 * x - 1, 2 * z - 1)
+            ));
+        }
     }
 
-    private int directionIndex(@NotNull OrthogonalPoint2i start, @NotNull OrthogonalPoint2i end)
+    private @NotNull List<ContourVertex> compressContourPath(@NotNull List<ContourVertex> traced)
+    {
+        if (traced.size() < 4)
+        {
+            throw new IllegalArgumentException("Merged claim boundary is too small.");
+        }
+
+        List<ContourVertex> compressed = new ArrayList<>();
+        int cycleLength = traced.size() - 1;
+        for (int i = 0; i < cycleLength; i++)
+        {
+            ContourVertex previous = traced.get((i - 1 + cycleLength) % cycleLength);
+            ContourVertex current = traced.get(i);
+            ContourVertex next = traced.get((i + 1) % cycleLength);
+
+            int dx1 = Integer.compare(current.x(), previous.x());
+            int dz1 = Integer.compare(current.z(), previous.z());
+            int dx2 = Integer.compare(next.x(), current.x());
+            int dz2 = Integer.compare(next.z(), current.z());
+
+            if (i == 0 || dx1 != dx2 || dz1 != dz2)
+            {
+                compressed.add(current);
+            }
+        }
+
+        compressed.add(compressed.getFirst());
+        return compressed;
+    }
+
+    private @NotNull List<OrthogonalPoint2i> mapContourCornersToOccupiedPoints(
+            @NotNull List<ContourVertex> contour,
+            @NotNull Set<OrthogonalPoint2i> occupied)
+    {
+        List<OrthogonalPoint2i> mapped = new ArrayList<>();
+        int cycleLength = contour.size() - 1;
+        for (int i = 0; i < cycleLength; i++)
+        {
+            ContourVertex previous = contour.get((i - 1 + cycleLength) % cycleLength);
+            ContourVertex current = contour.get(i);
+            ContourVertex next = contour.get((i + 1) % cycleLength);
+            OrthogonalPoint2i point = resolveContourCornerPoint(previous, current, next, occupied);
+            if (mapped.isEmpty() || !mapped.getLast().equals(point))
+            {
+                mapped.add(point);
+            }
+        }
+
+        if (mapped.size() < 4)
+        {
+            throw new IllegalArgumentException("Merged claim boundary is too small.");
+        }
+
+        mapped.add(mapped.getFirst());
+        return mapped;
+    }
+
+    private @NotNull OrthogonalPoint2i resolveContourCornerPoint(
+            @NotNull ContourVertex previous,
+            @NotNull ContourVertex vertex,
+            @NotNull ContourVertex next,
+            @NotNull Set<OrthogonalPoint2i> occupied)
+    {
+        int lowX = Math.floorDiv(vertex.x(), 2);
+        int highX = Math.floorDiv(vertex.x() + 1, 2);
+        int lowZ = Math.floorDiv(vertex.z(), 2);
+        int highZ = Math.floorDiv(vertex.z() + 1, 2);
+
+        int incomingDirection = contourDirection(previous, vertex);
+        int outgoingDirection = contourDirection(vertex, next);
+        int interiorFromIncoming = rotateRight(incomingDirection);
+        int interiorFromOutgoing = rotateRight(outgoingDirection);
+
+        int resolvedX;
+        if (interiorFromIncoming == 0 || interiorFromOutgoing == 0)
+        {
+            resolvedX = highX;
+        }
+        else if (interiorFromIncoming == 2 || interiorFromOutgoing == 2)
+        {
+            resolvedX = lowX;
+        }
+        else
+        {
+            throw new IllegalArgumentException("Merged claim boundary could not be followed.");
+        }
+
+        int resolvedZ;
+        if (interiorFromIncoming == 1 || interiorFromOutgoing == 1)
+        {
+            resolvedZ = highZ;
+        }
+        else if (interiorFromIncoming == 3 || interiorFromOutgoing == 3)
+        {
+            resolvedZ = lowZ;
+        }
+        else
+        {
+            throw new IllegalArgumentException("Merged claim boundary could not be followed.");
+        }
+
+        OrthogonalPoint2i match = new OrthogonalPoint2i(resolvedX, resolvedZ);
+        if (!occupied.contains(match))
+        {
+            throw new IllegalArgumentException("Merged claim boundary could not be followed.");
+        }
+
+        return match;
+    }
+
+    private int contourDirection(@NotNull ContourVertex start, @NotNull ContourVertex end)
     {
         if (end.x() > start.x())
         {
@@ -1132,44 +1340,22 @@ public final class ClaimEditorSkeleton implements ClaimEditor
         {
             return 3;
         }
-        throw new IllegalArgumentException("Boundary path cannot contain duplicate points.");
+        throw new IllegalArgumentException("Contour path cannot contain duplicate vertices.");
     }
 
-    private boolean isBoundaryOccupiedPoint(@NotNull Set<OrthogonalPoint2i> occupied, @NotNull OrthogonalPoint2i point)
+    private int rotateRight(int direction)
     {
-        return !occupied.contains(new OrthogonalPoint2i(point.x() + 1, point.z()))
-                || !occupied.contains(new OrthogonalPoint2i(point.x() - 1, point.z()))
-                || !occupied.contains(new OrthogonalPoint2i(point.x(), point.z() + 1))
-                || !occupied.contains(new OrthogonalPoint2i(point.x(), point.z() - 1));
-    }
-
-    private void addBoundaryNeighbor(
-            @NotNull Set<OrthogonalPoint2i> boundary,
-            @NotNull OrthogonalPoint2i point,
-            int dx,
-            int dz,
-            @NotNull List<OrthogonalPoint2i> adjacent)
-    {
-        OrthogonalPoint2i neighbor = new OrthogonalPoint2i(point.x() + dx, point.z() + dz);
-        if (boundary.contains(neighbor))
+        return switch (direction)
         {
-            adjacent.add(neighbor);
-        }
+            case 0 -> 1;
+            case 1 -> 2;
+            case 2 -> 3;
+            case 3 -> 0;
+            default -> throw new IllegalArgumentException("Unknown contour direction.");
+        };
     }
 
-    private boolean isCornerPoint(@Nullable List<OrthogonalPoint2i> neighbors)
-    {
-        if (neighbors == null || neighbors.size() != 2)
-        {
-            return false;
-        }
-
-        OrthogonalPoint2i first = neighbors.getFirst();
-        OrthogonalPoint2i second = neighbors.getLast();
-        return first.x() != second.x() && first.z() != second.z();
-    }
-
-    private @NotNull List<OrthogonalPoint2i> compressBoundaryPath(@NotNull List<OrthogonalPoint2i> traced)
+    private @NotNull List<OrthogonalPoint2i> compressOccupiedBoundaryPath(@NotNull List<OrthogonalPoint2i> traced)
     {
         List<OrthogonalPoint2i> path = new ArrayList<>(traced);
         if (path.size() < 4)
@@ -1197,6 +1383,14 @@ public final class ClaimEditorSkeleton implements ClaimEditor
 
         compressed.add(compressed.getFirst());
         return compressed;
+    }
+
+    private record ContourVertex(int x, int z)
+    {
+    }
+
+    private record ContourEdge(@NotNull ContourVertex start, @NotNull ContourVertex end)
+    {
     }
 
     private @NotNull ClaimEditResult handleAddNode(@NotNull ClaimEditorSession session, @NotNull ClaimEditIntent intent)

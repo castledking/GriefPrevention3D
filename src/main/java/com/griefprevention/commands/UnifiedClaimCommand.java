@@ -153,10 +153,18 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
         int lesserX, lesserZ, greaterX, greaterZ;
 
         try {
-            lesserX = Math.subtractExact(playerLoc.getBlockX(), radius);
-            lesserZ = Math.subtractExact(playerLoc.getBlockZ(), radius);
-            greaterX = Math.addExact(playerLoc.getBlockX(), radius);
-            greaterZ = Math.addExact(playerLoc.getBlockZ(), radius);
+            if (args.length > 0) {
+                lesserX = Math.subtractExact(playerLoc.getBlockX(), radius);
+                lesserZ = Math.subtractExact(playerLoc.getBlockZ(), radius);
+                greaterX = Math.addExact(playerLoc.getBlockX(), radius);
+                greaterZ = Math.addExact(playerLoc.getBlockZ(), radius);
+            } else {
+                ClaimCreateLayout.Bounds bounds = ClaimCreateLayout.resolveDefaultBounds(plugin, playerData, playerLoc);
+                lesserX = bounds.lesserX();
+                lesserZ = bounds.lesserZ();
+                greaterX = bounds.greaterX();
+                greaterZ = bounds.greaterZ();
+            }
         } catch (ArithmeticException e) {
             GriefPrevention.sendMessage(player, TextMode.Err, Messages.CreateClaimInsufficientBlocks,
                     String.valueOf(Integer.MAX_VALUE));

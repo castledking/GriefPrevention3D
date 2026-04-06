@@ -539,8 +539,10 @@ public class Claim
          // Check explicit ClaimPermission for UUID
          if (this.hasExplicitPermission(player.getUniqueId(), level)) return true;
 
-         // Managers have Manage, which hierarchically grants Build, Container, Access
-         if (level != ClaimPermission.Manage && this.hasExplicitPermission(player, ClaimPermission.Manage)) return true;
+         // Manage trust must never satisfy owner-only Edit checks.
+         if (level != ClaimPermission.Manage
+                 && level.isGrantedBy(ClaimPermission.Manage)
+                 && this.hasExplicitPermission(player, ClaimPermission.Manage)) return true;
 
          // Special case managers - a separate list is used.
          if (level == ClaimPermission.Manage)

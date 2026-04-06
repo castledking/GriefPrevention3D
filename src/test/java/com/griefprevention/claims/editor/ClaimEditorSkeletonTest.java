@@ -8,10 +8,14 @@ import org.bukkit.block.BlockFace;
 
 import java.util.List;
 import java.util.UUID;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class ClaimEditorSkeletonTest
@@ -912,6 +916,126 @@ public class ClaimEditorSkeletonTest
         assertTrue(polygonContains(result.preview().polygon(), new OrthogonalPoint2i(2, 2)));
         assertTrue(polygonContains(result.preview().polygon(), new OrthogonalPoint2i(2, 7)));
         assertTrue(polygonContains(result.preview().polygon(), new OrthogonalPoint2i(9, 5)));
+    }
+
+    @Test
+    void diagonalNibFillMergesIntoMainBodyInsteadOfTinyLocalLoop()
+    {
+        ClaimEditor editor = new ClaimEditorSkeleton();
+        OrthogonalPolygon original = OrthogonalPolygon.fromClosedPath(List.of(
+                new OrthogonalPoint2i(0, 0),
+                new OrthogonalPoint2i(6, 0),
+                new OrthogonalPoint2i(6, 2),
+                new OrthogonalPoint2i(4, 2),
+                new OrthogonalPoint2i(4, 4),
+                new OrthogonalPoint2i(0, 4),
+                new OrthogonalPoint2i(0, 0)
+        ));
+        ClaimEditorSession session = ClaimEditorSession.idle(UUID.randomUUID())
+                .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.TOOL)
+                .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, 42L))
+                .withPreview(new ClaimEditPreview(original, null, List.of(), null, List.of(), List.of(), List.of()))
+                .withOpenPath(new ShapedPathDraft(
+                        42L,
+                        List.of(
+                                new OrthogonalPoint2i(4, 2),
+                                new OrthogonalPoint2i(6, 2),
+                                new OrthogonalPoint2i(6, 4)
+                        ),
+                        null,
+                        false
+                ));
+
+        ClaimEditResult result = editor.apply(
+                session,
+                new ClaimEditIntent(
+                        ClaimEditIntentType.ADD_CORNER,
+                        ClaimEditSource.TOOL,
+                        null,
+                        42L,
+                        new OrthogonalPoint2i(4, 4),
+                        null,
+                        true,
+                        List.of()
+                )
+        );
+
+        assertTrue(result.success());
+        assertNotNull(result.preview().polygon());
+        assertTrue(polygonContains(result.preview().polygon(), new OrthogonalPoint2i(1, 1)));
+        assertTrue(polygonContains(result.preview().polygon(), new OrthogonalPoint2i(5, 3)));
+        assertEquals(List.of(
+                new OrthogonalPoint2i(0, 0),
+                new OrthogonalPoint2i(6, 0),
+                new OrthogonalPoint2i(6, 4),
+                new OrthogonalPoint2i(0, 4)
+        ), result.preview().polygon().corners());
+    }
+
+    @Test
+    void unionOfMapCornerNibAndSouthCellIsTraceable()
+    {
+        ClaimEditorSkeleton editor = new ClaimEditorSkeleton();
+        OrthogonalPolygon original = OrthogonalPolygon.fromClosedPath(List.of(
+                new OrthogonalPoint2i(0, 0),
+                new OrthogonalPoint2i(14, 0),
+                new OrthogonalPoint2i(14, 9),
+                new OrthogonalPoint2i(9, 9),
+                new OrthogonalPoint2i(9, 4),
+                new OrthogonalPoint2i(0, 4),
+                new OrthogonalPoint2i(0, 0)
+        ));
+        OrthogonalPolygon patch = OrthogonalPolygon.fromRectangle(10, 10, 14, 14);
+
+        OrthogonalPolygon merged = assertDoesNotThrow(() -> invokeUnion(editor, original, patch));
+        assertTrue(polygonContains(merged, new OrthogonalPoint2i(2, 2)));
+        assertTrue(polygonContains(merged, new OrthogonalPoint2i(12, 2)));
+        assertTrue(polygonContains(merged, new OrthogonalPoint2i(12, 12)));
+    }
+
+    @Test
+    void unionFailsWhenMapCellOnlyTouchesOnDiagonal()
+    {
+        ClaimEditorSkeleton editor = new ClaimEditorSkeleton();
+        OrthogonalPolygon original = OrthogonalPolygon.fromClosedPath(List.of(
+                new OrthogonalPoint2i(0, 0),
+                new OrthogonalPoint2i(14, 0),
+                new OrthogonalPoint2i(14, 9),
+                new OrthogonalPoint2i(9, 9),
+                new OrthogonalPoint2i(9, 4),
+                new OrthogonalPoint2i(0, 4),
+                new OrthogonalPoint2i(0, 0)
+        ));
+        OrthogonalPolygon diagonalOnlyPatch = OrthogonalPolygon.fromRectangle(10, 11, 14, 15);
+
+        assertThrows(IllegalArgumentException.class, () -> invokeUnion(editor, original, diagonalOnlyPatch));
+    }
+
+    private OrthogonalPolygon invokeUnion(
+            ClaimEditorSkeleton editor,
+            OrthogonalPolygon original,
+            OrthogonalPolygon patch
+    ) throws Exception
+    {
+        Method unionMethod = ClaimEditorSkeleton.class.getDeclaredMethod(
+                "unionPolygons",
+                OrthogonalPolygon.class,
+                OrthogonalPolygon.class
+        );
+        unionMethod.setAccessible(true);
+        try
+        {
+            return (OrthogonalPolygon) unionMethod.invoke(editor, original, patch);
+        }
+        catch (InvocationTargetException exception)
+        {
+            Throwable cause = exception.getCause();
+            if (cause instanceof Exception wrapped)
+            {
+                throw wrapped;
+            }
+            throw exception;
+        }
     }
 
     private boolean polygonContains(OrthogonalPolygon polygon, OrthogonalPoint2i point)

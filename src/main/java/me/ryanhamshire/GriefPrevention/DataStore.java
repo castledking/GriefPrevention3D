@@ -547,12 +547,33 @@ public abstract class DataStore {
         return area;
     }
 
+    private record MinimumProfile(int minWidth, int minArea)
+    {
+    }
+
+    private MinimumProfile resolveMinimumProfileForPolygon(@NotNull OrthogonalPolygon polygon)
+    {
+        // A normalized orthogonal polygon with 4 corners is a simple rectangle.
+        // Rectangles must respect standard claim minimums even when shaped editing exists.
+        if (polygon.corners().size() == 4)
+        {
+            return new MinimumProfile(
+                    Math.max(1, GriefPrevention.instance.config_claims_minWidth),
+                    Math.max(1, GriefPrevention.instance.config_claims_minArea));
+        }
+
+        return new MinimumProfile(
+                Math.max(1, GriefPrevention.instance.config_claims_shapedMinWidth),
+                Math.max(1, GriefPrevention.instance.config_claims_shapedMinArea));
+    }
+
     private @Nullable Supplier<String> validateShapedCreationMinimums(
             @NotNull World world,
             @NotNull OrthogonalPolygon polygon)
     {
-        int minWidth = Math.max(1, GriefPrevention.instance.config_claims_shapedMinWidth);
-        int minArea = Math.max(1, GriefPrevention.instance.config_claims_shapedMinArea);
+        MinimumProfile minimumProfile = resolveMinimumProfileForPolygon(polygon);
+        int minWidth = minimumProfile.minWidth();
+        int minArea = minimumProfile.minArea();
 
         int width;
         int height;
@@ -593,8 +614,9 @@ public abstract class DataStore {
             return null;
         }
 
-        int minWidth = Math.max(1, GriefPrevention.instance.config_claims_shapedMinWidth);
-        int minArea = Math.max(1, GriefPrevention.instance.config_claims_shapedMinArea);
+        MinimumProfile minimumProfile = resolveMinimumProfileForPolygon(polygon);
+        int minWidth = minimumProfile.minWidth();
+        int minArea = minimumProfile.minArea();
 
         int width;
         int height;
