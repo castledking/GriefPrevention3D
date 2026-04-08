@@ -507,20 +507,30 @@ public class EntityEventHandler implements Listener
             }
 
             //if yes, apply claim exemptions if they should apply
-            if (claim != null && !GriefPrevention.instance.config_blockClaimExplosions)
+            if (claim != null)
             {
-                // If config allows claim explosions, check claim-specific flags
-                if (isWitherExplosion)
+                // Check if this explosion should be allowed in the claim
+                boolean allowed = false;
+
+                // If config doesn't block claim explosions, allow by default
+                if (!GriefPrevention.instance.config_blockClaimExplosions)
+                {
+                    allowed = true;
+                }
+                // Otherwise, check claim-specific permissions
+                else if (isWitherExplosion && claim.areWitherExplosionsAllowed)
                 {
                     // Wither explosions require explicit wither permission
-                    if (claim.areWitherExplosionsAllowed)
-                    {
-                        explodedBlocks.add(block);
-                    }
+                    allowed = true;
                 }
-                else if (claim.areExplosivesAllowed)
+                else if (!isWitherExplosion && claim.areExplosivesAllowed)
                 {
                     // Other explosions require general explosives permission
+                    allowed = true;
+                }
+
+                if (allowed)
+                {
                     explodedBlocks.add(block);
                 }
                 continue;

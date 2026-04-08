@@ -85,3 +85,6 @@ redhat-java.vsix
 
 # Other
 .factorypath
+
+# Release work
+gp3d-release-work/
