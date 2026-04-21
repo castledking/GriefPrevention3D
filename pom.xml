@@ -164,10 +164,11 @@
             <scope>provided</scope>
         </dependency>
         <!-- Paper API for Paper-specific features (optional at runtime) -->
+        <!-- 26.1.2.build.18-alpha: Paper's new calendar versioning (experimental). -->
         <dependency>
             <groupId>io.papermc.paper</groupId>
             <artifactId>paper-api</artifactId>
-            <version>1.21.11-R0.1-SNAPSHOT</version>
+            <version>26.1.2.build.18-alpha</version>
             <scope>provided</scope>
             <optional>true</optional>
         </dependency>
