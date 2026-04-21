@@ -97,8 +97,7 @@ import org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason;
 import org.bukkit.event.entity.PlayerLeashEntityEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.inventory.InventoryType;
-import org.bukkit.event.player.PlayerLoginEvent;
-import org.bukkit.event.player.PlayerLoginEvent.Result;
+import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import org.bukkit.event.player.PlayerPortalEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
@@ -130,6 +129,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
@@ -143,7 +143,9 @@ class PlayerEventHandler implements Listener {
     private final GriefPrevention instance;
 
     // list of temporarily banned ip's
-    private final ArrayList<IpBanInfo> tempBannedIps = new ArrayList<>();
+    // CopyOnWriteArrayList: onAsyncPlayerPreLogin writes from an async thread while
+    // other handlers (onPlayerJoin, onPlayerKick) iterate from the main thread.
+    private final CopyOnWriteArrayList<IpBanInfo> tempBannedIps = new CopyOnWriteArrayList<>();
 
     // number of milliseconds in a day
     private final long MILLISECONDS_IN_DAY = 1000 * 60 * 60 * 24;
@@ -674,47 +676,59 @@ class PlayerEventHandler implements Listener {
     private final ConcurrentHashMap<UUID, Date> lastLoginThisServerSessionMap = new ConcurrentHashMap<>();
 
     // when a player attempts to join the server...
+    //
+    // Paper 26.x deprecates listening to PlayerLoginEvent because it fires between
+    // the login and configuration phases, which blocks Paper's re-configuration APIs
+    // for everyone else. AsyncPlayerPreLoginEvent runs earlier (async, before
+    // configuration) and exposes the same uuid/name/address/result surface we need
+    // for cooldown kicks and smart-ban IP tracking. IP recording into PlayerData is
+    // moved to onPlayerJoin so DataStore writes stay on the main thread.
     @EventHandler(priority = EventPriority.HIGHEST)
-    void onPlayerLogin(PlayerLoginEvent event) {
-        Player player = event.getPlayer();
+    void onAsyncPlayerPreLogin(AsyncPlayerPreLoginEvent event) {
+        if (!instance.config_spam_enabled) return;
 
-        // all this is anti-spam code
-        if (instance.config_spam_enabled) {
-            // FEATURE: login cooldown to prevent login/logout spam with custom clients
-            long now = Calendar.getInstance().getTimeInMillis();
+        long now = Calendar.getInstance().getTimeInMillis();
+        UUID uuid = event.getUniqueId();
+        AsyncPlayerPreLoginEvent.Result result = event.getLoginResult();
 
-            // if allowed to join and login cooldown enabled
-            if (instance.config_spam_loginCooldownSeconds > 0 && event.getResult() == Result.ALLOWED
-                    && !player.hasPermission("griefprevention.spam")) {
-                // determine how long since last login and cooldown remaining
-                Date lastLoginThisSession = lastLoginThisServerSessionMap.get(player.getUniqueId());
-                if (lastLoginThisSession != null) {
-                    long millisecondsSinceLastLogin = now - lastLoginThisSession.getTime();
-                    long secondsSinceLastLogin = millisecondsSinceLastLogin / 1000;
-                    long cooldownRemaining = instance.config_spam_loginCooldownSeconds - secondsSinceLastLogin;
+        // FEATURE: login cooldown to prevent login/logout spam with custom clients
+        if (instance.config_spam_loginCooldownSeconds > 0
+                && result == AsyncPlayerPreLoginEvent.Result.ALLOWED
+                && !hasSpamBypass(uuid)) {
+            Date lastLoginThisSession = lastLoginThisServerSessionMap.get(uuid);
+            if (lastLoginThisSession != null) {
+                long millisecondsSinceLastLogin = now - lastLoginThisSession.getTime();
+                long secondsSinceLastLogin = millisecondsSinceLastLogin / 1000;
+                long cooldownRemaining = instance.config_spam_loginCooldownSeconds - secondsSinceLastLogin;
 
-                    // if cooldown remaining
-                    if (cooldownRemaining > 0) {
-                        // DAS BOOT!
-                        event.setResult(Result.KICK_OTHER);
-                        event.setKickMessage(
-                                "You must wait " + cooldownRemaining + " seconds before logging-in again.");
-                        event.disallow(event.getResult(), event.getKickMessage());
-                        return;
-                    }
+                if (cooldownRemaining > 0) {
+                    event.disallow(
+                            AsyncPlayerPreLoginEvent.Result.KICK_OTHER,
+                            "You must wait " + cooldownRemaining + " seconds before logging-in again.");
+                    return;
                 }
-            }
-
-            // if logging-in account is banned, remember IP address for later
-            if (instance.config_smartBan && event.getResult() == Result.KICK_BANNED) {
-                this.tempBannedIps
-                        .add(new IpBanInfo(event.getAddress(), now + this.MILLISECONDS_IN_DAY, player.getName()));
             }
         }
 
-        // remember the player's ip address
-        PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
-        playerData.ipAddress = event.getAddress();
+        // if logging-in account is banned, remember IP address for later
+        if (instance.config_smartBan && result == AsyncPlayerPreLoginEvent.Result.KICK_BANNED) {
+            this.tempBannedIps.add(new IpBanInfo(
+                    event.getAddress(),
+                    now + this.MILLISECONDS_IN_DAY,
+                    event.getName()));
+        }
+    }
+
+    // Offline-safe bypass check for the griefprevention.spam permission. We cannot
+    // run Player#hasPermission during AsyncPlayerPreLoginEvent because there is no
+    // Player yet, so fall back to the ops file. TODO: add a reflective LuckPerms
+    // UserManager hook here so permission-manager-based bypass works for non-ops.
+    private boolean hasSpamBypass(UUID uuid) {
+        try {
+            return Bukkit.getOfflinePlayer(uuid).isOp();
+        } catch (Throwable ignored) {
+            return false;
+        }
     }
 
     // when a player successfully joins the server...
@@ -730,6 +744,13 @@ class PlayerEventHandler implements Listener {
         PlayerData playerData = this.dataStore.getPlayerData(playerID);
         playerData.lastSpawn = now;
         this.lastLoginThisServerSessionMap.put(playerID, nowDate);
+
+        // remember the player's ip address (moved from PlayerLoginEvent; Paper 26
+        // deprecates that event, and writes to DataStore should stay on the main thread)
+        java.net.InetSocketAddress socketAddress = player.getAddress();
+        if (socketAddress != null) {
+            playerData.ipAddress = socketAddress.getAddress();
+        }
 
         // if newish, prevent chat until he's moved a bit to prove he's not a bot
         if (GriefPrevention.isNewToServer(player) && !player.hasPermission("griefprevention.premovementchat")) {
