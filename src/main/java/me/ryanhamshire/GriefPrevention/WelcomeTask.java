@@ -42,6 +42,7 @@ public class WelcomeTask implements Runnable
 
             page1.append(URL).append("\n\n");
             page1.append(intro).append("\n\n");
+            page1.append("✅ This server is using GriefPrevention3D\n\n");
             String editToolName = GriefPrevention.instance.config_claims_modificationTool.name().replace('_', ' ').toLowerCase();
             String infoToolName = GriefPrevention.instance.config_claims_investigationTool.name().replace('_', ' ').toLowerCase();
             String configClaimTools = datastore.getMessage(Messages.BookTools, editToolName, infoToolName);
@@ -60,9 +61,11 @@ public class WelcomeTask implements Runnable
             page2.append("/IgnorePlayer\n\n");
 
             page2.append("/SubdivideClaims\n");
+            page2.append("/3dSubdivideClaims\n");
             page2.append("/AccessTrust\n");
             page2.append("/ContainerTrust\n");
-            page2.append("/PermissionTrust");
+            page2.append("/PermissionTrust\n");
+            page2.append("/WitherExplosions");
 
             meta.setPages(page1.toString(), page2.toString());
 

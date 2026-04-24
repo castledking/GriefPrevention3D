@@ -2060,9 +2060,14 @@ class PlayerEventHandler implements Listener {
                         }
                         playerData.claimResizing = selection;
                         playerData.lastShovelLocation = clickedBlock.getLocation();
-                        boolean hasNoChildren = selection.children == null || selection.children.isEmpty();
-                        GriefPrevention.sendMessage(player, TextMode.Instr,
-                                hasNoChildren ? Messages.ClaimSelected : Messages.ClaimSelectedTopLevel);
+                        Messages message;
+                        if (selection.parent != null) {
+                            message = Messages.SubdivisionSelected;
+                        } else {
+                            boolean hasNoChildren = selection.children == null || selection.children.isEmpty();
+                            message = hasNoChildren ? Messages.ClaimSelected : Messages.ClaimSelectedTopLevel;
+                        }
+                        GriefPrevention.sendMessage(player, TextMode.Instr, message);
                         VisualizationType visualizationType;
                         if (selection.parent == null) {
                             visualizationType = selection.isAdminClaim() ? VisualizationType.ADMIN_CLAIM
@@ -2635,10 +2640,15 @@ class PlayerEventHandler implements Listener {
                         }
                         playerData.claimResizing = selection;
                         playerData.lastShovelLocation = clickedBlock.getLocation();
-                        // ClaimSelected when no children; ClaimSelectedTopLevel when claim has subdivisions
-                        boolean hasNoChildren = selection.children == null || selection.children.isEmpty();
-                        GriefPrevention.sendMessage(player, TextMode.Instr,
-                                hasNoChildren ? Messages.ClaimSelected : Messages.ClaimSelectedTopLevel);
+                        Messages message;
+                        if (selection.parent != null) {
+                            message = Messages.SubdivisionSelected;
+                        } else {
+                            // ClaimSelected when no children; ClaimSelectedTopLevel when claim has subdivisions
+                            boolean hasNoChildren = selection.children == null || selection.children.isEmpty();
+                            message = hasNoChildren ? Messages.ClaimSelected : Messages.ClaimSelectedTopLevel;
+                        }
+                        GriefPrevention.sendMessage(player, TextMode.Instr, message);
                         // Refresh visualization in selection/resize mode.
                         VisualizationType visualizationType;
                         if (selection.parent == null) {
@@ -3982,9 +3992,14 @@ class PlayerEventHandler implements Listener {
 
         playerData.claimResizing = selection;
         playerData.lastShovelLocation = clickedBlock.getLocation();
-        boolean hasNoChildren = selection.children == null || selection.children.isEmpty();
-        GriefPrevention.sendMessage(player, TextMode.Instr,
-                hasNoChildren ? Messages.ClaimSelected : Messages.ClaimSelectedTopLevel);
+        Messages message;
+        if (selection.parent != null) {
+            message = Messages.SubdivisionSelected;
+        } else {
+            boolean hasNoChildren = selection.children == null || selection.children.isEmpty();
+            message = hasNoChildren ? Messages.ClaimSelected : Messages.ClaimSelectedTopLevel;
+        }
+        GriefPrevention.sendMessage(player, TextMode.Instr, message);
 
         VisualizationType visualizationType;
         if (selection.parent == null) {

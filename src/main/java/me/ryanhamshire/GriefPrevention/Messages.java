@@ -113,8 +113,9 @@ public enum Messages
     ResizeNeedMoreBlocks("You don't have enough blocks for this size.  You need {0} more.", "0: how many needed"),
     ClaimResizeSuccess("Claim resized.  {0} available claim blocks remaining.", "0: remaining blocks"),
     ResizeFailOverlap("Can't resize here because it would overlap another nearby claim."),
-    ClaimSelected("Claim selected. Use your shovel again to set the other corner and resize.\nNote: You can now run various management commands while a claim is selected."),
-    ClaimSelectedTopLevel("Claim selected. Use your shovel again to set the other corner and resize.\nNote: You can now run various management commands while a claim is selected."),
+    ClaimSelected("Claim selected. Use your shovel again to set the other corner and resize.\nNote: You can now run /claim abandon while this claim is selected."),
+    ClaimSelectedTopLevel("Claim selected. Use your shovel again to set the other corner and resize.\nNote: You can now run /claim abandon toplevel while this claim is selected."),
+    SubdivisionSelected("Subdivision selected. You can manage permissions for this specific area.\n&6You can run commands like:\n&7- &f/trust&7, &f/untrust\n&7- &f/containertrust&7, &f/accesstrust\n&7- &f/abandonclaim\n&6or you can right click again to resize."),
     ResizeFailOverlapSubdivision("You can't create a subdivision here because it would overlap another subdivision.  Consider /abandonclaim to delete it, or use your shovel at a corner to resize it."),
     SubdivisionStart("Subdivision corner set!  Use your shovel at the location for the opposite corner of this new subdivision."),
     CreateSubdivisionOverlap("Your selected area overlaps another subdivision."),
@@ -278,7 +279,12 @@ public enum Messages
     EconomySellBlocksUsage("Usage: /sellclaimblocks <amount>"),
     EconomyInvalidAmount("Please specify a valid positive number of blocks."),
     EconomyPurchaseCancelled("Purchase cancelled."),
-    EconomyNoVault("Economy support requires Vault plugin to be installed.");
+    EconomyNoVault("Economy support requires Vault plugin to be installed."),
+    ExternalPistonBoundaryViolation("&6Warning: A piston tried to push a block into your claim @ x:{0} y:{1} z:{2}!", "0: x coordinate; 1: y coordinate; 2: z coordinate"),
+    InternalPistonBoundaryViolation("&6Warning: A piston tried to push a block outside your claim @ x:{0} y:{1} z:{2}!", "0: x coordinate; 1: y coordinate; 2: z coordinate"),
+    ExternalLiquidBoundaryViolation("&6Warning: Liquid tried to flow into your claim @ x:{0} y:{1} z:{2}!", "0: x coordinate; 1: y coordinate; 2: z coordinate"),
+    InternalLiquidBoundaryViolation("&6Warning: Liquid tried to flow out of your claim @ x:{0} y:{1} z:{2}!", "0: x coordinate; 1: y coordinate; 2: z coordinate"),
+    BoundaryViolationBurstSummary("&6Warning: {0} {1} violations near your claim @ x:{2} y:{3} z:{4}!", "0: count; 1: type (piston/liquid); 2: x coordinate; 3: y coordinate; 4: z coordinate");
 
     final @NotNull String defaultValue;
     final @Nullable String notes;

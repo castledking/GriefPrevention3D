@@ -21,6 +21,7 @@ package me.ryanhamshire.GriefPrevention;
 import com.griefprevention.visualization.BoundaryVisualization;
 import com.griefprevention.visualization.VisualizationType;
 import me.ryanhamshire.GriefPrevention.util.BoundingBox;
+import com.griefprevention.protection.ClaimBoundaryViolationTracker;
 import com.griefprevention.protection.ProtectionHelper;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -674,6 +675,10 @@ public class BlockEventHandler implements Listener
             if (invadedClaim != null && (rootPiston == null || !Objects.equals(rootPiston.getID(), rootInvaded.getID())))
             {
                 event.setCancelled(true);
+                // Notify the invaded claim's owner (external - piston trying to enter their claim)
+                ClaimBoundaryViolationTracker.getInstance().trackPistonViolation(
+                        invadedClaim.getOwnerID(), invadedBlock.getLocation(),
+                        ClaimBoundaryViolationTracker.ViolationDirection.EXTERNAL);
             }
 
             return;
@@ -699,6 +704,10 @@ public class BlockEventHandler implements Listener
             if (pistonMode == PistonMode.CLAIMS_ONLY)
             {
                 event.setCancelled(true);
+                // Notify the claim owner that their piston tried to push blocks outside their claim (internal)
+                ClaimBoundaryViolationTracker.getInstance().trackPistonViolation(
+                        pistonClaim.getOwnerID(), pistonBlock.getRelative(direction).getLocation(),
+                        ClaimBoundaryViolationTracker.ViolationDirection.INTERNAL);
                 return;
             }
         }
@@ -718,16 +727,25 @@ public class BlockEventHandler implements Listener
         {
             // Fast mode: Bounding box intersection always causes a conflict, even if blocks do not conflict.
             intersectionHandler = denyOtherOwnerIntersection(pistonClaim, affectedBlocks);
+
+            // Check conflicts and notify invaded claim owners (external - into their claim)
+            if (boxConflictsWithClaims(pistonBlock.getWorld(), movedBlocks, pistonClaim, intersectionHandler,
+                    (claim) -> ClaimBoundaryViolationTracker.getInstance().trackPistonViolation(
+                            claim.getOwnerID(), pistonBlock.getLocation(),
+                            ClaimBoundaryViolationTracker.ViolationDirection.EXTERNAL)))
+            {
+                event.setCancelled(true);
+            }
         }
         else
         {
             // Precise mode: Bounding box intersection may not yield a conflict. Individual blocks must be considered.
             intersectionHandler = precisePistonIntersection(pistonBlock, pistonClaim, affectedBlocks, event);
-        }
 
-        if (boxConflictsWithClaims(pistonBlock.getWorld(), movedBlocks, pistonClaim, intersectionHandler))
-        {
-            event.setCancelled(true);
+            if (boxConflictsWithClaims(pistonBlock.getWorld(), movedBlocks, pistonClaim, intersectionHandler))
+            {
+                event.setCancelled(true);
+            }
         }
     }
 
@@ -745,6 +763,26 @@ public class BlockEventHandler implements Listener
             @NotNull BoundingBox boundingBox,
             @Nullable Claim initiatingClaim,
             @NotNull BiPredicate<@NotNull Claim, @NotNull BoundingBox> precisePredicate)
+    {
+        return boxConflictsWithClaims(world, boundingBox, initiatingClaim, precisePredicate, null);
+    }
+
+    /**
+     * Check if claims conflict with a given BoundingBox, with optional notification.
+     *
+     * @param world the world
+     * @param boundingBox the area that may intersect a claim
+     * @param initiatingClaim the claim from which the action was initiated
+     * @param precisePredicate a more accurate measure determining if a conflict actually occurs
+     * @param violationNotifier a consumer to notify when a conflict is detected (may be null)
+     * @return true if a claim is determined to be intersecting with the bounding box
+     */
+    private boolean boxConflictsWithClaims(
+            @NotNull World world,
+            @NotNull BoundingBox boundingBox,
+            @Nullable Claim initiatingClaim,
+            @NotNull BiPredicate<@NotNull Claim, @NotNull BoundingBox> precisePredicate,
+            @Nullable java.util.function.Consumer<Claim> violationNotifier)
     {
         // Check potentially intersecting claims from chunks interacted with.
         Set<Claim> chunkClaims = dataStore.getChunkClaims(world, boundingBox);
@@ -777,6 +815,7 @@ public class BlockEventHandler implements Listener
                     if (precisePredicate.test(child, childBox))
                     {
                         // Child denies permission - this is a conflict
+                        if (violationNotifier != null) violationNotifier.accept(child);
                         return true;
                     }
                     else
@@ -792,7 +831,11 @@ public class BlockEventHandler implements Listener
             if (coveredByGrantingChild) continue;
 
             // No intersecting children granted permission - check the parent claim.
-            if (precisePredicate.test(claim, claimBoundingBox)) return true;
+            if (precisePredicate.test(claim, claimBoundingBox))
+            {
+                if (violationNotifier != null) violationNotifier.accept(claim);
+                return true;
+            }
         }
 
         return false;
@@ -855,6 +898,11 @@ public class BlockEventHandler implements Listener
             Claim rootOther = rootOf(claim);
             if (rootPiston == null || rootOther == null || !Objects.equals(rootPiston.getID(), rootOther.getID()))
             {
+                // Notify the invaded claim's owner (external - piston trying to enter their claim)
+                ClaimBoundaryViolationTracker.getInstance().trackPistonViolation(
+                        claim.getOwnerID(), pistonBlock.getLocation(),
+                        ClaimBoundaryViolationTracker.ViolationDirection.EXTERNAL);
+
                 if (GriefPrevention.instance.config_pistonExplosionSound)
                 {
                     pistonBlock.getWorld().createExplosion(pistonBlock.getLocation(), 0);
@@ -1237,6 +1285,16 @@ public class BlockEventHandler implements Listener
         if (!isFluidFlowAllowed(fromClaim, toClaim, isInCreativeRulesWorld))
         {
             spreadEvent.setCancelled(true);
+
+            // Notify the claim owner when liquid tries to enter their claim from outside (external)
+            if (toClaim != null && fromClaim == null)
+            {
+                Material liquidType = spreadEvent.getBlock().getType();
+                boolean isLava = liquidType == Material.LAVA;
+                ClaimBoundaryViolationTracker.getInstance().trackLiquidViolation(
+                        toClaim.getOwnerID(), toLocation, isLava, spreadEvent.getBlock().getWorld(),
+                        ClaimBoundaryViolationTracker.ViolationDirection.EXTERNAL);
+            }
         }
     }
 
