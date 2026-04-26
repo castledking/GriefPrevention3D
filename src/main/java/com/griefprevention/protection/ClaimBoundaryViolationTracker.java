@@ -2,6 +2,7 @@ package com.griefprevention.protection;
 
 import me.ryanhamshire.GriefPrevention.GriefPrevention;
 import me.ryanhamshire.GriefPrevention.Messages;
+import me.ryanhamshire.GriefPrevention.util.SchedulerUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -275,10 +276,9 @@ public class ClaimBoundaryViolationTracker
         // No active burst – start a new one and schedule the flush
         pendingBursts.put(ownerID, new PendingBurst(type, direction, worldName, 1, x, y, z, now));
 
-        // Schedule a task to flush after the burst window expires.
-        // We use Bukkit scheduler so the message is delivered on the main thread.
-        Bukkit.getScheduler().runTaskLater(
-                Bukkit.getPluginManager().getPlugin("GriefPrevention"),
+        // We use global scheduler so the message is delivered on the tick thread (or main thread on Spigot).
+        SchedulerUtil.runLaterGlobal(
+                GriefPrevention.instance,
                 () -> flushBurst(ownerID),
                 // Convert burst window to ticks (20 ticks/sec), add 1 for safety
                 (BURST_WINDOW_MS / 50) + 1
