@@ -702,25 +702,25 @@ public class Claim
              @NotNull ClaimPermission permission,
              @Nullable Event event)
      {
-        
-         if (player != null)
-         {
-             // Admin claims need adminclaims permission only.
-             if (this.isAdminClaim())
-             {
-                 if (player.hasPermission("griefprevention.adminclaims")) return null;
-             }
+        // Administrators ignoring claims always have permission (matches ProtectionHelper behavior).
+        if (GriefPrevention.instance.dataStore.getPlayerData(uuid).ignoreClaims) return null;
 
-             // Anyone with deleteclaims permission can edit non-admin claims at any time.
-             else if (permission == ClaimPermission.Edit && player.hasPermission("griefprevention.deleteclaims"))
-                 return null;
-         }
+        if (player != null)
+        {
+            // Admin claims need adminclaims permission only.
+            if (this.isAdminClaim())
+            {
+                if (player.hasPermission("griefprevention.adminclaims")) return null;
+            }
 
-         // Claim owner and admins in ignoreclaims mode have access.
-         if (uuid.equals(this.getOwnerID())
-                 || GriefPrevention.instance.dataStore.getPlayerData(uuid).ignoreClaims
-                 && hasBypassPermission(player, permission))
-             return null;
+            // Anyone with deleteclaims permission can edit non-admin claims at any time.
+            else if (permission == ClaimPermission.Edit && player.hasPermission("griefprevention.deleteclaims"))
+                return null;
+        }
+
+        // Claim owner has access.
+        if (uuid.equals(this.getOwnerID()))
+            return null;
 
          // Look for explicit individual permission.
          if (player != null)
