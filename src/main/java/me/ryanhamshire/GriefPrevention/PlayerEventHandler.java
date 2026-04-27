@@ -1127,7 +1127,10 @@ class PlayerEventHandler implements Listener {
                 Supplier<String> noAccessReason = ProtectionHelper.checkPermission(player, event.getTo(),
                         ClaimPermission.Access, event);
                 if (noAccessReason != null) {
-                    GriefPrevention.sendMessage(player, TextMode.Err, noAccessReason.get());
+                    // Skip message if ProjectileHitEvent already handled it (Purpur/Folia: both events fire)
+                    if (!refundedByProjectileHitEvent.contains(player.getUniqueId())) {
+                        GriefPrevention.sendMessage(player, TextMode.Err, noAccessReason.get());
+                    }
                     event.setCancelled(true);
                     if (cause == TeleportCause.ENDER_PEARL && instance.config_claims_refundDeniedEnderPearls
                             && !refundedByProjectileHitEvent.contains(player.getUniqueId())) {
