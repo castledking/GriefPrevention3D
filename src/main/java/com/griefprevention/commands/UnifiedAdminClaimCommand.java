@@ -38,13 +38,18 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
         registerSubcommand("help", this::handleHelp);
 
         // Register standalone commands from Alias enum
-        registerStandaloneCommand(Alias.AClaimRestore, createRestoreTabExecutor());
+        registerStandaloneCommand(Alias.AClaimRestore, createNoArgStandaloneTabExecutor(this::handleRestore));
         // Legacy standalone commands - redirect to unified restore with appropriate type
         registerLegacyStandaloneCommand(
             "restorenatureaggressive",
             "griefprevention.restorenatureaggressive",
-            (sender, args) -> handleRestore(sender, prependArg("aggressive", args)),
-            java.util.Arrays.asList("1", "2", "3", "4", "5", "10")
+            (sender, args) -> {
+                if (args.length > 0) {
+                    return false;
+                }
+                return handleRestore(sender, new String[] { "aggressive" });
+            },
+            null
         );
         registerLegacyStandaloneCommand(
             "restorenaturefill",
@@ -53,7 +58,7 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
             java.util.Arrays.asList("1", "2", "3", "4", "5", "10")
         );
         registerStandaloneCommand(Alias.AClaimIgnore, this::handleIgnore);
-        registerStandaloneCommand(Alias.AClaimMode, this::handleMode);
+        registerStandaloneCommand(Alias.AClaimMode, createNoArgStandaloneTabExecutor(this::handleMode));
         registerStandaloneCommand(Alias.AClaimAdminList, this::handleAdminList);
         registerStandaloneCommand(Alias.AClaimList, this::handleList);
         registerStandaloneCommand(Alias.AClaimCheckExpiry, this::handleCheckExpiry);
@@ -106,7 +111,7 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
             (sender, args) -> handleBlocks(sender, prependArg("accrued", prependArg("all", args))),
             null
         );
-        registerStandaloneCommand(Alias.AClaimDelete, this::handleDelete);
+        registerStandaloneCommand(Alias.AClaimDelete, createNoArgStandaloneTabExecutor(this::handleDelete));
         registerStandaloneCommand(Alias.AClaimTransfer, this::handleTransfer);
         registerStandaloneCommand(Alias.AClaimMakeAdmin, this::handleMakeAdmin);
         registerStandaloneCommand(Alias.AClaimMakeBasic, this::handleMakeBasic);

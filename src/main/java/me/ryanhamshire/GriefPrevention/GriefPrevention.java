@@ -46,6 +46,7 @@ import com.griefprevention.visualization.VisualizationType;
 import me.ryanhamshire.GriefPrevention.DataStore.NoTransferException;
 import me.ryanhamshire.GriefPrevention.events.SaveTrappedPlayerEvent;
 import me.ryanhamshire.GriefPrevention.events.TrustChangedEvent;
+import me.ryanhamshire.GriefPrevention.integration.PlaceholderAPIExpansion;
 import org.bukkit.BanList;
 import org.bukkit.BanList.Type;
 import org.bukkit.Bukkit;
@@ -469,6 +470,11 @@ public class GriefPrevention extends JavaPlugin {
 
         // special interaction-related events
         pluginManager.registerEvents(new InteractionProtectionHandler(), this);
+
+        if (pluginManager.getPlugin("PlaceholderAPI") != null) {
+            new PlaceholderAPIExpansion(this).register();
+            AddLogEntry("Registered PlaceholderAPI expansion.");
+        }
 
         // cache offline players
         OfflinePlayer[] offlinePlayers = this.getServer().getOfflinePlayers();
@@ -1931,6 +1937,10 @@ public class GriefPrevention extends JavaPlugin {
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.ShapedClaimsDisabled);
                 return true;
             }
+            if (!player.hasPermission("griefprevention.shapedclaims")) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+                return true;
+            }
             PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
             playerData.shovelMode = ShovelMode.Shaped;
             playerData.claimSubdividing = null;
@@ -1964,6 +1974,10 @@ public class GriefPrevention extends JavaPlugin {
 
         // 3dsubdivideclaims
         else if (cmd.getName().equalsIgnoreCase("3dsubdivideclaims") && player != null) {
+            if (!player.hasPermission("griefprevention.3dsubdivideclaims")) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+                return true;
+            }
             PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
             playerData.shovelMode = ShovelMode.Subdivide3D;
             playerData.claimSubdividing = null;
@@ -4114,6 +4128,11 @@ public class GriefPrevention extends JavaPlugin {
                     GriefPrevention.sendMessage(player, TextMode.Err, Messages.ShapedClaimsDisabled);
                     return true;
                 }
+                if (!player.hasPermission("griefprevention.shapedclaims") ||
+                    !player.hasPermission("griefprevention.claims")) {
+                    GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+                    return true;
+                }
                 playerData.shovelMode = ShovelMode.Shaped;
                 playerData.claimSubdividing = null;
                 playerData.claimResizing = null;
@@ -4130,6 +4149,11 @@ public class GriefPrevention extends JavaPlugin {
                         DataStore.SUBDIVISION_VIDEO_URL);
             }
             case "3d" -> {
+                if (!player.hasPermission("griefprevention.3dsubdivideclaims") ||
+                    !player.hasPermission("griefprevention.claims")) {
+                    GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+                    return true;
+                }
                 playerData.shovelMode = ShovelMode.Subdivide3D;
                 playerData.claimSubdividing = null;
                 playerData.setClaimEditorSession(null);

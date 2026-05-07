@@ -20,6 +20,8 @@ package me.ryanhamshire.GriefPrevention;
 
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.plugin.RegisteredServiceProvider;
+import net.milkbowl.vault.permission.Permission;
 import me.ryanhamshire.GriefPrevention.util.SchedulerUtil;
 
 import java.util.UUID;
@@ -58,6 +60,12 @@ class CleanupUnusedClaimPreTask implements Runnable
             return;
         }
 
+        if (hasExpirationBypass(ownerInfo))
+        {
+            GriefPrevention.AddLogEntry("Player exempt from claim expiration by griefprevention.dontexpire.", CustomLogEntryTypes.Debug, true);
+            return;
+        }
+
         //skip claims belonging to exempted players based on block totals in config
         int bonusBlocks = ownerData.getBonusClaimBlocks();
         if (bonusBlocks >= GriefPrevention.instance.config_claims_expirationExemptionBonusBlocks || bonusBlocks + ownerData.getAccruedClaimBlocks() >= GriefPrevention.instance.config_claims_expirationExemptionTotalBlocks)
@@ -85,5 +93,21 @@ class CleanupUnusedClaimPreTask implements Runnable
 
         //pass it back to the main server thread, where it's safe to delete a claim if needed
         SchedulerUtil.runLaterGlobal(GriefPrevention.instance, new CleanupUnusedClaimTask(claimToExpire, ownerData, ownerInfo), 1L);
+    }
+
+    private boolean hasExpirationBypass(OfflinePlayer ownerInfo)
+    {
+        if (Bukkit.getPluginManager().getPlugin("Vault") == null)
+        {
+            return false;
+        }
+
+        RegisteredServiceProvider<Permission> registration = Bukkit.getServicesManager().getRegistration(Permission.class);
+        if (registration == null)
+        {
+            return false;
+        }
+
+        return registration.getProvider().playerHas((String) null, ownerInfo, "griefprevention.dontexpire");
     }
 }

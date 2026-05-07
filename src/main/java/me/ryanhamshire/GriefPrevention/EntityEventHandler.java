@@ -31,6 +31,7 @@ import org.bukkit.block.Block;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.FallingBlock;
+import org.bukkit.entity.Hanging;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Mob;
@@ -49,6 +50,8 @@ import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason;
 import org.bukkit.event.entity.EntityBreakDoorEvent;
 import org.bukkit.event.entity.EntityChangeBlockEvent;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.EntityInteractEvent;
@@ -103,6 +106,11 @@ public class EntityEventHandler implements Listener
     @EventHandler(ignoreCancelled = true, priority = EventPriority.LOWEST)
     public void onEntityChangeBLock(EntityChangeBlockEvent event)
     {
+        if (event.getTo() == Material.COBWEB && event.getEntity() instanceof LivingEntity)
+        {
+            return;
+        }
+
         if (!GriefPrevention.instance.config_endermenMoveBlocks && event.getEntityType() == EntityType.ENDERMAN)
         {
             event.setCancelled(true);
@@ -715,6 +723,11 @@ public class EntityEventHandler implements Listener
     @EventHandler(priority = EventPriority.LOWEST)
     public void onEntityPickup(EntityChangeBlockEvent event)
     {
+        if (event.getTo() == Material.COBWEB && event.getEntity() instanceof LivingEntity)
+        {
+            return;
+        }
+
         //FEATURE: endermen don't steal claimed blocks
 
         //if its an enderman
@@ -736,8 +749,18 @@ public class EntityEventHandler implements Listener
         //don't track in worlds where claims are not enabled
         if (!GriefPrevention.instance.claimsEnabledForWorld(event.getEntity().getWorld())) return;
 
-        //Ignore cases where itemframes should break due to no supporting blocks
-        if (event.getCause() == RemoveCause.PHYSICS) return;
+        if (event.getCause() == RemoveCause.PHYSICS)
+        {
+            if (event.getEntity() instanceof Hanging hanging)
+            {
+                Block attachedBlock = hanging.getLocation().getBlock().getRelative(hanging.getAttachedFace());
+                if (!attachedBlock.getType().isAir())
+                {
+                    event.setCancelled(true);
+                }
+            }
+            return;
+        }
 
         //FEATURE: claimed paintings are protected from breakage
 
@@ -771,6 +794,66 @@ public class EntityEventHandler implements Listener
         {
             event.setCancelled(true);
             GriefPrevention.sendMessage(playerRemover, TextMode.Err, noBuildReason.get());
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
+    public void onHangingEntityDamage(EntityDamageByEntityEvent event)
+    {
+        if (!(event.getEntity() instanceof Hanging))
+        {
+            return;
+        }
+
+        if (!GriefPrevention.instance.claimsEnabledForWorld(event.getEntity().getWorld()))
+        {
+            return;
+        }
+
+        Player player = null;
+        if (event.getDamager() instanceof Player damager)
+        {
+            player = damager;
+        }
+        else if (event.getDamager() instanceof Projectile projectile && projectile.getShooter() instanceof Player shooter)
+        {
+            player = shooter;
+        }
+
+        if (player == null)
+        {
+            event.setCancelled(true);
+            return;
+        }
+
+        Supplier<String> noBuildReason = ProtectionHelper.checkPermission(player, event.getEntity().getLocation(), ClaimPermission.Build, event);
+        if (noBuildReason != null)
+        {
+            event.setCancelled(true);
+            if (!(event.getDamager() instanceof Projectile))
+            {
+                GriefPrevention.sendMessage(player, TextMode.Err, noBuildReason.get());
+            }
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
+    public void onHangingExplosionDamage(EntityDamageEvent event)
+    {
+        if (!(event.getEntity() instanceof Hanging))
+        {
+            return;
+        }
+
+        if (!GriefPrevention.instance.claimsEnabledForWorld(event.getEntity().getWorld()))
+        {
+            return;
+        }
+
+        if (event.getCause() == EntityDamageEvent.DamageCause.ENTITY_EXPLOSION
+                || event.getCause() == EntityDamageEvent.DamageCause.BLOCK_EXPLOSION)
+        {
+            event.setCancelled(true);
         }
     }
 

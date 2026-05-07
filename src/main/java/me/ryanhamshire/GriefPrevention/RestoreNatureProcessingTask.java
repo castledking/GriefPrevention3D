@@ -24,7 +24,9 @@ import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.World.Environment;
 import org.bukkit.block.Biome;
+import org.bukkit.block.BlockFace;
 import org.bukkit.block.data.BlockData;
+import org.bukkit.block.data.type.WallSign;
 import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
@@ -175,7 +177,7 @@ public class RestoreNatureProcessingTask implements Runnable {
             for (int z = 1; z < snapshots[0][0].length - 1; z++) {
                 for (int y = miny; y < snapshots[0].length; y++) {
                     BlockSnapshot block = snapshots[x][y][z];
-                    if (block != null && playerBlocks.contains(block.material)) {
+                    if (block != null && playerBlocks.contains(block.material) && !isProtectedFromRestore(x, y, z)) {
                         block.material = Material.AIR;
                         block.blockData = Material.AIR.createBlockData();
                     }
@@ -191,6 +193,7 @@ public class RestoreNatureProcessingTask implements Runnable {
                 for (int y = miny; y < snapshots[0].length - 1; y++) {
                     BlockSnapshot block = snapshots[x][y][z];
                     if (block == null) continue;
+                    if (isProtectedFromRestore(x, y, z)) continue;
 
                     // Check for thin walls (solid block with air on opposite sides)
                     if (block.material.isSolid()) {
@@ -220,6 +223,48 @@ public class RestoreNatureProcessingTask implements Runnable {
                 }
             }
         }
+    }
+
+    private boolean isProtectedFromRestore(int x, int y, int z) {
+        BlockSnapshot block = snapshots[x][y][z];
+        if (block != null && block.protectedFromRestore) {
+            return true;
+        }
+
+        for (BlockFace face : BlockFace.values()) {
+            if (!face.isCartesian()) {
+                continue;
+            }
+
+            BlockSnapshot adjacent = getRelativeSnapshot(x, y, z, face);
+            if (adjacent == null || !adjacent.protectedFromRestore) {
+                continue;
+            }
+
+            if (adjacent.blockData instanceof WallSign wallSign) {
+                if (wallSign.getFacing() == face) {
+                    return true;
+                }
+            } else if (face == BlockFace.UP) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private BlockSnapshot getRelativeSnapshot(int x, int y, int z, BlockFace face) {
+        int relativeX = x + face.getModX();
+        int relativeY = y + face.getModY();
+        int relativeZ = z + face.getModZ();
+
+        if (relativeX < 0 || relativeX >= snapshots.length
+                || relativeY < 0 || relativeY >= snapshots[0].length
+                || relativeZ < 0 || relativeZ >= snapshots[0][0].length) {
+            return null;
+        }
+
+        return snapshots[relativeX][relativeY][relativeZ];
     }
 
     private void fillHoles() {

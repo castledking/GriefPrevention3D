@@ -8,7 +8,7 @@
 
     <groupId>com.griefprevention</groupId>
     <artifactId>GriefPrevention3D</artifactId>
-    <version>17.4.1</version>
+    <version>17.4.3</version>
 
     <name>GriefPrevention3D</name>
     <description>The self-service anti-griefing plugin for Minecraft servers — now with full 3D subdivisions</description>
@@ -48,6 +48,10 @@
         <repository>
             <id>papermc-repo</id>
             <url>https://repo.papermc.io/repository/maven-public/</url>
+        </repository>
+        <repository>
+            <id>placeholderapi-repo</id>
+            <url>https://repo.extendedclip.com/releases/</url>
         </repository>
         <repository>
             <id>jitpack.io</id>
@@ -185,6 +189,14 @@
             <groupId>com.github.MilkBowl</groupId>
             <artifactId>VaultAPI</artifactId>
             <version>1.7.1</version>
+            <scope>provided</scope>
+            <optional>true</optional>
+        </dependency>
+        <!-- PlaceholderAPI integration (optional) -->
+        <dependency>
+            <groupId>me.clip</groupId>
+            <artifactId>placeholderapi</artifactId>
+            <version>2.11.6</version>
             <scope>provided</scope>
             <optional>true</optional>
         </dependency>

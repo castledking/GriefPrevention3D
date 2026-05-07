@@ -53,7 +53,7 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
         registerStandaloneCommand(Alias.ClaimWitherExplosions, this::handleWitherExplosions);
         registerStandaloneCommand(Alias.ClaimBuyBlocks, createBuyBlocksTabExecutor());
         registerStandaloneCommand(Alias.ClaimSellBlocks, createSellBlocksTabExecutor());
-        registerStandaloneCommand(Alias.ClaimAbandon, this::handleAbandon);
+        registerStandaloneCommand(Alias.ClaimAbandon, createNoArgStandaloneTabExecutor(this::handleAbandon));
         registerStandaloneCommand(Alias.ClaimSiege, this::handleSiege);
         registerStandaloneCommand(Alias.ClaimTrapped, this::handleTrapped);
         registerStandaloneCommand(Alias.ClaimExpand, this::handleExpand);
@@ -314,11 +314,27 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
             @Override
             public boolean onCommand(@NotNull CommandSender sender, @NotNull org.bukkit.command.Command command,
                     @NotNull String alias, @NotNull String[] args) {
+                if (!"mode".equalsIgnoreCase(command.getName())) {
+                    if (args.length > 0) {
+                        return false;
+                    }
+                    if ("shapedclaims".equalsIgnoreCase(alias) || "shapedclaim".equalsIgnoreCase(alias)) {
+                        return handleMode(sender, new String[] { "shaped" });
+                    }
+                    return handleMode(sender, new String[0]);
+                }
+
                 if (args.length == 0 && ("shapedclaims".equalsIgnoreCase(alias) || "shapedclaim".equalsIgnoreCase(alias))) {
                     if (!plugin.config_claims_allowShapedClaims) {
                         if (sender instanceof org.bukkit.entity.Player player) {
                             GriefPrevention.sendMessage(player, TextMode.Err, Messages.ShapedClaimsDisabled);
                         }
+                        return true;
+                    }
+                    if (sender instanceof org.bukkit.entity.Player player && 
+                        (!player.hasPermission("griefprevention.shapedclaims") || 
+                         !player.hasPermission("griefprevention.claims"))) {
+                        GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
                         return true;
                     }
                     return plugin.handleModeCommand(sender, new String[] { "shaped" });
@@ -329,6 +345,10 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
             @Override
             public @Nullable List<String> onTabComplete(@NotNull CommandSender sender,
                     @NotNull org.bukkit.command.Command command, @NotNull String alias, @NotNull String[] args) {
+                if (!"mode".equalsIgnoreCase(command.getName())) {
+                    return java.util.Collections.emptyList();
+                }
+
                 // Provide tab completion for mode options
                 if (args.length == 1) {
                     String prefix = args[0].toLowerCase();

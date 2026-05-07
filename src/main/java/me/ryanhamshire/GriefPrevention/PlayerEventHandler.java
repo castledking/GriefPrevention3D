@@ -95,6 +95,7 @@ import org.bukkit.event.player.PlayerKickEvent;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason;
 import org.bukkit.event.entity.EntityChangeBlockEvent;
+import org.bukkit.event.entity.EntityMountEvent;
 import org.bukkit.event.entity.PlayerLeashEntityEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.inventory.InventoryType;
@@ -106,6 +107,7 @@ import org.bukkit.event.player.PlayerSignOpenEvent;
 import org.bukkit.event.player.PlayerTakeLecternBookEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.event.player.PlayerTeleportEvent.TeleportCause;
+import org.bukkit.event.player.PlayerUnleashEntityEvent;
 import org.bukkit.event.raid.RaidTriggerEvent;
 import org.bukkit.event.vehicle.VehicleEnterEvent;
 import org.bukkit.inventory.EquipmentSlot;
@@ -1318,6 +1320,69 @@ class PlayerEventHandler implements Listener {
                 GriefPrevention.sendRateLimitedErrorMessage(player, noBuildReason.get());
                 event.setCancelled(true);
             }
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.LOWEST)
+    public void onMountRequiresAccessTrust(EntityMountEvent event) {
+        if (!(event.getEntity() instanceof Player player)) {
+            return;
+        }
+
+        Entity mount = event.getMount();
+        if (!(mount instanceof Animals)) {
+            return;
+        }
+
+        if (!instance.claimsEnabledForWorld(mount.getWorld())) {
+            return;
+        }
+
+        PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
+        if (playerData.ignoreClaims) {
+            return;
+        }
+
+        Claim claim = this.dataStore.getClaimAt(mount.getLocation(), false, playerData.lastClaim);
+        if (claim == null) {
+            return;
+        }
+
+        playerData.lastClaim = claim;
+        Supplier<String> denial = claim.checkPermission(player, ClaimPermission.Access, event);
+        if (denial != null) {
+            event.setCancelled(true);
+            GriefPrevention.sendRateLimitedErrorMessage(player, denial.get());
+        }
+    }
+
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.LOW)
+    public void onPlayerUnleashEntity(PlayerUnleashEntityEvent event) {
+        if (!instance.config_claims_preventTheft) {
+            return;
+        }
+
+        Player player = event.getPlayer();
+        Entity entity = event.getEntity();
+        if (!instance.claimsEnabledForWorld(entity.getWorld())) {
+            return;
+        }
+
+        PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
+        if (playerData.ignoreClaims) {
+            return;
+        }
+
+        Claim claim = this.dataStore.getClaimAt(entity.getLocation(), false, playerData.lastClaim);
+        if (claim == null) {
+            return;
+        }
+
+        playerData.lastClaim = claim;
+        Supplier<String> denial = claim.checkPermission(player, ClaimPermission.Container, event);
+        if (denial != null) {
+            event.setCancelled(true);
+            GriefPrevention.sendRateLimitedErrorMessage(player, denial.get());
         }
     }
 

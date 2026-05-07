@@ -186,18 +186,7 @@ public final class CommandAliasConfiguration {
     }
 
     public @Nullable RootCommand getRootCommand(@NotNull String key) {
-        RootCommand command = rootCommands.get(normalize(key));
-        if (command != null) {
-            // Check if this root command has any enabled subcommands
-            boolean hasEnabledSubcommands = command.subcommands.values().stream()
-                    .anyMatch(Subcommand::isEnabled);
-
-            // If it's a root command with subcommands but none are enabled, return null
-            if (!command.subcommands.isEmpty() && !hasEnabledSubcommands) {
-                return null;
-            }
-        }
-        return command;
+        return rootCommands.get(normalize(key));
     }
 
     public static @NotNull YamlConfiguration mergeConfigurations(@NotNull YamlConfiguration defaults,

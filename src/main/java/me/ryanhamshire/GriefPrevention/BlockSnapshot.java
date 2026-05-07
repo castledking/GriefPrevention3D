@@ -21,7 +21,10 @@ package me.ryanhamshire.GriefPrevention;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.block.TileState;
 import org.bukkit.block.data.BlockData;
+import org.bukkit.persistence.PersistentDataContainer;
+import org.bukkit.persistence.PersistentDataHolder;
 
 /**
  * Represents a snapshot of a block's state for restore nature operations.
@@ -31,6 +34,7 @@ public class BlockSnapshot {
     public Location location;
     public Material material;
     public BlockData blockData;
+    public boolean protectedFromRestore;
 
     public BlockSnapshot(Location location, Material material, BlockData blockData) {
         this.location = location;
@@ -42,6 +46,7 @@ public class BlockSnapshot {
         this.location = block.getLocation();
         this.material = block.getType();
         this.blockData = block.getBlockData().clone();
+        this.protectedFromRestore = isQuickShopSign(block);
     }
 
     /**
@@ -51,5 +56,25 @@ public class BlockSnapshot {
     public void apply() {
         Block block = location.getBlock();
         block.setBlockData(blockData, false);
+    }
+
+    private boolean isQuickShopSign(Block block) {
+        if (!material.name().endsWith("_SIGN")) {
+            return false;
+        }
+
+        if (!(block.getState() instanceof TileState state)) {
+            return false;
+        }
+
+        return hasQuickShopSignKey(state);
+    }
+
+    private boolean hasQuickShopSignKey(PersistentDataHolder holder) {
+        PersistentDataContainer container = holder.getPersistentDataContainer();
+        return container.getKeys().stream()
+                .anyMatch(key -> key.getKey().equals("shopsign")
+                        && (key.getNamespace().equalsIgnoreCase("quickshop")
+                        || key.getNamespace().toLowerCase(java.util.Locale.ROOT).contains("quickshop")));
     }
 }

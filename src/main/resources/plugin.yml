@@ -1,8 +1,8 @@
 name: GriefPrevention
 main: me.ryanhamshire.GriefPrevention.GriefPrevention
 softdepend:
-  [Multiverse-Core, My_Worlds, MystCraft, Transporter, RoyalCommands, MultiWorld, Denizen, CommandHelper, Iris]
-dev-url: https://dev.bukkit.org/projects/grief-prevention
+  [Multiverse-Core, My_Worlds, MystCraft, Transporter, RoyalCommands, MultiWorld, Denizen, CommandHelper, Iris, PlaceholderAPI, Vault]
+dev-url: https://github.com/castledking/GriefPrevention3D
 version: "${project.version}"
 description: The self-service anti-griefing plugin for Minecraft servers — now with full 3D subdivisions
 website: https://castled.codes
@@ -65,7 +65,7 @@ commands:
     description: Switches the shovel tool to 3D subdivision mode, allowing height-limited subclaims.
     usage: /<command>
     aliases: [3dsubdivideclaim]
-    permission: griefprevention.claims
+    permission: griefprevention.3dsubdivideclaims
   restrictsubclaim:
     description: Restricts a subclaim, so that it inherits no permissions from the parent claim
     usage: /<command>
@@ -118,7 +118,7 @@ commands:
     description: Switches the shovel tool to shaped claims mode.
     usage: /<command>
     aliases: [shapedclaim]
-    permission: griefprevention.claims
+    permission: griefprevention.shapedclaims
   extendclaim:
     description: Resizes the land claim you're standing in by pushing or pulling its boundary in the direction you're facing.
     usage: /<command> <numberOfBlocks>
@@ -391,3 +391,9 @@ permissions:
   griefprevention.restorenatureaggressive:
     description: Grants permission to use /restorenatureaggressive and /restorenaturefill.
     default: op
+  griefprevention.shapedclaims:
+    description: Grants permission to use /shapedclaims and /claim mode shaped.
+    default: true
+  griefprevention.3dsubdivideclaims:
+    description: Grants permission to use /3dsubdivideclaims and /claim mode 3d.
+    default: true
