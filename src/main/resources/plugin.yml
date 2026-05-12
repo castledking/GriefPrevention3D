@@ -64,8 +64,13 @@ commands:
   3dsubdivideclaims:
     description: Switches the shovel tool to 3D subdivision mode, allowing height-limited subclaims.
     usage: /<command>
-    aliases: [3dsubdivideclaim]
+    aliases: [3dsubdivideclaim, 3dsc, sc3d, subdivide3d, 3dsubdivide]
     permission: griefprevention.3dsubdivideclaims
+  3dadminclaims:
+    description: Switches the shovel tool to 3D administrative claims mode.
+    usage: /<command>
+    aliases: [adminclaim3d, adminclaims3d, 3dadminclaim]
+    permission: griefprevention.adminclaims
   restrictsubclaim:
     description: Restricts a subclaim, so that it inherits no permissions from the parent claim
     usage: /<command>
@@ -108,7 +113,7 @@ commands:
     description: Switches the shovel tool to administrative claims mode.
     usage: /<command>
     permission: griefprevention.adminclaims
-    aliases: ac
+    aliases: [ac, aclaims]
   basicclaims:
     description: Switches the shovel tool back to basic claims mode.
     usage: /<command>

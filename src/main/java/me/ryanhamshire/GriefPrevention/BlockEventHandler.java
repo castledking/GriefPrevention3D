@@ -913,8 +913,26 @@ public class BlockEventHandler implements Listener
 
                 if (GriefPrevention.instance.config_pistonExplosionSound)
                 {
-                    pistonBlock.getWorld().createExplosion(pistonBlock.getLocation(), 0);
+                    pistonBlock.getWorld().createExplosion(pistonBlock.getLocation(), 0, false, false);
                 }
+
+                // Notify the nearest nearby player with build permission in the piston's claim,
+                // and visualize the blocking claim boundary so they know what stopped it.
+                Location pistonCenter = pistonBlock.getLocation().add(0.5, 0.5, 0.5);
+                final Claim blockingClaim = claim;
+                Bukkit.getOnlinePlayers().stream()
+                        .filter(p -> p.getWorld() == pistonBlock.getWorld())
+                        .filter(p -> pistonClaim == null
+                                ? p.getLocation().distanceSquared(pistonCenter) < 32 * 32
+                                : pistonClaim.checkPermission(p, ClaimPermission.Build, null) == null)
+                        .min(java.util.Comparator.comparingDouble(p -> p.getLocation().distanceSquared(pistonCenter)))
+                        .ifPresent(p -> {
+                            GriefPrevention.sendMessage(p, TextMode.Warn, Messages.PistonExploded,
+                                    "%d, %d, %d".formatted(pistonBlock.getX(), pistonBlock.getY(), pistonBlock.getZ()),
+                                    GriefPrevention.getfriendlyLocationString(blockingClaim.getLesserBoundaryCorner()));
+                            BoundaryVisualization.visualizeClaim(p, blockingClaim, VisualizationType.CONFLICT_ZONE);
+                        });
+
                 pistonBlock.getWorld().dropItem(
                         pistonBlock.getLocation(),
                         new ItemStack(event.isSticky() ? Material.STICKY_PISTON : Material.PISTON));

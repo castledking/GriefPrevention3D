@@ -1919,6 +1919,19 @@ public class GriefPrevention extends JavaPlugin {
             return true;
         }
 
+        // 3dadminclaims
+        else if (cmd.getName().equalsIgnoreCase("3dadminclaims") && player != null) {
+            if (!player.hasPermission("griefprevention.adminclaims")) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+                return true;
+            }
+            PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
+            playerData.shovelMode = ShovelMode.Admin3D;
+            GriefPrevention.sendMessage(player, TextMode.Success, Messages._3DAdminClaimsMode);
+
+            return true;
+        }
+
         // basicclaims
         else if (cmd.getName().equalsIgnoreCase("basicclaims") && player != null) {
             PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
@@ -4376,40 +4389,37 @@ public class GriefPrevention extends JavaPlugin {
         PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
         Claim claim = this.dataStore.getClaimAt(player.getLocation(), false, playerData.lastClaim);
 
-        // Check if player can build here - if so, they're not trapped
-        if (claim != null && claim.checkPermission(player, ClaimPermission.Build, null) == null) {
+        // if another /trapped is pending, silently ignore
+        if (playerData.pendingTrapped) {
+            return true;
+        }
+
+        // if the player isn't in a claim or has permission to build, tell him to man up
+        if (claim == null || claim.checkPermission(player, ClaimPermission.Build, null) == null) {
             GriefPrevention.sendMessage(player, TextMode.Err, Messages.NotTrappedHere);
             return true;
         }
 
-        // Check if player is in an admin claim and trapped command is not allowed there
-        if (claim != null && claim.isAdminClaim() && !this.config_claims_allowTrappedInAdminClaims) {
+        // rescue destination may be set by GPFlags or other plugin, ask to find out
+        SaveTrappedPlayerEvent event = new SaveTrappedPlayerEvent(claim);
+        Bukkit.getPluginManager().callEvent(event);
+
+        // if the player is in the nether or end, there's no way to programmatically find a safe place
+        if (player.getWorld().getEnvironment() != org.bukkit.World.Environment.NORMAL && event.getDestination() == null) {
             GriefPrevention.sendMessage(player, TextMode.Err, Messages.TrappedWontWorkHere);
             return true;
         }
 
-        // Check if player already has a pending rescue
-        if (playerData.pendingTrapped) {
-            GriefPrevention.sendMessage(player, TextMode.Err, Messages.RescueAbortedMoved);
+        // if the player is in an administrative claim and AllowTrappedInAdminClaims is false, contact an admin
+        if (!this.config_claims_allowTrappedInAdminClaims && claim.isAdminClaim() && event.getDestination() == null) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.TrappedWontWorkHere);
             return true;
         }
 
-        // Fire SaveTrappedPlayerEvent to allow other plugins to cancel or handle the rescue
-        if (claim != null) {
-            SaveTrappedPlayerEvent event = new SaveTrappedPlayerEvent(claim);
-            Bukkit.getPluginManager().callEvent(event);
-            if (event.isCancelled()) {
-                return true;
-            }
-        }
-
-        // Mark player as having a pending rescue
-        playerData.pendingTrapped = true;
-
-        // Schedule the rescue task using Folia-compatible scheduler
+        // send instructions and schedule rescue
         GriefPrevention.sendMessage(player, TextMode.Instr, Messages.RescuePending);
-        PlayerRescueTask task = new PlayerRescueTask(player, player.getLocation(), null);
-        SchedulerUtil.runLaterEntity(this, player, task, 200L); // 10 seconds (200 ticks)
+        PlayerRescueTask task = new PlayerRescueTask(player, player.getLocation(), event.getDestination());
+        SchedulerUtil.runLaterEntity(this, player, task::run, 200L); // 10 seconds (200 ticks)
 
         return true;
     }

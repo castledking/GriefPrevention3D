@@ -3073,7 +3073,7 @@ class PlayerEventHandler implements Listener {
                     return;
                 }
 
-                if (playerData.shovelMode != ShovelMode.Admin) {
+                if (playerData.shovelMode != ShovelMode.Admin && playerData.shovelMode != ShovelMode.Admin3D) {
                     if (newWidth < instance.config_claims_minWidth
                             || newHeight < instance.config_claims_minWidth) {
                         // this IF block is a workaround for craftbukkit bug which fires two events for
@@ -3100,7 +3100,7 @@ class PlayerEventHandler implements Listener {
 
                 // if not an administrative claim, verify the player has enough claim blocks for
                 // this new claim
-                if (playerData.shovelMode != ShovelMode.Admin) {
+                if (playerData.shovelMode != ShovelMode.Admin && playerData.shovelMode != ShovelMode.Admin3D) {
                     int newClaimArea = newWidth * newHeight;
                     int remainingBlocks = playerData.getRemainingClaimBlocks();
                     if (newClaimArea > remainingBlocks) {
@@ -3113,12 +3113,14 @@ class PlayerEventHandler implements Listener {
                     playerID = null;
                 }
 
+                boolean is3dAdminClaim = playerData.shovelMode == ShovelMode.Admin3D;
+
                 // try to create a new claim
                 CreateClaimResult result = this.dataStore.createClaim(
                         player.getWorld(),
                         lastShovelLocation.getBlockX(), clickedBlock.getX(),
-                        lastShovelLocation.getBlockY() - instance.config_claims_claimsExtendIntoGroundDistance,
-                        clickedBlock.getY() - instance.config_claims_claimsExtendIntoGroundDistance,
+                        is3dAdminClaim ? lastShovelLocation.getBlockY() : lastShovelLocation.getBlockY() - instance.config_claims_claimsExtendIntoGroundDistance,
+                        is3dAdminClaim ? clickedBlock.getY() : clickedBlock.getY() - instance.config_claims_claimsExtendIntoGroundDistance,
                         lastShovelLocation.getBlockZ(), clickedBlock.getZ(),
                         playerID,
                         null, null,
