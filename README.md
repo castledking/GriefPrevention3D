@@ -27,7 +27,13 @@ Stop _responding_ to grief and prevent it instead. GriefPrevention stops grief b
   `/3dsubdivideclaims`
   Use this command to switch to 3D subdivision mode.
 
-- **Shaped Claims (17.3.1+)**
+- **3D Admin Claims**
+  Create free, height-bounded administrative claims with exact Y coordinates.
+  `/3dadminclaims`
+  Use this command or `/aclaim mode admin3d` to switch to 3D admin claim mode.
+  Requires the `griefprevention.adminclaims` permission.
+
+- **Shaped Claims**
   ```
   AllowShapedClaims: false
   ```
