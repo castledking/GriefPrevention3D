@@ -1,6 +1,5 @@
 name: Bug report
 description: Report bugs or stack traces (red lines from your logs that say SomethingException).
-labels: [ "Unverified Bug" ]
 body:
 
   - type: markdown
