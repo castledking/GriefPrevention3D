@@ -79,36 +79,26 @@ Stop _responding_ to grief and prevent it instead. GriefPrevention stops grief b
   - Maintains all anti-grief protections
 
 ## Supported Platforms: Spigot, Paper, Purpur, and Folia.
-### GriefPrevention3D targets and supports the latest available version of these platforms. Older versions of GriefPrevention can be found on [BukkitDev](https://dev.bukkit.org/projects/grief-prevention/files). These older versions are not supported.
-Other server implementations of the Bukkit API _should_ work, but are untested.
+### GriefPrevention3D targets and supports 1.20.x - latest available version of these platforms.
 
 ## Download
 ### [⬇ Download the GriefPrevention3D.jar plugin here.](https://github.com/castledking/GriefPrevention3D/releases)
 
 ## Documentation
-For usage instructions, see the official [GriefPrevention documentation](https://r.griefprevention.com/docs).
+For usage instructions, see the official [GriefPrevention3D Documentation](https://github.com/castledking/GriefPrevention3D/wiki).
+
 
 ## Addons
 ### [Addons](https://r.griefprevention.com/addons) provide additional features to GriefPrevention. Some of these addons are listed in [GitHub Discussions](https://r.griefprevention.com/addons)
 
 ## Support
-- [📖 Documentation](https://r.griefprevention.com/docs) - Learn how GriefPrevention works. Contains answers to most questions.
+- [📖 Documentation](https://github.com/castledking/GriefPrevention3D/wiki) - Learn how GriefPrevention3D works. Contains answers to most questions.
 - [Issue Tracker](https://github.com/castledking/GriefPrevention3D/issues) - Report problems or bugs on the issue tracker. Check if someone else reported your issue before posting.
 - [GitHub Discussions](https://github.com/castledking/GriefPrevention3D/discussions) - New ideas, feature requests, or other general discussions.
 - [Discord Community](https://discord.com/invite/pCKdCX6nYr)
 
 ## Original Plugin
 This is a fork of [GriefPrevention](https://www.spigotmc.org/resources/griefprevention.1884/) by RoboMWM.
-
-## GriefPrevention Legacy
-
-GriefPrevention Legacy is the "friendly" name of GriefPrevention version 16. GriefPrevention version 16 will continue to be officially supported with new updates and releases, and is currently the version we recommend for use on production servers.
-
-GriefPrevention Legacy's development exists in the `legacy/v16` branch; be sure to target this branch if you intend to create any pull requests for GriefPrevention Legacy.
-
-## Version 17 and above
-
-Newer major versions of GriefPrevention are developed on the `master` branch. These new versions contain **breaking changes.** Please **do not** use these versions of GriefPrevention on production servers!
 
 ---
 
