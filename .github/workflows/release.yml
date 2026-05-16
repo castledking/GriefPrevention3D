@@ -70,7 +70,7 @@ jobs:
           
           if [ -f "$RELEASE_FILE" ]; then
             echo "Found release file: $RELEASE_FILE"
-            BODY=$(cat "$RELEASE_FILE")
+            BODY=$(tail -n +2 "$RELEASE_FILE")
             
             # Update the release with the markdown content
             gh api \
