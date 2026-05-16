@@ -45,7 +45,7 @@ jobs:
       - name: Find JAR file
         id: find-jar
         run: |
-          JAR=$(find target -name "GriefPrevention3D-*.jar" -not -name "*-javadoc.jar" -not -name "*-sources.jar" | head -n1)
+          JAR=$(find target -name "GriefPrevention3D*.jar" -not -name "*-javadoc.jar" -not -name "*-sources.jar" | head -n1)
           echo "jar=${JAR}" >> $GITHUB_OUTPUT
           echo "Found JAR: ${JAR}"
 
