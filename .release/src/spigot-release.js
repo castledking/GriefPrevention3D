@@ -156,7 +156,7 @@ async function submitToSpigotmc(page, resourceId, version, title, bbcodeBody, do
     });
   });
 
-  const displayVersion = version.startsWith('v') ? version : `v${version}`;
+  const displayVersion = version.startsWith('v') ? version.slice(1) : version;
   const versionInput = await findVisibleInput(page, 'input[name="version_string"]');
   if (versionInput) {
     await versionInput.fill(displayVersion);

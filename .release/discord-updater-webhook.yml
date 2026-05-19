@@ -64,4 +64,4 @@ embed:
 edit:
   # Message ID of the previously posted Discord message
   # Leave empty to post a new message
-  message_id: "1505082491009237004"
+  message_id: ""
