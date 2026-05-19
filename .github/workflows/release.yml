@@ -4,11 +4,6 @@ on:
   release:
     types: [published]
   workflow_dispatch:
-    inputs:
-      edit_discord:
-        description: 'Edit existing Discord message (set message_id in discord-updater-webhook.yml)'
-        required: false
-        type: boolean
 
 jobs:
   build-and-upload:
@@ -16,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-    
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -67,241 +62,19 @@ jobs:
         run: |
           VERSION=${GITHUB_REF#refs/tags/}
           RELEASE_FILE=".release/v${VERSION}.md"
-          
+
           if [ -f "$RELEASE_FILE" ]; then
             echo "Found release file: $RELEASE_FILE"
             BODY=$(tail -n +2 "$RELEASE_FILE")
-            
+
             # Update the release with the markdown content
             gh api \
               --method PATCH \
               -H "Accept: application/vnd.github.v3+json" \
               "repos/${{ github.repository }}/releases/${{ github.event.release.id }}" \
               -f body="$BODY"
-            
+
             echo "Release body updated from markdown"
           else
             echo "Warning: Release file not found at $RELEASE_FILE"
           fi
-
-  discord-notification:
-    name: Send Discord Notification
-    runs-on: ubuntu-latest
-    needs: build-and-upload
-    if: always()
-    
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Get version
-        id: version
-        run: |
-          if [ "${{ github.event_name }}" = "release" ]; then
-            VERSION=${GITHUB_REF#refs/tags/}
-            echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          else
-            VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
-            echo "version=${VERSION}" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Read Discord Webhook Config
-        id: webhook-config
-        run: |
-          python3 << 'EOF'
-          import yaml
-          import json
-          
-          with open('.release/discord-updater-webhook.yml', 'r') as f:
-              config = yaml.safe_load(f)
-          
-          # Extract webhook URL from secret
-          webhook_url = "${{ secrets.DISCORD_WEBHOOK_URL }}"
-          
-          # Build the Discord payload
-          payload = {}
-          
-          # Main message
-          if 'message' in config:
-              msg = config['message']
-              if msg.get('username'):
-                  payload['username'] = msg['username']
-              if msg.get('avatar_url'):
-                  payload['avatar_url'] = msg['avatar_url']
-              if msg.get('content'):
-                  payload['content'] = msg['content']
-          
-          # Embed
-          embed = {}
-          
-          # Read release markdown for embed content
-          VERSION = "${{ steps.version.outputs.version }}"
-          release_file = f".release/v{VERSION}.md"
-          
-          try:
-              with open(release_file, 'r') as f:
-                  lines = f.readlines()
-              
-              # First line is title (remove # prefix)
-              if lines:
-                  title = lines[0].strip().lstrip('#').strip()
-                  embed['title'] = title
-              
-              # Rest is description (skip empty lines and wiki link)
-              description_lines = []
-              import re
-              for line in lines[1:]:
-                  stripped = line.strip()
-                  if not stripped:
-                      description_lines.append('')
-                      continue
-                  if stripped.startswith('**Wiki:**'):
-                      continue
-                  # Skip top-level # headers (redundant with embed title)
-                  if re.match(r'^#\s+[^#]', stripped):
-                      continue
-                  # Convert markdown ## and ### headers to bold text with spacing
-                  header_match = re.match(r'^(#{2,3})\s+(.+)$', stripped)
-                  if header_match:
-                      description_lines.append('')
-                      description_lines.append(f'**{header_match.group(2)}**')
-                  else:
-                      description_lines.append(line.rstrip())
-
-              # Collapse 3+ consecutive blank lines to 2
-              collapsed = []
-              blank_count = 0
-              for line in description_lines:
-                  if line == '':
-                      blank_count += 1
-                      if blank_count <= 2:
-                          collapsed.append(line)
-                  else:
-                      blank_count = 0
-                      collapsed.append(line)
-
-              # Strip leading/trailing blank lines
-              while collapsed and collapsed[0] == '':
-                  collapsed.pop(0)
-              while collapsed and collapsed[-1] == '':
-                  collapsed.pop()
-
-              # Truncate description if too long (Discord limit is 4096 chars)
-              description = '\n'.join(collapsed)
-              if len(description) > 4000:
-                  description = description[:4000] + "..."
-              
-              embed['description'] = description
-          except FileNotFoundError:
-              print(f"Warning: Release file not found: {release_file}")
-              embed['title'] = f"GriefPrevention3D {VERSION}"
-              embed['description'] = "No release notes available."
-          
-          # Release URL
-          embed['url'] = f"https://github.com/${{ github.repository }}/releases/tag/{VERSION}"
-          
-          # Color
-          if 'embed' in config and 'color' in config['embed']:
-              embed['color'] = config['embed']['color']
-          
-          # Author
-          if 'embed' in config and 'author' in config['embed']:
-              author = config['embed']['author']
-              embed['author'] = {
-                  'name': author.get('name', ''),
-                  'url': author.get('url', ''),
-                  'icon_url': author.get('icon_url', '')
-              }
-          
-          # Thumbnail
-          if 'embed' in config and 'thumbnail' in config['embed']:
-              thumbnail = config['embed']['thumbnail']
-              if thumbnail.get('url'):
-                  embed['thumbnail'] = {'url': thumbnail['url']}
-          
-          # Image
-          if 'embed' in config and 'image' in config['embed']:
-              image = config['embed']['image']
-              if image.get('url'):
-                  embed['image'] = {'url': image['url']}
-          
-          # Footer
-          if 'embed' in config and 'footer' in config['embed']:
-              footer = config['embed']['footer']
-              embed['footer'] = {
-                  'text': footer.get('text', ''),
-                  'icon_url': footer.get('icon_url', '')
-              }
-          
-          # Timestamp
-          if 'embed' in config and config['embed'].get('timestamp', True):
-              from datetime import datetime
-              embed['timestamp'] = datetime.utcnow().isoformat() + 'Z'
-          
-          # Fields
-          if 'embed' in config and 'fields' in config['embed']:
-              embed['fields'] = []
-              for field in config['embed']['fields']:
-                  embed['fields'].append({
-                      'name': field.get('name', ''),
-                      'value': field.get('value', ''),
-                      'inline': field.get('inline', False)
-                  })
-          
-          payload['embeds'] = [embed]
-          
-          # Save payload to file
-          with open('${{ github.workspace }}/discord-payload.json', 'w') as f:
-              json.dump(payload, f, indent=2)
-          
-          # Check if we're editing an existing message
-          if 'edit' in config and config['edit'].get('message_id'):
-              with open('${{ github.workspace }}/discord-edit-mode.txt', 'w') as f:
-                  f.write(config['edit']['message_id'])
-          
-          print("Discord payload generated successfully")
-          EOF
-
-      - name: Send Discord Webhook
-        id: discord
-        run: |
-          WEBHOOK_URL="${{ secrets.DISCORD_WEBHOOK_URL }}"
-          
-          if [ -z "$WEBHOOK_URL" ]; then
-            echo "Error: DISCORD_WEBHOOK_URL secret not set"
-            exit 1
-          fi
-          
-          # Check if we're editing an existing message
-          if [ -f "${{ github.workspace }}/discord-edit-mode.txt" ]; then
-            MESSAGE_ID=$(cat "${{ github.workspace }}/discord-edit-mode.txt")
-            
-            if [ -n "$MESSAGE_ID" ] && [ "$MESSAGE_ID" != "" ]; then
-              echo "Editing existing Discord message: $MESSAGE_ID"
-              
-              # Extract webhook ID and token from URL
-              WEBHOOK_ID=$(echo $WEBHOOK_URL | sed -n 's|.*/webhooks/\([^/]*\)/.*|\1|p')
-              WEBHOOK_TOKEN=$(echo $WEBHOOK_URL | sed -n 's|.*/webflows/[^/]*/\([^/]*\)|\1|p')
-              
-              # PATCH to edit the message
-              curl -X PATCH \
-                "${WEBHOOK_URL}/messages/${MESSAGE_ID}" \
-                -H "Content-Type: application/json" \
-                -d @${{ github.workspace }}/discord-payload.json
-              
-              exit 0
-            fi
-          fi
-          
-          # POST new message
-          echo "Sending new Discord message"
-          curl -X POST "${WEBHOOK_URL}?wait=true" \
-            -H "Content-Type: application/json" \
-            -d @${{ github.workspace }}/discord-payload.json
-
-      - name: Upload Discord Response
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: discord-response
-          path: ${{ github.workspace }}/discord-payload.json

@@ -766,9 +766,10 @@ class PlayerEventHandler implements Listener {
 
             // if in survival claims mode, send a message about the claim basics video
             // (except for admins - assumed experts)
-            if (instance.config_claims_worldModes.get(player.getWorld()) == ClaimsMode.Survival
+            if (instance.config_claims_manualDeliveryDelaySeconds > 0
+                    && instance.config_claims_worldModes.get(player.getWorld()) == ClaimsMode.Survival
                     && !player.hasPermission("griefprevention.adminclaims") && this.dataStore.claims.size() > 10) {
-                WelcomeTask task = new WelcomeTask(player);
+                WelcomeTask task = new WelcomeTask(player.getUniqueId());
                 SchedulerUtil.runLaterEntity(instance, player, task::run,
                         instance.config_claims_manualDeliveryDelaySeconds * 20L);
             }

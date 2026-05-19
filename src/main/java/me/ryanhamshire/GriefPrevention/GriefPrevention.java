@@ -2261,7 +2261,7 @@ public class GriefPrevention extends JavaPlugin {
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.PlayerNotFound2);
                 return true;
             } else {
-                WelcomeTask task = new WelcomeTask(otherPlayer);
+                WelcomeTask task = new WelcomeTask(otherPlayer.getUniqueId());
                 task.run();
                 return true;
             }

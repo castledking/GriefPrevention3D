@@ -7,20 +7,22 @@ import org.bukkit.inventory.ItemFactory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.BookMeta;
 
+import java.util.UUID;
+
 public class WelcomeTask implements Runnable
 {
-    private final Player player;
+    private final UUID playerID;
 
-    public WelcomeTask(Player player)
+    public WelcomeTask(UUID playerID)
     {
-        this.player = player;
+        this.playerID = playerID;
     }
 
     @Override
     public void run()
     {
-        //abort if player has logged out since this task was scheduled
-        if (!this.player.isOnline()) return;
+        Player player = Bukkit.getPlayer(this.playerID);
+        if (player == null) return;
 
         //offer advice and a helpful link
         GriefPrevention.sendMessage(player, TextMode.Instr, Messages.AvoidGriefClaimLand);
