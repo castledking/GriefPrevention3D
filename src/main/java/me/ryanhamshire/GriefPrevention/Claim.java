@@ -445,7 +445,7 @@ public class Claim
         {
             case Manage -> "#manager";
             case Build -> "#build";
-            case Container -> "#inventory";
+            case Container, Inventory -> "#inventory";
             case Access -> "#access";
             case Edit -> "";
         };
@@ -946,7 +946,7 @@ public class Claim
              {
                  builders.add(entry.getKey());
              }
-             else if (entry.getValue() == ClaimPermission.Container)
+             else if (entry.getValue().isContainer())
              {
                  containers.add(entry.getKey());
              }

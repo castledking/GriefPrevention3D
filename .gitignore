@@ -71,6 +71,8 @@ tasks.xml
 .idea/copyright
 out/
 target/
+build/
+.gradle/
 *.MF
 *.name
 .idea

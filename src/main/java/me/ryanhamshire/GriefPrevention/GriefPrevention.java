@@ -4222,7 +4222,7 @@ public class GriefPrevention extends JavaPlugin {
 
         for (String container : parentContainers) {
             ClaimPermission childPerm = claim.getPermission(container.toLowerCase());
-            if (childPerm == ClaimPermission.Container) {
+            if (childPerm != null && childPerm.isContainer()) {
                 claim.dropPermission(container);
             }
         }

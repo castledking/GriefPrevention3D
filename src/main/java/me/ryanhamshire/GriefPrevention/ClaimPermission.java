@@ -43,6 +43,11 @@ public enum ClaimPermission
      */
     Container(Messages.NoContainersPermission),
     /**
+     * Legacy alias for {@link #Container}. Kept for addons compiled against older GriefPrevention APIs.
+     */
+    @Deprecated
+    Inventory(Messages.NoContainersPermission),
+    /**
      * ClaimPermission used for basic access. Command: /accesstrust
      */
     Access(Messages.NoAccessPermission);
@@ -71,8 +76,24 @@ public enum ClaimPermission
     public boolean isGrantedBy(ClaimPermission other)
     {
         if (other == null) return false;
-        // This uses declaration order to compare! If trust levels are reordered this method must be rewritten.
-        return other.ordinal() <= this.ordinal();
+        return other.getTrustLevel() <= this.getTrustLevel();
+    }
+
+    public boolean isContainer()
+    {
+        return this == Container || this == Inventory;
+    }
+
+    private int getTrustLevel()
+    {
+        return switch (this)
+        {
+            case Edit -> 0;
+            case Manage -> 1;
+            case Build -> 2;
+            case Container, Inventory -> 3;
+            case Access -> 4;
+        };
     }
 
 }
