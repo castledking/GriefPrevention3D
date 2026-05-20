@@ -79,7 +79,7 @@ Protect these additional GPExpansion dependencies:
 - `PlayerData` methods/fields for claim-block accounting: `getAccruedClaimBlocks`, `getBonusClaimBlocks`, `getTotalClaimBlocks`, `getRemainingClaimBlocks`, `setAccruedClaimBlocks`, `setBonusClaimBlocks`, `accruedClaimBlocks`, and `bonusClaimBlocks`.
 - `com.griefprevention.api.ClaimCommandAddon` and `ClaimCommandAddonRegistry` behavior, including delegation of unknown `/claim` subcommands via `ClaimCommandContext`, because GPExpansion registers `snapshot` and adds tab completions through this bridge.
 
-This does not mean every internal method must remain forever. It means the Bukkit jar needs either the same reflective surface or a first-class replacement API before those names are removed. The safest path is to add an integration smoke test that loads GPExpansion against the built Bukkit artifact and exercises `GPBridge.isAvailable`, claim lookup, claim id/corners, trust mutation, `create1x1SubdivisionAt`, shaped map editing, and `/claim snapshot` delegation.
+This does not mean every internal method must remain forever. It means the Bukkit jar needs either the same reflective surface or a first-class replacement API before those names are removed. The current branch protects GPExpansion with `AddonCompatibilitySurfaceTest` for reflected GP3D entry points and `./gradlew compileGpExpansionCompatibility`, which compiles the local GPExpansion checkout against the produced Bukkit-facing jar. The next GPExpansion guardrail should be an integration smoke test that loads GPExpansion against the built Bukkit artifact and exercises `GPBridge.isAvailable`, claim lookup, claim id/corners, trust mutation, `create1x1SubdivisionAt`, shaped map editing, and `/claim snapshot` delegation.
 
 ### GPFlags Compatibility
 
@@ -99,7 +99,29 @@ Protect these GPFlags dependencies for the Bukkit-family jar:
 - Mutable event behavior: `ClaimPermissionCheckEvent` needs `getCheckedPlayer()`, `getRequiredPermission()`, `getTriggeringEvent()`, and `setDenialReason(Supplier<String>)` with `null` accepted to allow the action. `PreventPvPEvent`, `ProtectDeathDropsEvent`, `PreventBlockBreakEvent`, and `ClaimExpirationEvent` must remain cancellable with the same semantics GPFlags expects.
 - `PreventPvPEvent#getDefender()` is used to decide whether an `AllowPvP` flag should cancel GP's PvP protection. `PreventBlockBreakEvent#getInnerEvent()` is used by the Spleef flag to access and allow the underlying `BlockBreakEvent`.
 
-The current branch adds `./gradlew checkAddonCompatibility`, which compiles GPFlags against the produced Bukkit-facing jar using the local GPFlags checkout. The next guardrail should be a smoke test that loads GP3D plus GPFlags and exercises claim flag lookup, enter/exit claim border events, resize/delete/transfer events, `ClaimPermissionCheckEvent` denial override, buy-trust commands that call `setPermission`/`saveClaim`, and the flight/trust-change path. If core extraction changes any of these internals, add deprecated Bukkit-facing wrappers first and migrate GPFlags only after the replacement API exists.
+The current branch adds `./gradlew checkAddonCompatibility`, which compiles GPFlags and GPExpansion against the produced Bukkit-facing jar using the local addon checkouts. The next GPFlags guardrail should be a smoke test that loads GP3D plus GPFlags and exercises claim flag lookup, enter/exit claim border events, resize/delete/transfer events, `ClaimPermissionCheckEvent` denial override, buy-trust commands that call `setPermission`/`saveClaim`, and the flight/trust-change path. If core extraction changes any of these internals, add deprecated Bukkit-facing wrappers first and migrate GPFlags only after the replacement API exists.
+
+### gpapiaddon-workspace Review
+
+`origin/feature/gpapiaddon-workspace` is an unrelated-root workspace snapshot, not a normal feature branch against this compatibility branch. It creates a Maven parent with `griefprevention/` and `gpapi-addon/` modules, targets Java 21 and 1.21.11 APIs, and moves the plugin source into the `griefprevention` module. Do not merge it wholesale into this branch.
+
+The branch has useful ideas worth mirroring selectively:
+
+- Claim tool interception: `ClaimToolHandler`, `ClaimToolContext`, `ClaimToolHandlerRegistry`, and `ClaimToolDispatcher`.
+- Command extension API: `ClaimCommandExtensionRegistry`, `ClaimCommandSubcommand`, `ClaimCommandMode`, and the rewritten `/claim` command dispatch.
+- Claim metadata and geometry hooks: `ClaimMetadataContainer`, `ClaimGeometry`, `ClaimGeometryRegistry`, and `ClaimCreationCustomizer`.
+- Visualization extensibility: `VisualizationStyle`, `VisualizationStyleRegistry`, `VisualizationProvider`, `BoundaryVisualizationEvent`, and the `Boundary` model.
+- The `gpapi-addon` proof-of-concept demonstrates stacked/3D subdivisions as an addon using those APIs.
+
+The branch is not compatible with the maintained addon surface as-is:
+
+- GPExpansion's current command bridge looks for `com.griefprevention.api.ClaimCommandAddon`, `ClaimCommandAddonRegistry`, and `ClaimCommandContext`. The workspace branch replaces that with `com.griefprevention.api.claimcommand.*`, so `/claim snapshot` registration would fail unless the old classes remain as wrappers.
+- GPExpansion's shaped-map bridge reflects `com.griefprevention.geometry.OrthogonalPolygon`, `OrthogonalPoint2i`, and `com.griefprevention.claims.editor.ClaimEditorSkeleton`. Those classes are not present in the workspace jar.
+- GPExpansion expects shaped/3D claim methods and config fields such as `Claim#is3D`, `containsY`, `getMinY`, `getMaxY`, `isShaped`, `getBoundaryPolygon`, `setOwnerID`, `getSubclaims`/`getChildren`, `DataStore#updateShapedClaim`, `config_claims_allowShapedClaims`, `config_claims_shapedMinWidth`, and economy claim-block fields. The workspace jar does not expose those contracts.
+- GPFlags looks mostly closer to compatible: the workspace jar keeps `GriefPrevention.instance`, `dataStore`, `Claim.parent`, `Claim.children`, `PlayerData.lastClaim`, `PlayerData.ignoreClaims`, `ClaimPermission.Inventory`, the permission-check events, and the legacy claim events GPFlags uses. It still needs the maintained-addon compile guardrail before any code is mirrored.
+- The recoded `PlayerEventHandler` directly imports modern APIs such as `Tag`, `BlockData`, `Waterlogged`, `PlayerProfile`, `CopperGolem`, `PlayerSignOpenEvent`, `PlayerTakeLecternBookEvent`, and uses Java 9+ helpers such as `List.of`, so it is not directly usable for the Java 8 / 1.8 Bukkit-family target.
+
+Selective mirror rule: copy API shape and small adapter concepts, not the workspace layout or recoded handlers. Any port must preserve the old Bukkit-facing classes first, add wrappers from old APIs to new registries, and pass `checkAddonCompatibility` plus `AddonCompatibilitySurfaceTest` before replacing current command, claim-tool, visualization, or geometry internals. `AddonCompatibilitySurfaceTest` protects GPExpansion's reflected command, shaped-claim, claim, datastore, event, permission, and visualization entry points.
 
 ## Bukkit Initial Direction
 
@@ -112,6 +134,8 @@ Do not start by trying to compile everything as Java 8. First make the codebase 
 5. Move classes that directly import modern-only APIs behind factories that use runtime class probes.
 6. Add a legacy smoke-test target that attempts plugin class loading against an old Bukkit/Spigot API.
 
+Current branch state: main sources still target Java 21, but `src/compat/legacy/java` now compiles with `legacyTargetJavaVersion=8` through `./gradlew checkLegacyCompatibility`. Its compile classpath uses `legacyBukkitVersion=1.8.8`, so legacy adapters fail fast if they reference APIs missing from old Bukkit. Use that source set for new legacy-server adapters as modern-only Bukkit/Paper calls are extracted behind compatibility boundaries.
+
 ## Proposed Compatibility Boundaries
 
 - `ServerPlatform`: detect Bukkit/Spigot/Paper/Folia and Minecraft API features.
@@ -122,6 +146,12 @@ Do not start by trying to compile everything as Java 8. First make the codebase 
 - `VisualizationCompat`: select legacy fake-block visualization on old servers and block-display/glowing visualization on modern servers.
 - `SchedulerCompat`: keep Folia reflection support while avoiding hard loads on old Bukkit.
 - `ProfileBanCompat`: hide `BanList<PlayerProfile>` and modern profile APIs.
+
+First adapter slice: `WorldHeightCompat` lives in main source, with `LegacyWorldHeightCompat` in `src/compat/legacy/java` returning min Y `0` and using old Bukkit `World#getMaxHeight()`, and `ModernWorldHeightCompat` in `src/compat/modern/java` using modern `World#getMinHeight()`/`getMaxHeight()`. `WorldHeightCompatProvider` selects the packaged implementation by runtime feature detection and has a Maven-safe fallback for builds that do not include Gradle compat source sets. `GriefPrevention#getWorldMinY` and `getWorldMaxY` now route through this provider. Production world-height access now goes through those helpers; direct Bukkit height calls are isolated to the compat provider and compat implementations. `./gradlew checkLegacyCompatibility` includes `checkWorldHeightCompatUsage` to keep that boundary from regressing.
+
+First material slice: `MaterialCompat` resolves Bukkit `Material` values by string name and skips names missing on the running server. `Claim` now builds its farm-crop trust whitelist through `MaterialCompat.availableSet(...)`, including both old names such as `CROPS`, `CARROT`, `POTATO`, and `NETHER_WARTS` and modern names such as `CARROTS`, `POTATOES`, `NETHER_WART`, `GLOW_BERRIES`, and `CAVE_VINES`. `AutoExtendClaimTask` also uses name-based add/remove helpers for its manually maintained player-block lists, including old aliases such as `WORKBENCH`, `PORTAL`, `DIODE_BLOCK_ON`, `WEB`, and `SKULL`. This avoids direct static references to modern material constants while keeping modern behavior when those materials exist.
+
+First tag slice: `MaterialTagCompat` resolves Bukkit `Tag` fields reflectively by name and returns an empty set when the runtime does not have Bukkit tags. It avoids initializing Bukkit tags when no server registry is available, which keeps ordinary unit tests from poisoning `org.bukkit.Tag` initialization. `AutoExtendClaimTask` now uses this helper for its material-tag groups instead of importing `org.bukkit.Tag` directly. `BlockEventHandler` also uses it for saplings, fire, and infiniburn checks, with material-name fallbacks for legacy saplings, fire blocks, and trash-block initialization. `FakeBlockVisualization` uses it for fence/sign/wall transparency checks. Legacy servers will still need more fallback material-name lists for behavior parity where tags do not exist, but this removes more hard class-linkage points from the auto-extend, block-event, and fake-block visualization paths.
 
 ## Future Mod Loader Track
 

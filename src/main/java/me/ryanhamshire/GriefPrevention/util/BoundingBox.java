@@ -2,6 +2,7 @@ package me.ryanhamshire.GriefPrevention.util;
 
 import com.griefprevention.util.IntVector;
 import me.ryanhamshire.GriefPrevention.Claim;
+import me.ryanhamshire.GriefPrevention.GriefPrevention;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -185,7 +186,7 @@ public class BoundingBox implements Cloneable
         // For 3D claims, preserve their exact Y boundaries
         // For 2D claims, extend to world max height
         if (!claim.is3D()) {
-            this.maxY = Objects.requireNonNull(claim.getLesserBoundaryCorner().getWorld()).getMaxHeight();
+            this.maxY = GriefPrevention.getWorldMaxY(Objects.requireNonNull(claim.getLesserBoundaryCorner().getWorld()));
         }
     }
 

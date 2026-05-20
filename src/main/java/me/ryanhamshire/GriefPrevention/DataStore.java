@@ -1374,7 +1374,7 @@ public abstract class DataStore {
 
         int smallx, bigx, smally, bigy, smallz, bigz;
 
-        int worldMinY = world.getMinHeight();
+        int worldMinY = GriefPrevention.getWorldMinY(world);
         // Only apply max depth clamp to non-3D claims. 3D claims have explicit Y bounds
         // set by player clicks and should not be forced toward the max depth setting.
         if (!is3D) {
@@ -1419,7 +1419,7 @@ public abstract class DataStore {
             }
 
             int parentBottomY = lesser.getBlockY();
-            int worldMaxY = world.getMaxHeight();
+            int worldMaxY = GriefPrevention.getWorldMaxY(world);
             boolean spansFullHeight = (smally == parentBottomY) && (bigy == worldMaxY);
             autoDetectIs3D = !spansFullHeight;
 
@@ -1788,7 +1788,7 @@ public abstract class DataStore {
         World world = Objects.requireNonNull(claim.getLesserBoundaryCorner().getWorld());
         // Cap depth to maximum depth allowed by the configuration.
         newDepth = Math.max(newDepth, GriefPrevention.instance.getMaxDepthForWorld(world));
-        newDepth = Math.max(newDepth, world.getMinHeight());
+        newDepth = Math.max(newDepth, GriefPrevention.getWorldMinY(world));
 
         return newDepth;
     }
@@ -2049,7 +2049,7 @@ public abstract class DataStore {
         }
         // For 2D claims, set lesser Y to world minimum (ground extension logic)
         if (!newClaim.is3D() && world != null) {
-            newClaim.lesserBoundaryCorner.setY(world.getMinHeight());
+            newClaim.lesserBoundaryCorner.setY(GriefPrevention.getWorldMinY(world));
         }
         // Ensure resized subdivisions stay inside parent bounds and avoid sibling
         // overlap.

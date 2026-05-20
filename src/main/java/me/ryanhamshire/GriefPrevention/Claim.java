@@ -21,6 +21,7 @@ package me.ryanhamshire.GriefPrevention;
 import com.griefprevention.geometry.OrthogonalEdge2i;
 import com.griefprevention.geometry.OrthogonalPoint2i;
 import com.griefprevention.geometry.OrthogonalPolygon;
+import com.griefprevention.compat.MaterialCompat;
 import me.ryanhamshire.GriefPrevention.events.ClaimPermissionCheckEvent;
 import me.ryanhamshire.GriefPrevention.util.BoundingBox;
 import org.bukkit.Bukkit;
@@ -189,7 +190,7 @@ public class Claim
         }
         // For 2D claims, set lesser Y to world minimum (ground extension logic)
         if (!this.is3D && this.lesserBoundaryCorner.getWorld() != null) {
-            this.lesserBoundaryCorner.setY(this.lesserBoundaryCorner.getWorld().getMinHeight());
+            this.lesserBoundaryCorner.setY(GriefPrevention.getWorldMinY(this.lesserBoundaryCorner.getWorld()));
         }
 
         //owner
@@ -416,18 +417,22 @@ public class Claim
          return supplier != null ? supplier.get() : null;
      }
  
-     private static final Set<Material> PLACEABLE_FARMING_BLOCKS = Set.of(
-             Material.PUMPKIN_STEM,
-             Material.WHEAT,
-             Material.MELON_STEM,
-             Material.CARROTS,
-             Material.POTATOES,
-             Material.NETHER_WART,
-             Material.BEETROOTS,
-             Material.COCOA,
-             Material.GLOW_BERRIES,
-             Material.CAVE_VINES,
-             Material.CAVE_VINES_PLANT);
+     private static final Set<Material> PLACEABLE_FARMING_BLOCKS = MaterialCompat.availableSet(
+             "PUMPKIN_STEM",
+             "WHEAT",
+             "CROPS",
+             "MELON_STEM",
+             "CARROTS",
+             "CARROT",
+             "POTATOES",
+             "POTATO",
+             "NETHER_WART",
+             "NETHER_WARTS",
+             "BEETROOTS",
+             "COCOA",
+             "GLOW_BERRIES",
+             "CAVE_VINES",
+             "CAVE_VINES_PLANT");
 
     public static @NotNull String normalizeIdentifier(@Nullable String identifier)
     {
@@ -994,6 +999,40 @@ public class Claim
          return this.ownerID;
      }
 
+     /**
+      * Set the direct owner UUID for this claim.
+      * <p>
+      * Kept as a small public wrapper for addons that use the classic GP claim surface by reflection.
+      * Ownership changes that need datastore bookkeeping should still go through {@link DataStore#changeClaimOwner(Claim, UUID)}.
+      * </p>
+      *
+      * @param ownerID the new owner UUID, or null for an admin claim
+      */
+     public void setOwnerID(UUID ownerID)
+     {
+         this.ownerID = ownerID;
+     }
+
+     /**
+      * Returns this claim's child subdivisions.
+      *
+      * @return mutable child subdivision list, matching the historical public field behavior
+      */
+     public ArrayList<Claim> getChildren()
+     {
+         return this.children;
+     }
+
+     /**
+      * Legacy synonym for {@link #getChildren()} used by older addons.
+      *
+      * @return mutable child subdivision list
+      */
+     public ArrayList<Claim> getSubclaims()
+     {
+         return this.children;
+     }
+
      public long getExpirationDate()
      {
          return this.expirationDate;
@@ -1033,8 +1072,8 @@ public class Claim
                      return false;
                  }
              } else if (this.parent == null) { // Only top-level claims span full height
-                 int worldMinY = location.getWorld().getMinHeight();
-                 int worldMaxY = location.getWorld().getMaxHeight();
+                 int worldMinY = GriefPrevention.getWorldMinY(location.getWorld());
+                 int worldMaxY = GriefPrevention.getWorldMaxY(location.getWorld());
                  if (y < worldMinY || y > worldMaxY) {
                      return false;
                  }
@@ -1083,7 +1122,7 @@ public class Claim
         }
         // For non-3D claims, use world boundaries
         World world = this.lesserBoundaryCorner.getWorld();
-        return world != null ? world.getMinHeight() : 0;
+        return world != null ? GriefPrevention.getWorldMinY(world) : 0;
     }
 
     /**
@@ -1102,7 +1141,7 @@ public class Claim
         }
         // For non-3D claims, use world boundaries
         World world = this.lesserBoundaryCorner.getWorld();
-        return world != null ? world.getMaxHeight() : 256;
+        return world != null ? GriefPrevention.getWorldMaxY(world) : 256;
     }
 
     /**

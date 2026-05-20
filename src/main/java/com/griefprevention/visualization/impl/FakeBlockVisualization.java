@@ -1,5 +1,6 @@
 package com.griefprevention.visualization.impl;
 
+import com.griefprevention.compat.MaterialTagCompat;
 import com.griefprevention.util.IntVector;
 import com.griefprevention.visualization.BlockBoundaryVisualization;
 import com.griefprevention.visualization.Boundary;
@@ -7,9 +8,9 @@ import com.griefprevention.visualization.BoundaryVisualization;
 import com.griefprevention.visualization.VisualizationType;
 import java.util.function.Consumer;
 import me.ryanhamshire.GriefPrevention.Claim;
+import me.ryanhamshire.GriefPrevention.GriefPrevention;
 import me.ryanhamshire.GriefPrevention.util.BoundingBox;
 import org.bukkit.Material;
-import org.bukkit.Tag;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -119,8 +120,8 @@ public class FakeBlockVisualization extends BlockBoundaryVisualization {
         int baseX = this.visualizeFrom.x();
         int baseZ = this.visualizeFrom.z();
         BoundingBox displayZoneArea = new BoundingBox(
-            new IntVector(baseX - displayZoneRadius, world.getMinHeight(), baseZ - displayZoneRadius),
-            new IntVector(baseX + displayZoneRadius, world.getMaxHeight(), baseZ + displayZoneRadius)
+            new IntVector(baseX - displayZoneRadius, GriefPrevention.getWorldMinY(world), baseZ - displayZoneRadius),
+            new IntVector(baseX + displayZoneRadius, GriefPrevention.getWorldMaxY(world), baseZ + displayZoneRadius)
         );
         BoundingBox displayZone = displayZoneArea.intersection(area);
         if (displayZone == null) return;
@@ -194,8 +195,8 @@ public class FakeBlockVisualization extends BlockBoundaryVisualization {
         int baseX = this.visualizeFrom.x();
         int baseZ = this.visualizeFrom.z();
         // For 3D subdivisions, ensure we include the entire claim's vertical span so both top and bottom are shown.
-        int worldMinY = world.getMinHeight();
-        int worldMaxY = world.getMaxHeight();
+        int worldMinY = GriefPrevention.getWorldMinY(world);
+        int worldMaxY = GriefPrevention.getWorldMaxY(world);
         int minShowY = Math.max(worldMinY, claimMinY - 1);
         int maxShowY = Math.min(worldMaxY, claimMaxY + 1);
         BoundingBox displayZoneArea = new BoundingBox(
@@ -215,7 +216,7 @@ public class FakeBlockVisualization extends BlockBoundaryVisualization {
         // We only render at the top and bottom Y boundaries for 3D subdivisions.
         int[] yLevels = new int[] { claimMinY, claimMaxY };
         for (int y : yLevels) {
-            if (y < world.getMinHeight() || y > world.getMaxHeight()) continue;
+            if (y < GriefPrevention.getWorldMinY(world) || y > GriefPrevention.getWorldMaxY(world)) continue;
 
             // Short directional side markers next to corners only (no full ring)
             if (area.getLength() > 2) {
@@ -246,7 +247,7 @@ public class FakeBlockVisualization extends BlockBoundaryVisualization {
             } else {
                 continue; // shouldn't happen, but guards future changes
             }
-            if (verticalY >= world.getMinHeight() && verticalY <= world.getMaxHeight()) {
+            if (verticalY >= GriefPrevention.getWorldMinY(world) && verticalY <= GriefPrevention.getWorldMaxY(world)) {
                 // reuse exact-placement white wool consumer for 3D sides
                 addDisplayed3D(displayZone, new IntVector(area.getMinX(), verticalY, area.getMaxZ()), addSide);
                 addDisplayed3D(displayZone, new IntVector(area.getMaxX(), verticalY, area.getMaxZ()), addSide);
@@ -342,8 +343,8 @@ public class FakeBlockVisualization extends BlockBoundaryVisualization {
         BlockFace direction = (isTransparent(block)) ? BlockFace.DOWN : BlockFace.UP;
 
         while (
-            block.getY() >= world.getMinHeight() &&
-            block.getY() < world.getMaxHeight() - 1 &&
+            block.getY() >= GriefPrevention.getWorldMinY(world) &&
+            block.getY() < GriefPrevention.getWorldMaxY(world) - 1 &&
             (!isTransparent(block.getRelative(BlockFace.UP)) || isTransparent(block))
         ) {
             block = block.getRelative(direction);
@@ -373,11 +374,11 @@ public class FakeBlockVisualization extends BlockBoundaryVisualization {
 
         if (
             blockMaterial.isAir() ||
-            Tag.FENCES.isTagged(blockMaterial) ||
-            Tag.FENCE_GATES.isTagged(blockMaterial) ||
-            Tag.SIGNS.isTagged(blockMaterial) ||
-            Tag.WALLS.isTagged(blockMaterial) ||
-            Tag.WALL_SIGNS.isTagged(blockMaterial)
+            MaterialTagCompat.isTagged("FENCES", blockMaterial) ||
+            MaterialTagCompat.isTagged("FENCE_GATES", blockMaterial) ||
+            MaterialTagCompat.isTagged("SIGNS", blockMaterial) ||
+            MaterialTagCompat.isTagged("WALLS", blockMaterial) ||
+            MaterialTagCompat.isTagged("WALL_SIGNS", blockMaterial)
         ) return true;
 
         @SuppressWarnings("deprecation")

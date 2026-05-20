@@ -18,6 +18,8 @@
 
 package me.ryanhamshire.GriefPrevention;
 
+import com.griefprevention.compat.MaterialCompat;
+import com.griefprevention.compat.MaterialTagCompat;
 import com.griefprevention.visualization.BoundaryVisualization;
 import com.griefprevention.visualization.VisualizationType;
 import me.ryanhamshire.GriefPrevention.util.BoundingBox;
@@ -28,7 +30,6 @@ import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
-import org.bukkit.Tag;
 import org.bukkit.World;
 import org.bukkit.World.Environment;
 import org.bukkit.block.Block;
@@ -135,23 +136,41 @@ public class BlockEventHandler implements Listener
     }
 
 
+    private static final Set<Material> FIRE_BLOCKS = MaterialCompat.availableSet("FIRE", "SOUL_FIRE");
+    private static final Set<Material> SAPLING_BLOCKS = MaterialCompat.availableSet(
+            "SAPLING",
+            "OAK_SAPLING",
+            "SPRUCE_SAPLING",
+            "BIRCH_SAPLING",
+            "JUNGLE_SAPLING",
+            "ACACIA_SAPLING",
+            "DARK_OAK_SAPLING",
+            "CHERRY_SAPLING",
+            "MANGROVE_PROPAGULE");
+    private static final Set<Material> INFINIBURN_FALLBACK_BLOCKS = MaterialCompat.availableSet(
+            "NETHERRACK",
+            "MAGMA_BLOCK",
+            "BEDROCK");
     protected static final Set<Material> TRASH_BLOCKS;
 
     static
     {
         //create the list of blocks which will not trigger a warning when they're placed outside of land claims
         TRASH_BLOCKS = new HashSet<>();
-        TRASH_BLOCKS.add(Material.COBBLESTONE);
-        TRASH_BLOCKS.add(Material.TORCH);
-        TRASH_BLOCKS.add(Material.DIRT);
-        TRASH_BLOCKS.addAll(Tag.SAPLINGS.getValues());
-        TRASH_BLOCKS.add(Material.GRAVEL);
-        TRASH_BLOCKS.add(Material.SAND);
-        TRASH_BLOCKS.add(Material.SANDSTONE);
-        TRASH_BLOCKS.add(Material.TNT);
-        TRASH_BLOCKS.add(Material.CRAFTING_TABLE);
-        TRASH_BLOCKS.add(Material.TUFF);
-        TRASH_BLOCKS.add(Material.COBBLED_DEEPSLATE);
+        TRASH_BLOCKS.addAll(MaterialCompat.availableSet(
+                "COBBLESTONE",
+                "TORCH",
+                "DIRT",
+                "GRAVEL",
+                "SAND",
+                "SANDSTONE",
+                "TNT",
+                "CRAFTING_TABLE",
+                "WORKBENCH",
+                "TUFF",
+                "COBBLED_DEEPSLATE"));
+        TRASH_BLOCKS.addAll(SAPLING_BLOCKS);
+        TRASH_BLOCKS.addAll(MaterialTagCompat.values("SAPLINGS"));
     }
 
     //convenience reference to singleton datastore
@@ -162,6 +181,16 @@ public class BlockEventHandler implements Listener
     {
         this.dataStore = dataStore;
 
+    }
+
+    private static boolean isFire(@NotNull Material material)
+    {
+        return FIRE_BLOCKS.contains(material) || MaterialTagCompat.isTagged("FIRE", material);
+    }
+
+    private static boolean isSapling(@NotNull Material material)
+    {
+        return SAPLING_BLOCKS.contains(material) || MaterialTagCompat.isTagged("SAPLINGS", material);
     }
 
     //when a player breaks a block...
@@ -341,7 +370,7 @@ public class BlockEventHandler implements Listener
         //FEATURE: limit fire placement, to prevent PvP-by-fire
 
         //if placed block is fire and pvp is off, apply rules for proximity to other players
-        if (Tag.FIRE.isTagged(block.getType()) && !doesAllowFireProximityInWorld(block.getWorld()))
+        if (isFire(block.getType()) && !doesAllowFireProximityInWorld(block.getWorld()))
         {
             List<Player> players = block.getWorld().getPlayers();
             for (Player otherPlayer : players)
@@ -514,7 +543,7 @@ public class BlockEventHandler implements Listener
         }
 
         //FEATURE: limit wilderness tree planting to grass, or dirt with more blocks beneath it
-        else if (Tag.SAPLINGS.isTagged(block.getType()) && GriefPrevention.instance.config_blockSkyTrees && GriefPrevention.instance.claimsEnabledForWorld(player.getWorld()))
+        else if (isSapling(block.getType()) && GriefPrevention.instance.config_blockSkyTrees && GriefPrevention.instance.claimsEnabledForWorld(player.getWorld()))
         {
             Block earthBlock = placeEvent.getBlockAgainst();
             if (earthBlock.getType() != Material.SHORT_GRASS)
@@ -1081,7 +1110,7 @@ public class BlockEventHandler implements Listener
         if (!GriefPrevention.instance.claimsEnabledForWorld(event.getBlock().getWorld())) return;
 
         // Trees are handled by the StructureGrowEvent handler.
-        if (Tag.SAPLINGS.isTagged(event.getBlock().getType())) return;
+        if (isSapling(event.getBlock().getType())) return;
 
         onMultiBlockGrow(
                 event.getPlayer(),
@@ -1217,14 +1246,15 @@ public class BlockEventHandler implements Listener
         if (fire.getType() != Material.FIRE) return;
 
         Block underBlock = fire.getRelative(BlockFace.DOWN);
-        Tag<Material> infiniburn = switch (fire.getWorld().getEnvironment())
+        String infiniburnTag = switch (fire.getWorld().getEnvironment())
                 {
-                    case NETHER -> Tag.INFINIBURN_NETHER;
-                    case THE_END -> Tag.INFINIBURN_END;
-                    default -> Tag.INFINIBURN_OVERWORLD;
+                    case NETHER -> "INFINIBURN_NETHER";
+                    case THE_END -> "INFINIBURN_END";
+                    default -> "INFINIBURN_OVERWORLD";
                 };
 
-        if (!infiniburn.isTagged(underBlock.getType()))
+        if (!MaterialTagCompat.isTagged(infiniburnTag, underBlock.getType())
+                && !INFINIBURN_FALLBACK_BLOCKS.contains(underBlock.getType()))
         {
             fire.setType(Material.AIR);
         }

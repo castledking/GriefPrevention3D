@@ -9,9 +9,13 @@ version = providers.gradleProperty("version").get()
 
 val minecraftVersion = providers.gradleProperty("minecraftVersion").get()
 val paperMinecraftVersion = providers.gradleProperty("paperMinecraftVersion").get()
+val legacyBukkitVersion = providers.gradleProperty("legacyBukkitVersion").get()
 val targetJavaVersion = providers.gradleProperty("targetJavaVersion").get().toInt()
+val legacyTargetJavaVersion = providers.gradleProperty("legacyTargetJavaVersion").get().toInt()
 val gpFlagsRepo = providers.gradleProperty("gpFlagsRepo")
     .orElse("/mnt/storage/repos/GPFlags")
+val gpExpansionRepo = providers.gradleProperty("gpExpansionRepo")
+    .orElse("/mnt/storage/repos/GPExpansion")
 
 repositories {
     mavenCentral()
@@ -37,7 +41,7 @@ sourceSets {
     create("compatLegacy") {
         java.srcDir("src/compat/legacy/java")
         resources.srcDir("src/compat/legacy/resources")
-        compileClasspath += main.output + main.compileClasspath
+        compileClasspath += main.output
         runtimeClasspath += output + compileClasspath
     }
 
@@ -59,10 +63,12 @@ val gpFlagsCompatCompileClasspath by configurations.creating {
     isCanBeConsumed = false
 }
 
+val gpExpansionCompatCompileClasspath by configurations.creating {
+    isCanBeResolved = true
+    isCanBeConsumed = false
+}
+
 configurations {
-    named("compatLegacyCompileOnly") {
-        extendsFrom(compileOnly.get())
-    }
     named("compatModernCompileOnly") {
         extendsFrom(compileOnly.get())
     }
@@ -74,6 +80,9 @@ dependencies {
     compileOnly("org.jetbrains:annotations:26.0.2")
     compileOnly("com.github.MilkBowl:VaultAPI:1.7.1")
     compileOnly("me.clip:placeholderapi:2.11.6")
+
+    add("compatLegacyCompileOnly", "org.bukkit:bukkit:$legacyBukkitVersion-R0.1-SNAPSHOT")
+    add("compatLegacyCompileOnly", "org.jetbrains:annotations:26.0.2")
 
     testImplementation("org.spigotmc:spigot-api:$minecraftVersion-R0.1-SNAPSHOT")
     testImplementation("org.junit.jupiter:junit-jupiter:5.12.1")
@@ -95,12 +104,28 @@ dependencies {
     gpFlagsCompatCompileClasspath("org.apache.maven:maven-artifact:3.9.8")
     gpFlagsCompatCompileClasspath("com.github.PlaceholderAPI:PlaceholderAPI:2.11.5")
     gpFlagsCompatCompileClasspath("org.bstats:bstats-bukkit:3.0.2")
+
+    gpExpansionCompatCompileClasspath("io.papermc.paper:paper-api:26.1.2.build.18-alpha")
+    gpExpansionCompatCompileClasspath("com.github.MilkBowl:VaultAPI:1.7") {
+        exclude(group = "org.bukkit", module = "bukkit")
+    }
+    gpExpansionCompatCompileClasspath("net.kyori:adventure-text-minimessage:4.17.0")
+    gpExpansionCompatCompileClasspath("net.kyori:adventure-text-serializer-legacy:4.17.0")
+    gpExpansionCompatCompileClasspath("net.kyori:adventure-text-serializer-plain:4.17.0")
+    gpExpansionCompatCompileClasspath("me.clip:placeholderapi:2.11.6")
+    gpExpansionCompatCompileClasspath("commons-lang:commons-lang:2.6")
+    gpExpansionCompatCompileClasspath("org.jetbrains:annotations:26.0.2")
 }
 
 tasks {
     withType<JavaCompile>().configureEach {
         options.encoding = "UTF-8"
         options.release.set(targetJavaVersion)
+    }
+
+    named<JavaCompile>("compileCompatLegacyJava") {
+        options.release.set(legacyTargetJavaVersion)
+        options.compilerArgs.add("-Xlint:-options")
     }
 
     processResources {
@@ -150,10 +175,77 @@ tasks {
         options.release.set(9)
     }
 
+    val compileGpExpansionCompatibility by registering(JavaCompile::class) {
+        group = "verification"
+        description = "Compiles GPExpansion against this checkout's Bukkit-facing API."
+
+        val repoDir = file(gpExpansionRepo.get())
+        val sourceDir = repoDir.resolve("src/main/java")
+
+        onlyIf {
+            if (!sourceDir.isDirectory) {
+                logger.lifecycle("Skipping GPExpansion compatibility check; source directory not found: $sourceDir")
+                false
+            } else {
+                true
+            }
+        }
+
+        dependsOn(jar)
+        source(sourceDir)
+        include("**/*.java")
+        destinationDirectory.set(layout.buildDirectory.dir("compat-check/gpexpansion/classes"))
+        classpath = files(jar.flatMap { it.archiveFile }) + gpExpansionCompatCompileClasspath
+        options.encoding = "UTF-8"
+        options.release.set(21)
+    }
+
     register("checkAddonCompatibility") {
         group = "verification"
         description = "Runs local addon compatibility checks for maintained GP3D addons."
-        dependsOn(compileGpFlagsCompatibility)
+        dependsOn(compileGpFlagsCompatibility, compileGpExpansionCompatibility)
+    }
+
+    val checkWorldHeightCompatUsage by registering {
+        group = "verification"
+        description = "Ensures direct Bukkit world-height calls stay isolated to the compat layer."
+
+        doLast {
+            val allowedFiles = setOf(
+                file("src/main/java/com/griefprevention/compat/WorldHeightCompatProvider.java").canonicalFile,
+                file("src/compat/legacy/java/com/griefprevention/compat/legacy/LegacyWorldHeightCompat.java").canonicalFile,
+                file("src/compat/modern/java/com/griefprevention/compat/modern/ModernWorldHeightCompat.java").canonicalFile
+            )
+            val sourceFiles = files(
+                fileTree("src/main/java") { include("**/*.java") },
+                fileTree("src/compat") { include("**/*.java") }
+            )
+
+            val violations = sourceFiles.files
+                .filter { it.isFile && it.canonicalFile !in allowedFiles }
+                .flatMap { sourceFile ->
+                    sourceFile.readLines().mapIndexedNotNull { index, line ->
+                        if (line.contains(".getMinHeight(") || line.contains(".getMaxHeight(")) {
+                            "${sourceFile.relativeTo(projectDir)}:${index + 1}: ${line.trim()}"
+                        } else {
+                            null
+                        }
+                    }
+                }
+
+            if (violations.isNotEmpty()) {
+                throw GradleException(
+                    "Use GriefPrevention.getWorldMinY/getWorldMaxY instead of direct Bukkit world-height calls:\n" +
+                        violations.joinToString("\n")
+                )
+            }
+        }
+    }
+
+    register("checkLegacyCompatibility") {
+        group = "verification"
+        description = "Compiles legacy-server compatibility sources with the configured legacy Java target."
+        dependsOn(named("compileCompatLegacyJava"), checkWorldHeightCompatUsage)
     }
 }
 

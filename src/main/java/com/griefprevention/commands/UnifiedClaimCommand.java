@@ -172,7 +172,7 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
         }
 
         Location lesser = new Location(world, lesserX, playerLoc.getY(), lesserZ);
-        Location greater = new Location(world, greaterX, world.getMaxHeight(), greaterZ);
+        Location greater = new Location(world, greaterX, GriefPrevention.getWorldMaxY(world), greaterZ);
 
         UUID ownerId = (playerData.shovelMode == ShovelMode.Admin || playerData.shovelMode == ShovelMode.Admin3D) ? null : player.getUniqueId();
 

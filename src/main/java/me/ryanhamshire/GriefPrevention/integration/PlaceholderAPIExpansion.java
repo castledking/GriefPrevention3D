@@ -97,8 +97,8 @@ public class PlaceholderAPIExpansion extends PlaceholderExpansion
         int maxX = Math.max(claim.getLesserBoundaryCorner().getBlockX(), claim.getGreaterBoundaryCorner().getBlockX());
         int minZ = Math.min(claim.getLesserBoundaryCorner().getBlockZ(), claim.getGreaterBoundaryCorner().getBlockZ());
         int maxZ = Math.max(claim.getLesserBoundaryCorner().getBlockZ(), claim.getGreaterBoundaryCorner().getBlockZ());
-        int minY = claim.is3D() ? Math.min(claim.getLesserBoundaryCorner().getBlockY(), claim.getGreaterBoundaryCorner().getBlockY()) : world.getMinHeight();
-        int maxY = claim.is3D() ? Math.max(claim.getLesserBoundaryCorner().getBlockY(), claim.getGreaterBoundaryCorner().getBlockY()) : world.getMaxHeight();
+        int minY = claim.is3D() ? Math.min(claim.getLesserBoundaryCorner().getBlockY(), claim.getGreaterBoundaryCorner().getBlockY()) : GriefPrevention.getWorldMinY(world);
+        int maxY = claim.is3D() ? Math.max(claim.getLesserBoundaryCorner().getBlockY(), claim.getGreaterBoundaryCorner().getBlockY()) : GriefPrevention.getWorldMaxY(world);
 
         return x >= minX && x <= maxX && y >= minY && y <= maxY && z >= minZ && z <= maxZ;
     }

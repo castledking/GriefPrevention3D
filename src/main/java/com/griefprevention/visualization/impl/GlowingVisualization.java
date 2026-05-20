@@ -363,7 +363,7 @@ public class GlowingVisualization extends FakeBlockVisualization {
         }
 
         // Ensure Y is within world bounds
-        y = Math.max(world.getMinHeight(), Math.min(world.getMaxHeight(), y));
+        y = Math.max(GriefPrevention.getWorldMinY(world), Math.min(GriefPrevention.getWorldMaxY(world), y));
         
         // O(1) duplicate check - reserve key immediately under Track lock, capture generation
         long posKey = key(pos.x(), y, pos.z());

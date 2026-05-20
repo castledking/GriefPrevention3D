@@ -2022,7 +2022,7 @@ class PlayerEventHandler implements Listener {
                         if (playerData.shovelMode == ShovelMode.Subdivide) {
                             // 2D mode: span full height
                             minY = playerData.claimSubdividing.getLesserBoundaryCorner().getBlockY();
-                            maxY = player.getWorld().getMaxHeight();
+                            maxY = GriefPrevention.getWorldMaxY(player.getWorld());
                         } else {
                             // 3D mode: use clicked Y coordinates
                             minY = Math.min(y1, y2);
@@ -2837,7 +2837,7 @@ class PlayerEventHandler implements Listener {
                                 // 3D.
                                 // This matches default GP behavior where 2D subclaims ignore height.
                                 int parentMinY = playerData.claimSubdividing.getLesserBoundaryCorner().getBlockY();
-                                int worldMaxY = player.getWorld().getMaxHeight();
+                                int worldMaxY = GriefPrevention.getWorldMaxY(player.getWorld());
 
                                 minY = parentMinY;
                                 maxY = worldMaxY;
@@ -4998,7 +4998,7 @@ class PlayerEventHandler implements Listener {
 
                                 if (maxY == minY) {
                                     int aboveY = yi + 1;
-                                    if (aboveY <= world.getMaxHeight()) {
+                                    if (aboveY <= GriefPrevention.getWorldMaxY(world)) {
                                         candidate = evaluateCornerCandidate(
                                                 eyePos, dir, maxDistance, threshold, current,
                                                 xi + 0.5, aboveY + 0.5, zi + 0.5,
@@ -5010,7 +5010,7 @@ class PlayerEventHandler implements Listener {
                                     }
 
                                     int belowY = yi - 1;
-                                    if (belowY >= world.getMinHeight()) {
+                                    if (belowY >= GriefPrevention.getWorldMinY(world)) {
                                         candidate = evaluateCornerCandidate(
                                                 eyePos, dir, maxDistance, threshold, current,
                                                 xi + 0.5, belowY + 0.5, zi + 0.5,
@@ -5260,8 +5260,8 @@ class PlayerEventHandler implements Listener {
         World world = clickedBlock.getWorld();
         int centerX = clickedBlock.getX();
         int centerZ = clickedBlock.getZ();
-        int minY = world.getMinHeight();
-        int maxY = world.getMaxHeight();
+        int minY = GriefPrevention.getWorldMinY(world);
+        int maxY = GriefPrevention.getWorldMaxY(world);
         int radius = 5;
         if (playerData.shovelMode == ShovelMode.RestoreNatureFill) {
             radius = Math.max(1, Math.min(playerData.fillRadius, 10));

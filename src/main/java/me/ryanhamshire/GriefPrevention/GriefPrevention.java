@@ -34,6 +34,7 @@ import com.griefprevention.claims.editor.ClaimEditorSession;
 import com.griefprevention.claims.editor.SegmentSelection;
 import com.griefprevention.commands.CommandAliasConfiguration;
 import com.griefprevention.commands.TabCompletions;
+import com.griefprevention.compat.WorldHeightCompatProvider;
 import com.griefprevention.geometry.OrthogonalEdge2i;
 import com.griefprevention.geometry.OrthogonalPolygon;
 import com.griefprevention.platform.knockback.KnockbackProtectionListener;
@@ -4386,7 +4387,7 @@ public class GriefPrevention extends JavaPlugin {
      * @return the minimum Y coordinate
      */
     public static int getWorldMinY(@NotNull World world) {
-        return world.getMinHeight();
+        return WorldHeightCompatProvider.current().minHeight(world);
     }
 
     /**
@@ -4397,7 +4398,7 @@ public class GriefPrevention extends JavaPlugin {
      * @return the maximum Y coordinate
      */
     public static int getWorldMaxY(@NotNull World world) {
-        return world.getMaxHeight();
+        return WorldHeightCompatProvider.current().maxHeight(world);
     }
 
     public static void sendMessage(Player player, ChatColor color, String message) {
