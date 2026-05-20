@@ -33,7 +33,7 @@ embed:
   # Embed body (pulled from RELEASE-v*.md)
   # title: First line of release doc (e.g., "# GriefPrevention3D v17.4.6")
   # description: 2nd line and up of release doc
-  # url: Release URL (auto-generated from tag)
+  url: https://github.com/castledking/GriefPrevention3D/
   
   # Embed color (decimal integer, not hex)
   # Example: 0x58A6FF = 5814783
