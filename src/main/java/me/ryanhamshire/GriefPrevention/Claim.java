@@ -340,6 +340,26 @@ public class Claim
 
      public int getCornerIndexAt(int x, int z)
      {
+         if (!this.isShaped())
+         {
+             int minX = Math.min(this.lesserBoundaryCorner.getBlockX(), this.greaterBoundaryCorner.getBlockX());
+             int maxX = Math.max(this.lesserBoundaryCorner.getBlockX(), this.greaterBoundaryCorner.getBlockX());
+             int minZ = Math.min(this.lesserBoundaryCorner.getBlockZ(), this.greaterBoundaryCorner.getBlockZ());
+             int maxZ = Math.max(this.lesserBoundaryCorner.getBlockZ(), this.greaterBoundaryCorner.getBlockZ());
+
+             boolean onXCorner = x == minX || x == maxX;
+             boolean onZCorner = z == minZ || z == maxZ;
+             if (!onXCorner || !onZCorner)
+             {
+                 return -1;
+             }
+
+             if (x == minX && z == minZ) return 0;
+             if (x == maxX && z == minZ) return 1;
+             if (x == maxX && z == maxZ) return 2;
+             return 3;
+         }
+
          List<OrthogonalPoint2i> corners = this.getBoundaryPolygon().corners();
          for (int i = 0; i < corners.size(); i++)
          {

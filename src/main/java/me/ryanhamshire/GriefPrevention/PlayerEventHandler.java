@@ -2500,19 +2500,18 @@ class PlayerEventHandler implements Listener {
                                       // for golden shovel)
             boolean cornerSelected = false; // track if we snapped to a 3D corner so AIR guard can be bypassed
 
+            CornerHit cornerHit = raycast3DSubclaimCorner(player, 100);
+            if (cornerHit != null && shouldUse3DCornerHit(player, clickedBlock, cornerHit)) {
+                clickedBlock = player.getWorld().getBlockAt(cornerHit.x, cornerHit.y, cornerHit.z);
+                clickedBlockType = clickedBlock.getType();
+                cornerSelected = true;
+            }
+
             // FEATURE: shovel and stick can be used from a distance away
-            if (action == Action.RIGHT_CLICK_AIR) {
-                // Try to snap to a nearby 3D subclaim corner along the player's view ray
-                CornerHit cornerHit = raycast3DSubclaimCorner(player, 100);
-                if (cornerHit != null) {
-                    clickedBlock = player.getWorld().getBlockAt(cornerHit.x, cornerHit.y, cornerHit.z);
-                    clickedBlockType = clickedBlock.getType();
-                    cornerSelected = true;
-                } else {
-                    // try to find a far away non-air block along line of sight
-                    clickedBlock = getTargetBlock(player, 100);
-                    clickedBlockType = clickedBlock.getType();
-                }
+            if (!cornerSelected && action == Action.RIGHT_CLICK_AIR) {
+                // try to find a far away non-air block along line of sight
+                clickedBlock = getTargetBlock(player, 100);
+                clickedBlockType = clickedBlock.getType();
             }
 
             // if no block, stop here
@@ -3227,6 +3226,18 @@ class PlayerEventHandler implements Listener {
         int minY = Math.min(lesser.getBlockY(), greater.getBlockY());
         int maxY = Math.max(lesser.getBlockY(), greater.getBlockY());
         return blockY == minY || blockY == maxY;
+    }
+
+    private boolean shouldUse3DCornerHit(Player player, @Nullable Block clickedBlock, CornerHit cornerHit) {
+        if (clickedBlock == null || clickedBlock.getType() == Material.AIR) {
+            return true;
+        }
+
+        Vector eyePos = player.getEyeLocation().toVector();
+        Vector dir = player.getEyeLocation().getDirection().normalize();
+        Vector clickedCenter = clickedBlock.getLocation().toVector().add(new Vector(0.5, 0.5, 0.5));
+        double clickedT = clickedCenter.subtract(eyePos).dot(dir);
+        return clickedT < 0 || cornerHit.t <= clickedT + 2.0;
     }
 
     private boolean tryResizeShapedClaim(@NotNull Player player, @NotNull PlayerData playerData, @NotNull Block clickedBlock)
@@ -4982,6 +4993,32 @@ class PlayerEventHandler implements Listener {
                                     if (candidate != null && candidate.t < bestT) {
                                         bestT = candidate.t;
                                         best = candidate;
+                                    }
+                                }
+
+                                if (maxY == minY) {
+                                    int aboveY = yi + 1;
+                                    if (aboveY <= world.getMaxHeight()) {
+                                        candidate = evaluateCornerCandidate(
+                                                eyePos, dir, maxDistance, threshold, current,
+                                                xi + 0.5, aboveY + 0.5, zi + 0.5,
+                                                xi, yi, zi);
+                                        if (candidate != null && candidate.t < bestT) {
+                                            bestT = candidate.t;
+                                            best = candidate;
+                                        }
+                                    }
+
+                                    int belowY = yi - 1;
+                                    if (belowY >= world.getMinHeight()) {
+                                        candidate = evaluateCornerCandidate(
+                                                eyePos, dir, maxDistance, threshold, current,
+                                                xi + 0.5, belowY + 0.5, zi + 0.5,
+                                                xi, yi, zi);
+                                        if (candidate != null && candidate.t < bestT) {
+                                            bestT = candidate.t;
+                                            best = candidate;
+                                        }
                                     }
                                 }
                             }
