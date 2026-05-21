@@ -73,6 +73,10 @@ commands:
     # If true, running /claim with no arguments shows help instead of creating a claim
     use-as-help-cmd: false
 
+    # Subcommand to run when /claim is executed without arguments.
+    # Leave empty to use the built-in default behavior.
+    fallback: ''
+
   # --------------------------------------------------------------------------
   # /aclaim - Admin claim management command
   # --------------------------------------------------------------------------
@@ -83,6 +87,7 @@ commands:
     description: Command to manage administrative claims
     permission: griefprevention.adminclaims
     use-as-help-cmd: false
+    fallback: ''
 
 # ============================================================================
 #                              SUBCOMMANDS

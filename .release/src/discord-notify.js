@@ -42,7 +42,7 @@ async function sendDiscordNotification() {
   let embed = {
     title: `${repoName} v${version}`,
     description: '',
-    url: `https://github.com/${env('REPO_OWNER', 'castledking')}/${repoName}/releases/tag/${version}`,
+    url: `https://github.com/${env('REPO_OWNER', 'castledking')}/${repoName}`,
     color: 1474606,
     timestamp: new Date().toISOString(),
     footer: { text: 'Released via GitHub Actions' },

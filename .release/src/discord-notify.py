@@ -56,7 +56,7 @@ def main():
         embed['title'] = f"{repo_name} {display_version}"
         embed['description'] = "No release notes available."
 
-    embed['url'] = f"https://github.com/{repo_owner}/{repo_name}/releases/tag/{release_tag}"
+    embed['url'] = f"https://github.com/{repo_owner}/{repo_name}"
 
     if 'embed' in config:
         ec = config['embed']

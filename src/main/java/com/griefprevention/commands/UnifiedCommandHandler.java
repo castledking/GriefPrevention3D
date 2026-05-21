@@ -681,6 +681,23 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
             return true;
         }
 
+        return dispatchSubcommand(sender, args);
+    }
+
+    protected boolean handleConfiguredFallback(@NotNull CommandSender sender) {
+        if (rootCommandConfig == null) {
+            return false;
+        }
+
+        String fallback = rootCommandConfig.getFallback();
+        if (fallback == null || fallback.isBlank()) {
+            return false;
+        }
+
+        return dispatchSubcommand(sender, fallback.trim().split("\\s+"));
+    }
+
+    private boolean dispatchSubcommand(@NotNull CommandSender sender, @NotNull String[] args) {
         String providedSubcommand = args[0];
         String canonicalSubcommand = resolveCanonicalSubcommandName(providedSubcommand);
         String[] subArgs = Arrays.copyOfRange(args, 1, args.length);
@@ -1025,12 +1042,15 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
         int end = Math.min(start + commandsPerPage, entries.size());
 
         // Send header
-        Messages headerMessage = "aclaim".equalsIgnoreCase(getPrimaryRootAlias())
+        Messages headerMessage = this.canonicalCommand.equalsIgnoreCase("aclaim")
             ? Messages.AClaimHelpHeader
             : Messages.ClaimHelpHeader;
-        Messages legendMessage = "aclaim".equalsIgnoreCase(getPrimaryRootAlias())
+        Messages legendMessage = this.canonicalCommand.equalsIgnoreCase("aclaim")
             ? Messages.AClaimHelpLegend
             : Messages.ClaimHelpLegend;
+        Messages entryMessage = this.canonicalCommand.equalsIgnoreCase("aclaim")
+            ? Messages.AClaimHelpEntry
+            : Messages.ClaimHelpEntry;
 
         // Send header and legend messages
         if (sender instanceof Player player) {
@@ -1079,17 +1099,12 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
                 continue;
             }
 
-            // Build the command line with proper formatting
-            String[] parts = subcommandUsage.split(" - ", 2);
-            StringBuilder line = new StringBuilder(ChatColor.YELLOW.toString()).append(parts[0].trim());
-
-            if (parts.length > 1) {
-                line.append(ChatColor.GRAY).append(" - ").append(parts[1].trim());
-            } else if (config != null && config.getDescription() != null) {
-                line.append(ChatColor.GRAY).append(" - ").append(config.getDescription());
+            HelpEntryParts parts = parseHelpEntryParts(subcommandUsage, config);
+            String entryText = plugin.dataStore.getMessage(entryMessage, parts.command(), parts.description());
+            if (!GriefPrevention.hasVisibleMessageContent(entryText)) {
+                continue;
             }
-
-            sender.sendMessage(line.toString());
+            sender.sendMessage(entryText);
         }
 
         // Show pagination footer
@@ -1099,7 +1114,10 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
                 Messages paginationMsg = this.canonicalCommand.equalsIgnoreCase("aclaim")
                     ? Messages.AClaimHelpPagination
                     : Messages.ClaimHelpPagination;
-                sender.sendMessage(plugin.dataStore.getMessage(paginationMsg, String.valueOf(page + 1)));
+                String pagination = plugin.dataStore.getMessage(paginationMsg, String.valueOf(page + 1));
+                if (GriefPrevention.hasVisibleMessageContent(pagination)) {
+                    sender.sendMessage(pagination);
+                }
             }
             if (page > 1) {
                 sender.sendMessage(
@@ -1115,6 +1133,26 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
         }
         return canonicalCommand;
     }
+
+    private @NotNull HelpEntryParts parseHelpEntryParts(
+        @NotNull String subcommandUsage,
+        @Nullable CommandAliasConfiguration.Subcommand config
+    ) {
+        String[] parts = subcommandUsage.split(" - ", 2);
+        String command = parts[0].trim();
+        command = command.replaceFirst("^((?:\u00A7.)*)/", "$1");
+
+        String description = "";
+        if (parts.length > 1) {
+            description = parts[1].trim();
+        } else if (config != null && config.getDescription() != null) {
+            description = config.getDescription();
+        }
+
+        return new HelpEntryParts(command, description);
+    }
+
+    private record HelpEntryParts(@NotNull String command, @NotNull String description) {}
 
     private @Nullable String getUsageText(@NotNull String canonical) {
         CommandAliasConfiguration.Subcommand config = subcommandConfigs.get(canonical);

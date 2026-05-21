@@ -2343,9 +2343,10 @@ public abstract class DataStore {
                 boolean hasUserColorCodes = this.messages[message.ordinal()].contains("$")
                         || this.messages[message.ordinal()].contains("&");
                 boolean hasUserNewline = this.messages[message.ordinal()].contains("\\n");
+                boolean isDisabledMessage = this.messages[message.ordinal()].isBlank();
 
                 // Apply default styling for specific messages if no user color codes
-                if (!hasUserColorCodes) {
+                if (!hasUserColorCodes && !isDisabledMessage) {
                     switch (message) {
                         case ClaimHelpHeader:
                         case AClaimHelpHeader:

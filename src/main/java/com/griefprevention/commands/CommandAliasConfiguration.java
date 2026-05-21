@@ -114,9 +114,10 @@ public final class CommandAliasConfiguration {
                     String description = entry.getString("description");
                     String permission = entry.getString("permission");
                     boolean useAsHelpCmd = entry.getBoolean("use-as-help-cmd", false);
+                    String fallback = entry.getString("fallback");
 
                     RootCommand rootCommand = new RootCommand(normalizedKey, enabled, aliases, description, permission,
-                            useAsHelpCmd);
+                            useAsHelpCmd, fallback);
                     commands.put(normalizedKey, rootCommand);
                 } catch (Exception e) {
                     plugin.getLogger().log(Level.WARNING,
@@ -130,7 +131,7 @@ public final class CommandAliasConfiguration {
             for (String rootKey : subcommandSection.getKeys(false)) {
                 String normalizedRootKey = normalize(rootKey);
                 RootCommand root = commands.computeIfAbsent(normalizedRootKey,
-                        k -> new RootCommand(k, true, List.of(), null, null, false));
+                        k -> new RootCommand(k, true, List.of(), null, null, false, null));
 
                 ConfigurationSection subcommands = subcommandSection.getConfigurationSection(rootKey);
                 if (subcommands == null)
@@ -410,16 +411,18 @@ public final class CommandAliasConfiguration {
         private final String description;
         private final String permission;
         private final boolean useAsHelpCmd;
+        private final String fallback;
         private final Map<String, Subcommand> subcommands = new HashMap<>();
 
         private RootCommand(String key, boolean enabled, List<String> commands, String description, String permission,
-                boolean useAsHelpCmd) {
+                boolean useAsHelpCmd, String fallback) {
             this.key = key;
             this.enabled = enabled;
             this.commands = commands == null ? List.of() : List.copyOf(commands);
             this.description = description;
             this.permission = permission;
             this.useAsHelpCmd = useAsHelpCmd;
+            this.fallback = fallback;
         }
 
         public @NotNull String getKey() {
@@ -444,6 +447,10 @@ public final class CommandAliasConfiguration {
 
         public boolean shouldUseAsHelpCmd() {
             return useAsHelpCmd;
+        }
+
+        public @Nullable String getFallback() {
+            return fallback;
         }
 
         public @Nullable Subcommand getSubcommand(@NotNull String key) {

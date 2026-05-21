@@ -32,6 +32,7 @@ public enum Alias {
         commands: [claim]
         description: Command to manage your claim(s)
         permission: griefprevention.claims
+        fallback: ''
         """,
         "claim"
     ),
@@ -42,6 +43,7 @@ public enum Alias {
         commands: [aclaim]
         description: Command to manage administrative claims
         permission: griefprevention.adminclaims
+        fallback: ''
         """,
         "aclaim"
     ),
@@ -505,12 +507,14 @@ public enum Alias {
             commands: [claim]
             description: Command to manage your claim(s)
             permission: griefprevention.claims
+            fallback: ''
 
           aclaim:
             enable: true
             commands: [aclaim]
             description: Command to manage administrative claims
             permission: griefprevention.adminclaims
+            fallback: ''
 
         subcommands:
           claim:
