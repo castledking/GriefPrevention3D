@@ -242,10 +242,26 @@ tasks {
         }
     }
 
+    val checkLegacyClassLoading by registering(JavaExec::class) {
+        group = "verification"
+        description = "Initializes key plugin classes with only legacy Bukkit on the runtime classpath."
+        dependsOn(named("classes"), named("compatLegacyClasses"))
+        classpath = sourceSets["compatLegacy"].runtimeClasspath
+        mainClass.set("com.griefprevention.compat.legacy.LegacyClassLoadingCheck")
+        args(
+            "me.ryanhamshire.GriefPrevention.GriefPrevention",
+            "me.ryanhamshire.GriefPrevention.BlockEventHandler",
+            "me.ryanhamshire.GriefPrevention.EntityEventHandler",
+            "me.ryanhamshire.GriefPrevention.EntityDamageHandler",
+            "me.ryanhamshire.GriefPrevention.PlayerEventHandler",
+            "me.ryanhamshire.GriefPrevention.PlayerEventHandler#construct"
+        )
+    }
+
     register("checkLegacyCompatibility") {
         group = "verification"
         description = "Compiles legacy-server compatibility sources with the configured legacy Java target."
-        dependsOn(named("compileCompatLegacyJava"), checkWorldHeightCompatUsage)
+        dependsOn(named("compileCompatLegacyJava"), checkWorldHeightCompatUsage, checkLegacyClassLoading)
     }
 }
 

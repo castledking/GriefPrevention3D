@@ -79,8 +79,8 @@ public class EntityDamageHandler implements Listener {
 
     private static final NamespacedKey LURED_BY_PLAYER = NamespacedKey.fromString("griefprevention:lured_by_player");
 
-    private final @NotNull DataStore dataStore;
-    private final @NotNull GriefPrevention instance;
+    final @NotNull DataStore dataStore;
+    final @NotNull GriefPrevention instance;
 
     EntityDamageHandler(@NotNull DataStore dataStore, @NotNull GriefPrevention plugin) {
         this.dataStore = dataStore;
@@ -556,7 +556,7 @@ public class EntityDamageHandler implements Listener {
      * @param cancelHandler the {@link Runnable} to run if PVP is disallowed
      * @return true if PVP is handled by claim rules
      */
-    private boolean handlePvpInClaim(
+    boolean handlePvpInClaim(
             @Nullable Player attacker,
             @NotNull Player defender,
             @NotNull Location location,

@@ -188,7 +188,7 @@ public class BlockEventHandler implements Listener
         return FIRE_BLOCKS.contains(material) || MaterialTagCompat.isTagged("FIRE", material);
     }
 
-    private static boolean isSapling(@NotNull Material material)
+    static boolean isSapling(@NotNull Material material)
     {
         return SAPLING_BLOCKS.contains(material) || MaterialTagCompat.isTagged("SAPLINGS", material);
     }
@@ -1104,7 +1104,7 @@ public class BlockEventHandler implements Listener
 
     private Claim lastBlockFertilizeClaim = null;
     @EventHandler(priority = EventPriority.LOWEST)
-    private void onBlockFertilize(@NotNull BlockFertilizeEvent event)
+    void onBlockFertilize(@NotNull BlockFertilizeEvent event)
     {
         // Don't track in worlds where claims are not enabled.
         if (!GriefPrevention.instance.claimsEnabledForWorld(event.getBlock().getWorld())) return;
