@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class ClaimCornerDetectionTest
@@ -28,6 +29,41 @@ class ClaimCornerDetectionTest
         assertEquals(-1, claim.getCornerIndexAt(6, 5));
         assertEquals(-1, claim.getCornerIndexAt(5, 6));
         assertEquals(-1, claim.getCornerIndexAt(6, 6));
+    }
+
+    @Test
+    void threeDCornerRaycastOnlyAppliesToInitialSelectionClicks()
+    {
+        PlayerData playerData = new PlayerData();
+        playerData.shovelMode = ShovelMode.Subdivide3D;
+
+        assertTrue(ClaimToolInteractionState.shouldAttempt3DCornerSelection(playerData));
+
+        playerData.lastShovelLocation = new Location(null, 5, 64, 5);
+        assertFalse(ClaimToolInteractionState.shouldAttempt3DCornerSelection(playerData));
+
+        playerData.lastShovelLocation = null;
+        playerData.claimResizing = new3DClaim(5, 64, 5, 5, 64, 5);
+        assertFalse(ClaimToolInteractionState.shouldAttempt3DCornerSelection(playerData));
+
+        playerData.claimResizing = null;
+        playerData.claimSubdividing = new3DClaim(5, 64, 5, 5, 64, 5);
+        assertFalse(ClaimToolInteractionState.shouldAttempt3DCornerSelection(playerData));
+    }
+
+    @Test
+    void threeDCornerRaycastSkipsNonClaimSelectionModes()
+    {
+        PlayerData playerData = new PlayerData();
+
+        playerData.shovelMode = ShovelMode.RestoreNature;
+        assertFalse(ClaimToolInteractionState.shouldAttempt3DCornerSelection(playerData));
+
+        playerData.shovelMode = ShovelMode.Shaped;
+        assertFalse(ClaimToolInteractionState.shouldAttempt3DCornerSelection(playerData));
+
+        playerData.shovelMode = ShovelMode.Admin3D;
+        assertTrue(ClaimToolInteractionState.shouldAttempt3DCornerSelection(playerData));
     }
 
     private static void assertCornerDetected(Claim claim, int x, int z)

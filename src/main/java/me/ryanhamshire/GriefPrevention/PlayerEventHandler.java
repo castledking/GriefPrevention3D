@@ -2500,18 +2500,22 @@ class PlayerEventHandler implements Listener {
                                       // for golden shovel)
             boolean cornerSelected = false; // track if we snapped to a 3D corner so AIR guard can be bypassed
 
-            CornerHit cornerHit = raycast3DSubclaimCorner(player, 100);
-            if (cornerHit != null && shouldUse3DCornerHit(player, clickedBlock, cornerHit)) {
-                clickedBlock = player.getWorld().getBlockAt(cornerHit.x, cornerHit.y, cornerHit.z);
-                clickedBlockType = clickedBlock.getType();
-                cornerSelected = true;
-            }
-
             // FEATURE: shovel and stick can be used from a distance away
-            if (!cornerSelected && action == Action.RIGHT_CLICK_AIR) {
+            if (action == Action.RIGHT_CLICK_AIR) {
                 // try to find a far away non-air block along line of sight
                 clickedBlock = getTargetBlock(player, 100);
                 clickedBlockType = clickedBlock.getType();
+            }
+
+            playerData = this.dataStore.getPlayerData(player.getUniqueId());
+
+            if (ClaimToolInteractionState.shouldAttempt3DCornerSelection(playerData)) {
+                CornerHit cornerHit = raycast3DSubclaimCorner(player, 100);
+                if (cornerHit != null && shouldUse3DCornerHit(player, clickedBlock, cornerHit)) {
+                    clickedBlock = player.getWorld().getBlockAt(cornerHit.x, cornerHit.y, cornerHit.z);
+                    clickedBlockType = clickedBlock.getType();
+                    cornerSelected = true;
+                }
             }
 
             // if no block, stop here
@@ -2529,8 +2533,6 @@ class PlayerEventHandler implements Listener {
                 GriefPrevention.sendRateLimitedErrorMessage(player, Messages.NoCreateClaimPermission);
                 return;
             }
-
-            playerData = this.dataStore.getPlayerData(player.getUniqueId());
 
             // Handle RestoreNature shovel modes
             if (playerData.shovelMode == ShovelMode.RestoreNature ||
