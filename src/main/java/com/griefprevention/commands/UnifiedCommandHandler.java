@@ -1089,6 +1089,7 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
             return;
         }
 
+        // Show commands for current page
         for (int i = start; i < end; i++) {
             Map.Entry<String, CommandAliasConfiguration.Subcommand> entry = entries.get(i);
             String canonical = entry.getKey();

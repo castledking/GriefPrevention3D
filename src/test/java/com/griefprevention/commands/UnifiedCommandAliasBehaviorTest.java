@@ -62,6 +62,14 @@ class UnifiedCommandAliasBehaviorTest
                 enable: true
                 commands: [claim]
                 fallback: help
+            subcommands:
+              claim:
+                create:
+                  enable: true
+                  commands: [create]
+                  standalone: [createclaim]
+                  usage: "/claim create [radius]"
+                  description: Create or expand a claim centered on you.
             """);
         GriefPrevention plugin = newPlugin(aliases);
         GriefPrevention.instance = plugin;
@@ -71,7 +79,7 @@ class UnifiedCommandAliasBehaviorTest
         UnifiedClaimCommand command = new UnifiedClaimCommand(plugin);
         command.onCommand(sender, mock(Command.class), "claim", new String[0]);
 
-        verify(sender, atLeastOnce()).sendMessage("CUSTOM claim create [radius] :: ");
+        verify(sender, atLeastOnce()).sendMessage("CUSTOM claim create [radius] :: Create or expand a claim centered on you.");
         verify(plugin.dataStore, never()).createClaim(
             org.mockito.ArgumentMatchers.any(),
             org.mockito.ArgumentMatchers.anyInt(),
@@ -97,16 +105,29 @@ class UnifiedCommandAliasBehaviorTest
               claim:
                 enable: true
                 commands: [claim]
+            subcommands:
+              claim:
+                create:
+                  enable: true
+                  commands: [create]
+                  standalone: [createclaim]
+                  usage: "/claim create [radius]"
+                  description: Create or expand a claim centered on you.
             """);
         GriefPrevention plugin = newPlugin(aliases);
         GriefPrevention.instance = plugin;
+        
+        UnifiedClaimCommand command = new UnifiedClaimCommand(plugin);
         CommandSender sender = mock(CommandSender.class);
         when(sender.getName()).thenReturn("Console");
 
-        UnifiedClaimCommand command = new UnifiedClaimCommand(plugin);
         command.onCommand(sender, mock(Command.class), "claim", new String[] { "help" });
 
-        verify(sender, atLeastOnce()).sendMessage("CUSTOM claim create [radius] :: ");
+        // Let's see what messages are actually being sent
+        verify(sender, atLeastOnce()).sendMessage("§6Available /claim commands (Page 1/1):");
+        verify(sender, atLeastOnce()).sendMessage("");
+        // The help entry should be sent but isn't
+        verify(sender, atLeastOnce()).sendMessage("CUSTOM claim create [radius] :: Create or expand a claim centered on you.");
     }
 
     @Test
@@ -153,18 +174,26 @@ class UnifiedCommandAliasBehaviorTest
         plugin.dataStore = dataStore;
         when(plugin.getCommandAliases()).thenReturn(aliases);
         when(plugin.getCommand(anyString())).thenReturn(mock(PluginCommand.class));
-        when(plugin.getLogger()).thenReturn(mock(Logger.class));
+        Logger logger = mock(Logger.class);
+        when(plugin.getLogger()).thenReturn(logger);
+        
         doAnswer(invocation -> {
             Messages message = invocation.getArgument(0);
-            String[] args = invocation.getArgument(1);
-            if (message == Messages.ClaimHelpEntry) {
-                return "CUSTOM " + args[0].replaceAll("\u00A7.", "") + " :: " + args[1].replaceAll("\u00A7.", "");
+            Object[] args = invocation.getArguments();
+            // Handle varargs - skip the first argument (Messages enum) and process the rest as strings
+            if (message == Messages.ClaimHelpEntry && args.length >= 3) {
+                String command = args[1] != null ? args[1].toString().replaceAll("\u00A7.", "") : "";
+                String description = args[2] != null ? args[2].toString().replaceAll("\u00A7.", "") : "";
+                return "CUSTOM " + command + " :: " + description;
+            }
+            if (message == Messages.ClaimHelpHeader) {
+                return "§6Available /claim commands (Page 1/2):";
             }
             if (message == Messages.ClaimHelpLegend || message == Messages.ClaimHelpPagination) {
                 return "";
             }
             return message.name();
-        }).when(dataStore).getMessage(org.mockito.ArgumentMatchers.any(Messages.class), org.mockito.ArgumentMatchers.any(String[].class));
+        }).when(dataStore).getMessage(org.mockito.ArgumentMatchers.any(Messages.class), org.mockito.ArgumentMatchers.any(String.class), org.mockito.ArgumentMatchers.any(String.class));
         return plugin;
     }
 }
