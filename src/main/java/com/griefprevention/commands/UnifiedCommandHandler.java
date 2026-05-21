@@ -58,23 +58,19 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
         if (!plugin.getCommandAliases().isEnabled()) {
             this.rootCommandConfig = null;
             this.rootCommandEnabled = true; // Use defaults when alias system disabled
-            plugin
-                .getLogger()
-                .info("Initializing command '" + this.canonicalCommand + "' - Using defaults (alias system disabled)");
+            debugLog("Initializing command '" + this.canonicalCommand + "' - Using defaults (alias system disabled)");
         } else {
             this.rootCommandConfig = plugin.getCommandAliases().getRootCommand(this.canonicalCommand);
             this.rootCommandEnabled = this.rootCommandConfig == null || this.rootCommandConfig.isEnabled();
 
             // Log the enable/disable state for debugging
-            plugin
-                .getLogger()
-                .info(
-                    "Initializing command '" +
-                        this.canonicalCommand +
-                        "' - Enabled: " +
-                        this.rootCommandEnabled +
-                        (this.rootCommandConfig != null ? " (from config)" : " (default enabled)")
-                );
+            debugLog(
+                "Initializing command '" +
+                    this.canonicalCommand +
+                    "' - Enabled: " +
+                    this.rootCommandEnabled +
+                    (this.rootCommandConfig != null ? " (from config)" : " (default enabled)")
+            );
         }
 
         PluginCommand pluginCommand = plugin.getCommand(this.canonicalCommand);
@@ -212,7 +208,7 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
 
         // Check if standalone is disabled (empty list in config means disabled)
         if (standaloneNames.isEmpty()) {
-            plugin.getLogger().info("Standalone for '" + finalSubcommandName + "' is disabled in config");
+            debugLog("Standalone for '" + finalSubcommandName + "' is disabled in config");
             return;
         }
 
@@ -253,7 +249,7 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
             pluginCommand.setExecutor(wrapper);
             pluginCommand.setTabCompleter(wrapper);
             applyStandaloneMetadata(pluginCommand, config);
-            plugin.getLogger().info("Registered standalone command: " + commandName + " (from plugin.yml)");
+            debugLog("Registered standalone command: " + commandName + " (from plugin.yml)");
             return;
         }
 
@@ -300,7 +296,7 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
                 // Track for cleanup on reload
                 registeredDynamicCommands.add(commandName);
 
-                plugin.getLogger().info("Registered standalone command: " + commandName + " (dynamically)");
+                debugLog("Registered standalone command: " + commandName + " (dynamically)");
             } catch (Exception e) {
                 plugin
                     .getLogger()
@@ -431,7 +427,24 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
                     @NotNull String alias,
                     @NotNull String[] args
                 ) {
-                    if (args.length == 1 && tabCompletions != null && !tabCompletions.isEmpty()) {
+                    if (tabCompletions == null || tabCompletions.isEmpty()) {
+                        return Collections.emptyList();
+                    }
+
+                    if (args.length > 0 && args.length <= tabCompletions.size()) {
+                        String completionType = tabCompletions.get(args.length - 1);
+                        if ("online-player".equalsIgnoreCase(completionType)) {
+                            return TabCompletions.visiblePlayers(sender, args);
+                        }
+                        if ("integer".equalsIgnoreCase(completionType)) {
+                            return TabCompletions.integer(args, 6, false);
+                        }
+                        if ("integer-negative".equalsIgnoreCase(completionType)) {
+                            return TabCompletions.integer(args, 6, true);
+                        }
+                    }
+
+                    if (args.length == 1) {
                         return tabCompletions
                             .stream()
                             .filter(s -> s.toLowerCase().startsWith(args[0].toLowerCase()))
@@ -442,7 +455,7 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
             };
             pluginCommand.setExecutor(wrapper);
             pluginCommand.setTabCompleter(wrapper);
-            plugin.getLogger().info("Registered legacy standalone command: " + commandName);
+            debugLog("Registered legacy standalone command: " + commandName);
         }
     }
 
@@ -493,13 +506,23 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
                     // Remove both the plain name and the prefixed version
                     knownCommands.remove(cmdName.toLowerCase());
                     knownCommands.remove(plugin.getName().toLowerCase() + ":" + cmdName.toLowerCase());
-                    plugin.getLogger().info("Unregistered dynamic command: " + cmdName);
+                    debugLog(plugin, "Unregistered dynamic command: " + cmdName);
                 }
 
                 registeredDynamicCommands.clear();
             } catch (Exception e) {
                 plugin.getLogger().warning("Failed to unregister dynamic commands: " + e.getMessage());
             }
+        }
+    }
+
+    private void debugLog(@NotNull String message) {
+        debugLog(plugin, message);
+    }
+
+    private static void debugLog(@NotNull GriefPrevention plugin, @NotNull String message) {
+        if (plugin.config_logs_debugEnabled) {
+            plugin.getLogger().info(message);
         }
     }
 
@@ -540,9 +563,7 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
                 }
 
                 registeredDynamicCommands.add(commandName);
-                plugin
-                    .getLogger()
-                    .info("Registered dynamic root command: " + commandName + " (alias for " + canonicalCommand + ")");
+                debugLog("Registered dynamic root command: " + commandName + " (alias for " + canonicalCommand + ")");
             } catch (Exception e) {
                 plugin
                     .getLogger()
