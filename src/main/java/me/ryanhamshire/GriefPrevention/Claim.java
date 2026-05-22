@@ -438,14 +438,13 @@ public class Claim
 
         return identifier.trim().toLowerCase(Locale.ROOT);
     }
-
     private static @NotNull String getPermissionSuffix(@NotNull ClaimPermission permission)
     {
         return switch (permission)
         {
             case Manage -> "#manager";
             case Build -> "#build";
-            case Container -> "#inventory";
+            case Container, Inventory -> "#inventory";
             case Access -> "#access";
             case Edit -> "";
         };

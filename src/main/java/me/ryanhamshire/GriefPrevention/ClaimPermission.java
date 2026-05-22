@@ -43,6 +43,10 @@ public enum ClaimPermission
      */
     Container(Messages.NoContainersPermission),
     /**
+     * Backward-compatible alias for {@link #Container}. Used by external plugins.
+     */
+    Inventory(Messages.NoContainersPermission),
+    /**
      * ClaimPermission used for basic access. Command: /accesstrust
      */
     Access(Messages.NoAccessPermission);
