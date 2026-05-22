@@ -656,8 +656,12 @@ public class GriefPrevention extends JavaPlugin {
         // load the config if it exists
         FileConfiguration config = YamlConfiguration.loadConfiguration(new File(DataStore.configFilePath));
         FileConfiguration outConfig = new YamlConfiguration();
-        outConfig.options().setHeader(java.util.List.of(
-                "Default values are perfect for most servers.  If you want to customize and have a question, look for the answer here first: http://dev.bukkit.org/bukkit-plugins/grief-prevention/pages/setup-and-configuration/"));
+        try {
+            outConfig.options().setHeader(Arrays.asList(
+                    "Default values are perfect for most servers.  If you want to customize and have a question, look for the answer here first: http://dev.bukkit.org/bukkit-plugins/grief-prevention/pages/setup-and-configuration/"));
+        } catch (NoSuchMethodError e) {
+            // setHeader(List) doesn't exist in older Bukkit versions (1.8.8), ignore
+        }
 
         // get (deprecated node) claims world names from the config file
         List<World> worlds = this.getServer().getWorlds();
@@ -970,7 +974,11 @@ public class GriefPrevention extends JavaPlugin {
         }
 
         // default for claim creation/modification tool
-        String modificationToolMaterialName = Material.GOLDEN_SHOVEL.name();
+        Material defaultModTool = com.griefprevention.compat.MaterialCompat.get("GOLDEN_SHOVEL");
+        if (defaultModTool == null) {
+            defaultModTool = com.griefprevention.compat.MaterialCompat.get("GOLD_SPADE");
+        }
+        String modificationToolMaterialName = defaultModTool != null ? defaultModTool.name() : "GOLD_SPADE";
 
         // get modification tool from config
         modificationToolMaterialName = config.getString("GriefPrevention.Claims.ModificationTool",

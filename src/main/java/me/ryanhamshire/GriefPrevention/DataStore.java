@@ -48,6 +48,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
@@ -2392,22 +2393,30 @@ public abstract class DataStore {
             if (message.notes != null) {
                 // Import old non-comment notes.
                 String notesString = config.getString(messagePath + ".Notes", message.notes);
-                // Import existing comment notes.
-                List<String> notes = config.getComments(messagePath);
-                if (notes.isEmpty()) {
-                    notes = List.of(notesString);
+                // Import existing comment notes (try-catch for 1.8.8 compatibility)
+                try {
+                    List<String> notes = config.getComments(messagePath);
+                    if (notes.isEmpty()) {
+                        notes = Arrays.asList(notesString);
+                    }
+                    config.setComments(messagePath, notes);
+                } catch (NoSuchMethodError e) {
+                    // getComments/setComments not available in older Bukkit versions, ignore
                 }
-                config.setComments(messagePath, notes);
             }
         }
 
         // save any changes
         try {
-            config.options().setHeader(List.of(
-                    "Use a YAML editor like NotepadPlusPlus to edit this file.",
-                    "After editing, back up your changes before reloading the server in case you made a syntax error.",
-                    "Use dollar signs ($) for formatting codes, which are documented here: http://minecraft.wiki/Formatting_codes#Color_codes",
-                    "Use \\n to create newlines in messages."));
+            try {
+                config.options().setHeader(Arrays.asList(
+                        "Use a YAML editor like NotepadPlusPlus to edit this file.",
+                        "After editing, back up your changes before reloading the server in case you made a syntax error.",
+                        "Use dollar signs ($) for formatting codes, which are documented here: http://minecraft.wiki/Formatting_codes#Color_codes",
+                        "Use \\n to create newlines in messages."));
+            } catch (NoSuchMethodError e) {
+                // setHeader not available in older Bukkit versions, ignore
+            }
             config.save(DataStore.messagesFilePath);
         } catch (IOException exception) {
             Bukkit.getLogger()
