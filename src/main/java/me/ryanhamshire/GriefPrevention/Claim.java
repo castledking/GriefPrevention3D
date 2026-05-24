@@ -443,7 +443,6 @@ public class Claim
 
         return identifier.trim().toLowerCase(Locale.ROOT);
     }
-
     private static @NotNull String getPermissionSuffix(@NotNull ClaimPermission permission)
     {
         return switch (permission)

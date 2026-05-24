@@ -2094,6 +2094,680 @@ class PlayerEventHandler implements Listener {
             {
                 return;
             }
+
+            playerData = this.dataStore.getPlayerData(player.getUniqueId());
+
+            boolean cornerSelected = false; // track if we snapped to a 3D corner so AIR guard can be bypassed
+
+            if (ClaimToolInteractionState.shouldAttempt3DCornerSelection(playerData)) {
+                CornerHit cornerHit = raycast3DSubclaimCorner(player, 100);
+                if (cornerHit != null && shouldUse3DCornerHit(player, clickedBlock, cornerHit)) {
+                    clickedBlock = player.getWorld().getBlockAt(cornerHit.x, cornerHit.y, cornerHit.z);
+                    clickedBlockType = clickedBlock.getType();
+                    cornerSelected = true;
+                }
+            }
+
+            // if no block, stop here
+            if (clickedBlock == null) {
+                return;
+            }
+
+            // can't use the shovel from too far away, unless we snapped to a 3D corner
+            // (corner itself may be air)
+            if (clickedBlockType == Material.AIR && !cornerSelected)
+                return;
+
+            // if the player doesn't have claims permission, don't do anything
+            if (!player.hasPermission("griefprevention.createclaims")) {
+                GriefPrevention.sendRateLimitedErrorMessage(player, Messages.NoCreateClaimPermission);
+                return;
+            }
+
+            // Handle RestoreNature shovel modes
+            if (playerData.shovelMode == ShovelMode.RestoreNature ||
+                    playerData.shovelMode == ShovelMode.RestoreNatureAggressive ||
+                    playerData.shovelMode == ShovelMode.RestoreNatureFill) {
+                handleRestoreNature(player, clickedBlock, playerData);
+                return;
+            }
+
+            if (playerData.shovelMode == ShovelMode.Shaped) {
+                playerData.setEphemeralBasicShapedSegmentPreview(false);
+                if (!GriefPrevention.instance.config_claims_allowShapedClaims) {
+                    playerData.shovelMode = ShovelMode.Basic;
+                    playerData.claimSubdividing = null;
+                    playerData.claimResizing = null;
+                    playerData.lastShovelLocation = null;
+                    playerData.setClaimEditorSession(null);
+                    GriefPrevention.sendMessage(player, TextMode.Err, Messages.ShapedClaimsDisabled);
+                    return;
+                }
+                if (handleShapedResizeInteraction(player, playerData, clickedBlock)) {
+                    return;
+                }
+                handleShapedModeInteraction(player, playerData, clickedBlock);
+                return;
+            }
+
+            // if he's resizing a claim and that claim hasn't been deleted since he started
+            // resizing it
+            if (playerData.claimResizing != null && playerData.claimResizing.inDataStore) {
+                if (clickedBlock.getLocation().equals(playerData.lastShovelLocation))
+                    return;
+
+                if (tryResizeShapedClaim(player, playerData, clickedBlock)) {
+                    return;
+                }
+
+                // figure out what the coords of his new claim would be
+                int newx1, newx2, newz1, newz2, newy1, newy2;
+                if (playerData.lastShovelLocation.getBlockX() == playerData.claimResizing.getLesserBoundaryCorner()
+                        .getBlockX()) {
+                    newx1 = clickedBlock.getX();
+                    newx2 = playerData.claimResizing.getGreaterBoundaryCorner().getBlockX();
+                } else {
+                    newx1 = playerData.claimResizing.getLesserBoundaryCorner().getBlockX();
+                    newx2 = clickedBlock.getX();
+                }
+
+                if (playerData.lastShovelLocation.getBlockZ() == playerData.claimResizing.getLesserBoundaryCorner()
+                        .getBlockZ()) {
+                    newz1 = clickedBlock.getZ();
+                    newz2 = playerData.claimResizing.getGreaterBoundaryCorner().getBlockZ();
+                } else {
+                    newz1 = playerData.claimResizing.getLesserBoundaryCorner().getBlockZ();
+                    newz2 = clickedBlock.getZ();
+                }
+
+                // Y resizing behavior
+                if (playerData.claimResizing.is3D()) {
+                    // For 3D subclaims, allow vertical resizing when the initial corner was at minY
+                    // or maxY
+                    int currentMinY = playerData.claimResizing.getLesserBoundaryCorner().getBlockY();
+                    int currentMaxY = playerData.claimResizing.getGreaterBoundaryCorner().getBlockY();
+                    int startY = playerData.lastShovelLocation.getBlockY();
+                    int endY = clickedBlock.getY();
+
+                    // Special case: If it's a single-layer 3D claim, allow resizing from any corner
+                    boolean isSingleLayer = (currentMinY == currentMaxY);
+
+                    // Default: preserve Y range
+                    newy1 = currentMinY;
+                    newy2 = currentMaxY;
+
+                    if (isSingleLayer || startY == currentMinY) {
+                        // For single-layer or when dragging from bottom edge: adjust minY
+                        newy1 = Math.min(endY, currentMaxY);
+
+                        // If we're making it taller, set maxY to the new Y
+                        if (endY > currentMaxY) {
+                            newy2 = endY;
+                        }
+                    } else if (startY == currentMaxY) {
+                        // Dragging from top edge: adjust maxY
+                        newy2 = Math.max(endY, currentMinY);
+
+                        // If we're making it taller from the bottom, set minY to the new Y
+                        if (endY < currentMinY) {
+                            newy1 = endY;
+                        }
+                    }
+
+                    // Ensure ordering
+                    if (newy1 > newy2) {
+                        int tmp = newy1;
+                        newy1 = newy2;
+                        newy2 = tmp;
+                    }
+                } else {
+                    // 2D claims keep legacy behavior: extend into ground based on clicked Y
+                    newy1 = playerData.claimResizing.getLesserBoundaryCorner().getBlockY();
+                    newy2 = playerData.claimResizing.getGreaterBoundaryCorner().getBlockY();
+                }
+
+                this.dataStore.resizeClaimWithChecks(player, playerData, newx1, newx2, newy1, newy2, newz1, newz2);
+
+                return;
+            }
+
+            // otherwise, since not currently resizing a claim, must be starting a resize,
+            // creating a new claim, or creating a subdivision
+            // Prefer a Y-aware lookup first so we correctly target stacked 3D subclaims at
+            // this Y level.
+            Claim resolvedClaim = this.dataStore.getClaimAt(clickedBlock.getLocation(), false /* respect height */,
+                    playerData.lastClaim);
+            if (resolvedClaim == null) {
+                // Fallback to ignore-height search to preserve legacy behavior when no 3D
+                // subclaim matches Y
+                resolvedClaim = this.dataStore.getClaimAt(clickedBlock.getLocation(), true /* ignore height */,
+                        playerData.lastClaim);
+            }
+            Claim claim = findDeepestContainingClaim(resolvedClaim, clickedBlock.getLocation());
+            if (claim != null) {
+                playerData.lastClaim = claim;
+            }
+
+            // If this click is exactly at a shared corner, promote to the outermost parent
+            // sharing that corner.
+            if (claim != null) {
+                Claim promoted = claim;
+                while (promoted.parent != null && isCornerMatch(promoted, clickedBlock)) {
+                    Claim parent = promoted.parent;
+                    if (!isCornerMatch(parent, clickedBlock)) {
+                        break;
+                    }
+
+                    promoted = parent;
+                }
+
+                claim = promoted;
+            }
+
+            // Fix for Issue: Clicking outside Y-bounds of a 3D claim (e.g. above/below)
+            // should not resolve to that 3D claim
+            // This prevents "One block inside parent" / Overlap errors when trying to
+            // create/resize near a 3D subclaim.
+            if (claim != null && claim.is3D() && !claim.contains(clickedBlock.getLocation(), true, false)) {
+                claim = claim.parent;
+            }
+
+            // Admin3D stacking: if already creating a new 3D admin claim,
+            // bypass the inside-claim restriction and proceed to finish
+            if (claim != null && playerData.shovelMode == ShovelMode.Admin3D && playerData.lastShovelLocation != null) {
+                if (!playerData.lastShovelLocation.getWorld().equals(clickedBlock.getWorld())) {
+                    playerData.lastShovelLocation = null;
+                    this.onPlayerInteract(event);
+                    return;
+                }
+                claim = null;
+            }
+
+            // if within an existing claim, he's not creating a new one
+            if (claim != null) {
+                // if the player has permission to edit the claim or subdivision
+                final String ownerName = claim.getOwnerName();
+                Supplier<String> noEditReason = claim.checkPermission(player, ClaimPermission.Edit, event,
+                        () -> instance.dataStore.getMessage(Messages.CreateClaimFailOverlapOtherPlayer, ownerName));
+                if (noEditReason == null) {
+                    // Shift+right-click on a top-level shaped claim edge (basic mode): ephemeral segment selection for
+                    // later expansion in shaped mode. Requires AllowShapedClaims; corners use normal resize below.
+                    if (playerData.shovelMode == ShovelMode.Basic
+                            && player.isSneaking()
+                            && instance.config_claims_allowShapedClaims
+                            && trySelectShapedBoundarySegmentBasicMode(player, playerData, claim, clickedBlock)) {
+                        return;
+                    }
+
+                    // if he clicked on a corner, start resizing it
+                    boolean isCorner = isCornerMatch(claim, clickedBlock);
+                    if (isCorner) {
+                        // When 2D/3D subdivisions share a corner with the parent, select the parent (so
+                        // e.g. 1x1x1 sub at main corner can be removed by selecting main and deleting).
+                        Claim selection = claim;
+                        while (selection.parent != null) {
+                            Claim parent = selection.parent;
+                            boolean parentContains = parent.contains(clickedBlock.getLocation(), true, false);
+                            if (parentContains && isCornerMatch(parent, clickedBlock)) {
+                                selection = parent;
+                            } else {
+                                break;
+                            }
+                        }
+                        playerData.claimResizing = selection;
+                        playerData.lastShovelLocation = clickedBlock.getLocation();
+                        Messages message;
+                        if (selection.parent != null) {
+                            message = Messages.SubdivisionSelected;
+                        } else {
+                            // ClaimSelected when no children; ClaimSelectedTopLevel when claim has subdivisions
+                            boolean hasNoChildren = selection.children == null || selection.children.isEmpty();
+                            message = hasNoChildren ? Messages.ClaimSelected : Messages.ClaimSelectedTopLevel;
+                        }
+                        GriefPrevention.sendMessage(player, TextMode.Instr, message);
+                        // Refresh visualization in selection/resize mode.
+                        VisualizationType visualizationType;
+                        if (selection.parent == null) {
+                            visualizationType = selection.isAdminClaim() ? VisualizationType.ADMIN_CLAIM
+                                    : VisualizationType.CLAIM;
+                        } else {
+                            visualizationType = selection.is3D() ? VisualizationType.SUBDIVISION_3D
+                                    : VisualizationType.SUBDIVISION;
+                        }
+
+                        BoundaryVisualization.visualizeClaim(player, selection, visualizationType, clickedBlock);
+                    }
+
+                    // if he didn't click on a corner and is in subdivision mode, he's creating a
+                    // new subdivision
+                    else if (playerData.shovelMode == ShovelMode.Subdivide
+                            || playerData.shovelMode == ShovelMode.Subdivide3D) {
+                        // if it's the first click, he's trying to start a new subdivision
+                        if (playerData.lastShovelLocation == null) {
+                            // if the clicked claim was a subdivision, decide whether nesting is allowed
+                            if (claim.parent != null) {
+                                boolean claimIs3D = claim.is3D();
+                                boolean wants3DSubdivision = playerData.shovelMode == ShovelMode.Subdivide3D;
+                                boolean canStartSubdivision;
+
+                                if (!instance.config_claims_allowNestedSubClaims) {
+                                    // Nested subdivisions disabled entirely.
+                                    canStartSubdivision = false;
+                                } else if (claimIs3D) {
+                                    // When nested subclaims enabled and inside a 3D subdivision:
+                                    // Only allow if NOT on the same X/Z boundary as the 3D subdivision
+                                    boolean onXBoundary = (clickedBlock.getX() == claim.getLesserBoundaryCorner()
+                                            .getBlockX() ||
+                                            clickedBlock.getX() == claim.getGreaterBoundaryCorner().getBlockX());
+                                    boolean onZBoundary = (clickedBlock.getZ() == claim.getLesserBoundaryCorner()
+                                            .getBlockZ() ||
+                                            clickedBlock.getZ() == claim.getGreaterBoundaryCorner().getBlockZ());
+
+                                    // Block if on exact X/Z boundary (corners), allow nesting otherwise
+                                    // Also require 3D mode to stack inside 3D claims
+                                    canStartSubdivision = wants3DSubdivision && !(onXBoundary && onZBoundary);
+                                } else {
+                                    // Parent is 2D: allow additional subdivisions (2D or 3D) when nesting is
+                                    // enabled.
+                                    canStartSubdivision = true;
+                                }
+
+                                if (canStartSubdivision) {
+                                    GriefPrevention.sendMessage(player, TextMode.Instr, Messages.SubdivisionStart);
+                                    playerData.lastShovelLocation = clickedBlock.getLocation();
+                                    if (wants3DSubdivision) {
+                                        BoundaryVisualization.visualizeArea(player, new BoundingBox(clickedBlock),
+                                                VisualizationType.INITIALIZE_ZONE_3D, clickedBlock.getY());
+                                    }
+                                    playerData.claimSubdividing = claim;
+                                } else {
+                                    // Show conflict zone visualization for the existing 3D subdivision
+                                    // Show conflict zone visualization for the existing 3D subdivision
+                                    if (claimIs3D) {
+                                        GriefPrevention.sendMessage(player, TextMode.Err,
+                                                Messages.ResizeFailOverlapSubdivision);
+                                        visualizeConflict(player, playerData, claim, clickedBlock, true);
+                                    } else {
+                                        GriefPrevention.sendMessage(player, TextMode.Err,
+                                                Messages.ResizeFailOverlapSubdivision);
+                                    }
+                                }
+                            } else {
+                                // Top-level claim: always allow starting a subdivision.
+                                GriefPrevention.sendMessage(player, TextMode.Instr, Messages.SubdivisionStart);
+                                playerData.lastShovelLocation = clickedBlock.getLocation();
+                                if (playerData.shovelMode == ShovelMode.Subdivide3D) {
+                                    BoundaryVisualization.visualizeArea(player, new BoundingBox(clickedBlock),
+                                            VisualizationType.INITIALIZE_ZONE_3D, clickedBlock.getY());
+                                }
+                                playerData.claimSubdividing = claim;
+                            }
+                        }
+
+                        // otherwise, he's trying to finish creating a subdivision by setting the other
+                        // boundary corner
+                        else {
+                            // if last shovel location was in a different world, assume the player is
+                            // starting the create-claim workflow over
+                            if (!playerData.lastShovelLocation.getWorld().equals(clickedBlock.getWorld())) {
+                                playerData.lastShovelLocation = null;
+                                this.onPlayerInteract(event);
+                                return;
+                            }
+
+                            // Determine Y boundaries based on shovel mode
+                            int y1 = playerData.lastShovelLocation.getBlockY();
+                            int y2 = clickedBlock.getY();
+                            int minY, maxY;
+
+                            if (playerData.shovelMode == ShovelMode.Subdivide) {
+                                if (playerData.claimSubdividing == null) {
+                                    GriefPrevention.sendMessage(player, TextMode.Err, "No claim selected for subdivision.");
+                                    return;
+                                }
+                                // 2D mode: Always span from parent's bottom to world max height so claim is NOT
+                                // 3D.
+                                // This matches default GP behavior where 2D subclaims ignore height.
+                                int parentMinY = playerData.claimSubdividing.getLesserBoundaryCorner().getBlockY();
+                                int worldMaxY = player.getWorld().getMaxHeight();
+
+                                minY = parentMinY;
+                                maxY = worldMaxY;
+
+                                // For 2D subdivisions, force the created corners to use the full-height span
+                                // so DataStore.createClaim marks is3D=false.
+                                y1 = minY;
+                                y2 = maxY;
+                            } else if (playerData.shovelMode == ShovelMode.Subdivide3D) {
+                                // 3D mode: same-Y -> single-layer 3D; different Y -> bounded 3D
+                                if (Math.abs(y2 - y1) == 0) {
+                                    minY = y1;
+                                    maxY = y1; // single layer high
+                                } else {
+                                    minY = Math.min(y1, y2);
+                                    maxY = Math.max(y1, y2);
+                                }
+                            } else {
+                                // Fallback: default to parent Y bounds
+                                if (playerData.claimSubdividing == null) {
+                                    GriefPrevention.sendMessage(player, TextMode.Err, "No claim selected for subdivision.");
+                                    return;
+                                }
+                                minY = playerData.claimSubdividing.getLesserBoundaryCorner().getBlockY();
+                                maxY = playerData.claimSubdividing.getGreaterBoundaryCorner().getBlockY();
+                            }
+
+                            // Enforce inner offset if nesting 3D subclaims is enabled
+                            if (instance.config_claims_allowNestedSubClaims && playerData.claimSubdividing != null
+                                    && playerData.claimSubdividing.is3D()
+                                    && playerData.shovelMode == ShovelMode.Subdivide3D) {
+                                Claim parentClaim = playerData.claimSubdividing;
+                                int inset = 1;
+                                if (inset > 0) {
+                                    Location parentMin = parentClaim.getLesserBoundaryCorner();
+                                    Location parentMax = parentClaim.getGreaterBoundaryCorner();
+
+                                    int parentMinY = Math.min(parentMin.getBlockY(), parentMax.getBlockY());
+                                    int parentMaxY = Math.max(parentMin.getBlockY(), parentMax.getBlockY());
+
+                                    // Only enforce Y-axis inset for 3D claims, allow X/Z boundaries to match parent
+                                    int minAllowedY = parentMinY + inset;
+                                    int maxAllowedY = parentMaxY - inset;
+
+                                    if (minAllowedY > maxAllowedY) {
+                                        GriefPrevention.sendMessage(player, TextMode.Err,
+                                                Messages.CreateSubdivisionOverlap);
+                                        return;
+                                    }
+
+                                    int subMinY = Math.min(minY, maxY);
+                                    int subMaxY = Math.max(minY, maxY);
+
+                                    if (subMinY < minAllowedY || subMaxY > maxAllowedY) {
+                                        GriefPrevention.sendMessage(player, TextMode.Err,
+                                                Messages.InnerSubdivisionTooClose);
+                                        return;
+                                    }
+                                }
+                            }
+
+                            // Ensure 3D subclaims placed inside 2D parents - allow X/Z boundaries to match
+                            // parent
+                            if (playerData.shovelMode == ShovelMode.Subdivide3D
+                                    && playerData.claimSubdividing != null
+                                    && !playerData.claimSubdividing.is3D()) {
+                                // No X/Z inset enforcement - allow subdivisions to share parent boundaries
+                                // Only sibling collision checks remain
+                                Claim parentClaim = playerData.claimSubdividing;
+                                int proposedMinX = Math.min(playerData.lastShovelLocation.getBlockX(),
+                                        clickedBlock.getX());
+                                int proposedMaxX = Math.max(playerData.lastShovelLocation.getBlockX(),
+                                        clickedBlock.getX());
+                                int proposedMinZ = Math.min(playerData.lastShovelLocation.getBlockZ(),
+                                        clickedBlock.getZ());
+                                int proposedMaxZ = Math.max(playerData.lastShovelLocation.getBlockZ(),
+                                        clickedBlock.getZ());
+
+                                for (Claim sibling : parentClaim.children) {
+                                    if (!sibling.inDataStore || sibling.is3D())
+                                        continue;
+
+                                    Location siblingMin = sibling.getLesserBoundaryCorner();
+                                    Location siblingMax = sibling.getGreaterBoundaryCorner();
+
+                                    int siblingMinX = Math.min(siblingMin.getBlockX(), siblingMax.getBlockX());
+                                    int siblingMaxX = Math.max(siblingMin.getBlockX(), siblingMax.getBlockX());
+                                    int siblingMinZ = Math.min(siblingMin.getBlockZ(), siblingMax.getBlockZ());
+                                    int siblingMaxZ = Math.max(siblingMin.getBlockZ(), siblingMax.getBlockZ());
+
+                                    boolean zOverlap = proposedMinZ <= siblingMaxZ && proposedMaxZ >= siblingMinZ;
+                                    if (zOverlap) {
+                                        int gapEast = proposedMinX - siblingMaxX;
+                                        if (gapEast >= 0 && gapEast < 1) {
+                                            GriefPrevention.sendMessage(player, TextMode.Err,
+                                                    Messages.InnerSubdivisionTooClose);
+                                            return;
+                                        }
+
+                                        int gapWest = siblingMinX - proposedMaxX;
+                                        if (gapWest >= 0 && gapWest < 1) {
+                                            GriefPrevention.sendMessage(player, TextMode.Err,
+                                                    Messages.InnerSubdivisionTooClose);
+                                            return;
+                                        }
+                                    }
+
+                                    boolean xOverlap = proposedMinX <= siblingMaxX && proposedMaxX >= siblingMinX;
+                                    if (xOverlap) {
+                                        int gapSouth = proposedMinZ - siblingMaxZ;
+                                        if (gapSouth >= 0 && gapSouth < 1) {
+                                            GriefPrevention.sendMessage(player, TextMode.Err,
+                                                    Messages.InnerSubdivisionTooClose);
+                                            return;
+                                        }
+
+                                        int gapNorth = siblingMinZ - proposedMaxZ;
+                                        if (gapNorth >= 0 && gapNorth < 1) {
+                                            GriefPrevention.sendMessage(player, TextMode.Err,
+                                                    Messages.InnerSubdivisionTooClose);
+                                            return;
+                                        }
+                                    }
+                                }
+                            }
+
+                            // try to create a new claim (will return null if this subdivision overlaps
+                            // another)
+                            CreateClaimResult subdivisionResult = this.dataStore.createClaim(
+                                    player.getWorld(),
+                                    playerData.lastShovelLocation.getBlockX(), clickedBlock.getX(),
+                                    minY, maxY,
+                                    playerData.lastShovelLocation.getBlockZ(), clickedBlock.getZ(),
+                                    null, // owner is not used for subdivisions
+                                    playerData.claimSubdividing,
+                                    null, player);
+
+                            // if it didn't succeed, tell the player why
+                            if (!subdivisionResult.succeeded || subdivisionResult.claim == null) {
+                                if (subdivisionResult.claim != null) {
+                                    GriefPrevention.sendMessage(player, TextMode.Err,
+                                            Messages.CreateSubdivisionOverlap);
+                                    visualizeConflict(player, playerData, subdivisionResult.claim, clickedBlock,
+                                            subdivisionResult.claim.is3D());
+                                } else {
+                                    GriefPrevention.sendMessage(player, TextMode.Err,
+                                            Messages.CreateClaimFailOverlapRegion);
+                                }
+
+                                return;
+                            }
+
+                            // otherwise, advise him on the /trust command and show him his new subdivision
+                            else {
+                                GriefPrevention.sendMessage(player, TextMode.Success, Messages.SubdivisionSuccess);
+                                VisualizationType subdivisionViz = subdivisionResult.claim.is3D()
+                                        ? VisualizationType.SUBDIVISION_3D
+                                        : VisualizationType.SUBDIVISION;
+                                BoundaryVisualization.visualizeClaim(player, subdivisionResult.claim, subdivisionViz,
+                                        clickedBlock);
+                                playerData.lastShovelLocation = null;
+                                playerData.claimSubdividing = null;
+                            }
+                        }
+                    }
+
+                    // otherwise tell him he can't create a claim here, and show him the existing
+                    // claim
+                    // also advise him to consider /abandonclaim or resizing the existing claim
+                    else {
+                        // Admin3D mode: allow starting a stacked 3D admin claim at a different Y level
+                        if (playerData.shovelMode == ShovelMode.Admin3D && claim.is3D() && claim.isAdminClaim()
+                                && playerData.lastShovelLocation == null) {
+                            playerData.lastShovelLocation = clickedBlock.getLocation();
+                            GriefPrevention.sendMessage(player, TextMode.Instr, Messages.ClaimStart);
+                            BoundaryVisualization.visualizeArea(player, new BoundingBox(clickedBlock),
+                                    VisualizationType.INITIALIZE_ZONE_3D, clickedBlock.getY());
+                            return;
+                        }
+
+                        GriefPrevention.sendMessage(player, TextMode.Err, Messages.CreateClaimFailOverlap);
+                        visualizeConflict(player, playerData, claim, clickedBlock, claim.is3D());
+                    }
+                }
+
+                // otherwise tell the player he can't claim here because it's someone else's
+                // claim, and show him the claim
+                else {
+                    GriefPrevention.sendMessage(player, TextMode.Err, noEditReason.get());
+                    visualizeConflict(player, playerData, claim, clickedBlock, claim.is3D());
+                }
+
+                return;
+            }
+
+            // otherwise, the player isn't in an existing claim!
+
+            // if he hasn't already start a claim with a previous shovel action
+            Location lastShovelLocation = playerData.lastShovelLocation;
+            if (lastShovelLocation == null) {
+                // if claims are not enabled in this world and it's not an administrative claim,
+                // display an error message and stop
+                if (!instance.claimsEnabledForWorld(player.getWorld())) {
+                    GriefPrevention.sendMessage(player, TextMode.Err, Messages.ClaimsDisabledWorld);
+                    return;
+                }
+
+                // if he's at the claim count per player limit already and doesn't have
+                // permission to bypass, display an error message
+                if (instance.config_claims_maxClaimsPerPlayer > 0 &&
+                        !player.hasPermission("griefprevention.overrideclaimcountlimit") &&
+                        playerData.getClaims().size() >= instance.config_claims_maxClaimsPerPlayer) {
+                    GriefPrevention.sendMessage(player, TextMode.Err, Messages.ClaimCreationFailedOverClaimCountLimit);
+                    return;
+                }
+
+                // remember it, and start him on the new claim
+                if (playerData.shovelMode == ShovelMode.Admin3D) {
+                    playerData.lastShovelLocation = clickedBlock.getLocation();
+                    GriefPrevention.sendMessage(player, TextMode.Instr, Messages.ClaimStart);
+                    BoundaryVisualization.visualizeArea(player, new BoundingBox(clickedBlock),
+                            VisualizationType.INITIALIZE_ZONE_3D, clickedBlock.getY());
+                } else {
+                    playerData.lastShovelLocation = clickedBlock.getLocation();
+                    GriefPrevention.sendMessage(player, TextMode.Instr, Messages.ClaimStart);
+                    BoundaryVisualization.visualizeArea(player, new BoundingBox(clickedBlock),
+                            VisualizationType.INITIALIZE_ZONE);
+                }
+            }
+
+            // otherwise, he's trying to finish creating a claim by setting the other
+            // boundary corner
+            else {
+                // if last shovel location was in a different world, assume the player is
+                // starting the create-claim workflow over
+                if (!lastShovelLocation.getWorld().equals(clickedBlock.getWorld())) {
+                    playerData.lastShovelLocation = null;
+                    this.onPlayerInteract(event);
+                    return;
+                }
+
+                // apply pvp rule
+                if (playerData.inPvpCombat()) {
+                    GriefPrevention.sendRateLimitedErrorMessage(player, Messages.NoClaimDuringPvP);
+                    return;
+                }
+
+                // apply minimum claim dimensions rule
+                int newWidth;
+                int newHeight;
+
+                try
+                {
+                    newWidth = Math.abs(Math.subtractExact(lastShovelLocation.getBlockX(), clickedBlock.getX())) + 1;
+                    newHeight = Math.abs(Math.subtractExact(lastShovelLocation.getBlockZ(), clickedBlock.getZ())) + 1;
+                }
+                catch (ArithmeticException e)
+                {
+                    GriefPrevention.sendMessage(player, TextMode.Err, Messages.CreateClaimInsufficientBlocks, String.valueOf(Integer.MAX_VALUE));
+                    playerData.lastShovelLocation = null;
+                    playerData.claimSubdividing = null;
+                    return;
+                }
+
+                if (playerData.shovelMode != ShovelMode.Admin && playerData.shovelMode != ShovelMode.Admin3D) {
+                    if (newWidth < instance.config_claims_minWidth
+                            || newHeight < instance.config_claims_minWidth) {
+                        // this IF block is a workaround for craftbukkit bug which fires two events for
+                        // one interaction
+                        if (newWidth != 1 && newHeight != 1) {
+                            GriefPrevention.sendMessage(player, TextMode.Err, Messages.NewClaimTooNarrow,
+                                    String.valueOf(instance.config_claims_minWidth));
+                        }
+                        return;
+                    }
+
+                    int newArea = newWidth * newHeight;
+                    if (newArea < instance.config_claims_minArea) {
+                        if (newArea != 1) {
+                            GriefPrevention.sendMessage(player, TextMode.Err, Messages.ResizeClaimInsufficientArea,
+                                    String.valueOf(instance.config_claims_minArea));
+                        }
+
+                        return;
+                    }
+                }
+
+                UUID playerID = player.getUniqueId();
+
+                // if not an administrative claim, verify the player has enough claim blocks for
+                // this new claim
+                if (playerData.shovelMode != ShovelMode.Admin && playerData.shovelMode != ShovelMode.Admin3D) {
+                    int newClaimArea = newWidth * newHeight;
+                    int remainingBlocks = playerData.getRemainingClaimBlocks();
+                    if (newClaimArea > remainingBlocks) {
+                        GriefPrevention.sendMessage(player, TextMode.Err, Messages.CreateClaimInsufficientBlocks,
+                                String.valueOf(newClaimArea - remainingBlocks));
+                        instance.dataStore.tryAdvertiseAdminAlternatives(player);
+                        return;
+                    }
+                } else {
+                    playerID = null;
+                }
+
+                boolean is3dAdminClaim = playerData.shovelMode == ShovelMode.Admin3D;
+
+                // try to create a new claim
+                CreateClaimResult result = this.dataStore.createClaim(
+                        player.getWorld(),
+                        lastShovelLocation.getBlockX(), clickedBlock.getX(),
+                        is3dAdminClaim ? lastShovelLocation.getBlockY() : lastShovelLocation.getBlockY() - instance.config_claims_claimsExtendIntoGroundDistance,
+                        is3dAdminClaim ? clickedBlock.getY() : clickedBlock.getY() - instance.config_claims_claimsExtendIntoGroundDistance,
+                        lastShovelLocation.getBlockZ(), clickedBlock.getZ(),
+                        playerID,
+                        null, null,
+                        player,
+                        is3dAdminClaim);
+
+                // if it didn't succeed, tell the player why
+                if (!result.succeeded || result.claim == null) {
+                    if (result.claim != null) {
+                        GriefPrevention.sendMessage(player, TextMode.Err, Messages.CreateClaimFailOverlapShort);
+                        visualizeConflict(player, playerData, result.claim, clickedBlock, result.claim.is3D());
+                    } else {
+                        GriefPrevention.sendMessage(player, TextMode.Err, Messages.CreateClaimFailOverlapRegion);
+                    }
+
+                    return;
+                }
+
+                // otherwise, advise him on the /trust command and show him his new claim
+                else {
+                    GriefPrevention.sendMessage(player, TextMode.Success, Messages.CreateClaimSuccess);
+                    VisualizationType vizType = is3dAdminClaim ? VisualizationType.ADMIN_CLAIM_3D : VisualizationType.CLAIM;
+                    BoundaryVisualization.visualizeClaim(player, result.claim, vizType, clickedBlock);
+                    playerData.lastShovelLocation = null;
+                }
+            }
         }
     }
 

@@ -3425,7 +3425,7 @@ public class GriefPrevention extends JavaPlugin {
     }
 
     public static void sendMessage(@Nullable CommandSender sender, @NotNull TextMode mode, @Nullable String message) {
-        if (message == null || message.isBlank())
+        if (!hasVisibleMessageContent(message))
             return;
 
         if (sender == null) {
@@ -3451,7 +3451,7 @@ public class GriefPrevention extends JavaPlugin {
 
     public static void sendMessage(@Nullable Player player, @NotNull ChatColor color, @Nullable String message,
             long delayInTicks) {
-        if (message == null || message.isBlank())
+        if (!hasVisibleMessageContent(message))
             return;
 
         SendPlayerMessageTask task = new SendPlayerMessageTask(player, color, message);
@@ -3463,6 +3463,15 @@ public class GriefPrevention extends JavaPlugin {
         } else {
             task.run();
         }
+    }
+
+    public static boolean hasVisibleMessageContent(@Nullable String message) {
+        if (message == null) {
+            return false;
+        }
+
+        String stripped = ChatColor.stripColor(message);
+        return stripped != null && !stripped.isBlank();
     }
 
     // sends a rate-limited error message to a player (max once per 10 seconds)
@@ -4481,7 +4490,7 @@ public class GriefPrevention extends JavaPlugin {
     }
 
     public static void sendMessage(Player player, ChatColor color, String message) {
-        if (message == null || message.isBlank())
+        if (!hasVisibleMessageContent(message))
             return;
         if (player != null) {
             player.sendMessage(color + message);

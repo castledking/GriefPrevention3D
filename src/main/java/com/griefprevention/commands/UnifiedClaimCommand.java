@@ -68,6 +68,10 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
             return;
         }
 
+        if (handleConfiguredFallback(sender)) {
+            return;
+        }
+
         // Check if use-as-help-cmd is enabled
         if (rootCommandConfig != null && rootCommandConfig.shouldUseAsHelpCmd()) {
             sendHelpMessage(sender, new String[0]);

@@ -67,49 +67,49 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
             "adjustbonusclaimblocks",
             "griefprevention.adjustclaimblocks",
             (sender, args) -> handleBlocks(sender, prependArg("bonus", args)),
-            null
+            java.util.Arrays.asList("online-player", "integer-negative")
         );
         registerLegacyStandaloneCommand(
             "acb",
             "griefprevention.adjustclaimblocks",
             (sender, args) -> handleBlocks(sender, prependArg("bonus", args)),
-            null
+            java.util.Arrays.asList("online-player", "integer-negative")
         );
         registerLegacyStandaloneCommand(
             "setaccruedclaimblocks",
             "griefprevention.adjustclaimblocks",
             (sender, args) -> handleBlocks(sender, prependArg("accrued", args)),
-            null
+            java.util.Arrays.asList("online-player", "integer-negative")
         );
         registerLegacyStandaloneCommand(
             "scb",
             "griefprevention.adjustclaimblocks",
             (sender, args) -> handleBlocks(sender, prependArg("accrued", args)),
-            null
+            java.util.Arrays.asList("online-player", "integer-negative")
         );
         registerLegacyStandaloneCommand(
             "adjustbonusclaimblocksall",
             "griefprevention.adjustclaimblocks",
             (sender, args) -> handleBlocks(sender, prependArg("bonus", prependArg("all", args))),
-            null
+            java.util.List.of("integer-negative")
         );
         registerLegacyStandaloneCommand(
             "acball",
             "griefprevention.adjustclaimblocks",
             (sender, args) -> handleBlocks(sender, prependArg("bonus", prependArg("all", args))),
-            null
+            java.util.List.of("integer-negative")
         );
         registerLegacyStandaloneCommand(
             "setaccruedclaimblocksall",
             "griefprevention.adjustclaimblocks",
             (sender, args) -> handleBlocks(sender, prependArg("accrued", prependArg("all", args))),
-            null
+            java.util.List.of("integer-negative")
         );
         registerLegacyStandaloneCommand(
             "scball",
             "griefprevention.adjustclaimblocks",
             (sender, args) -> handleBlocks(sender, prependArg("accrued", prependArg("all", args))),
-            null
+            java.util.List.of("integer-negative")
         );
         registerStandaloneCommand(Alias.AClaimDelete, createNoArgStandaloneTabExecutor(this::handleDelete));
         registerStandaloneCommand(Alias.AClaimTransfer, this::handleTransfer);
@@ -123,6 +123,10 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
         // Check if root command is disabled first
         if (!rootCommandEnabled) {
             sender.sendMessage("This command is disabled.");
+            return;
+        }
+
+        if (handleConfiguredFallback(sender)) {
             return;
         }
 

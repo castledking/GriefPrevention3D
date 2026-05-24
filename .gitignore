@@ -100,3 +100,7 @@ wiki/
 
 # Track latest release
 !.release/latest/
+
+# Untrack legacy compat work
+.gradle/
+build/

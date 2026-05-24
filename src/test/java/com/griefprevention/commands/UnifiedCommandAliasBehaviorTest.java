@@ -1,33 +1,67 @@
 package com.griefprevention.commands;
 
-import com.griefprevention.commands.CommandAliasConfiguration;
+import com.griefprevention.test.ServerMocks;
 import me.ryanhamshire.GriefPrevention.DataStore;
 import me.ryanhamshire.GriefPrevention.GriefPrevention;
 import me.ryanhamshire.GriefPrevention.Messages;
+import me.ryanhamshire.GriefPrevention.TextMode;
+import org.bukkit.Bukkit;
+import org.bukkit.Server;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
+import org.bukkit.entity.Player;
+import org.bukkit.plugin.PluginManager;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
-import java.io.File;
-import java.io.FileWriter;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.logging.Logger;
 
-import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
-class UnifiedCommandAliasBehaviorTest {
+@SuppressWarnings("null")
+class UnifiedCommandAliasBehaviorTest
+{
+    @BeforeAll
+    static void beforeAll()
+    {
+        Server server = ServerMocks.newServer();
+        PluginManager pluginManager = mock(PluginManager.class);
+        doReturn(pluginManager).when(server).getPluginManager();
+        Bukkit.setServer(server);
+    }
+
+    @AfterAll
+    static void afterAll()
+    {
+        GriefPrevention.instance = null;
+        ServerMocks.unsetBukkitServer();
+    }
 
     @Test
-    void rootCommandUseAsHelpCmdShowsHelp(@TempDir Path tempDir) throws Exception {
+    void rootCommandFallbackDispatchesConfiguredSubcommand(@TempDir Path tempDir) throws Exception
+    {
         CommandAliasConfiguration aliases = loadAliases(tempDir, """
             enabled: true
+            standalone: true
             commands:
               claim:
                 enable: true
                 commands: [claim]
-                use-as-help-cmd: true
+                fallback: help
             subcommands:
               claim:
                 create:
@@ -45,14 +79,28 @@ class UnifiedCommandAliasBehaviorTest {
         UnifiedClaimCommand command = new UnifiedClaimCommand(plugin);
         command.onCommand(sender, mock(Command.class), "claim", new String[0]);
 
-        // Verify the help message is sent with the correct format
-        verify(sender, atLeastOnce()).sendMessage("§e§e/claim create [radius]§7 - Create or expand a claim centered on you.");
+        verify(sender, atLeastOnce()).sendMessage("CUSTOM claim create [radius] :: Create or expand a claim centered on you.");
+        verify(plugin.dataStore, never()).createClaim(
+            org.mockito.ArgumentMatchers.any(),
+            org.mockito.ArgumentMatchers.anyInt(),
+            org.mockito.ArgumentMatchers.anyInt(),
+            org.mockito.ArgumentMatchers.anyInt(),
+            org.mockito.ArgumentMatchers.anyInt(),
+            org.mockito.ArgumentMatchers.anyInt(),
+            org.mockito.ArgumentMatchers.anyInt(),
+            org.mockito.ArgumentMatchers.any(),
+            org.mockito.ArgumentMatchers.any(),
+            org.mockito.ArgumentMatchers.any(),
+            org.mockito.ArgumentMatchers.any()
+        );
     }
 
     @Test
-    void helpRowsUseConfiguredMessageTemplate(@TempDir Path tempDir) throws Exception {
+    void helpRowsUseConfiguredMessageTemplate(@TempDir Path tempDir) throws Exception
+    {
         CommandAliasConfiguration aliases = loadAliases(tempDir, """
             enabled: true
+            standalone: true
             commands:
               claim:
                 enable: true
@@ -68,59 +116,59 @@ class UnifiedCommandAliasBehaviorTest {
             """);
         GriefPrevention plugin = newPlugin(aliases);
         GriefPrevention.instance = plugin;
-        
+
         UnifiedClaimCommand command = new UnifiedClaimCommand(plugin);
         CommandSender sender = mock(CommandSender.class);
         when(sender.getName()).thenReturn("Console");
 
         command.onCommand(sender, mock(Command.class), "claim", new String[] { "help" });
 
-        // Verify the help header and entry are sent
-        verify(sender, atLeastOnce()).sendMessage("§6Available /claim commands (Page 1/1):");
+        // Let's see what messages are actually being sent
+        verify(sender, atLeastOnce()).sendMessage("§6Available /claim commands (Page 1/2):");
         verify(sender, atLeastOnce()).sendMessage("");
-        // The actual help entry message format
-        verify(sender, atLeastOnce()).sendMessage("§e§e/claim create [radius]§7 - Create or expand a claim centered on you.");
+        // The help entry should be sent but isn't
+        verify(sender, atLeastOnce()).sendMessage("CUSTOM claim create [radius] :: Create or expand a claim centered on you.");
     }
 
     @Test
-    void colorOnlyMessagesAreSuppressed(@TempDir Path tempDir) throws Exception {
+    void fallbackValueIsLoadedFromAliasConfiguration(@TempDir Path tempDir) throws Exception
+    {
         CommandAliasConfiguration aliases = loadAliases(tempDir, """
             enabled: true
             commands:
               claim:
                 enable: true
-                commands: [claim]
-            subcommands:
-              claim:
-                create:
-                  enable: false
+                commands: [terreno]
+                fallback: 'help 2'
             """);
-        GriefPrevention plugin = newPlugin(aliases);
-        GriefPrevention.instance = plugin;
 
-        UnifiedClaimCommand command = new UnifiedClaimCommand(plugin);
-        org.bukkit.entity.Player player = mock(org.bukkit.entity.Player.class);
-        when(player.getName()).thenReturn("TestPlayer");
-        when(player.getUniqueId()).thenReturn(java.util.UUID.randomUUID());
-
-        command.onCommand(player, mock(Command.class), "claim", new String[] { "create" });
-
-        // Should NOT send any message (color-only messages suppressed)
-        verify(player, never()).sendMessage(any(String.class));
+        assertEquals("help 2", aliases.getRootCommand("claim").getFallback());
     }
 
-    private static CommandAliasConfiguration loadAliases(Path tempDir, String yaml) throws Exception {
-        File file = tempDir.resolve("aliases.yml").toFile();
-        try (FileWriter writer = new FileWriter(file)) {
-            writer.write(yaml);
-        }
-        // Create a mock plugin to load the configuration
-        GriefPrevention mockPlugin = mock(GriefPrevention.class);
-        when(mockPlugin.getLogger()).thenReturn(mock(Logger.class));
-        return CommandAliasConfiguration.load(mockPlugin, file);
+    @Test
+    void colorOnlyMessagesAreSuppressed()
+    {
+        Player sender = mock(Player.class);
+
+        GriefPrevention.sendMessage(sender, TextMode.Info, "\u00A7b", 0);
+
+        verify(sender, never()).sendMessage(anyString());
+        assertTrue(!GriefPrevention.hasVisibleMessageContent(""));
+        assertTrue(!GriefPrevention.hasVisibleMessageContent("\u00A7c\n"));
     }
 
-    private static GriefPrevention newPlugin(CommandAliasConfiguration aliases) {
+    private static CommandAliasConfiguration loadAliases(Path tempDir, String yaml) throws Exception
+    {
+        Path file = tempDir.resolve("alias.yml");
+        Files.writeString(file, yaml);
+
+        GriefPrevention plugin = mock(GriefPrevention.class);
+        when(plugin.getLogger()).thenReturn(mock(Logger.class));
+        return CommandAliasConfiguration.load(plugin, file.toFile());
+    }
+
+    private static GriefPrevention newPlugin(CommandAliasConfiguration aliases)
+    {
         GriefPrevention plugin = mock(GriefPrevention.class);
         DataStore dataStore = mock(DataStore.class);
         plugin.dataStore = dataStore;
@@ -128,42 +176,25 @@ class UnifiedCommandAliasBehaviorTest {
         when(plugin.getCommand(anyString())).thenReturn(mock(PluginCommand.class));
         Logger logger = mock(Logger.class);
         when(plugin.getLogger()).thenReturn(logger);
-        
-        // Setup mock for getMessage with proper varargs handling
-        when(dataStore.getMessage(any(Messages.class), any(String.class), any(String.class)))
-            .thenAnswer(invocation -> {
-                Messages message = invocation.getArgument(0);
-                String arg1 = invocation.getArgument(1);
-                String arg2 = invocation.getArgument(2);
-                
-                if (message == Messages.ClaimHelpHeader) {
-                    return "§6Available /claim commands (Page 1/1):";
-                }
-                if (message == Messages.ClaimHelpLegend) {
-                    return "";
-                }
-                if (message == Messages.ClaimHelpEntry) {
-                    // Format: §e<command>§7 - <description>
-                    return "§e" + arg1 + "§7 - " + arg2;
-                }
+
+        doAnswer(invocation -> {
+            Messages message = invocation.getArgument(0);
+            Object[] args = invocation.getArguments();
+            // Handle varargs - skip the first argument (Messages enum) and process the rest as strings
+            if (message == Messages.ClaimHelpEntry && args.length >= 3) {
+                String command = args[1] != null ? args[1].toString().replaceAll("\u00A7.", "") : "";
+                String description = args[2] != null ? args[2].toString().replaceAll("\u00A7.", "") : "";
+                return "CUSTOM " + command + " :: " + description;
+            }
+            if (message == Messages.ClaimHelpHeader) {
+                return "§6Available /claim commands (Page 1/2):";
+            }
+            if (message == Messages.ClaimHelpLegend || message == Messages.ClaimHelpPagination) {
                 return "";
-            });
-        
-        // Handle single-arg getMessage calls
-        when(dataStore.getMessage(any(Messages.class)))
-            .thenAnswer(invocation -> {
-                Messages message = invocation.getArgument(0);
-                if (message == Messages.ClaimHelpHeader) {
-                    return "§6Available /claim commands (Page 1/1):";
-                }
-                if (message == Messages.ClaimHelpLegend) {
-                    return "";
-                }
-                return message.name();
-            });
-        
-        when(dataStore.getGroupBonusBlocks(any())).thenReturn(0);
-        
+            }
+            return message.name();
+        }).when(dataStore).getMessage(org.mockito.ArgumentMatchers.any(Messages.class), org.mockito.ArgumentMatchers.any(String.class), org.mockito.ArgumentMatchers.any(String.class));
+
         return plugin;
     }
 }

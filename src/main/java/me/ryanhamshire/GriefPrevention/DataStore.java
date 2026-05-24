@@ -1856,8 +1856,9 @@ public abstract class DataStore {
         // layer here; accept the requested vertical span.
 
         // try to create this new claim, ignoring the original when checking for overlap
+        // Use the 13-parameter overload: dryRun=true, is3D from original claim
         CreateClaimResult result = this.createClaim(claim.getLesserBoundaryCorner().getWorld(), newx1, newx2, newy1,
-                newy2, newz1, newz2, claim.ownerID, claim.parent, claim.id, resizingPlayer, true);
+                newy2, newz1, newz2, claim.ownerID, claim.parent, claim.id, resizingPlayer, true, claim.is3D());
 
         // if succeeded
         if (result.succeeded) {
@@ -2027,7 +2028,7 @@ public abstract class DataStore {
 
             // make sure player has enough blocks to make up the difference
             if (!playerData.claimResizing.isAdminClaim()
-                    && player.getName().equals(playerData.claimResizing.getOwnerName())) {
+                    && player.getUniqueId().equals(playerData.claimResizing.ownerID)) {
                 int newArea;
                 int blocksRemainingAfter;
                 try {
@@ -2356,9 +2357,10 @@ public abstract class DataStore {
                 boolean hasUserColorCodes = this.messages[message.ordinal()].contains("$")
                         || this.messages[message.ordinal()].contains("&");
                 boolean hasUserNewline = this.messages[message.ordinal()].contains("\\n");
+                boolean isDisabledMessage = this.messages[message.ordinal()].isBlank();
 
                 // Apply default styling for specific messages if no user color codes
-                if (!hasUserColorCodes) {
+                if (!hasUserColorCodes && !isDisabledMessage) {
                     switch (message) {
                         case ClaimHelpHeader:
                         case AClaimHelpHeader:
