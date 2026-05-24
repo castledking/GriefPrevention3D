@@ -19,6 +19,7 @@
 package me.ryanhamshire.GriefPrevention;
 
 import com.griefprevention.protection.ProtectionHelper;
+import me.ryanhamshire.GriefPrevention.compat.CompatUtil;
 import me.ryanhamshire.GriefPrevention.events.ProtectDeathDropsEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.ExplosionResult;
@@ -105,7 +106,7 @@ public class EntityEventHandler implements Listener
     @EventHandler(ignoreCancelled = true, priority = EventPriority.LOWEST)
     public void onEntityChangeBLock(EntityChangeBlockEvent event)
     {
-        if (event.getTo() == Material.COBWEB && event.getEntity() instanceof LivingEntity)
+        if (CompatUtil.isMaterial(event.getTo(), "COBWEB") && event.getEntity() instanceof LivingEntity)
         {
             return;
         }
@@ -122,7 +123,7 @@ public class EntityEventHandler implements Listener
         {
             event.setCancelled(true);
         }
-        else if (!GriefPrevention.instance.config_claims_ravagersBreakBlocks && event.getEntityType() == EntityType.RAVAGER)
+        else if (!GriefPrevention.instance.config_claims_ravagersBreakBlocks && CompatUtil.isEntityType(event.getEntityType(), "RAVAGER"))
         {
             event.setCancelled(true);
         }
@@ -172,7 +173,7 @@ public class EntityEventHandler implements Listener
         }
 
         // Prevent melting powdered snow.
-        else if (event.getBlock().getType() == Material.POWDER_SNOW && event.getTo() == Material.AIR)
+        else if (CompatUtil.isMaterial(event.getBlock().getType(), "POWDER_SNOW") && event.getTo() == Material.AIR)
         {
             handleEntityMeltPowderedSnow(event);
         }
@@ -723,7 +724,7 @@ public class EntityEventHandler implements Listener
     @EventHandler(priority = EventPriority.LOWEST)
     public void onEntityPickup(EntityChangeBlockEvent event)
     {
-        if (event.getTo() == Material.COBWEB && event.getEntity() instanceof LivingEntity)
+        if (CompatUtil.isMaterial(event.getTo(), "COBWEB") && event.getEntity() instanceof LivingEntity)
         {
             return;
         }

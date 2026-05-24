@@ -2,6 +2,7 @@ package me.ryanhamshire.GriefPrevention.compat;
 
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.entity.EntityType;
 import org.bukkit.Statistic;
 import org.bukkit.WorldBorder;
 import org.bukkit.entity.Player;
@@ -263,6 +264,18 @@ public class CompatUtil {
             player.setPortalCooldown(ticks);
         } catch (NoSuchMethodError e) {
             // 1.8.8: setPortalCooldown doesn't exist
+        }
+    }
+
+    /**
+     * Safely check if an EntityType matches a given name (for newer entity types)
+     * Returns false if entity type doesn't exist in this version
+     */
+    public static boolean isEntityType(EntityType entityType, String entityTypeName) {
+        try {
+            return entityType == EntityType.valueOf(entityTypeName);
+        } catch (IllegalArgumentException e) {
+            return false;
         }
     }
 

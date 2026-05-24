@@ -21,12 +21,14 @@ public class LegacyRightClickAirHandler implements Listener {
     private static Class<?> channelClass;
     private static Class<?> channelHandlerClass;
     private static Class<?> channelInboundHandlerClass;
+    private static Class<?> pipelineClass;
 
     static {
         try {
             channelClass = Class.forName("io.netty.channel.Channel");
             channelHandlerClass = Class.forName("io.netty.channel.ChannelHandler");
             channelInboundHandlerClass = Class.forName("io.netty.channel.ChannelInboundHandler");
+            pipelineClass = Class.forName("io.netty.channel.ChannelPipeline");
             available = true;
         } catch (ClassNotFoundException e) {
             GriefPrevention.AddLogEntry("Netty not available; right-click air handler disabled.");
@@ -64,7 +66,7 @@ public class LegacyRightClickAirHandler implements Listener {
                     new RightClickInvocationHandler(player)
             );
 
-            Method addBefore = pipeline.getClass().getMethod("addBefore", String.class, String.class, channelHandlerClass);
+            Method addBefore = pipelineClass.getMethod("addBefore", String.class, String.class, channelHandlerClass);
             addBefore.invoke(pipeline, "packet_handler", "gp_rightclick", handler);
 
         } catch (Exception e) {
