@@ -511,7 +511,7 @@ public class GriefPrevention extends JavaPlugin {
         registerIfClassPresent(pluginManager, "org.bukkit.event.entity.EntityMountEvent",
                 () -> new EntityMountEventHandler(this.dataStore, this));
         registerIfClassPresent(pluginManager, "org.bukkit.event.entity.EntityPickupItemEvent",
-                () -> new EntityPickupItemEventHandler(entityEventHandler));
+                () -> new EntityPickupItemEventHandler(this.dataStore));
         registerIfClassPresent(pluginManager, "org.bukkit.event.player.PlayerSignOpenEvent",
                 () -> new PlayerSignOpenEventHandler());
         registerIfClassPresent(pluginManager, "org.bukkit.event.player.PlayerTakeLecternBookEvent",
