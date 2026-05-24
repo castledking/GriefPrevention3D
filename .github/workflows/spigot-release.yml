@@ -24,6 +24,11 @@ on:
         required: false
         default: true
         type: boolean
+      run_curseforge:
+        description: 'Release to CurseForge'
+        required: false
+        default: true
+        type: boolean
       run_discord:
         description: 'Send Discord notification'
         required: false
@@ -39,7 +44,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up JDK 21
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_modrinth || inputs.run_spigot }}
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_modrinth || inputs.run_spigot || inputs.run_curseforge }}
         uses: actions/setup-java@v4
         with:
           java-version: 21
@@ -47,11 +52,11 @@ jobs:
           cache: gradle
 
       - name: Grant execute permission for gradlew
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_modrinth || inputs.run_spigot }}
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_modrinth || inputs.run_spigot || inputs.run_curseforge }}
         run: chmod +x gradlew
 
       - name: Build with Gradle
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_modrinth || inputs.run_spigot }}
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_modrinth || inputs.run_spigot || inputs.run_curseforge }}
         run: ./gradlew build -x test
 
       - name: Determine version
@@ -68,7 +73,7 @@ jobs:
 
       - name: Find JAR
         id: find-jar
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_modrinth || inputs.run_spigot }}
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_modrinth || inputs.run_spigot || inputs.run_curseforge }}
         run: |
           JAR=$(find build/libs -name "GriefPrevention3D*.jar" -not -name "*-javadoc.jar" -not -name "*-sources.jar" | head -n1)
           echo "jar=${JAR}" >> $GITHUB_OUTPUT
@@ -92,7 +97,28 @@ jobs:
           fi
           node .release/src/modrinth-release.js
 
-      # --- Step 2: SpigotMC ---
+      # --- Step 2: CurseForge ---
+      - name: Release to CurseForge
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_curseforge }}
+        env:
+          CURSEFORGE_API_TOKEN: ${{ secrets.CURSEFORGE_API_TOKEN }}
+          CURSEFORGE_PROJECT_ID: 1552252
+          REPO_NAME: GriefPrevention3D
+          VERSION: ${{ steps.version.outputs.version }}
+          JAR_PATH: ${{ steps.find-jar.outputs.jar }}
+          DRY_RUN: ${{ inputs.dry_run && 'true' || 'false' }}
+        run: |
+          if [ -z "${{ steps.find-jar.outputs.jar }}" ]; then
+            echo "No JAR found, skipping CurseForge"
+            exit 0
+          fi
+          if [ -f ".release/latest/v${{ steps.version.outputs.version }}.md" ]; then
+            mkdir -p /tmp/release-notes
+            cp ".release/latest/v${{ steps.version.outputs.version }}.md" /tmp/release-notes/
+          fi
+          node .release/src/curseforge-release.js
+
+      # --- Step 3: SpigotMC ---
       - name: Build Docker image
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_spigot }}
         run: docker build -t spigot-release-automation .release
@@ -126,7 +152,7 @@ jobs:
             $MOUNTS \
             spigot-release-automation
 
-      # --- Step 3: Discord ---
+      # --- Step 4: Discord ---
       - name: Discord notification
         if: ${{ always() && (github.event_name != 'workflow_dispatch' || inputs.run_discord) }}
         env:
