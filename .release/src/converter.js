@@ -160,11 +160,10 @@ export function markdownToBbcode(input) {
     if (label === url) return "[URL]" + url + "[/URL]";
     return "[URL=" + url + "]" + label + "[/URL]";
   });
-  text = markdownListsToBbcode(text);
-  text = text.replace(/\[\*\]/g, () => store.take("[*]"));
   text = text.replace(/\*\*([\s\S]*?)\*\*/g, "[B]$1[/B]");
   text = text.replace(/(^|[^\*])\*([^\*\n][\s\S]*?)\*(?!\*)/g, "$1[I]$2[/I]");
   text = text.replace(/~~([\s\S]*?)~~/g, "[S]$1[/S]");
+  text = markdownListsToBbcode(text);
   text = markdownQuotesToBbcode(text);
 
   return trimEmptyLines(store.restore(text)).replace(/\n{3,}/g, "\n\n");
