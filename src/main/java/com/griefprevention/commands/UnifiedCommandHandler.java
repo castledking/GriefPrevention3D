@@ -798,8 +798,8 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
         @NotNull String[] subArgs
     ) {
         Claim selectedOrCurrentClaim = null;
-        if (sender instanceof Player player) {
-            selectedOrCurrentClaim = plugin.getSelectedOrCurrentClaim(player, false);
+        if (sender instanceof Player) {
+            selectedOrCurrentClaim = plugin.getSelectedOrCurrentClaim((Player) sender, false);
         }
 
         return new ClaimCommandContext(
@@ -1074,7 +1074,8 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
             : Messages.ClaimHelpEntry;
 
         // Send header and legend messages
-        if (sender instanceof Player player) {
+        if (sender instanceof Player) {
+            Player player = (Player) sender;
             GriefPrevention.sendMessage(player, TextMode.Info, headerMessage);
             GriefPrevention.sendMessage(player, TextMode.Info, "");
             GriefPrevention.sendMessage(player, TextMode.Info, legendMessage);
@@ -1174,7 +1175,27 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
         return new HelpEntryParts(command, description);
     }
 
-    private record HelpEntryParts(@NotNull String command, @NotNull String description) {}
+    private static final class HelpEntryParts
+    {
+        private final @NotNull String command;
+        private final @NotNull String description;
+
+        private HelpEntryParts(@NotNull String command, @NotNull String description)
+        {
+            this.command = command;
+            this.description = description;
+        }
+
+        @NotNull String command()
+        {
+            return command;
+        }
+
+        @NotNull String description()
+        {
+            return description;
+        }
+    }
 
     private @Nullable String getUsageText(@NotNull String canonical) {
         CommandAliasConfiguration.Subcommand config = subcommandConfigs.get(canonical);
@@ -1259,21 +1280,25 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
                 }
             } else {
                 switch (type) {
-                    case "player", "online-player" -> {
+                    case "player":
+                    case "online-player":
                         List<String> players = TabCompletions.visiblePlayers(sender, new String[] { current });
                         // Exclude the sender themselves from player completions
-                        if (sender instanceof Player playerSender) {
+                        if (sender instanceof Player) {
+                            Player playerSender = (Player) sender;
                             players.removeIf(name -> name.equalsIgnoreCase(playerSender.getName()));
                         }
                         suggestions.addAll(players);
-                    }
-                    case "integer" -> suggestions.addAll(TabCompletions.integer(new String[] { current }, 6, false));
-                    case "integer-negative" -> suggestions.addAll(
-                        TabCompletions.integer(new String[] { current }, 6, true)
-                    );
-                    default -> {
+                        break;
+                    case "integer":
+                        suggestions.addAll(TabCompletions.integer(new String[] { current }, 6, false));
+                        break;
+                    case "integer-negative":
+                        suggestions.addAll(TabCompletions.integer(new String[] { current }, 6, true));
+                        break;
+                    default:
                         // no special handling
-                    }
+                        break;
                 }
             }
         }

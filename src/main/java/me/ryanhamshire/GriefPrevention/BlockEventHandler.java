@@ -949,7 +949,7 @@ public class BlockEventHandler implements Listener
                         .min(java.util.Comparator.comparingDouble(p -> p.getLocation().distanceSquared(pistonCenter)));
                 nearestPlayer.ifPresent(p -> {
                     GriefPrevention.sendMessage(p, TextMode.Warn, Messages.PistonExploded,
-                                    "%d, %d, %d".formatted(pistonBlock.getX(), pistonBlock.getY(), pistonBlock.getZ()),
+                                    String.format("%d, %d, %d", pistonBlock.getX(), pistonBlock.getY(), pistonBlock.getZ()),
                                     GriefPrevention.getfriendlyLocationString(blockingClaim.getLesserBoundaryCorner()));
                             BoundaryVisualization.visualizeClaim(p, blockingClaim, VisualizationType.CONFLICT_ZONE);
                         });
@@ -1061,8 +1061,9 @@ public class BlockEventHandler implements Listener
         if (isArrowCause && igniteEvent.getIgnitingEntity() != null)
         {
             // Arrows shot by players may return the shooter, not the arrow.
-            if (igniteEvent.getIgnitingEntity() instanceof Player player)
+            if (igniteEvent.getIgnitingEntity() instanceof Player)
             {
+                Player player = (Player) igniteEvent.getIgnitingEntity();
                 BlockBreakEvent breakEvent = new BlockBreakEvent(igniteEvent.getBlock(), player);
                 onBlockBreak(breakEvent);
                 if (breakEvent.isCancelled())
@@ -1228,12 +1229,19 @@ public class BlockEventHandler implements Listener
         if (fire.getType() != Material.FIRE) return;
 
         Block underBlock = fire.getRelative(BlockFace.DOWN);
-        String infiniburnTag = switch (fire.getWorld().getEnvironment())
+        String infiniburnTag;
+        switch (fire.getWorld().getEnvironment())
                 {
-                    case NETHER -> "INFINIBURN_NETHER";
-                    case THE_END -> "INFINIBURN_END";
-                    default -> "INFINIBURN_OVERWORLD";
-                };
+                    case NETHER:
+                        infiniburnTag = "INFINIBURN_NETHER";
+                        break;
+                    case THE_END:
+                        infiniburnTag = "INFINIBURN_END";
+                        break;
+                    default:
+                        infiniburnTag = "INFINIBURN_OVERWORLD";
+                        break;
+                }
 
         if (!MaterialTagCompat.isTagged(infiniburnTag, underBlock.getType())
                 && !INFINIBURN_FALLBACK_BLOCKS.contains(underBlock.getType()))
@@ -1566,8 +1574,9 @@ public class BlockEventHandler implements Listener
             // No entity always means denial.
             predicate = (claim, claimBoundingBox) -> true;
         }
-        else if (entity instanceof Player player)
+        else if (entity instanceof Player)
         {
+            Player player = (Player) entity;
             predicate = (claim, claimBoundingBox) ->
             {
                 Supplier<String> noPortalReason = claim.checkPermission(player, ClaimPermission.Build, event);
@@ -1587,8 +1596,8 @@ public class BlockEventHandler implements Listener
             predicate = (claim, claimBoundingBox) ->
             {
                 // Non-player entities are denied and set on portal cooldown to prevent repeated attempts.
-                if (entity instanceof Player player) {
-                    CompatUtil.setPortalCooldown(player, 100);
+                if (entity instanceof Player) {
+                    CompatUtil.setPortalCooldown((Player) entity, 100);
                 }
                 return true;
             };

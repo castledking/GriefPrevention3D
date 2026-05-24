@@ -34,21 +34,30 @@ public class KnockbackProtectionListener implements PlatformListener
         // platform. In this case, both Paper and Spigot support these events,
         // but this pattern is useful for listeners that depend on classes
         // which may not exist on all servers.
-        return switch (PlatformDetection.getPlatform())
+        switch (PlatformDetection.getPlatform())
         {
-            case PAPER -> PlatformDetection.classExists("com.destroystokyo.paper.event.entity.EntityKnockbackByEntityEvent");
-            case SPIGOT -> PlatformDetection.classExists("org.bukkit.event.entity.EntityKnockbackByEntityEvent");
-        };
+            case PAPER:
+                return PlatformDetection.classExists("com.destroystokyo.paper.event.entity.EntityKnockbackByEntityEvent")
+                        && PlatformDetection.classExists("io.papermc.paper.event.entity.EntityPushedByEntityAttackEvent");
+            case SPIGOT:
+                return PlatformDetection.classExists("org.bukkit.event.entity.EntityKnockbackByEntityEvent");
+            default:
+                return false;
+        }
     }
 
     @Override
     public @NotNull Listener create()
     {
-        return switch (PlatformDetection.getPlatform())
+        switch (PlatformDetection.getPlatform())
         {
-            case PAPER -> new PaperKnockbackProtectionHandler(dataStore, plugin);
-            case SPIGOT -> new SpigotKnockbackProtectionHandler(dataStore, plugin);
-        };
+            case PAPER:
+                return new PaperKnockbackProtectionHandler(dataStore, plugin);
+            case SPIGOT:
+                return new SpigotKnockbackProtectionHandler(dataStore, plugin);
+            default:
+                return new SpigotKnockbackProtectionHandler(dataStore, plugin);
+        }
     }
 
 }

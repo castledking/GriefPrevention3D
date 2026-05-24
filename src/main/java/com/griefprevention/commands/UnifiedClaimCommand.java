@@ -84,8 +84,8 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
 
     @Override
     protected boolean handleUnknownSubcommand(CommandSender sender, String subcommand, String[] args) {
-        if (sender instanceof Player player) {
-            GriefPrevention.sendMessage(player, TextMode.Err, Messages.CommandNotFound, subcommand);
+        if (sender instanceof Player) {
+            GriefPrevention.sendMessage((Player) sender, TextMode.Err, Messages.CommandNotFound, subcommand);
         } else {
             sender.sendMessage("Unknown subcommand: " + subcommand);
         }
@@ -93,9 +93,10 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
     }
 
     private boolean handleCreate(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player player)) {
+        if (!(sender instanceof Player)) {
             return false;
         }
+        Player player = (Player) sender;
 
         World world = player.getWorld();
         if (!plugin.claimsEnabledForWorld(world)) {
@@ -330,14 +331,15 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
 
                 if (args.length == 0 && ("shapedclaims".equalsIgnoreCase(alias) || "shapedclaim".equalsIgnoreCase(alias))) {
                     if (!plugin.config_claims_allowShapedClaims) {
-                        if (sender instanceof org.bukkit.entity.Player player) {
-                            GriefPrevention.sendMessage(player, TextMode.Err, Messages.ShapedClaimsDisabled);
+                        if (sender instanceof org.bukkit.entity.Player) {
+                            GriefPrevention.sendMessage((org.bukkit.entity.Player) sender, TextMode.Err, Messages.ShapedClaimsDisabled);
                         }
                         return true;
                     }
-                    if (sender instanceof org.bukkit.entity.Player player && 
-                        (!player.hasPermission("griefprevention.shapedclaims") || 
-                         !player.hasPermission("griefprevention.claims"))) {
+                    if (sender instanceof org.bukkit.entity.Player
+                            && (!((org.bukkit.entity.Player) sender).hasPermission("griefprevention.shapedclaims")
+                            || !((org.bukkit.entity.Player) sender).hasPermission("griefprevention.claims"))) {
+                        org.bukkit.entity.Player player = (org.bukkit.entity.Player) sender;
                         GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
                         return true;
                     }
@@ -465,10 +467,11 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
     }
 
     private boolean handleBuyBlocks(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player player)) {
+        if (!(sender instanceof Player)) {
             sender.sendMessage(plugin.dataStore.getMessage(Messages.CommandRequiresPlayer));
             return true;
         }
+        Player player = (Player) sender;
 
         // Check if economy is enabled in config
         if (!plugin.config_economy_claimBlocksEnabled) {
@@ -531,10 +534,11 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
     }
 
     private boolean handleSellBlocks(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player player)) {
+        if (!(sender instanceof Player)) {
             sender.sendMessage(plugin.dataStore.getMessage(Messages.CommandRequiresPlayer));
             return true;
         }
+        Player player = (Player) sender;
 
         // Check if economy is enabled in config
         if (!plugin.config_economy_claimBlocksEnabled) {
@@ -626,21 +630,21 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
             return plugin.abandonAllClaimsHandler(sender);
         }
         if (args.length > 0 && "toplevel".equalsIgnoreCase(args[0])) {
-            if (sender instanceof Player player) {
-                return plugin.abandonClaimHandler(player, true);
+            if (sender instanceof Player) {
+                return plugin.abandonClaimHandler((Player) sender, true);
             }
             return false;
         }
-        if (sender instanceof Player player) {
-            return plugin.abandonClaimHandler(player, false);
+        if (sender instanceof Player) {
+            return plugin.abandonClaimHandler((Player) sender, false);
         }
         return false;
     }
 
     private boolean handleSiege(CommandSender sender, String[] args) {
         // Siege feature is not available in this version
-        if (sender instanceof Player player) {
-            GriefPrevention.sendMessage(player, TextMode.Info, "The siege feature is not available in this version.");
+        if (sender instanceof Player) {
+            GriefPrevention.sendMessage((Player) sender, TextMode.Info, "The siege feature is not available in this version.");
         } else {
             sender.sendMessage("The siege feature is not available in this version.");
         }
@@ -648,16 +652,16 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
     }
 
     private boolean handleTrapped(CommandSender sender, String[] args) {
-        if (sender instanceof Player player) {
-            return plugin.handleTrappedCommand(player, args);
+        if (sender instanceof Player) {
+            return plugin.handleTrappedCommand((Player) sender, args);
         } else {
             return false;
         }
     }
 
     private boolean handleExpand(CommandSender sender, String[] args) {
-        if (sender instanceof Player player) {
-            return plugin.handleExtendClaimCommand(player, args);
+        if (sender instanceof Player) {
+            return plugin.handleExtendClaimCommand((Player) sender, args);
         } else {
             return false;
         }

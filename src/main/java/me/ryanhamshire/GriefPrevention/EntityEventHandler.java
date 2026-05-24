@@ -96,8 +96,8 @@ public class EntityEventHandler implements Listener
     public void onEntityFormBlock(EntityBlockFormEvent event)
     {
         Entity entity = event.getEntity();
-        if (entity instanceof Player player
-                && ProtectionHelper.checkPermission(player, event.getBlock().getLocation(), ClaimPermission.Build, event) != null)
+        if (entity instanceof Player
+                && ProtectionHelper.checkPermission((Player) entity, event.getBlock().getLocation(), ClaimPermission.Build, event) != null)
         {
             event.setCancelled(true);
         }
@@ -128,9 +128,9 @@ public class EntityEventHandler implements Listener
             event.setCancelled(true);
         }
         //sand cannon fix - when the falling block doesn't fall straight down, take additional anti-grief steps
-        else if (event.getEntity() instanceof FallingBlock fallingBlock)
+        else if (event.getEntity() instanceof FallingBlock)
         {
-            handleFallingBlockChangeBlock(event, fallingBlock);
+            handleFallingBlockChangeBlock(event, (FallingBlock) event.getEntity());
         }
         // All other handling depends on claims being enabled.
         else if (GriefPrevention.instance.config_claims_worldModes.get(event.getBlock().getWorld()) == ClaimsMode.Disabled)
@@ -158,12 +158,13 @@ public class EntityEventHandler implements Listener
         //don't allow crops to be trampled, except by a player with build permission
         else if (event.getTo() == Material.DIRT && event.getBlock().getType() == Material.FARMLAND)
         {
-            if (!(event.getEntity() instanceof Player player))
+            if (!(event.getEntity() instanceof Player))
             {
                 event.setCancelled(true);
             }
             else
             {
+                Player player = (Player) event.getEntity();
                 Block block = event.getBlock();
                 if (ProtectionHelper.checkPermission(player, block.getLocation(), ClaimPermission.Build, event) != null)
                 {
@@ -182,8 +183,9 @@ public class EntityEventHandler implements Listener
         else if (event.getEntity() instanceof Vehicle && !event.getEntity().getPassengers().isEmpty())
         {
             Entity driver = event.getEntity().getPassengers().get(0);
-            if (driver instanceof Player player)
+            if (driver instanceof Player)
             {
+                Player player = (Player) driver;
                 Block block = event.getBlock();
                 if (ProtectionHelper.checkPermission(player, block.getLocation(), ClaimPermission.Build, event) != null)
                 {
@@ -213,7 +215,8 @@ public class EntityEventHandler implements Listener
 
         List<MetadataValue> values = fallingBlock.getMetadata("GP_FALLINGBLOCK");
         //if we're not sure where this entity came from (maybe another plugin didn't follow the standard?), allow the block to form
-        if (values.isEmpty() || !(values.get(0).value() instanceof Location originalLocation)) return;
+        if (values.isEmpty() || !(values.get(0).value() instanceof Location)) return;
+        Location originalLocation = (Location) values.get(0).value();
 
         // If it fell straight down, allow.
         if (Objects.equals(originalLocation.getWorld(), block.getWorld())
@@ -319,18 +322,19 @@ public class EntityEventHandler implements Listener
     {
         // Note: this does not handle flaming arrows; they are handled earlier by #handleProjectileChangeBlock
         Player player = null;
-        if (event.getEntity() instanceof Player localPlayer)
+        if (event.getEntity() instanceof Player)
         {
-            player = localPlayer;
+            player = (Player) event.getEntity();
         }
-        else if (event.getEntity() instanceof Mob mob)
+        else if (event.getEntity() instanceof Mob)
         {
+            Mob mob = (Mob) event.getEntity();
             // Handle players leading packs of zombies.
-            if (mob.getTarget() instanceof Player localPlayer)
-                player = localPlayer;
+            if (mob.getTarget() instanceof Player)
+                player = (Player) mob.getTarget();
             // Handle players leading burning leashed entities.
-            else if (mob.isLeashed() && mob.getLeashHolder() instanceof Player localPlayer)
-                player = localPlayer;
+            else if (mob.isLeashed() && mob.getLeashHolder() instanceof Player)
+                player = (Player) mob.getLeashHolder();
         }
 
         if (player != null)
@@ -432,8 +436,9 @@ public class EntityEventHandler implements Listener
         Player player = null;
         PlayerData playerData = null;
         ProjectileSource source = null;
-        if (entity instanceof Projectile projectile)
+        if (entity instanceof Projectile)
         {
+            Projectile projectile = (Projectile) entity;
             source = projectile.getShooter();
             if (source instanceof Player)
             {
@@ -676,10 +681,11 @@ public class EntityEventHandler implements Listener
         }
 
         //FEATURE: lock dropped items to player who dropped them
-        if (!(entity instanceof Player player))
+        if (!(entity instanceof Player))
         {
             return;
         }
+        Player player = (Player) entity;
 
         PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
         World world = entity.getWorld();
@@ -752,8 +758,9 @@ public class EntityEventHandler implements Listener
 
         if (event.getCause() == RemoveCause.PHYSICS)
         {
-            if (event.getEntity() instanceof Hanging hanging)
+            if (event.getEntity() instanceof Hanging)
             {
+                Hanging hanging = (Hanging) event.getEntity();
                 Block attachedBlock = hanging.getLocation().getBlock().getRelative(hanging.getAttachedFace());
                 if (!attachedBlock.getType().isAir())
                 {
@@ -773,21 +780,23 @@ public class EntityEventHandler implements Listener
         }
 
         //only allow players to break paintings, not anything else (like water and explosions)
-        if (!(event instanceof HangingBreakByEntityEvent entityEvent))
+        if (!(event instanceof HangingBreakByEntityEvent))
         {
             event.setCancelled(true);
             return;
         }
+        HangingBreakByEntityEvent entityEvent = (HangingBreakByEntityEvent) event;
 
         //who is removing it?
         Entity remover = entityEvent.getRemover();
 
         //again, making sure the breaker is a player
-        if (!(remover instanceof Player playerRemover))
+        if (!(remover instanceof Player))
         {
             event.setCancelled(true);
             return;
         }
+        Player playerRemover = (Player) remover;
 
         //if the player doesn't have build permission, don't allow the breakage
         Supplier<String> noBuildReason = ProtectionHelper.checkPermission(playerRemover, event.getEntity().getLocation(), ClaimPermission.Build, event);
@@ -812,13 +821,13 @@ public class EntityEventHandler implements Listener
         }
 
         Player player = null;
-        if (event.getDamager() instanceof Player damager)
+        if (event.getDamager() instanceof Player)
         {
-            player = damager;
+            player = (Player) event.getDamager();
         }
-        else if (event.getDamager() instanceof Projectile projectile && projectile.getShooter() instanceof Player shooter)
+        else if (event.getDamager() instanceof Projectile && ((Projectile) event.getDamager()).getShooter() instanceof Player)
         {
-            player = shooter;
+            player = (Player) ((Projectile) event.getDamager()).getShooter();
         }
 
         if (player == null)

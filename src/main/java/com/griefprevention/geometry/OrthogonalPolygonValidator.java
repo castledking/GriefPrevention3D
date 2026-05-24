@@ -31,13 +31,13 @@ final class OrthogonalPolygonValidator
             return new OrthogonalPolygonValidationResult(normalizedPath, issues, null);
         }
 
-        boolean closed = normalizedPath.getFirst().equals(normalizedPath.getLast());
+        boolean closed = normalizedPath.get(0).equals(normalizedPath.get(normalizedPath.size() - 1));
         if (!closed)
         {
             issues.add(new OrthogonalPolygonValidationIssue(
                     OrthogonalPolygonValidationIssueType.NOT_CLOSED,
                     "The path must end on its starting corner.",
-                    normalizedPath.getLast(),
+                    normalizedPath.get(normalizedPath.size() - 1),
                     null,
                     null
             ));
@@ -93,7 +93,7 @@ final class OrthogonalPolygonValidator
         closed.addAll(corners);
         if (!corners.isEmpty())
         {
-            closed.add(corners.getFirst());
+            closed.add(corners.get(0));
         }
 
         return List.copyOf(closed);

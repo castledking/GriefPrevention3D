@@ -165,8 +165,8 @@ public class FakeBlockVisualization extends BlockBoundaryVisualization {
         if (!isAccessible(displayZone, coordinate)) return;
 
         BlockData fakeData = Material.LIME_GLAZED_TERRACOTTA.createBlockData();
-        if (fakeData instanceof Directional directional) {
-            directional.setFacing(facing);
+        if (fakeData instanceof Directional) {
+            ((Directional) fakeData).setFacing(facing);
         }
         createElementAdder(fakeData, type, false).accept(coordinate);
     }
@@ -373,7 +373,7 @@ public class FakeBlockVisualization extends BlockBoundaryVisualization {
         }
 
         if (
-            blockMaterial.isAir() ||
+            blockMaterial.name().equals("AIR") ||
             MaterialTagCompat.isTagged("FENCES", blockMaterial) ||
             MaterialTagCompat.isTagged("FENCE_GATES", blockMaterial) ||
             MaterialTagCompat.isTagged("SIGNS", blockMaterial) ||

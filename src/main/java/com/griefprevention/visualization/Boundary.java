@@ -5,14 +5,16 @@ import me.ryanhamshire.GriefPrevention.util.BoundingBox;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Objects;
+
 /**
  * A data holder defining an area to be visualized.
  */
-public record Boundary(
-        @NotNull BoundingBox bounds,
-        @NotNull VisualizationType type,
-        @Nullable Claim claim)
+public final class Boundary
 {
+    private final @NotNull BoundingBox bounds;
+    private final @NotNull VisualizationType type;
+    private final @Nullable Claim claim;
 
     /**
      * Construct a new {@code Boundary} for a {@link BoundingBox} with the given visualization style.
@@ -23,6 +25,13 @@ public record Boundary(
     public Boundary(@NotNull BoundingBox bounds, @NotNull VisualizationType type)
     {
         this(bounds, type, null);
+    }
+
+    public Boundary(@NotNull BoundingBox bounds, @NotNull VisualizationType type, @Nullable Claim claim)
+    {
+        this.bounds = bounds;
+        this.type = type;
+        this.claim = claim;
     }
 
     /**
@@ -59,10 +68,47 @@ public record Boundary(
      *
      * @return the {@code Claim} or {@code null} if not present
      */
-    @Override
+    public @NotNull BoundingBox bounds()
+    {
+        return bounds;
+    }
+
+    public @NotNull VisualizationType type()
+    {
+        return type;
+    }
+
     public @Nullable Claim claim()
     {
         return claim;
     }
 
+    @Override
+    public boolean equals(Object other)
+    {
+        if (this == other)
+        {
+            return true;
+        }
+        if (!(other instanceof Boundary))
+        {
+            return false;
+        }
+        Boundary boundary = (Boundary) other;
+        return bounds.equals(boundary.bounds)
+                && type == boundary.type
+                && Objects.equals(claim, boundary.claim);
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(bounds, type, claim);
+    }
+
+    @Override
+    public String toString()
+    {
+        return "Boundary[bounds=" + bounds + ", type=" + type + ", claim=" + claim + ']';
+    }
 }

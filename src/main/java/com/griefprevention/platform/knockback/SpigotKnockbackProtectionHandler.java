@@ -37,24 +37,25 @@ public class SpigotKnockbackProtectionHandler extends KnockbackProtectionHandler
         Player attacker;
 
         // Handle projectiles (wind charges, etc.) - must extract shooter
-        if (sourceEntity instanceof Projectile projectile)
+        if (sourceEntity instanceof Projectile)
         {
-            if (!(projectile.getShooter() instanceof Player shooter)) return;
-            attacker = shooter;
+            Projectile projectile = (Projectile) sourceEntity;
+            if (!(projectile.getShooter() instanceof Player)) return;
+            attacker = (Player) projectile.getShooter();
         }
         // Handle direct player knockback (melee, shield block, etc.)
-        else if (sourceEntity instanceof Player player)
+        else if (sourceEntity instanceof Player)
         {
-            attacker = player;
+            attacker = (Player) sourceEntity;
         }
         else
         {
             return;
         }
 
-        if (knockedEntity instanceof Player defender)
+        if (knockedEntity instanceof Player)
         {
-            handleKnockbackPlayer(event, attacker, defender);
+            handleKnockbackPlayer(event, attacker, (Player) knockedEntity);
         }
         else
         {

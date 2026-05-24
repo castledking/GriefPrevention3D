@@ -1201,7 +1201,8 @@ public class PlayerEventHandler implements Listener {
     public void onProjectileHitEnderPearlCancel(ProjectileHitEvent event) {
         if (event.getEntity().getType() != EntityType.ENDER_PEARL) return;
         if (!instance.config_claims_enderPearlsRequireAccessTrust) return;
-        if (!(event.getEntity().getShooter() instanceof Player shooter)) return;
+        if (!(event.getEntity().getShooter() instanceof Player)) return;
+        Player shooter = (Player) event.getEntity().getShooter();
         if (!instance.claimsEnabledForWorld(event.getEntity().getWorld())) return;
 
         Block hitBlock = event.getHitBlock();
@@ -1245,7 +1246,8 @@ public class PlayerEventHandler implements Listener {
     public void onProjectileHitEnderPearl(ProjectileHitEvent event) {
         if (event.getEntity().getType() != EntityType.ENDER_PEARL) return;
         if (!instance.config_claims_enderPearlsRequireAccessTrust) return;
-        if (!(event.getEntity().getShooter() instanceof Player shooter)) return;
+        if (!(event.getEntity().getShooter() instanceof Player)) return;
+        Player shooter = (Player) event.getEntity().getShooter();
         if (!instance.claimsEnabledForWorld(event.getEntity().getWorld())) return;
 
         Block hitBlock = event.getHitBlock();
@@ -1399,7 +1401,8 @@ public class PlayerEventHandler implements Listener {
         PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
 
         // if entity is tameable and has an owner, apply special rules
-        if (entity instanceof Tameable tameable) {
+        if (entity instanceof Tameable) {
+            Tameable tameable = (Tameable) entity;
             if (tameable.isTamed()) {
                 if (tameable.getOwner() != null) {
                     UUID ownerID = tameable.getOwner().getUniqueId();
@@ -1434,8 +1437,8 @@ public class PlayerEventHandler implements Listener {
             {
                 // ensure this entity can be tamed by players
                 tameable.setOwner(null);
-                if (tameable instanceof InventoryHolder holder) {
-                    holder.getInventory().clear();
+                if (tameable instanceof InventoryHolder) {
+                    ((InventoryHolder) tameable).getInventory().clear();
                 }
             }
         }
@@ -3449,12 +3452,44 @@ public class PlayerEventHandler implements Listener {
         return area;
     }
 
-    private record ShapedNibResizeAttempt(
-            @NotNull OrthogonalPolygonValidationResult result,
-            boolean containsOriginal,
-            int area,
-            int overlap)
+    private static final class ShapedNibResizeAttempt
     {
+        private final @NotNull OrthogonalPolygonValidationResult result;
+        private final boolean containsOriginal;
+        private final int area;
+        private final int overlap;
+
+        private ShapedNibResizeAttempt(
+                @NotNull OrthogonalPolygonValidationResult result,
+                boolean containsOriginal,
+                int area,
+                int overlap)
+        {
+            this.result = result;
+            this.containsOriginal = containsOriginal;
+            this.area = area;
+            this.overlap = overlap;
+        }
+
+        @NotNull OrthogonalPolygonValidationResult result()
+        {
+            return result;
+        }
+
+        boolean containsOriginal()
+        {
+            return containsOriginal;
+        }
+
+        int area()
+        {
+            return area;
+        }
+
+        int overlap()
+        {
+            return overlap;
+        }
     }
 
     private @Nullable FaceRun findStraightFaceRun(
@@ -3583,8 +3618,33 @@ public class PlayerEventHandler implements Listener {
         return null;
     }
 
-    private record FaceRun(int startEdgeIndex, int endEdgeIndex, boolean horizontal)
+    private static final class FaceRun
     {
+        private final int startEdgeIndex;
+        private final int endEdgeIndex;
+        private final boolean horizontal;
+
+        private FaceRun(int startEdgeIndex, int endEdgeIndex, boolean horizontal)
+        {
+            this.startEdgeIndex = startEdgeIndex;
+            this.endEdgeIndex = endEdgeIndex;
+            this.horizontal = horizontal;
+        }
+
+        int startEdgeIndex()
+        {
+            return startEdgeIndex;
+        }
+
+        int endEdgeIndex()
+        {
+            return endEdgeIndex;
+        }
+
+        boolean horizontal()
+        {
+            return horizontal;
+        }
     }
 
     private boolean handleShapedResizeInteraction(
@@ -3693,7 +3753,7 @@ public class PlayerEventHandler implements Listener {
             return false;
         }
 
-        OrthogonalPoint2i onlyPoint = session.openPath().points().getFirst();
+        OrthogonalPoint2i onlyPoint = session.openPath().points().get(0);
         return onlyPoint.x() == clickedBlock.getX() && onlyPoint.z() == clickedBlock.getZ();
     }
 
@@ -4077,7 +4137,27 @@ public class PlayerEventHandler implements Listener {
         return new BoundaryNodeEnsureResult(updatedClaim != null ? updatedClaim : claim, true);
     }
 
-    private record BoundaryNodeEnsureResult(@Nullable Claim claim, boolean markerEdited) {}
+    private static final class BoundaryNodeEnsureResult
+    {
+        private final @Nullable Claim claim;
+        private final boolean markerEdited;
+
+        private BoundaryNodeEnsureResult(@Nullable Claim claim, boolean markerEdited)
+        {
+            this.claim = claim;
+            this.markerEdited = markerEdited;
+        }
+
+        @Nullable Claim claim()
+        {
+            return claim;
+        }
+
+        boolean markerEdited()
+        {
+            return markerEdited;
+        }
+    }
 
     private boolean meetsMinimumNodeSpacing(@NotNull Claim claim, @NotNull OrthogonalPoint2i point)
     {
@@ -4094,7 +4174,7 @@ public class PlayerEventHandler implements Listener {
             return false;
         }
 
-        OrthogonalEdge2i edge = polygon.edges().get(edgeIndexes.getFirst());
+        OrthogonalEdge2i edge = polygon.edges().get(edgeIndexes.get(0));
         int distanceToStart = Math.abs(point.x() - edge.start().x()) + Math.abs(point.z() - edge.start().z());
         int distanceToEnd = Math.abs(point.x() - edge.end().x()) + Math.abs(point.z() - edge.end().z());
         return distanceToStart >= minimumEdgeLength && distanceToEnd >= minimumEdgeLength;
@@ -4112,7 +4192,7 @@ public class PlayerEventHandler implements Listener {
             return clickedPoint;
         }
 
-        OrthogonalPoint2i anchor = session.openPath().points().getFirst();
+        OrthogonalPoint2i anchor = session.openPath().points().get(0);
         OrthogonalPolygon boundaryPolygon = claim.getBoundaryPolygon();
         if (!isBoundaryPoint(boundaryPolygon, anchor) || isBoundaryPoint(boundaryPolygon, clickedPoint))
         {
@@ -4245,7 +4325,7 @@ public class PlayerEventHandler implements Listener {
             return "Cannot merge yet: add at least one outside corner before reconnecting to the claim boundary.";
         }
 
-        OrthogonalPoint2i lastPoint = points.getLast();
+        OrthogonalPoint2i lastPoint = points.get(points.size() - 1);
         if (!isOrthogonalStep(lastPoint, clickedPoint))
         {
             return "Cannot merge yet: reconnect point must be orthogonally aligned with the current endpoint.";
@@ -4758,7 +4838,8 @@ public class PlayerEventHandler implements Listener {
      */
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onPlayerBrushComplete(EntityChangeBlockEvent event) {
-        if (!(event.getEntity() instanceof Player player)) return;
+        if (!(event.getEntity() instanceof Player)) return;
+        Player player = (Player) event.getEntity();
 
         // Only consider results that come from brushing. Brushing converts
         // SUSPICIOUS_SAND -> SAND and SUSPICIOUS_GRAVEL -> GRAVEL. Filter on

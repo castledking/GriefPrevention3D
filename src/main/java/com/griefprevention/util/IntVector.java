@@ -9,11 +9,23 @@ import org.jetbrains.annotations.Contract;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Objects;
+
 /**
  * An immutable integer-based vector.
  */
-public record IntVector(int x, int y, int z)
+public final class IntVector
 {
+    private final int x;
+    private final int y;
+    private final int z;
+
+    public IntVector(int x, int y, int z)
+    {
+        this.x = x;
+        this.y = y;
+        this.z = z;
+    }
 
     /**
      * Construct a new {@code IntVector} representing the specified {@link Block}.
@@ -43,6 +55,21 @@ public record IntVector(int x, int y, int z)
     public IntVector(@NotNull Vector vector)
     {
         this(vector.getBlockX(), vector.getBlockY(), vector.getBlockZ());
+    }
+
+    public int x()
+    {
+        return this.x;
+    }
+
+    public int y()
+    {
+        return this.y;
+    }
+
+    public int z()
+    {
+        return this.z;
     }
 
     /**
@@ -133,4 +160,24 @@ public record IntVector(int x, int y, int z)
         return world.isChunkLoaded(x() >> 4, z() >> 4);
     }
 
+    @Override
+    public boolean equals(Object other)
+    {
+        if (this == other) return true;
+        if (!(other instanceof IntVector)) return false;
+        IntVector that = (IntVector) other;
+        return this.x == that.x && this.y == that.y && this.z == that.z;
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(this.x, this.y, this.z);
+    }
+
+    @Override
+    public String toString()
+    {
+        return "IntVector[x=" + this.x + ", y=" + this.y + ", z=" + this.z + "]";
+    }
 }

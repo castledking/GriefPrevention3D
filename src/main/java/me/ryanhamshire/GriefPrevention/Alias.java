@@ -27,435 +27,405 @@ import org.jetbrains.annotations.NotNull;
 public enum Alias {
     // Commands section
     ClaimCommand(
-        """
-        enable: true
-        commands: [claim]
-        description: Command to manage your claim(s)
-        permission: griefprevention.claims
-        fallback: ''
-        """,
+        "enable: true" + "\n" +
+"commands: [claim]" + "\n" +
+"description: Command to manage your claim(s)" + "\n" +
+"permission: griefprevention.claims" + "\n" +
+"fallback: ''" + "\n" +
+"" + "\n",
         "claim"
     ),
 
     AClaimCommand(
-        """
-        enable: true
-        commands: [aclaim]
-        description: Command to manage administrative claims
-        permission: griefprevention.adminclaims
-        fallback: ''
-        """,
+        "enable: true" + "\n" +
+"commands: [aclaim]" + "\n" +
+"description: Command to manage administrative claims" + "\n" +
+"permission: griefprevention.adminclaims" + "\n" +
+"fallback: ''" + "\n" +
+"" + "\n",
         "aclaim"
     ),
 
     // Subcommands section - claim commands
     ClaimCreate(
-        """
-        enable: true
-        commands: [create]
-        standalone: [createclaim]
-        usage: "/claim create [radius]"
-        description: Create or expand a claim centered on you.
-        arguments:
-          radius:
-            type: integer
-        """,
+        "enable: true" + "\n" +
+"commands: [create]" + "\n" +
+"standalone: [createclaim]" + "\n" +
+"usage: \"/claim create [radius]\"" + "\n" +
+"description: Create or expand a claim centered on you." + "\n" +
+"arguments:" + "\n" +
+"  radius:" + "\n" +
+"    type: integer" + "\n" +
+"" + "\n",
         "createclaim"
     ),
 
     ClaimTrust(
-        """
-        enable: true
-        commands: [trust]
-        standalone: [trust]
-        usage: "/claim trust <player> [type]"
-        description: Grant a player access to your claim.
-        arguments:
-          player:
-            type: player
-          type:
-            options:
-              access: [access]
-              container: [container]
-              permission: [permission]
-              build: [build]
-        """,
+        "enable: true" + "\n" +
+"commands: [trust]" + "\n" +
+"standalone: [trust]" + "\n" +
+"usage: \"/claim trust <player> [type]\"" + "\n" +
+"description: Grant a player access to your claim." + "\n" +
+"arguments:" + "\n" +
+"  player:" + "\n" +
+"    type: player" + "\n" +
+"  type:" + "\n" +
+"    options:" + "\n" +
+"      access: [access]" + "\n" +
+"      container: [container]" + "\n" +
+"      permission: [permission]" + "\n" +
+"      build: [build]" + "\n" +
+"" + "\n",
         "trust"
     ),
 
     ClaimUntrust(
-        """
-        enable: true
-        commands: [untrust]
-        standalone: [untrust]
-        usage: "/claim untrust <player|all>"
-        description: Revoke claim access from a player or everyone.
-        arguments:
-          options:
-            player: player
-            all: [all]
-            public: [public]
-        """,
+        "enable: true" + "\n" +
+"commands: [untrust]" + "\n" +
+"standalone: [untrust]" + "\n" +
+"usage: \"/claim untrust <player|all>\"" + "\n" +
+"description: Revoke claim access from a player or everyone." + "\n" +
+"arguments:" + "\n" +
+"  options:" + "\n" +
+"    player: player" + "\n" +
+"    all: [all]" + "\n" +
+"    public: [public]" + "\n" +
+"" + "\n",
         "untrust"
     ),
 
     ClaimTrustlist(
-        """
-        enable: true
-        commands: [trustlist]
-        standalone: [trustlist]
-        usage: "/claim trustlist"
-        description: Show players who have access to this claim.
-        """,
+        "enable: true" + "\n" +
+"commands: [trustlist]" + "\n" +
+"standalone: [trustlist]" + "\n" +
+"usage: \"/claim trustlist\"" + "\n" +
+"description: Show players who have access to this claim." + "\n" +
+"" + "\n",
         "trustlist"
     ),
 
     ClaimList(
-        """
-        enable: true
-        commands: [list]
-        standalone: [claimslist]
-        usage: "/claim list [player]"
-        description: List claims owned by you or another player.
-        arguments:
-          player:
-            type: player
-        """,
+        "enable: true" + "\n" +
+"commands: [list]" + "\n" +
+"standalone: [claimslist]" + "\n" +
+"usage: \"/claim list [player]\"" + "\n" +
+"description: List claims owned by you or another player." + "\n" +
+"arguments:" + "\n" +
+"  player:" + "\n" +
+"    type: player" + "\n" +
+"" + "\n",
         "claimslist"
     ),
 
     ClaimMode(
-        """
-        enable: true
-        commands: [mode]
-        standalone: [basicclaims, shapedclaims, shapedclaim]
-        usage: "/claim mode <basic|2d|3d|shaped>"
-        description: Change your golden shovel claim mode.
-        arguments:
-          mode:
-            options:
-              basic: [basic]
-              2d: [2d, subdivide]
-              3d: [3d]
-              shaped: [shaped]
-        """,
+        "enable: true" + "\n" +
+"commands: [mode]" + "\n" +
+"standalone: [basicclaims, shapedclaims, shapedclaim]" + "\n" +
+"usage: \"/claim mode <basic|2d|3d|shaped>\"" + "\n" +
+"description: Change your golden shovel claim mode." + "\n" +
+"arguments:" + "\n" +
+"  mode:" + "\n" +
+"    options:" + "\n" +
+"      basic: [basic]" + "\n" +
+"      2d: [2d, subdivide]" + "\n" +
+"      3d: [3d]" + "\n" +
+"      shaped: [shaped]" + "\n" +
+"" + "\n",
         "basicclaims"
     ),
 
     ClaimRestrictSubclaim(
-        """
-        enable: true
-        commands: [restrictsubclaim]
-        standalone: [restrictsubclaim]
-        usage: "/claim restrictsubclaim"
-        description: Toggle whether a subdivision inherits parent permissions.
-        """,
+        "enable: true" + "\n" +
+"commands: [restrictsubclaim]" + "\n" +
+"standalone: [restrictsubclaim]" + "\n" +
+"usage: \"/claim restrictsubclaim\"" + "\n" +
+"description: Toggle whether a subdivision inherits parent permissions." + "\n" +
+"" + "\n",
         "restrictsubclaim"
     ),
 
     ClaimBuyBlocks(
-        """
-        enable: true
-        commands: [buyblocks]
-        standalone: [buyclaimblocks]
-        usage: "/claim buyblocks <amount>"
-        description: Purchase additional claim blocks with server currency.
-        arguments:
-          amount:
-            type: integer
-        """,
+        "enable: true" + "\n" +
+"commands: [buyblocks]" + "\n" +
+"standalone: [buyclaimblocks]" + "\n" +
+"usage: \"/claim buyblocks <amount>\"" + "\n" +
+"description: Purchase additional claim blocks with server currency." + "\n" +
+"arguments:" + "\n" +
+"  amount:" + "\n" +
+"    type: integer" + "\n" +
+"" + "\n",
         "buyclaimblocks"
     ),
 
     ClaimSellBlocks(
-        """
-        enable: true
-        commands: [sellblocks]
-        standalone: [sellclaimblocks]
-        usage: "/claim sellblocks <amount>"
-        description: Sell claim blocks for server currency.
-        arguments:
-          amount:
-            type: integer
-        """,
+        "enable: true" + "\n" +
+"commands: [sellblocks]" + "\n" +
+"standalone: [sellclaimblocks]" + "\n" +
+"usage: \"/claim sellblocks <amount>\"" + "\n" +
+"description: Sell claim blocks for server currency." + "\n" +
+"arguments:" + "\n" +
+"  amount:" + "\n" +
+"    type: integer" + "\n" +
+"" + "\n",
         "sellclaimblocks"
     ),
 
     ClaimExplosions(
-        """
-        enable: true
-        commands: [explosions]
-        standalone: [claimexplosions]
-        usage: "/claim explosions [on|off]"
-        description: Toggle explosions inside your current claim.
-        arguments:
-          state:
-            options:
-              on: [on]
-              off: [off]
-        """,
+        "enable: true" + "\n" +
+"commands: [explosions]" + "\n" +
+"standalone: [claimexplosions]" + "\n" +
+"usage: \"/claim explosions [on|off]\"" + "\n" +
+"description: Toggle explosions inside your current claim." + "\n" +
+"arguments:" + "\n" +
+"  state:" + "\n" +
+"    options:" + "\n" +
+"      on: [on]" + "\n" +
+"      off: [off]" + "\n" +
+"" + "\n",
         "explosions"
     ),
 
     ClaimWitherExplosions(
-        """
-        enable: true
-        commands: [witherexplosions]
-        standalone: [witherexplosions, witherexplosion]
-        usage: "/claim witherexplosions [on|off]"
-        description: Toggle wither explosions inside your current claim.
-        permission: griefprevention.witherexplosions
-        arguments:
-          state:
-            options:
-              on: [on]
-              off: [off]
-        """,
+        "enable: true" + "\n" +
+"commands: [witherexplosions]" + "\n" +
+"standalone: [witherexplosions, witherexplosion]" + "\n" +
+"usage: \"/claim witherexplosions [on|off]\"" + "\n" +
+"description: Toggle wither explosions inside your current claim." + "\n" +
+"permission: griefprevention.witherexplosions" + "\n" +
+"arguments:" + "\n" +
+"  state:" + "\n" +
+"    options:" + "\n" +
+"      on: [on]" + "\n" +
+"      off: [off]" + "\n" +
+"" + "\n",
         "witherexplosions"
     ),
 
     ClaimAbandon(
-        """
-        enable: true
-        commands: [abandon]
-        standalone: [abandonclaim]
-        usage: "/claim abandon [all|toplevel]"
-        description: Abandon the claim you are standing in, or use 'toplevel' to delete it and all subdivisions, or 'all' to abandon every claim you own.
-        arguments:
-          scope:
-            options:
-              all: [all]
-              toplevel: [toplevel]
-        """,
+        "enable: true" + "\n" +
+"commands: [abandon]" + "\n" +
+"standalone: [abandonclaim]" + "\n" +
+"usage: \"/claim abandon [all|toplevel]\"" + "\n" +
+"description: Abandon the claim you are standing in, or use 'toplevel' to delete it and all subdivisions, or 'all' to abandon every claim you own." + "\n" +
+"arguments:" + "\n" +
+"  scope:" + "\n" +
+"    options:" + "\n" +
+"      all: [all]" + "\n" +
+"      toplevel: [toplevel]" + "\n" +
+"" + "\n",
         "abandonclaim"
     ),
 
     ClaimSiege(
-        """
-        enable: true
-        commands: [siege]
-        standalone: [siege]
-        usage: "/claim siege <player>"
-        description: Challenge another player to a siege (if enabled).
-        arguments:
-          player:
-            type: player
-        """,
+        "enable: true" + "\n" +
+"commands: [siege]" + "\n" +
+"standalone: [siege]" + "\n" +
+"usage: \"/claim siege <player>\"" + "\n" +
+"description: Challenge another player to a siege (if enabled)." + "\n" +
+"arguments:" + "\n" +
+"  player:" + "\n" +
+"    type: player" + "\n" +
+"" + "\n",
         "siege"
     ),
 
     ClaimTrapped(
-        """
-        enable: true
-        commands: [trapped]
-        standalone: [trapped]
-        usage: "/claim trapped"
-        description: Attempt to escape if you are stuck inside a claim.
-        """,
+        "enable: true" + "\n" +
+"commands: [trapped]" + "\n" +
+"standalone: [trapped]" + "\n" +
+"usage: \"/claim trapped\"" + "\n" +
+"description: Attempt to escape if you are stuck inside a claim." + "\n" +
+"" + "\n",
         "trapped"
     ),
 
     ClaimExpand(
-        """
-        enable: true
-        commands: [expand]
-        standalone: [expandclaim, extendclaim]
-        usage: "/claim expand <numberOfBlocks>"
-        description: Expand the claim you're standing in by pushing or pulling its boundary.
-        arguments:
-          numberOfBlocks:
-            type: integer-negative
-        """,
+        "enable: true" + "\n" +
+"commands: [expand]" + "\n" +
+"standalone: [expandclaim, extendclaim]" + "\n" +
+"usage: \"/claim expand <numberOfBlocks>\"" + "\n" +
+"description: Expand the claim you're standing in by pushing or pulling its boundary." + "\n" +
+"arguments:" + "\n" +
+"  numberOfBlocks:" + "\n" +
+"    type: integer-negative" + "\n" +
+"" + "\n",
         "expandclaim"
     ),
 
     ClaimHelp(
-        """
-        enable: true
-        commands: [help]
-        standalone: [claimhelp]
-        usage: "/claim help [page]"
-        description: View a list of all available claim subcommands.
-        arguments:
-          page:
-            type: integer
-        """,
+        "enable: true" + "\n" +
+"commands: [help]" + "\n" +
+"standalone: [claimhelp]" + "\n" +
+"usage: \"/claim help [page]\"" + "\n" +
+"description: View a list of all available claim subcommands." + "\n" +
+"arguments:" + "\n" +
+"  page:" + "\n" +
+"    type: integer" + "\n" +
+"" + "\n",
         "claimhelp"
     ),
 
     // Subcommands section - aclaim commands
     AClaimRestore(
-        """
-        enable: true
-        commands: [restore]
-        standalone: [restorenature]
-        usage: "/aclaim restore [type] [radius]"
-        description: Restore an area to nature. Types: nature (default), aggressive, fill.
-        arguments:
-          type:
-            options:
-              nature: [nature]
-              aggressive: [aggressive]
-              fill: [fill]
-          radius:
-            type: integer
-        """,
+        "enable: true" + "\n" +
+"commands: [restore]" + "\n" +
+"standalone: [restorenature]" + "\n" +
+"usage: \"/aclaim restore [type] [radius]\"" + "\n" +
+"description: Restore an area to nature. Types: nature (default), aggressive, fill." + "\n" +
+"arguments:" + "\n" +
+"  type:" + "\n" +
+"    options:" + "\n" +
+"      nature: [nature]" + "\n" +
+"      aggressive: [aggressive]" + "\n" +
+"      fill: [fill]" + "\n" +
+"  radius:" + "\n" +
+"    type: integer" + "\n" +
+"" + "\n",
         "restorenature"
     ),
 
     AClaimIgnore(
-        """
-        enable: true
-        commands: [ignore]
-        standalone: [ignoreclaims]
-        usage: "/aclaim ignore"
-        description: Toggle ignoring nearby claims.
-        """,
+        "enable: true" + "\n" +
+"commands: [ignore]" + "\n" +
+"standalone: [ignoreclaims]" + "\n" +
+"usage: \"/aclaim ignore\"" + "\n" +
+"description: Toggle ignoring nearby claims." + "\n" +
+"" + "\n",
         "ignoreclaims"
     ),
 
     AClaimMode(
-        """
-        enable: true
-        commands: [mode]
-        standalone: [adminclaims]
-        usage: "/aclaim mode <admin|admin3d>"
-        description: Switch your shovel to admin-claim mode.
-        arguments:
-          mode:
-            options:
-              admin: [admin]
-              admin3d: [admin3d]
-        """,
+        "enable: true" + "\n" +
+"commands: [mode]" + "\n" +
+"standalone: [adminclaims]" + "\n" +
+"usage: \"/aclaim mode <admin|admin3d>\"" + "\n" +
+"description: Switch your shovel to admin-claim mode." + "\n" +
+"arguments:" + "\n" +
+"  mode:" + "\n" +
+"    options:" + "\n" +
+"      admin: [admin]" + "\n" +
+"      admin3d: [admin3d]" + "\n" +
+"" + "\n",
         "adminclaims"
     ),
 
     AClaimAdminList(
-        """
-        enable: true
-        commands: [adminlist]
-        standalone: [adminclaimslist]
-        usage: "/adminlist"
-        description: List administrative claims on the current server.
-        """,
+        "enable: true" + "\n" +
+"commands: [adminlist]" + "\n" +
+"standalone: [adminclaimslist]" + "\n" +
+"usage: \"/adminlist\"" + "\n" +
+"description: List administrative claims on the current server." + "\n" +
+"" + "\n",
         "adminclaimslist"
     ),
 
     AClaimList(
-        """
-        enable: true
-        commands: [adminclaimslist]
-        usage: "/aclaim list [player]"
-        description: Show claims owned by a player (including admin claims).
-        arguments:
-          player:
-            type: player
-        """,
+        "enable: true" + "\n" +
+"commands: [adminclaimslist]" + "\n" +
+"usage: \"/aclaim list [player]\"" + "\n" +
+"description: Show claims owned by a player (including admin claims)." + "\n" +
+"arguments:" + "\n" +
+"  player:" + "\n" +
+"    type: player" + "\n" +
+"" + "\n",
         "adminclaimslist"
     ),
 
     AClaimCheckExpiry(
-        """
-        enable: true
-        commands: [checkexpiry]
-        standalone: [claimcheckexpiry]
-        usage: "/aclaim checkexpiry <player>"
-        description: View claim expiration details for a player.
-        arguments:
-          player:
-            type: player
-        """,
+        "enable: true" + "\n" +
+"commands: [checkexpiry]" + "\n" +
+"standalone: [claimcheckexpiry]" + "\n" +
+"usage: \"/aclaim checkexpiry <player>\"" + "\n" +
+"description: View claim expiration details for a player." + "\n" +
+"arguments:" + "\n" +
+"  player:" + "\n" +
+"    type: player" + "\n" +
+"" + "\n",
         "claimcheckexpiry"
     ),
 
     AClaimBlocks(
-        """
-        enable: true
-        commands: [blocks]
-        standalone: []
-        usage: "/aclaim blocks <bonus|accrued> <player|all> <amount>"
-        description: Adjust a player's claim block balance.
-        arguments:
-          type:
-            options:
-              bonus: [bonus]
-              accrued: [accrued]
-          player:
-            type: player
-            options:
-              all: [all]
-          amount:
-            type: integer
-        """,
+        "enable: true" + "\n" +
+"commands: [blocks]" + "\n" +
+"standalone: []" + "\n" +
+"usage: \"/aclaim blocks <bonus|accrued> <player|all> <amount>\"" + "\n" +
+"description: Adjust a player's claim block balance." + "\n" +
+"arguments:" + "\n" +
+"  type:" + "\n" +
+"    options:" + "\n" +
+"      bonus: [bonus]" + "\n" +
+"      accrued: [accrued]" + "\n" +
+"  player:" + "\n" +
+"    type: player" + "\n" +
+"    options:" + "\n" +
+"      all: [all]" + "\n" +
+"  amount:" + "\n" +
+"    type: integer" + "\n" +
+"" + "\n",
         "aclaimblocks"
     ),
 
     AClaimDelete(
-        """
-        enable: true
-        commands: [delete]
-        standalone: [deleteclaim]
-        usage: "/aclaim delete <player|world|all>"
-        description: Delete claims owned by a player or within a world.
-        arguments:
-          scope:
-            options:
-              player: [player]
-              world: [world]
-              all: [all]
-        """,
+        "enable: true" + "\n" +
+"commands: [delete]" + "\n" +
+"standalone: [deleteclaim]" + "\n" +
+"usage: \"/aclaim delete <player|world|all>\"" + "\n" +
+"description: Delete claims owned by a player or within a world." + "\n" +
+"arguments:" + "\n" +
+"  scope:" + "\n" +
+"    options:" + "\n" +
+"      player: [player]" + "\n" +
+"      world: [world]" + "\n" +
+"      all: [all]" + "\n" +
+"" + "\n",
         "deleteclaim"
     ),
 
     AClaimTransfer(
-        """
-        enable: true
-        commands: [transfer]
-        standalone: [transferclaim]
-        usage: "/aclaim transfer <player>"
-        description: Transfer the claim you are standing in to another player.
-        arguments:
-          player:
-            type: player
-        """,
+        "enable: true" + "\n" +
+"commands: [transfer]" + "\n" +
+"standalone: [transferclaim]" + "\n" +
+"usage: \"/aclaim transfer <player>\"" + "\n" +
+"description: Transfer the claim you are standing in to another player." + "\n" +
+"arguments:" + "\n" +
+"  player:" + "\n" +
+"    type: player" + "\n" +
+"" + "\n",
         "transferclaim"
     ),
 
     AClaimMakeAdmin(
-        """
-        enable: true
-        commands: [makeadmin]
-        standalone: [makeadmin]
-        usage: "/aclaim makeadmin"
-        description: Convert the current top-level claim to an administrative claim.
-        permission: griefprevention.adminclaims.convert
-        """,
+        "enable: true" + "\n" +
+"commands: [makeadmin]" + "\n" +
+"standalone: [makeadmin]" + "\n" +
+"usage: \"/aclaim makeadmin\"" + "\n" +
+"description: Convert the current top-level claim to an administrative claim." + "\n" +
+"permission: griefprevention.adminclaims.convert" + "\n" +
+"" + "\n",
         "makeadmin"
     ),
 
     AClaimMakeBasic(
-        """
-        enable: true
-        commands: [makebasic]
-        standalone: [makebasic]
-        usage: "/aclaim makebasic"
-        description: Convert the current top-level administrative claim to a basic claim you own.
-        permission: griefprevention.adminclaims.convert
-        """,
+        "enable: true" + "\n" +
+"commands: [makebasic]" + "\n" +
+"standalone: [makebasic]" + "\n" +
+"usage: \"/aclaim makebasic\"" + "\n" +
+"description: Convert the current top-level administrative claim to a basic claim you own." + "\n" +
+"permission: griefprevention.adminclaims.convert" + "\n" +
+"" + "\n",
         "makebasic"
     ),
 
     AClaimHelp(
-        """
-        enable: true
-        commands: [help]
-        standalone: [aclaimhelp]
-        usage: "/aclaim help [page]"
-        description: View a list of all available admin claim subcommands.
-        arguments:
-          page:
-            type: integer
-        """,
+        "enable: true" + "\n" +
+"commands: [help]" + "\n" +
+"standalone: [aclaimhelp]" + "\n" +
+"usage: \"/aclaim help [page]\"" + "\n" +
+"description: View a list of all available admin claim subcommands." + "\n" +
+"arguments:" + "\n" +
+"  page:" + "\n" +
+"    type: integer" + "\n" +
+"" + "\n",
         "aclaimhelp"
     ),
 
@@ -488,334 +458,334 @@ public enum Alias {
      * Gets all default alias configuration as a single YAML string
      */
     public static @NotNull String getDefaultYaml() {
-        return """
-        # ============================================
-        #      GRIEFPREVENTION ALIAS CONFIGURATION
-        # ============================================
-        # Customize command names, translations, and tab completion.
-        # Full documentation: https://github.com/castledking/GriefPrevention3D/tree/master/src/main/resources/alias.yml
-        # Reload changes with: /gpreload
-
-        # Set to false to disable all alias customization (uses default command names)
-        enabled: true
-        # Set to false to disable standalone commands (/trust, /trapped, etc.); only /claim and /aclaim (or their translations) will be registered
-        standalone: true
-
-        commands:
-          claim:
-            enable: true
-            commands: [claim]
-            description: Command to manage your claim(s)
-            permission: griefprevention.claims
-            fallback: ''
-
-          aclaim:
-            enable: true
-            commands: [aclaim]
-            description: Command to manage administrative claims
-            permission: griefprevention.adminclaims
-            fallback: ''
-
-        subcommands:
-          claim:
-            create:
-              enable: true
-              commands: [create]
-              standalone: [createclaim]
-              usage: "/claim create [radius]"
-              description: Create or expand a claim centered on you.
-              arguments:
-                radius:
-                  type: integer
-
-            trust:
-              enable: true
-              commands: [trust]
-              standalone: [trust]
-              usage: "/claim trust <player> [type]"
-              description: Grant a player access to your claim.
-              arguments:
-                player:
-                  type: player
-                type:
-                  options:
-                    access: [access]
-                    container: [container]
-                    permission: [permission]
-                    build: [build]
-
-            untrust:
-              enable: true
-              commands: [untrust]
-              standalone: [untrust]
-              usage: "/claim untrust <player|all>"
-              description: Revoke claim access from a player or everyone.
-              arguments:
-                options:
-                  player: player
-                  all: [all]
-                  public: [public]
-
-            trustlist:
-              enable: true
-              commands: [trustlist]
-              standalone: [trustlist]
-              usage: "/claim trustlist"
-              description: Show players who have access to this claim.
-
-            list:
-              enable: true
-              commands: [list]
-              standalone: [claimslist]
-              usage: "/claim list [player]"
-              description: List claims owned by you or another player.
-              arguments:
-                player:
-                  type: player
-
-            mode:
-              enable: true
-              commands: [mode]
-              standalone: [basicclaims, shapedclaims, shapedclaim]
-              usage: "/claim mode <basic|2d|3d|shaped>"
-              description: Change your golden shovel claim mode.
-              arguments:
-                mode:
-                  options:
-                    basic: [basic]
-                    2d: [2d, subdivide]
-                    3d: [3d]
-                    shaped: [shaped]
-
-            restrictsubclaim:
-              enable: true
-              commands: [restrictsubclaim]
-              standalone: [restrictsubclaim]
-              usage: "/claim restrictsubclaim"
-              description: Toggle whether a subdivision inherits parent permissions.
-
-            explosions:
-              enable: true
-              commands: [explosions]
-              standalone: [claimexplosions]
-              usage: "/claim explosions [on|off]"
-              description: Toggle explosions inside your current claim.
-              arguments:
-                state:
-                  options:
-                    on: [on]
-                    off: [off]
-
-            witherexplosions:
-              enable: true
-              commands: [witherexplosions]
-              standalone: [witherexplosions, witherexplosion]
-              usage: "/claim witherexplosions [on|off]"
-              description: Toggle wither explosions inside your current claim.
-              permission: griefprevention.witherexplosions
-              arguments:
-                state:
-                  options:
-                    on: [on]
-                    off: [off]
-
-            buyblocks:
-              enable: true
-              commands: [buyblocks]
-              standalone: [buyclaimblocks]
-              usage: "/claim buyblocks"
-              description: Purchase additional claim blocks.
-
-            sellblocks:
-              enable: true
-              commands: [sellblocks]
-              standalone: [sellclaimblocks]
-              usage: "/claim sellblocks"
-              description: Sell excess claim blocks for currency.
-
-            abandon:
-              enable: true
-              commands: [abandon]
-              standalone: [abandonclaim]
-              usage: "/claim abandon [all|toplevel]"
-              description: Abandon the claim you are standing in, or use 'toplevel' to delete it and all subdivisions, or 'all' to abandon every claim you own.
-              arguments:
-                scope:
-                  options:
-                    all: [all]
-                    toplevel: [toplevel]
-
-            siege:
-              enable: true
-              commands: [siege]
-              standalone: [siege]
-              usage: "/claim siege <player>"
-              description: Challenge another player to a siege (if enabled).
-              arguments:
-                player:
-                  type: player
-
-            trapped:
-              enable: true
-              commands: [trapped]
-              standalone: [trapped]
-              usage: "/claim trapped"
-              description: Attempt to escape if you are stuck inside a claim.
-
-            expand:
-              enable: true
-              commands: [expand]
-              standalone: [expandclaim, extendclaim]
-              usage: "/claim expand <numberOfBlocks>"
-              description: Expand the claim you're standing in by pushing or pulling its boundary.
-              arguments:
-                numberOfBlocks:
-                  type: integer-negative
-
-            help:
-              enable: true
-              commands: [help]
-              standalone: [claimhelp]
-              usage: "/claim help [page]"
-              description: View a list of all available claim subcommands.
-              arguments:
-                page:
-                  type: integer
-
-          aclaim:
-            restore:
-              enable: true
-              commands: [restore]
-              standalone: [restorenature]
-              usage: "/aclaim restore [mode]"
-              description: Restore an area to nature using the specified mode.
-              arguments:
-                mode:
-                  options:
-                    default: [default]
-                    aggressive: [aggressive]
-                    fill: [fill]
-
-            restoreaggressive:
-              enable: true
-              commands: [restoreaggressive]
-              standalone: [restorenatureaggressive]
-              usage: "/aclaim restoreaggressive"
-              description: Switches the shovel tool to aggressive restoration mode.
-
-            restorefill:
-              enable: true
-              commands: [restorefill]
-              standalone: [restorenaturefill]
-              usage: "/aclaim restorefill [radius]"
-              description: Switches the shovel tool to fill mode.
-              arguments:
-                radius:
-                  type: integer
-
-            ignore:
-              enable: true
-              commands: [ignore]
-              standalone: [ignoreclaims]
-              usage: "/aclaim ignore"
-              description: Toggle ignoring nearby claims.
-
-            mode:
-              enable: true
-              commands: [mode]
-              standalone: [adminclaims]
-              usage: "/aclaim mode <admin|admin3d>"
-              description: Switch your shovel to admin-claim mode.
-              arguments:
-                mode:
-                  options:
-                    admin: [admin]
-                    admin3d: [admin3d]
-
-            adminlist:
-              enable: true
-              commands: [adminlist]
-              standalone: [adminclaimslist]
-              usage: "/aclaim adminlist"
-              description: List administrative claims on the current server.
-
-            checkexpiry:
-              enable: true
-              commands: [checkexpiry]
-              standalone: [claimcheckexpiry]
-              usage: "/aclaim checkexpiry <player>"
-              description: View claim expiration details for a player.
-              arguments:
-                player:
-                  type: player
-
-            blocks:
-              enable: true
-              commands: [blocks]
-              standalone: []
-              usage: "/aclaim blocks <bonus|accrued> <player|all> <amount>"
-              description: Adjust a player's claim block balance.
-              arguments:
-                type:
-                  options:
-                    bonus: [bonus]
-                    accrued: [accrued]
-                player:
-                  type: player
-                  options:
-                    all: [all]
-                amount:
-                  type: integer
-
-            delete:
-              enable: true
-              commands: [delete]
-              standalone: [deleteclaim]
-              usage: "/aclaim delete <player|world|all>"
-              description: Delete claims owned by a player or within a world.
-              arguments:
-                scope:
-                  options:
-                    player: [player]
-                    world: [world]
-                    all: [all]
-
-            transfer:
-              enable: true
-              commands: [transfer]
-              standalone: [transferclaim]
-              usage: "/aclaim transfer <player>"
-              description: Transfer the claim you are standing in to another player.
-              arguments:
-                player:
-                  type: player
-
-            makeadmin:
-              enable: true
-              commands: [makeadmin]
-              standalone: [makeadmin]
-              usage: "/aclaim makeadmin"
-              description: Convert the current top-level claim to an administrative claim.
-              permission: griefprevention.adminclaims.convert
-
-            makebasic:
-              enable: true
-              commands: [makebasic]
-              standalone: [makebasic]
-              usage: "/aclaim makebasic"
-              description: Convert the current top-level administrative claim to a basic claim you own.
-              permission: griefprevention.adminclaims.convert
-
-            help:
-              enable: true
-              commands: [help]
-              standalone: [aclaimhelp]
-              usage: "/aclaim help [page]"
-              description: View a list of all available admin claim subcommands.
-              arguments:
-                page:
-                  type: integer
-        """;
+        return "# ============================================" + "\n" +
+"#      GRIEFPREVENTION ALIAS CONFIGURATION" + "\n" +
+"# ============================================" + "\n" +
+"# Customize command names, translations, and tab completion." + "\n" +
+"# Full documentation: https://github.com/castledking/GriefPrevention3D/tree/master/src/main/resources/alias.yml" + "\n" +
+"# Reload changes with: /gpreload" + "\n" +
+"" + "\n" +
+"# Set to false to disable all alias customization (uses default command names)" + "\n" +
+"enabled: true" + "\n" +
+"# Set to false to disable standalone commands (/trust, /trapped, etc.); only /claim and /aclaim (or their translations) will be registered" + "\n" +
+"standalone: true" + "\n" +
+"" + "\n" +
+"commands:" + "\n" +
+"  claim:" + "\n" +
+"    enable: true" + "\n" +
+"    commands: [claim]" + "\n" +
+"    description: Command to manage your claim(s)" + "\n" +
+"    permission: griefprevention.claims" + "\n" +
+"    fallback: ''" + "\n" +
+"" + "\n" +
+"  aclaim:" + "\n" +
+"    enable: true" + "\n" +
+"    commands: [aclaim]" + "\n" +
+"    description: Command to manage administrative claims" + "\n" +
+"    permission: griefprevention.adminclaims" + "\n" +
+"    fallback: ''" + "\n" +
+"" + "\n" +
+"subcommands:" + "\n" +
+"  claim:" + "\n" +
+"    create:" + "\n" +
+"      enable: true" + "\n" +
+"      commands: [create]" + "\n" +
+"      standalone: [createclaim]" + "\n" +
+"      usage: \"/claim create [radius]\"" + "\n" +
+"      description: Create or expand a claim centered on you." + "\n" +
+"      arguments:" + "\n" +
+"        radius:" + "\n" +
+"          type: integer" + "\n" +
+"" + "\n" +
+"    trust:" + "\n" +
+"      enable: true" + "\n" +
+"      commands: [trust]" + "\n" +
+"      standalone: [trust]" + "\n" +
+"      usage: \"/claim trust <player> [type]\"" + "\n" +
+"      description: Grant a player access to your claim." + "\n" +
+"      arguments:" + "\n" +
+"        player:" + "\n" +
+"          type: player" + "\n" +
+"        type:" + "\n" +
+"          options:" + "\n" +
+"            access: [access]" + "\n" +
+"            container: [container]" + "\n" +
+"            permission: [permission]" + "\n" +
+"            build: [build]" + "\n" +
+"" + "\n" +
+"    untrust:" + "\n" +
+"      enable: true" + "\n" +
+"      commands: [untrust]" + "\n" +
+"      standalone: [untrust]" + "\n" +
+"      usage: \"/claim untrust <player|all>\"" + "\n" +
+"      description: Revoke claim access from a player or everyone." + "\n" +
+"      arguments:" + "\n" +
+"        options:" + "\n" +
+"          player: player" + "\n" +
+"          all: [all]" + "\n" +
+"          public: [public]" + "\n" +
+"" + "\n" +
+"    trustlist:" + "\n" +
+"      enable: true" + "\n" +
+"      commands: [trustlist]" + "\n" +
+"      standalone: [trustlist]" + "\n" +
+"      usage: \"/claim trustlist\"" + "\n" +
+"      description: Show players who have access to this claim." + "\n" +
+"" + "\n" +
+"    list:" + "\n" +
+"      enable: true" + "\n" +
+"      commands: [list]" + "\n" +
+"      standalone: [claimslist]" + "\n" +
+"      usage: \"/claim list [player]\"" + "\n" +
+"      description: List claims owned by you or another player." + "\n" +
+"      arguments:" + "\n" +
+"        player:" + "\n" +
+"          type: player" + "\n" +
+"" + "\n" +
+"    mode:" + "\n" +
+"      enable: true" + "\n" +
+"      commands: [mode]" + "\n" +
+"      standalone: [basicclaims, shapedclaims, shapedclaim]" + "\n" +
+"      usage: \"/claim mode <basic|2d|3d|shaped>\"" + "\n" +
+"      description: Change your golden shovel claim mode." + "\n" +
+"      arguments:" + "\n" +
+"        mode:" + "\n" +
+"          options:" + "\n" +
+"            basic: [basic]" + "\n" +
+"            2d: [2d, subdivide]" + "\n" +
+"            3d: [3d]" + "\n" +
+"            shaped: [shaped]" + "\n" +
+"" + "\n" +
+"    restrictsubclaim:" + "\n" +
+"      enable: true" + "\n" +
+"      commands: [restrictsubclaim]" + "\n" +
+"      standalone: [restrictsubclaim]" + "\n" +
+"      usage: \"/claim restrictsubclaim\"" + "\n" +
+"      description: Toggle whether a subdivision inherits parent permissions." + "\n" +
+"" + "\n" +
+"    explosions:" + "\n" +
+"      enable: true" + "\n" +
+"      commands: [explosions]" + "\n" +
+"      standalone: [claimexplosions]" + "\n" +
+"      usage: \"/claim explosions [on|off]\"" + "\n" +
+"      description: Toggle explosions inside your current claim." + "\n" +
+"      arguments:" + "\n" +
+"        state:" + "\n" +
+"          options:" + "\n" +
+"            on: [on]" + "\n" +
+"            off: [off]" + "\n" +
+"" + "\n" +
+"    witherexplosions:" + "\n" +
+"      enable: true" + "\n" +
+"      commands: [witherexplosions]" + "\n" +
+"      standalone: [witherexplosions, witherexplosion]" + "\n" +
+"      usage: \"/claim witherexplosions [on|off]\"" + "\n" +
+"      description: Toggle wither explosions inside your current claim." + "\n" +
+"      permission: griefprevention.witherexplosions" + "\n" +
+"      arguments:" + "\n" +
+"        state:" + "\n" +
+"          options:" + "\n" +
+"            on: [on]" + "\n" +
+"            off: [off]" + "\n" +
+"" + "\n" +
+"    buyblocks:" + "\n" +
+"      enable: true" + "\n" +
+"      commands: [buyblocks]" + "\n" +
+"      standalone: [buyclaimblocks]" + "\n" +
+"      usage: \"/claim buyblocks\"" + "\n" +
+"      description: Purchase additional claim blocks." + "\n" +
+"" + "\n" +
+"    sellblocks:" + "\n" +
+"      enable: true" + "\n" +
+"      commands: [sellblocks]" + "\n" +
+"      standalone: [sellclaimblocks]" + "\n" +
+"      usage: \"/claim sellblocks\"" + "\n" +
+"      description: Sell excess claim blocks for currency." + "\n" +
+"" + "\n" +
+"    abandon:" + "\n" +
+"      enable: true" + "\n" +
+"      commands: [abandon]" + "\n" +
+"      standalone: [abandonclaim]" + "\n" +
+"      usage: \"/claim abandon [all|toplevel]\"" + "\n" +
+"      description: Abandon the claim you are standing in, or use 'toplevel' to delete it and all subdivisions, or 'all' to abandon every claim you own." + "\n" +
+"      arguments:" + "\n" +
+"        scope:" + "\n" +
+"          options:" + "\n" +
+"            all: [all]" + "\n" +
+"            toplevel: [toplevel]" + "\n" +
+"" + "\n" +
+"    siege:" + "\n" +
+"      enable: true" + "\n" +
+"      commands: [siege]" + "\n" +
+"      standalone: [siege]" + "\n" +
+"      usage: \"/claim siege <player>\"" + "\n" +
+"      description: Challenge another player to a siege (if enabled)." + "\n" +
+"      arguments:" + "\n" +
+"        player:" + "\n" +
+"          type: player" + "\n" +
+"" + "\n" +
+"    trapped:" + "\n" +
+"      enable: true" + "\n" +
+"      commands: [trapped]" + "\n" +
+"      standalone: [trapped]" + "\n" +
+"      usage: \"/claim trapped\"" + "\n" +
+"      description: Attempt to escape if you are stuck inside a claim." + "\n" +
+"" + "\n" +
+"    expand:" + "\n" +
+"      enable: true" + "\n" +
+"      commands: [expand]" + "\n" +
+"      standalone: [expandclaim, extendclaim]" + "\n" +
+"      usage: \"/claim expand <numberOfBlocks>\"" + "\n" +
+"      description: Expand the claim you're standing in by pushing or pulling its boundary." + "\n" +
+"      arguments:" + "\n" +
+"        numberOfBlocks:" + "\n" +
+"          type: integer-negative" + "\n" +
+"" + "\n" +
+"    help:" + "\n" +
+"      enable: true" + "\n" +
+"      commands: [help]" + "\n" +
+"      standalone: [claimhelp]" + "\n" +
+"      usage: \"/claim help [page]\"" + "\n" +
+"      description: View a list of all available claim subcommands." + "\n" +
+"      arguments:" + "\n" +
+"        page:" + "\n" +
+"          type: integer" + "\n" +
+"" + "\n" +
+"  aclaim:" + "\n" +
+"    restore:" + "\n" +
+"      enable: true" + "\n" +
+"      commands: [restore]" + "\n" +
+"      standalone: [restorenature]" + "\n" +
+"      usage: \"/aclaim restore [mode]\"" + "\n" +
+"      description: Restore an area to nature using the specified mode." + "\n" +
+"      arguments:" + "\n" +
+"        mode:" + "\n" +
+"          options:" + "\n" +
+"            default: [default]" + "\n" +
+"            aggressive: [aggressive]" + "\n" +
+"            fill: [fill]" + "\n" +
+"" + "\n" +
+"    restoreaggressive:" + "\n" +
+"      enable: true" + "\n" +
+"      commands: [restoreaggressive]" + "\n" +
+"      standalone: [restorenatureaggressive]" + "\n" +
+"      usage: \"/aclaim restoreaggressive\"" + "\n" +
+"      description: Switches the shovel tool to aggressive restoration mode." + "\n" +
+"" + "\n" +
+"    restorefill:" + "\n" +
+"      enable: true" + "\n" +
+"      commands: [restorefill]" + "\n" +
+"      standalone: [restorenaturefill]" + "\n" +
+"      usage: \"/aclaim restorefill [radius]\"" + "\n" +
+"      description: Switches the shovel tool to fill mode." + "\n" +
+"      arguments:" + "\n" +
+"        radius:" + "\n" +
+"          type: integer" + "\n" +
+"" + "\n" +
+"    ignore:" + "\n" +
+"      enable: true" + "\n" +
+"      commands: [ignore]" + "\n" +
+"      standalone: [ignoreclaims]" + "\n" +
+"      usage: \"/aclaim ignore\"" + "\n" +
+"      description: Toggle ignoring nearby claims." + "\n" +
+"" + "\n" +
+"    mode:" + "\n" +
+"      enable: true" + "\n" +
+"      commands: [mode]" + "\n" +
+"      standalone: [adminclaims]" + "\n" +
+"      usage: \"/aclaim mode <admin|admin3d>\"" + "\n" +
+"      description: Switch your shovel to admin-claim mode." + "\n" +
+"      arguments:" + "\n" +
+"        mode:" + "\n" +
+"          options:" + "\n" +
+"            admin: [admin]" + "\n" +
+"            admin3d: [admin3d]" + "\n" +
+"" + "\n" +
+"    adminlist:" + "\n" +
+"      enable: true" + "\n" +
+"      commands: [adminlist]" + "\n" +
+"      standalone: [adminclaimslist]" + "\n" +
+"      usage: \"/aclaim adminlist\"" + "\n" +
+"      description: List administrative claims on the current server." + "\n" +
+"" + "\n" +
+"    checkexpiry:" + "\n" +
+"      enable: true" + "\n" +
+"      commands: [checkexpiry]" + "\n" +
+"      standalone: [claimcheckexpiry]" + "\n" +
+"      usage: \"/aclaim checkexpiry <player>\"" + "\n" +
+"      description: View claim expiration details for a player." + "\n" +
+"      arguments:" + "\n" +
+"        player:" + "\n" +
+"          type: player" + "\n" +
+"" + "\n" +
+"    blocks:" + "\n" +
+"      enable: true" + "\n" +
+"      commands: [blocks]" + "\n" +
+"      standalone: []" + "\n" +
+"      usage: \"/aclaim blocks <bonus|accrued> <player|all> <amount>\"" + "\n" +
+"      description: Adjust a player's claim block balance." + "\n" +
+"      arguments:" + "\n" +
+"        type:" + "\n" +
+"          options:" + "\n" +
+"            bonus: [bonus]" + "\n" +
+"            accrued: [accrued]" + "\n" +
+"        player:" + "\n" +
+"          type: player" + "\n" +
+"          options:" + "\n" +
+"            all: [all]" + "\n" +
+"        amount:" + "\n" +
+"          type: integer" + "\n" +
+"" + "\n" +
+"    delete:" + "\n" +
+"      enable: true" + "\n" +
+"      commands: [delete]" + "\n" +
+"      standalone: [deleteclaim]" + "\n" +
+"      usage: \"/aclaim delete <player|world|all>\"" + "\n" +
+"      description: Delete claims owned by a player or within a world." + "\n" +
+"      arguments:" + "\n" +
+"        scope:" + "\n" +
+"          options:" + "\n" +
+"            player: [player]" + "\n" +
+"            world: [world]" + "\n" +
+"            all: [all]" + "\n" +
+"" + "\n" +
+"    transfer:" + "\n" +
+"      enable: true" + "\n" +
+"      commands: [transfer]" + "\n" +
+"      standalone: [transferclaim]" + "\n" +
+"      usage: \"/aclaim transfer <player>\"" + "\n" +
+"      description: Transfer the claim you are standing in to another player." + "\n" +
+"      arguments:" + "\n" +
+"        player:" + "\n" +
+"          type: player" + "\n" +
+"" + "\n" +
+"    makeadmin:" + "\n" +
+"      enable: true" + "\n" +
+"      commands: [makeadmin]" + "\n" +
+"      standalone: [makeadmin]" + "\n" +
+"      usage: \"/aclaim makeadmin\"" + "\n" +
+"      description: Convert the current top-level claim to an administrative claim." + "\n" +
+"      permission: griefprevention.adminclaims.convert" + "\n" +
+"" + "\n" +
+"    makebasic:" + "\n" +
+"      enable: true" + "\n" +
+"      commands: [makebasic]" + "\n" +
+"      standalone: [makebasic]" + "\n" +
+"      usage: \"/aclaim makebasic\"" + "\n" +
+"      description: Convert the current top-level administrative claim to a basic claim you own." + "\n" +
+"      permission: griefprevention.adminclaims.convert" + "\n" +
+"" + "\n" +
+"    help:" + "\n" +
+"      enable: true" + "\n" +
+"      commands: [help]" + "\n" +
+"      standalone: [aclaimhelp]" + "\n" +
+"      usage: \"/aclaim help [page]\"" + "\n" +
+"      description: View a list of all available admin claim subcommands." + "\n" +
+"      arguments:" + "\n" +
+"        page:" + "\n" +
+"          type: integer" + "\n" +
+"" + "\n"
+;
     }
 
     /**

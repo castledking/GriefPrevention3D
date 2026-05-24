@@ -54,23 +54,22 @@ class UnifiedCommandAliasBehaviorTest
     @Test
     void rootCommandFallbackDispatchesConfiguredSubcommand(@TempDir Path tempDir) throws Exception
     {
-        CommandAliasConfiguration aliases = loadAliases(tempDir, """
-            enabled: true
-            standalone: true
-            commands:
-              claim:
-                enable: true
-                commands: [claim]
-                fallback: help
-            subcommands:
-              claim:
-                create:
-                  enable: true
-                  commands: [create]
-                  standalone: [createclaim]
-                  usage: "/claim create [radius]"
-                  description: Create or expand a claim centered on you.
-            """);
+        CommandAliasConfiguration aliases = loadAliases(tempDir,
+                "enabled: true\n"
+                        + "standalone: true\n"
+                        + "commands:\n"
+                        + "  claim:\n"
+                        + "    enable: true\n"
+                        + "    commands: [claim]\n"
+                        + "    fallback: help\n"
+                        + "subcommands:\n"
+                        + "  claim:\n"
+                        + "    create:\n"
+                        + "      enable: true\n"
+                        + "      commands: [create]\n"
+                        + "      standalone: [createclaim]\n"
+                        + "      usage: \"/claim create [radius]\"\n"
+                        + "      description: Create or expand a claim centered on you.\n");
         GriefPrevention plugin = newPlugin(aliases);
         GriefPrevention.instance = plugin;
         CommandSender sender = mock(CommandSender.class);
@@ -98,22 +97,21 @@ class UnifiedCommandAliasBehaviorTest
     @Test
     void helpRowsUseConfiguredMessageTemplate(@TempDir Path tempDir) throws Exception
     {
-        CommandAliasConfiguration aliases = loadAliases(tempDir, """
-            enabled: true
-            standalone: true
-            commands:
-              claim:
-                enable: true
-                commands: [claim]
-            subcommands:
-              claim:
-                create:
-                  enable: true
-                  commands: [create]
-                  standalone: [createclaim]
-                  usage: "/claim create [radius]"
-                  description: Create or expand a claim centered on you.
-            """);
+        CommandAliasConfiguration aliases = loadAliases(tempDir,
+                "enabled: true\n"
+                        + "standalone: true\n"
+                        + "commands:\n"
+                        + "  claim:\n"
+                        + "    enable: true\n"
+                        + "    commands: [claim]\n"
+                        + "subcommands:\n"
+                        + "  claim:\n"
+                        + "    create:\n"
+                        + "      enable: true\n"
+                        + "      commands: [create]\n"
+                        + "      standalone: [createclaim]\n"
+                        + "      usage: \"/claim create [radius]\"\n"
+                        + "      description: Create or expand a claim centered on you.\n");
         GriefPrevention plugin = newPlugin(aliases);
         GriefPrevention.instance = plugin;
 
@@ -133,14 +131,13 @@ class UnifiedCommandAliasBehaviorTest
     @Test
     void fallbackValueIsLoadedFromAliasConfiguration(@TempDir Path tempDir) throws Exception
     {
-        CommandAliasConfiguration aliases = loadAliases(tempDir, """
-            enabled: true
-            commands:
-              claim:
-                enable: true
-                commands: [terreno]
-                fallback: 'help 2'
-            """);
+        CommandAliasConfiguration aliases = loadAliases(tempDir,
+                "enabled: true\n"
+                        + "commands:\n"
+                        + "  claim:\n"
+                        + "    enable: true\n"
+                        + "    commands: [terreno]\n"
+                        + "    fallback: 'help 2'\n");
 
         assertEquals("help 2", aliases.getRootCommand("claim").getFallback());
     }

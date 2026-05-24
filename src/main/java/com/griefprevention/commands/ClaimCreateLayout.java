@@ -5,14 +5,82 @@ import me.ryanhamshire.GriefPrevention.PlayerData;
 import org.bukkit.Location;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Objects;
+
 final class ClaimCreateLayout
 {
     private ClaimCreateLayout()
     {
     }
 
-    record Bounds(int lesserX, int lesserZ, int greaterX, int greaterZ)
+    static final class Bounds
     {
+        private final int lesserX;
+        private final int lesserZ;
+        private final int greaterX;
+        private final int greaterZ;
+
+        Bounds(int lesserX, int lesserZ, int greaterX, int greaterZ)
+        {
+            this.lesserX = lesserX;
+            this.lesserZ = lesserZ;
+            this.greaterX = greaterX;
+            this.greaterZ = greaterZ;
+        }
+
+        int lesserX()
+        {
+            return lesserX;
+        }
+
+        int lesserZ()
+        {
+            return lesserZ;
+        }
+
+        int greaterX()
+        {
+            return greaterX;
+        }
+
+        int greaterZ()
+        {
+            return greaterZ;
+        }
+
+        @Override
+        public boolean equals(Object other)
+        {
+            if (this == other)
+            {
+                return true;
+            }
+            if (!(other instanceof Bounds))
+            {
+                return false;
+            }
+            Bounds bounds = (Bounds) other;
+            return lesserX == bounds.lesserX
+                    && lesserZ == bounds.lesserZ
+                    && greaterX == bounds.greaterX
+                    && greaterZ == bounds.greaterZ;
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return Objects.hash(lesserX, lesserZ, greaterX, greaterZ);
+        }
+
+        @Override
+        public String toString()
+        {
+            return "Bounds[lesserX=" + lesserX
+                    + ", lesserZ=" + lesserZ
+                    + ", greaterX=" + greaterX
+                    + ", greaterZ=" + greaterZ
+                    + ']';
+        }
     }
 
     static @NotNull Bounds resolveDefaultBounds(

@@ -54,10 +54,10 @@ public class MonitoredCommands
             if (GriefPrevention.instance != null)
             {
                 GriefPrevention.instance.getLogger().warning(
-                        """
-                        Caught exception trying to access server command map!
-                        Aliases can only be detected for plugin commands declared in relevant plugin.yml files!
-                        """);
+                        "Caught exception trying to access server command map!" + "\n" +
+"Aliases can only be detected for plugin commands declared in relevant plugin.yml files!" + "\n" +
+"" + "\n"
+);
             }
             if (GriefPrevention.instance != null) {
                 GriefPrevention.instance.getLogger().log(Level.WARNING, e.getMessage(), e);
@@ -119,7 +119,7 @@ public class MonitoredCommands
     private void addFromCommandMap(@NotNull String commandName, @NotNull String suffix)
     {
         Command command = commandMap.getCommand(commandName);
-        Plugin activePlugin = command instanceof PluginIdentifiableCommand pluginCmd ? pluginCmd.getPlugin() : null;
+        Plugin activePlugin = command instanceof PluginIdentifiableCommand ? ((PluginIdentifiableCommand) command).getPlugin() : null;
 
         // Command may also be null if an invalid/empty commands.yml override exists.
         // As a result, there may still be relevant aliases.
@@ -194,9 +194,9 @@ public class MonitoredCommands
             aliasesField.setAccessible(true);
             Object object = aliasesField.get(command);
 
-            if (object instanceof List<?> list)
+            if (object instanceof List<?>)
             {
-                list.stream()
+                ((List<?>) object).stream()
                         .map(Object::toString)
                         .map(String::toLowerCase)
                         .forEach(alias -> monitoredCommands.add(prefix + alias + suffix));

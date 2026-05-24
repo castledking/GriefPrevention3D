@@ -41,7 +41,8 @@ public final class EntityPickupItemEventHandler implements Listener {
         org.bukkit.entity.Item item = event.getItem();
         List<MetadataValue> data = item.getMetadata("GP_ITEMOWNER");
 
-        if (data.isEmpty() || !(data.get(0).value() instanceof UUID ownerID)) return;
+        if (data.isEmpty() || !(data.get(0).value() instanceof UUID)) return;
+        UUID ownerID = (UUID) data.get(0).value();
 
         OfflinePlayer owner = GriefPrevention.instance.getServer().getOfflinePlayer(ownerID);
 

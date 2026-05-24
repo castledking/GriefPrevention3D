@@ -28,8 +28,9 @@ public class SpigotKnockbackHandler implements Listener {
     @EventHandler(ignoreCancelled = true, priority = EventPriority.LOWEST)
     public void onEntityKnockbackByEntity(@NotNull EntityKnockbackByEntityEvent event) {
         // Only handle wind charge knockback on players
-        if (!(event.getEntity() instanceof Player defender))
+        if (!(event.getEntity() instanceof Player))
             return;
+        Player defender = (Player) event.getEntity();
 
         Entity source = event.getSourceEntity();
         if (source == null)
@@ -46,8 +47,8 @@ public class SpigotKnockbackHandler implements Listener {
 
         // Get the player who threw the wind charge
         Player attacker = null;
-        if (source instanceof Projectile projectile && projectile.getShooter() instanceof Player shooter) {
-            attacker = shooter;
+        if (source instanceof Projectile && ((Projectile) source).getShooter() instanceof Player) {
+            attacker = (Player) ((Projectile) source).getShooter();
         }
 
         // Allow self-knockback (e.g., for movement tricks)

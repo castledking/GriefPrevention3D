@@ -178,38 +178,63 @@ public class LegacyFakeBlockVisualization extends FakeBlockVisualization
 
     private static @NotNull Material cornerMaterialFor(@NotNull VisualizationType type)
     {
-        return switch (type)
+        switch (type)
         {
-            case CLAIM -> Material.GLOWSTONE;
-            case ADMIN_CLAIM, ADMIN_CLAIM_3D -> Material.GLOWSTONE;
-            case SUBDIVISION, SUBDIVISION_3D -> Material.IRON_BLOCK;
-            case INITIALIZE_ZONE, INITIALIZE_ZONE_3D -> Material.DIAMOND_BLOCK;
-            case CONFLICT_ZONE -> LIT_REDSTONE_ORE;
-            case CONFLICT_ZONE_3D -> Material.REDSTONE_ORE;
-            case RESTORE_NATURE -> LIME_STAINED_CLAY;
-        };
+            case CLAIM:
+            case ADMIN_CLAIM:
+            case ADMIN_CLAIM_3D:
+                return Material.GLOWSTONE;
+            case SUBDIVISION:
+            case SUBDIVISION_3D:
+                return Material.IRON_BLOCK;
+            case INITIALIZE_ZONE:
+            case INITIALIZE_ZONE_3D:
+                return Material.DIAMOND_BLOCK;
+            case CONFLICT_ZONE:
+                return LIT_REDSTONE_ORE;
+            case CONFLICT_ZONE_3D:
+                return Material.REDSTONE_ORE;
+            case RESTORE_NATURE:
+                return LIME_STAINED_CLAY;
+            default:
+                return Material.GLOWSTONE;
+        }
     }
 
     private static byte cornerDataFor(@NotNull VisualizationType type)
     {
-        return switch (type)
+        switch (type)
         {
-            case RESTORE_NATURE -> 5;
-            default -> 0;
-        };
+            case RESTORE_NATURE:
+                return 5;
+            default:
+                return 0;
+        }
     }
 
     private static @NotNull Material sideMaterialFor(@NotNull VisualizationType type)
     {
-        return switch (type)
+        switch (type)
         {
-            case CLAIM -> Material.GOLD_BLOCK;
-            case ADMIN_CLAIM, ADMIN_CLAIM_3D -> Material.PUMPKIN;
-            case SUBDIVISION, SUBDIVISION_3D -> WOOL;
-            case INITIALIZE_ZONE, INITIALIZE_ZONE_3D -> Material.DIAMOND_BLOCK;
-            case CONFLICT_ZONE, CONFLICT_ZONE_3D -> Material.NETHERRACK;
-            case RESTORE_NATURE -> Material.EMERALD_BLOCK;
-        };
+            case CLAIM:
+                return Material.GOLD_BLOCK;
+            case ADMIN_CLAIM:
+            case ADMIN_CLAIM_3D:
+                return Material.PUMPKIN;
+            case SUBDIVISION:
+            case SUBDIVISION_3D:
+                return WOOL;
+            case INITIALIZE_ZONE:
+            case INITIALIZE_ZONE_3D:
+                return Material.DIAMOND_BLOCK;
+            case CONFLICT_ZONE:
+            case CONFLICT_ZONE_3D:
+                return Material.NETHERRACK;
+            case RESTORE_NATURE:
+                return Material.EMERALD_BLOCK;
+            default:
+                return Material.GOLD_BLOCK;
+        }
     }
 
     private static byte sideDataFor(@NotNull VisualizationType type)

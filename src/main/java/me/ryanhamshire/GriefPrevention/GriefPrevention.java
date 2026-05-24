@@ -365,6 +365,13 @@ public class GriefPrevention extends JavaPlugin {
     // adds a server log entry
     public static synchronized void AddLogEntry(String entry, CustomLogEntryTypes customLogType,
             boolean excludeFromServerLogs) {
+        if (customLogType == CustomLogEntryTypes.Debug
+                && entry.startsWith("[GP Debug]")
+                && GriefPrevention.instance != null
+                && !GriefPrevention.instance.config_logs_debugEnabled) {
+            return;
+        }
+
         if (customLogType != null && GriefPrevention.instance.customLogger != null) {
             GriefPrevention.instance.customLogger.AddEntry(entry, customLogType);
         }
@@ -487,7 +494,7 @@ public class GriefPrevention extends JavaPlugin {
         new KnockbackProtectionListener(this.dataStore, this).register(this);
 
         // Register knockback handler - use Paper's event if available, otherwise use Spigot's (wind charge protection)
-        if (PaperKnockbackHandler.isPaperEventAvailable()) {
+        if (isClassPresent("io.papermc.paper.event.entity.EntityPushedByEntityAttackEvent")) {
             pluginManager.registerEvents(new PaperKnockbackHandler(this.dataStore, this), this);
             AddLogEntry("Using Paper knockback handler for wind charge protection.");
         } else if (isClassPresent("org.bukkit.event.entity.EntityKnockbackByEntityEvent")) {
@@ -1467,7 +1474,8 @@ public class GriefPrevention extends JavaPlugin {
         @Override
         public java.util.List<String> onTabComplete(org.bukkit.command.CommandSender sender,
                 org.bukkit.command.Command command, String alias, String[] args) {
-            if (args.length == 1 && sender instanceof org.bukkit.entity.Player player) {
+            if (args.length == 1 && sender instanceof org.bukkit.entity.Player) {
+                org.bukkit.entity.Player player = (org.bukkit.entity.Player) sender;
                 java.util.List<String> players = TabCompletions.visiblePlayers(sender, new String[] { args[0] });
                 // Exclude the sender themselves
                 players.removeIf(name -> name.equalsIgnoreCase(player.getName()));
@@ -3246,17 +3254,18 @@ public class GriefPrevention extends JavaPlugin {
 
     static @NotNull String lookupPlayerName(@NotNull AnimalTamer tamer) {
         // If the tamer is not a player, fetch their name directly.
-        if (!(tamer instanceof OfflinePlayer player)) {
+        if (!(tamer instanceof OfflinePlayer)) {
             String name = tamer.getName();
             if (name != null)
                 return name;
             // Fall back to tamer's UUID.
             return getDefaultName(tamer.getUniqueId());
         }
+        OfflinePlayer player = (OfflinePlayer) tamer;
 
         // If the player is online, their name is available immediately.
-        if (player instanceof Player online) {
-            String name = online.getName();
+        if (player instanceof Player) {
+            String name = ((Player) player).getName();
             if (name != null) {
                 // Store name in cache.
                 if (name != null) {
@@ -3799,8 +3808,9 @@ public class GriefPrevention extends JavaPlugin {
 
     public boolean handleTrustCommand(CommandSender sender, String[] args) {
         // Extract trust command logic from onCommand
-        if (!(sender instanceof Player player))
+        if (!(sender instanceof Player))
             return false;
+        Player player = (Player) sender;
 
         if (args.length != 1)
             return false;
@@ -3810,8 +3820,9 @@ public class GriefPrevention extends JavaPlugin {
     }
 
     public boolean handleUntrustCommand(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player player))
+        if (!(sender instanceof Player))
             return false;
+        Player player = (Player) sender;
 
         if (args.length != 1)
             return false;
@@ -4018,8 +4029,9 @@ public class GriefPrevention extends JavaPlugin {
     }
 
     public boolean handleTrustListCommand(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player player))
+        if (!(sender instanceof Player))
             return false;
+        Player player = (Player) sender;
 
         PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
         Claim claim = getSelectedOrCurrentClaim(player, playerData, false);
@@ -4126,8 +4138,9 @@ public class GriefPrevention extends JavaPlugin {
 
     public boolean handleClaimsListCommand(CommandSender sender, String[] args) {
         // Simplified claims list logic
-        if (!(sender instanceof Player player))
+        if (!(sender instanceof Player))
             return false;
+        Player player = (Player) sender;
 
         OfflinePlayer otherPlayer = player;
         if (args.length > 0 && player.hasPermission("griefprevention.claimslistother")) {
@@ -4168,8 +4181,9 @@ public class GriefPrevention extends JavaPlugin {
     }
 
     public boolean handleModeCommand(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player player))
+        if (!(sender instanceof Player))
             return false;
+        Player player = (Player) sender;
 
         PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
 
@@ -4185,15 +4199,15 @@ public class GriefPrevention extends JavaPlugin {
         }
 
         switch (args[0].toLowerCase()) {
-            case "basic" -> {
+            case "basic":
                 playerData.shovelMode = ShovelMode.Basic;
                 playerData.claimSubdividing = null;
                 playerData.claimResizing = null;
                 playerData.lastShovelLocation = null;
                 playerData.setClaimEditorSession(null);
                 GriefPrevention.sendMessage(player, TextMode.Success, Messages.BasicClaimsMode);
-            }
-            case "shaped" -> {
+                break;
+            case "shaped":
                 if (!this.config_claims_allowShapedClaims) {
                     GriefPrevention.sendMessage(player, TextMode.Err, Messages.ShapedClaimsDisabled);
                     return true;
@@ -4209,16 +4223,16 @@ public class GriefPrevention extends JavaPlugin {
                 playerData.lastShovelLocation = null;
                 playerData.setClaimEditorSession(null);
                 GriefPrevention.sendMessage(player, TextMode.Instr, Messages.ShapedClaimsMode);
-            }
-            case "2d" -> {
+                break;
+            case "2d":
                 playerData.shovelMode = ShovelMode.Subdivide;
                 playerData.claimSubdividing = null;
                 playerData.setClaimEditorSession(null);
                 GriefPrevention.sendMessage(player, TextMode.Instr, Messages.SubdivisionMode);
                 GriefPrevention.sendMessage(player, TextMode.Instr, Messages.SubdivisionVideo2,
                         DataStore.SUBDIVISION_VIDEO_URL);
-            }
-            case "3d" -> {
+                break;
+            case "3d":
                 if (!player.hasPermission("griefprevention.3dsubdivideclaims") ||
                     !player.hasPermission("griefprevention.claims")) {
                     GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
@@ -4230,19 +4244,19 @@ public class GriefPrevention extends JavaPlugin {
                 GriefPrevention.sendMessage(player, TextMode.Instr, Messages.SubdivisionMode3D);
                 GriefPrevention.sendMessage(player, TextMode.Instr, Messages.SubdivisionVideo2,
                         DataStore.SUBDIVISION_VIDEO_URL);
-            }
-            default -> {
+                break;
+            default:
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.CommandInvalidMode);
                 return true;
-            }
         }
 
         return true;
     }
 
     public boolean handleRestrictSubclaimCommand(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player player))
+        if (!(sender instanceof Player))
             return false;
+        Player player = (Player) sender;
 
         PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
         Claim claim = this.dataStore.getClaimAt(player.getLocation(), true, playerData.lastClaim);
@@ -4339,8 +4353,9 @@ public class GriefPrevention extends JavaPlugin {
     }
 
     public boolean handleDropsCommand(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player player))
+        if (!(sender instanceof Player))
             return false;
+        Player player = (Player) sender;
 
         PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
 
@@ -4364,8 +4379,9 @@ public class GriefPrevention extends JavaPlugin {
     }
 
     private boolean handleClaimExplosionToggleCommand(CommandSender sender, String[] args, boolean witherOnly) {
-        if (!(sender instanceof Player player))
+        if (!(sender instanceof Player))
             return false;
+        Player player = (Player) sender;
 
         if (witherOnly && !player.hasPermission("griefprevention.witherexplosions")) {
             GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
@@ -4420,8 +4436,9 @@ public class GriefPrevention extends JavaPlugin {
     }
 
     public boolean abandonAllClaimsHandler(CommandSender sender) {
-        if (!(sender instanceof Player player))
+        if (!(sender instanceof Player))
             return false;
+        Player player = (Player) sender;
 
         PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
         int originalClaimCount = playerData.getClaims().size();
@@ -4440,8 +4457,9 @@ public class GriefPrevention extends JavaPlugin {
     }
 
     public boolean handleTrappedCommand(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player player))
+        if (!(sender instanceof Player))
             return false;
+        Player player = (Player) sender;
 
         PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
         Claim claim = this.dataStore.getClaimAt(player.getLocation(), false, playerData.lastClaim);

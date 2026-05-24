@@ -1652,12 +1652,44 @@ final class ClaimToolDispatcher
         return area;
     }
 
-    private record ShapedNibResizeAttempt(
-            @NotNull OrthogonalPolygonValidationResult result,
-            boolean containsOriginal,
-            int area,
-            int overlap)
+    private static final class ShapedNibResizeAttempt
     {
+        private final @NotNull OrthogonalPolygonValidationResult result;
+        private final boolean containsOriginal;
+        private final int area;
+        private final int overlap;
+
+        private ShapedNibResizeAttempt(
+                @NotNull OrthogonalPolygonValidationResult result,
+                boolean containsOriginal,
+                int area,
+                int overlap)
+        {
+            this.result = result;
+            this.containsOriginal = containsOriginal;
+            this.area = area;
+            this.overlap = overlap;
+        }
+
+        @NotNull OrthogonalPolygonValidationResult result()
+        {
+            return result;
+        }
+
+        boolean containsOriginal()
+        {
+            return containsOriginal;
+        }
+
+        int area()
+        {
+            return area;
+        }
+
+        int overlap()
+        {
+            return overlap;
+        }
     }
 
     private @Nullable FaceRun findStraightFaceRun(
@@ -1786,8 +1818,33 @@ final class ClaimToolDispatcher
         return null;
     }
 
-    private record FaceRun(int startEdgeIndex, int endEdgeIndex, boolean horizontal)
+    private static final class FaceRun
     {
+        private final int startEdgeIndex;
+        private final int endEdgeIndex;
+        private final boolean horizontal;
+
+        private FaceRun(int startEdgeIndex, int endEdgeIndex, boolean horizontal)
+        {
+            this.startEdgeIndex = startEdgeIndex;
+            this.endEdgeIndex = endEdgeIndex;
+            this.horizontal = horizontal;
+        }
+
+        int startEdgeIndex()
+        {
+            return startEdgeIndex;
+        }
+
+        int endEdgeIndex()
+        {
+            return endEdgeIndex;
+        }
+
+        boolean horizontal()
+        {
+            return horizontal;
+        }
     }
 
     private boolean handleShapedResizeInteraction(
@@ -1896,7 +1953,7 @@ final class ClaimToolDispatcher
             return false;
         }
 
-        OrthogonalPoint2i onlyPoint = session.openPath().points().getFirst();
+        OrthogonalPoint2i onlyPoint = session.openPath().points().get(0);
         return onlyPoint.x() == clickedBlock.getX() && onlyPoint.z() == clickedBlock.getZ();
     }
 
@@ -2274,7 +2331,27 @@ final class ClaimToolDispatcher
         return new BoundaryNodeEnsureResult(updatedClaim != null ? updatedClaim : claim, true);
     }
 
-    private record BoundaryNodeEnsureResult(@Nullable Claim claim, boolean markerEdited) {}
+    private static final class BoundaryNodeEnsureResult
+    {
+        private final @Nullable Claim claim;
+        private final boolean markerEdited;
+
+        private BoundaryNodeEnsureResult(@Nullable Claim claim, boolean markerEdited)
+        {
+            this.claim = claim;
+            this.markerEdited = markerEdited;
+        }
+
+        @Nullable Claim claim()
+        {
+            return claim;
+        }
+
+        boolean markerEdited()
+        {
+            return markerEdited;
+        }
+    }
 
     private boolean meetsMinimumNodeSpacing(@NotNull Claim claim, @NotNull OrthogonalPoint2i point)
     {
@@ -2291,7 +2368,7 @@ final class ClaimToolDispatcher
             return false;
         }
 
-        OrthogonalEdge2i edge = polygon.edges().get(edgeIndexes.getFirst());
+        OrthogonalEdge2i edge = polygon.edges().get(edgeIndexes.get(0));
         int distanceToStart = Math.abs(point.x() - edge.start().x()) + Math.abs(point.z() - edge.start().z());
         int distanceToEnd = Math.abs(point.x() - edge.end().x()) + Math.abs(point.z() - edge.end().z());
         return distanceToStart >= minimumEdgeLength && distanceToEnd >= minimumEdgeLength;
@@ -2309,7 +2386,7 @@ final class ClaimToolDispatcher
             return clickedPoint;
         }
 
-        OrthogonalPoint2i anchor = session.openPath().points().getFirst();
+        OrthogonalPoint2i anchor = session.openPath().points().get(0);
         OrthogonalPolygon boundaryPolygon = claim.getBoundaryPolygon();
         if (!isBoundaryPoint(boundaryPolygon, anchor) || isBoundaryPoint(boundaryPolygon, clickedPoint))
         {
@@ -2442,7 +2519,7 @@ final class ClaimToolDispatcher
             return "Cannot merge yet: add at least one outside corner before reconnecting to the claim boundary.";
         }
 
-        OrthogonalPoint2i lastPoint = points.getLast();
+        OrthogonalPoint2i lastPoint = points.get(points.size() - 1);
         if (!isOrthogonalStep(lastPoint, clickedPoint))
         {
             return "Cannot merge yet: reconnect point must be orthogonally aligned with the current endpoint.";
@@ -2881,8 +2958,8 @@ final class ClaimToolDispatcher
         eye.setYaw(yaw);
         eye.setPitch(pitch);
 
-        Material eyeMaterial = eye.getBlock().getType();
-        boolean passThroughWater = (eyeMaterial == Material.WATER);
+        // Check if player is in water by checking feet and eye position
+        boolean playerInWater = (loc.getBlock().getType() == Material.WATER) || (eye.getBlock().getType() == Material.WATER);
         boolean hasTags = MaterialTagCompat.isTagged("REPLACEABLE", Material.AIR);
 
         Vector direction = eye.getDirection();
@@ -2902,7 +2979,13 @@ final class ClaimToolDispatcher
             iterations++;
             Material type = result.getType();
             if (hasTags) {
-                if (!MaterialTagCompat.isTagged("REPLACEABLE", type) || (!passThroughWater && type == Material.WATER)) {
+                // Stop at water if player is not in water
+                if (!playerInWater && type == Material.WATER) {
+                    GriefPrevention.AddLogEntry("[GP Debug] getTargetBlock: found block after " + iterations + " iterations: " + type.name() + " @ " + result.getX() + "," + result.getY() + "," + result.getZ(), CustomLogEntryTypes.Debug, false);
+                    return result;
+                }
+                // Stop at non-replaceable blocks
+                if (!MaterialTagCompat.isTagged("REPLACEABLE", type)) {
                     GriefPrevention.AddLogEntry("[GP Debug] getTargetBlock: found block after " + iterations + " iterations: " + type.name() + " @ " + result.getX() + "," + result.getY() + "," + result.getZ(), CustomLogEntryTypes.Debug, false);
                     return result;
                 }

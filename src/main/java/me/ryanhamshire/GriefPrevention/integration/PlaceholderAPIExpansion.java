@@ -55,11 +55,14 @@ public class PlaceholderAPIExpansion extends PlaceholderExpansion
         Claim topLevelClaim = plugin.dataStore.getClaimAt(location, false, null);
         Claim claim = findInnermostClaim(topLevelClaim, location);
 
-        return switch (params.toLowerCase()) {
-            case "in_subdivision" -> claim != null && claim.parent != null ? "true" : "false";
-            case "in_3d_subdivision" -> claim != null && claim.parent != null && claim.is3D() ? "true" : "false";
-            default -> "";
-        };
+        switch (params.toLowerCase()) {
+            case "in_subdivision":
+                return claim != null && claim.parent != null ? "true" : "false";
+            case "in_3d_subdivision":
+                return claim != null && claim.parent != null && claim.is3D() ? "true" : "false";
+            default:
+                return "";
+        }
     }
 
     private Claim findInnermostClaim(Claim claim, Location location)

@@ -538,8 +538,26 @@ public abstract class DataStore {
         return polygon.cellCount();
     }
 
-    private record MinimumProfile(int minWidth, int minArea)
+    private static final class MinimumProfile
     {
+        private final int minWidth;
+        private final int minArea;
+
+        private MinimumProfile(int minWidth, int minArea)
+        {
+            this.minWidth = minWidth;
+            this.minArea = minArea;
+        }
+
+        private int minWidth()
+        {
+            return minWidth;
+        }
+
+        private int minArea()
+        {
+            return minArea;
+        }
     }
 
     private MinimumProfile resolveMinimumProfileForPolygon(@NotNull OrthogonalPolygon polygon)

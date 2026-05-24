@@ -33,8 +33,9 @@ public class PaperKnockbackHandler implements Listener {
      */
     private void handleKnockback(@NotNull Entity entity, Entity source, @NotNull io.papermc.paper.event.entity.EntityPushedByEntityAttackEvent event) {
         // Only handle knockback on players
-        if (!(entity instanceof Player defender))
+        if (!(entity instanceof Player))
             return;
+        Player defender = (Player) entity;
 
         if (source == null)
             return;
@@ -56,10 +57,10 @@ public class PaperKnockbackHandler implements Listener {
 
         // Get the attacker - for player-thrown wind charges, source IS the player
         Player attacker = null;
-        if (source instanceof Player player) {
-            attacker = player;
-        } else if (source instanceof Projectile projectile && projectile.getShooter() instanceof Player shooter) {
-            attacker = shooter;
+        if (source instanceof Player) {
+            attacker = (Player) source;
+        } else if (source instanceof Projectile && ((Projectile) source).getShooter() instanceof Player) {
+            attacker = (Player) ((Projectile) source).getShooter();
         }
 
         // Allow self-knockback (e.g., for movement tricks)

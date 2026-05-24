@@ -13,6 +13,7 @@ import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.BlockDisplay;
 import org.bukkit.entity.Display;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import me.ryanhamshire.GriefPrevention.PlayerData;
 import org.bukkit.util.Transformation;
@@ -66,15 +67,26 @@ public class GlowingVisualization extends FakeBlockVisualization {
 
     /** Get default glow color for a block material */
     private static org.bukkit.Color defaultGlowColor(Material m) {
-        return switch (m) {
-            case GOLD_BLOCK, GLOWSTONE -> org.bukkit.Color.YELLOW;
-            case IRON_BLOCK, WHITE_WOOL -> org.bukkit.Color.WHITE;
-            case DIAMOND_BLOCK -> org.bukkit.Color.AQUA;
-            case REDSTONE_ORE, NETHERRACK -> org.bukkit.Color.RED;
-            case PUMPKIN -> org.bukkit.Color.ORANGE;
-            case LIME_GLAZED_TERRACOTTA, EMERALD_BLOCK -> org.bukkit.Color.LIME;
-            default -> org.bukkit.Color.YELLOW;
-        };
+        switch (m) {
+            case GOLD_BLOCK:
+            case GLOWSTONE:
+                return org.bukkit.Color.YELLOW;
+            case IRON_BLOCK:
+            case WHITE_WOOL:
+                return org.bukkit.Color.WHITE;
+            case DIAMOND_BLOCK:
+                return org.bukkit.Color.AQUA;
+            case REDSTONE_ORE:
+            case NETHERRACK:
+                return org.bukkit.Color.RED;
+            case PUMPKIN:
+                return org.bukkit.Color.ORANGE;
+            case LIME_GLAZED_TERRACOTTA:
+            case EMERALD_BLOCK:
+                return org.bukkit.Color.LIME;
+            default:
+                return org.bukkit.Color.YELLOW;
+        }
     }
 
     /** Get or create a Track for a player (synchronized on tracks map) */
@@ -409,52 +421,59 @@ public class GlowingVisualization extends FakeBlockVisualization {
                 return;
             }
             
+            BlockDisplay display = null;
             try {
-                // Create and initialize the display entity atomically to avoid global visibility flicker
-                @SuppressWarnings("null")
-                BlockDisplay display = world.spawn(loc, BlockDisplay.class, spawned -> {
-                    // Tag this display for identification
-                    spawned.addScoreboardTag(TAG_BASE);      // base tag for all GP displays
-                    spawned.addScoreboardTag(playerTag);     // per-player tag
-                    spawned.addScoreboardTag(typeTag);       // type tag (subdiv vs outline)
-                    
-                    // Make per-player only
-                    spawned.setVisibleByDefault(false);
-                    // Paper/Folia-compatible per-player visibility
-                    // Note: showEntity method may not be available in all Bukkit versions
-                    try {
-                        player.showEntity(plugin, spawned);
-                    } catch (Exception e) {
-                        // Fallback for older Bukkit versions
+                Entity entity = world.spawnEntity(loc, EntityType.BLOCK_DISPLAY);
+                if (!(entity instanceof BlockDisplay)) {
+                    entity.remove();
+                    synchronized (t) {
+                        if (t.gen == myGen) t.keys.remove(posKey);
                     }
+                    return;
+                }
+                display = (BlockDisplay) entity;
 
-                    spawned.setBlock(blockData);
-                    spawned.setGlowing(true);
-                    spawned.setBrightness(new Display.Brightness(12, 12));
-                    spawned.setShadowStrength(0.0f);
-                    spawned.setShadowRadius(0.0f);
+                // Tag this display for identification
+                display.addScoreboardTag(TAG_BASE);      // base tag for all GP displays
+                display.addScoreboardTag(playerTag);     // per-player tag
+                display.addScoreboardTag(typeTag);       // type tag (subdiv vs outline)
 
-                    // Apply transformation: scale slightly larger and offset to stay centered
-                    // offset = -(scale - 1) / 2 recenters the scaled block on the original corner
-                    float s = OUTLINE_SCALE;
-                    float o = -(s - 1.0f) / 2.0f;
-                    spawned.setTransformation(new Transformation(
-                            new Vector3f(o, o, o),  // translation (recenter for scale)
-                            ROT_IDENTITY,           // left rotation (identity)
-                            new Vector3f(s, s, s),  // scale
-                            ROT_IDENTITY            // right rotation (identity)
-                    ));
+                // Make per-player only
+                display.setVisibleByDefault(false);
+                // Paper/Folia-compatible per-player visibility
+                // Note: showEntity method may not be available in all Bukkit versions
+                try {
+                    player.showEntity(plugin, display);
+                } catch (Exception e) {
+                    // Fallback for older Bukkit versions
+                }
 
-                    spawned.setViewRange(96);
-                    spawned.setInterpolationDuration(0);  // No lerp slide on spawn
+                display.setBlock(blockData);
+                display.setGlowing(true);
+                display.setBrightness(new Display.Brightness(12, 12));
+                display.setShadowStrength(0.0f);
+                display.setShadowRadius(0.0f);
 
-                    // Apply glow color override (use pos directly as key - IntVector is immutable)
-                    org.bukkit.Color override;
-                    synchronized (GlowingVisualization.this) {
-                        override = glowColorOverrides.get(pos);
-                    }
-                    spawned.setGlowColorOverride(override != null ? override : defaultGlowColor(blockData.getMaterial()));
-                });
+                // Apply transformation: scale slightly larger and offset to stay centered
+                // offset = -(scale - 1) / 2 recenters the scaled block on the original corner
+                float s = OUTLINE_SCALE;
+                float o = -(s - 1.0f) / 2.0f;
+                display.setTransformation(new Transformation(
+                        new Vector3f(o, o, o),  // translation (recenter for scale)
+                        ROT_IDENTITY,           // left rotation (identity)
+                        new Vector3f(s, s, s),  // scale
+                        ROT_IDENTITY            // right rotation (identity)
+                ));
+
+                display.setViewRange(96);
+                display.setInterpolationDuration(0);  // No lerp slide on spawn
+
+                // Apply glow color override (use pos directly as key - IntVector is immutable)
+                org.bukkit.Color override;
+                synchronized (GlowingVisualization.this) {
+                    override = glowColorOverrides.get(pos);
+                }
+                display.setGlowColorOverride(override != null ? override : defaultGlowColor(blockData.getMaterial()));
 
                 // Sanity check: if spawn succeeded but entity is instantly invalid, release key
                 if (display == null || !display.isValid()) {
@@ -475,14 +494,18 @@ public class GlowingVisualization extends FakeBlockVisualization {
                     t.keyByEntity.put(display, posKey);
                 }
 
+                BlockDisplay trackedDisplay = display;
                 // Schedule a check to ensure the display is still valid
                 SchedulerUtil.runLaterEntity(plugin, player, () -> {
-                    if (display.isValid() && !player.getWorld().equals(display.getWorld())) {
-                        untrackDisplay(playerId, display);
+                    if (trackedDisplay.isValid() && !player.getWorld().equals(trackedDisplay.getWorld())) {
+                        untrackDisplay(playerId, trackedDisplay);
                     }
                 }, 20L);
 
             } catch (Exception e) {
+                if (display != null && display.isValid()) {
+                    display.remove();
+                }
                 // Release reserved key on failure (if track still valid)
                 synchronized (t) {
                     if (t.gen == myGen) t.keys.remove(posKey);

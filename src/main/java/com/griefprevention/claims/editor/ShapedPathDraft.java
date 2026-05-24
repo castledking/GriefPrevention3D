@@ -59,7 +59,7 @@ public final class ShapedPathDraft
     {
         List<OrthogonalPoint2i> updated = new ArrayList<>(this.points);
         updated.add(point);
-        boolean closureReady = updated.size() >= 4 && updated.getFirst().equals(point);
+        boolean closureReady = updated.size() >= 4 && updated.get(0).equals(point);
         return new ShapedPathDraft(this.claimId, updated, this.snappedPreviewPoint, closureReady);
     }
 

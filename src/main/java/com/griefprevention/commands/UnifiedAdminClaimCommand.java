@@ -137,10 +137,11 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
         }
 
         // Default behavior: set admin claim mode
-        if (!(sender instanceof Player player)) {
+        if (!(sender instanceof Player)) {
             sender.sendMessage("This command can only be used by players.");
             return;
         }
+        Player player = (Player) sender;
 
         PlayerData playerData = plugin.dataStore.getPlayerData(player.getUniqueId());
         playerData.shovelMode = ShovelMode.Admin;
@@ -150,8 +151,8 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
 
     @Override
     protected boolean handleUnknownSubcommand(CommandSender sender, String subcommand, String[] args) {
-        if (sender instanceof Player player) {
-            GriefPrevention.sendMessage(player, TextMode.Err, Messages.CommandNotFound, subcommand);
+        if (sender instanceof Player) {
+            GriefPrevention.sendMessage((Player) sender, TextMode.Err, Messages.CommandNotFound, subcommand);
         } else {
             sender.sendMessage("Unknown subcommand: " + subcommand);
         }
@@ -159,10 +160,11 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
     }
 
     private boolean handleRestore(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player player)) {
+        if (!(sender instanceof Player)) {
             sender.sendMessage("This command can only be used by players.");
             return true;
         }
+        Player player = (Player) sender;
 
         // Check permission
         if (!player.hasPermission("griefprevention.restorenature")) {
@@ -176,11 +178,11 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
         if (args.length > 0) {
             String mode = args[0].toLowerCase();
             switch (mode) {
-                case "aggressive" -> {
+                case "aggressive":
                     playerData.shovelMode = ShovelMode.RestoreNatureAggressive;
                     GriefPrevention.sendMessage(player, TextMode.Success, Messages.RestoreNatureAggressiveActivate);
-                }
-                case "fill" -> {
+                    break;
+                case "fill":
                     // Check for radius argument
                     if (args.length > 1) {
                         try {
@@ -198,12 +200,12 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
                         Messages.FillModeActive,
                         String.valueOf(playerData.fillRadius)
                     );
-                }
-                default -> {
+                    break;
+                default:
                     // Default restore nature mode
                     playerData.shovelMode = ShovelMode.RestoreNature;
                     GriefPrevention.sendMessage(player, TextMode.Success, Messages.RestoreNatureActivate);
-                }
+                    break;
             }
         } else {
             // Default restore nature mode
@@ -259,7 +261,8 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
     }
 
     private boolean handleIgnore(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player player)) return false;
+        if (!(sender instanceof Player)) return false;
+        Player player = (Player) sender;
 
         // Permission check - requires griefprevention.ignoreclaims
         if (!player.hasPermission("griefprevention.ignoreclaims")) {
@@ -279,7 +282,8 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
     }
 
     private boolean handleMode(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player player)) return false;
+        if (!(sender instanceof Player)) return false;
+        Player player = (Player) sender;
 
         PlayerData playerData = plugin.dataStore.getPlayerData(player.getUniqueId());
 
@@ -311,10 +315,11 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
 
     private boolean handleList(CommandSender sender, String[] args) {
         // Show admin claims list (similar to /adminclaimslist)
-        if (!(sender instanceof Player player)) {
+        if (!(sender instanceof Player)) {
             sender.sendMessage("This command can only be used by players.");
             return true;
         }
+        Player player = (Player) sender;
 
         // Check permission
         if (!player.hasPermission("griefprevention.adminclaims")) {
@@ -350,7 +355,8 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
 
     private boolean handleBlocks(CommandSender sender, String[] args) {
         // Permission check - requires griefprevention.adjustclaimblocks
-        if (sender instanceof Player player) {
+        if (sender instanceof Player) {
+            Player player = (Player) sender;
             if (!player.hasPermission("griefprevention.adjustclaimblocks")) {
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
                 return true;
@@ -453,59 +459,53 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
         // Usage: /aclaim delete [claim|player <name>|world <world>|alladmin]
         if (args.length == 0) {
             // Default: delete claim player is standing in
-            if (!(sender instanceof Player player)) {
+            if (!(sender instanceof Player)) {
                 sender.sendMessage("Usage: /aclaim delete <claim|player <name>|world <world>|alladmin>");
                 return true;
             }
-            return deleteCurrentClaim(player);
+            return deleteCurrentClaim((Player) sender);
         }
 
         String subOp = args[0].toLowerCase();
 
         switch (subOp) {
-            case "claim" -> {
-                if (!(sender instanceof Player player)) {
+            case "claim":
+                if (!(sender instanceof Player)) {
                     sender.sendMessage("This sub-command can only be used by players.");
                     return true;
                 }
-                return deleteCurrentClaim(player);
-            }
-            case "player" -> {
+                return deleteCurrentClaim((Player) sender);
+            case "player":
                 if (args.length < 2) {
-                    if (sender instanceof Player player) {
-                        GriefPrevention.sendMessage(player, TextMode.Err, "Usage: /aclaim delete player <name>");
+                    if (sender instanceof Player) {
+                        GriefPrevention.sendMessage((Player) sender, TextMode.Err, "Usage: /aclaim delete player <name>");
                     } else {
                         sender.sendMessage("Usage: /aclaim delete player <name>");
                     }
                     return true;
                 }
                 return deletePlayerClaims(sender, args[1]);
-            }
-            case "world" -> {
+            case "world":
                 if (args.length < 2) {
                     sender.sendMessage("Usage: /aclaim delete world <worldname>");
                     return true;
                 }
                 return deleteWorldClaims(sender, args[1], true);
-            }
-            case "userworld" -> {
+            case "userworld":
                 if (args.length < 2) {
                     sender.sendMessage("Usage: /aclaim delete userworld <worldname>");
                     return true;
                 }
                 return deleteWorldClaims(sender, args[1], false);
-            }
-            case "alladmin" -> {
+            case "alladmin":
                 return deleteAllAdminClaims(sender);
-            }
-            default -> {
-                if (sender instanceof Player player) {
-                    GriefPrevention.sendMessage(player, TextMode.Err, "Unknown delete operation: " + subOp);
+            default:
+                if (sender instanceof Player) {
+                    GriefPrevention.sendMessage((Player) sender, TextMode.Err, "Unknown delete operation: " + subOp);
                 } else {
                     sender.sendMessage("Unknown delete operation: " + subOp);
                 }
                 return true;
-            }
         }
     }
 
@@ -551,8 +551,8 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
     private boolean deletePlayerClaims(CommandSender sender, String playerName) {
         OfflinePlayer targetPlayer = plugin.resolvePlayerByName(playerName);
         if (targetPlayer == null) {
-            if (sender instanceof Player player) {
-                GriefPrevention.sendMessage(player, TextMode.Err, Messages.PlayerNotFound2);
+            if (sender instanceof Player) {
+                GriefPrevention.sendMessage((Player) sender, TextMode.Err, Messages.PlayerNotFound2);
             } else {
                 sender.sendMessage("Player not found: " + playerName);
             }
@@ -561,7 +561,8 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
 
         plugin.dataStore.deleteClaimsForPlayer(targetPlayer.getUniqueId(), true);
 
-        if (sender instanceof Player player) {
+        if (sender instanceof Player) {
+            Player player = (Player) sender;
             GriefPrevention.sendMessage(player, TextMode.Success, Messages.DeleteAllSuccess, targetPlayer.getName());
             plugin.dataStore.getPlayerData(player.getUniqueId()).setVisibleBoundaries(null);
         } else {
@@ -580,8 +581,8 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
     private boolean deleteWorldClaims(CommandSender sender, String worldName, boolean includeAdmin) {
         org.bukkit.World world = Bukkit.getServer().getWorld(worldName);
         if (world == null) {
-            if (sender instanceof Player player) {
-                GriefPrevention.sendMessage(player, TextMode.Err, Messages.WorldNotFound);
+            if (sender instanceof Player) {
+                GriefPrevention.sendMessage((Player) sender, TextMode.Err, Messages.WorldNotFound);
             } else {
                 sender.sendMessage("World not found: " + worldName);
             }
@@ -590,8 +591,8 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
 
         plugin.deleteClaimsInWorldPublic(world, includeAdmin);
         String message = includeAdmin ? "Deleted all claims in world: " : "Deleted all user claims in world: ";
-        if (sender instanceof Player player) {
-            GriefPrevention.sendMessage(player, TextMode.Success, message + world.getName());
+        if (sender instanceof Player) {
+            GriefPrevention.sendMessage((Player) sender, TextMode.Success, message + world.getName());
         } else {
             sender.sendMessage(message + world.getName());
         }
@@ -603,8 +604,8 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
     private boolean deleteAllAdminClaims(CommandSender sender) {
         plugin.dataStore.deleteClaimsForPlayer(null, true);
 
-        if (sender instanceof Player player) {
-            GriefPrevention.sendMessage(player, TextMode.Success, "Deleted all administrative claims.");
+        if (sender instanceof Player) {
+            GriefPrevention.sendMessage((Player) sender, TextMode.Success, "Deleted all administrative claims.");
         } else {
             sender.sendMessage("Deleted all administrative claims.");
         }
@@ -614,10 +615,11 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
     }
 
     private boolean handleTransfer(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player player)) {
+        if (!(sender instanceof Player)) {
             sender.sendMessage("This command can only be used by players.");
             return true;
         }
+        Player player = (Player) sender;
 
         // which claim is the user in?
         Claim claim = plugin.dataStore.getClaimAt(player.getLocation(), false, null);
@@ -669,10 +671,11 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
     }
 
     private boolean handleMakeAdmin(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player player)) {
+        if (!(sender instanceof Player)) {
             sender.sendMessage("This command can only be used by players.");
             return true;
         }
+        Player player = (Player) sender;
 
         if (!player.hasPermission("griefprevention.adminclaims.convert")) {
             GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
@@ -713,10 +716,11 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
     }
 
     private boolean handleMakeBasic(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player player)) {
+        if (!(sender instanceof Player)) {
             sender.sendMessage("This command can only be used by players.");
             return true;
         }
+        Player player = (Player) sender;
 
         if (!player.hasPermission("griefprevention.adminclaims.convert")) {
             GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
@@ -758,7 +762,8 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
 
     private boolean handleCheckExpiry(CommandSender sender, String[] args) {
         // Check permission
-        if (sender instanceof Player player) {
+        if (sender instanceof Player) {
+            Player player = (Player) sender;
             if (!player.hasPermission("griefprevention.checkclaimexpiry")) {
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
                 return true;
@@ -773,10 +778,11 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
 
         // Handle no arguments - check current claim if player is standing in one
         if (args.length == 0) {
-            if (!(sender instanceof Player player)) {
+            if (!(sender instanceof Player)) {
                 sender.sendMessage("Console must specify a player target.");
                 return false;
             }
+            Player player = (Player) sender;
 
             // Find claim at player's location
             Claim claim = plugin.dataStore.getClaimAt(player.getLocation(), true, null);
@@ -796,8 +802,8 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
         // Look up the player (online or offline)
         OfflinePlayer targetPlayer = plugin.resolvePlayerByName(targetPlayerName);
         if (targetPlayer == null || !targetPlayer.hasPlayedBefore()) {
-            if (sender instanceof Player player) {
-                GriefPrevention.sendMessage(player, TextMode.Err, Messages.ClaimExpiryPlayerNotFound, targetPlayerName);
+            if (sender instanceof Player) {
+                GriefPrevention.sendMessage((Player) sender, TextMode.Err, Messages.ClaimExpiryPlayerNotFound, targetPlayerName);
             } else {
                 sender.sendMessage("Could not find player: " + targetPlayerName);
             }
@@ -807,8 +813,8 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
         // Get player data
         PlayerData playerData = plugin.dataStore.getPlayerData(targetPlayer.getUniqueId());
         if (playerData == null) {
-            if (sender instanceof Player player) {
-                GriefPrevention.sendMessage(player, TextMode.Err, Messages.ClaimExpiryPlayerNotFound, targetPlayerName);
+            if (sender instanceof Player) {
+                GriefPrevention.sendMessage((Player) sender, TextMode.Err, Messages.ClaimExpiryPlayerNotFound, targetPlayerName);
             } else {
                 sender.sendMessage("Could not find player data for: " + targetPlayerName);
             }
@@ -818,7 +824,8 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
         // Get all claims owned by the player
         java.util.List<Claim> claims = playerData.getClaims();
         if (claims.isEmpty()) {
-            if (sender instanceof Player player) {
+            if (sender instanceof Player) {
+                Player player = (Player) sender;
                 GriefPrevention.sendMessage(
                     player,
                     TextMode.Info,
@@ -838,8 +845,8 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
 
     private void showSingleClaimExpiry(CommandSender sender, Claim claim) {
         // Show header for single claim
-        if (sender instanceof Player player) {
-            GriefPrevention.sendMessage(player, TextMode.Info, Messages.ClaimExpiryHeader, claim.getOwnerName());
+        if (sender instanceof Player) {
+            GriefPrevention.sendMessage((Player) sender, TextMode.Info, Messages.ClaimExpiryHeader, claim.getOwnerName());
         } else {
             sender.sendMessage("Claim expiration for " + claim.getOwnerName() + ":");
         }
@@ -855,16 +862,16 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
             claim.getLesserBoundaryCorner().getBlockZ() +
             ")";
 
-        if (sender instanceof Player player) {
-            GriefPrevention.sendMessage(player, TextMode.Info, Messages.ClaimExpiryLocation, location);
+        if (sender instanceof Player) {
+            GriefPrevention.sendMessage((Player) sender, TextMode.Info, Messages.ClaimExpiryLocation, location);
         } else {
             sender.sendMessage("Location: " + location);
         }
 
         // Show expiry info
         String expiryInfo = getSingleClaimExpiryInfo(claim);
-        if (sender instanceof Player player) {
-            player.sendMessage(expiryInfo);
+        if (sender instanceof Player) {
+            ((Player) sender).sendMessage(expiryInfo);
         } else {
             sender.sendMessage(expiryInfo);
         }
@@ -879,7 +886,8 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
         boolean isOnline = targetPlayer.isOnline();
 
         // Send header
-        if (sender instanceof Player player) {
+        if (sender instanceof Player) {
+            Player player = (Player) sender;
             GriefPrevention.sendMessage(
                 player,
                 TextMode.Info,
@@ -923,8 +931,8 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
                 claim.getLesserBoundaryCorner().getBlockZ() +
                 ")";
 
-            if (sender instanceof Player player) {
-                GriefPrevention.sendMessage(player, TextMode.Info, Messages.ClaimExpiryListEntry, location, expiryInfo);
+            if (sender instanceof Player) {
+                GriefPrevention.sendMessage((Player) sender, TextMode.Info, Messages.ClaimExpiryListEntry, location, expiryInfo);
             } else {
                 sender.sendMessage("- " + location + ": " + expiryInfo);
             }

@@ -90,7 +90,7 @@ public final class TabCompletions
         // instead of having to have otherwise-identical array and iterable methods.
         Player[] onlinePlayers = Bukkit.getOnlinePlayers().toArray(new Player[0]);
         // Require sender to be able to see a player to complete their name.
-        Predicate<Player> canSee = sender instanceof Player senderPlayer ? senderPlayer::canSee : null;
+        Predicate<Player> canSee = sender instanceof Player ? ((Player) sender)::canSee : null;
         return complete(onlinePlayers, Player::getName, canSee, args);
     }
 

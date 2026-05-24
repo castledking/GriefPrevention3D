@@ -39,11 +39,12 @@ public class PaperKnockbackProtectionHandler extends KnockbackProtectionHandler
     @EventHandler(ignoreCancelled = true, priority = EventPriority.LOWEST)
     public void onEntityKnockbackByEntity(@NotNull EntityKnockbackByEntityEvent event)
     {
-        if (!(event.getHitBy() instanceof Player attacker)) return;
+        if (!(event.getHitBy() instanceof Player)) return;
+        Player attacker = (Player) event.getHitBy();
 
-        if (event.getEntity() instanceof Player defender)
+        if (event.getEntity() instanceof Player)
         {
-            handleKnockbackPlayer(event, attacker, defender);
+            handleKnockbackPlayer(event, attacker, (Player) event.getEntity());
         }
         else
         {
@@ -64,22 +65,22 @@ public class PaperKnockbackProtectionHandler extends KnockbackProtectionHandler
         Entity pusher = event.getPushedBy();
 
         Player attacker;
-        if (pusher instanceof Player player)
+        if (pusher instanceof Player)
         {
-            attacker = player;
+            attacker = (Player) pusher;
         }
-        else if (pusher instanceof Projectile projectile && projectile.getShooter() instanceof Player shooter)
+        else if (pusher instanceof Projectile && ((Projectile) pusher).getShooter() instanceof Player)
         {
-            attacker = shooter;
+            attacker = (Player) ((Projectile) pusher).getShooter();
         }
         else
         {
             return;
         }
 
-        if (event.getEntity() instanceof Player defender)
+        if (event.getEntity() instanceof Player)
         {
-            handleKnockbackPlayer(event, attacker, defender);
+            handleKnockbackPlayer(event, attacker, (Player) event.getEntity());
         }
         else
         {

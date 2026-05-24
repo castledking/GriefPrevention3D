@@ -65,7 +65,7 @@ public final class OrthogonalPolygon
         {
             String message = result.issues().isEmpty()
                     ? "Invalid orthogonal polygon path."
-                    : result.issues().getFirst().message();
+                    : result.issues().get(0).message();
             throw new IllegalArgumentException(message);
         }
 

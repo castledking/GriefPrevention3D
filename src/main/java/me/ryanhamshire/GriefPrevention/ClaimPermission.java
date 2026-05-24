@@ -86,14 +86,22 @@ public enum ClaimPermission
 
     private int getTrustLevel()
     {
-        return switch (this)
+        switch (this)
         {
-            case Edit -> 0;
-            case Manage -> 1;
-            case Build -> 2;
-            case Container, Inventory -> 3;
-            case Access -> 4;
-        };
+            case Edit:
+                return 0;
+            case Manage:
+                return 1;
+            case Build:
+                return 2;
+            case Container:
+            case Inventory:
+                return 3;
+            case Access:
+                return 4;
+            default:
+                throw new IllegalStateException("Unknown claim permission: " + this);
+        }
     }
 
 }

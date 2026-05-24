@@ -3,11 +3,32 @@ package com.griefprevention.geometry;
 import org.bukkit.block.BlockFace;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Objects;
+
 /**
  * An axis-aligned edge between two points in the X/Z plane.
  */
-public record OrthogonalEdge2i(@NotNull OrthogonalPoint2i start, @NotNull OrthogonalPoint2i end)
+public final class OrthogonalEdge2i
 {
+    private final @NotNull OrthogonalPoint2i start;
+    private final @NotNull OrthogonalPoint2i end;
+
+    public OrthogonalEdge2i(@NotNull OrthogonalPoint2i start, @NotNull OrthogonalPoint2i end)
+    {
+        this.start = start;
+        this.end = end;
+    }
+
+    public @NotNull OrthogonalPoint2i start()
+    {
+        return this.start;
+    }
+
+    public @NotNull OrthogonalPoint2i end()
+    {
+        return this.end;
+    }
+
     public boolean isHorizontal()
     {
         return start.z() == end.z() && start.x() != end.x();
@@ -81,5 +102,26 @@ public record OrthogonalEdge2i(@NotNull OrthogonalPoint2i start, @NotNull Orthog
         }
 
         throw new IllegalStateException("Non-orthogonal edges do not have a normal.");
+    }
+
+    @Override
+    public boolean equals(Object other)
+    {
+        if (this == other) return true;
+        if (!(other instanceof OrthogonalEdge2i)) return false;
+        OrthogonalEdge2i that = (OrthogonalEdge2i) other;
+        return this.start.equals(that.start) && this.end.equals(that.end);
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return Objects.hash(this.start, this.end);
+    }
+
+    @Override
+    public String toString()
+    {
+        return "OrthogonalEdge2i[start=" + this.start + ", end=" + this.end + "]";
     }
 }

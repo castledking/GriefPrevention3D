@@ -17,7 +17,9 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Minimal placeholder implementation to anchor the recode editor boundary.
@@ -27,31 +29,39 @@ public final class ClaimEditorSkeleton implements ClaimEditor
     @Override
     public @NotNull ClaimEditResult apply(@NotNull ClaimEditorSession session, @NotNull ClaimEditIntent intent)
     {
-        return switch (intent.type())
+        switch (intent.type())
         {
-            case ENTER_MODE -> ClaimEditResult.success(
-                    session.withMode(intent.mode(), intent.source()).withPreview(ClaimEditPreview.empty()),
-                    ClaimEditPreview.empty(),
-                    List.of("Entered " + intent.mode() + " mode.")
-            );
-            case EXIT_MODE -> ClaimEditResult.success(
-                    ClaimEditorSession.idle(session.playerId()),
-                    ClaimEditPreview.empty(),
-                    List.of("Exited claim editor mode.")
-            );
-            case SELECT_SEGMENT -> handleSelectSegment(session, intent);
-            case ADD_CORNER -> handleAddCorner(session, intent);
-            case ADD_NODE -> handleAddNode(session, intent);
-            case EXPAND_SEGMENT -> handleExpandSegment(session, intent);
-            case CANCEL_PATH -> handleCancelPath(session);
-            default -> ClaimEditResult.failure(
-                    ClaimEditFailureType.AMBIGUOUS_EDIT_REQUEST,
-                    null,
-                    session,
-                    session.preview(),
-                    List.of("Claim editor intent not implemented yet: " + intent.type())
-            );
-        };
+            case ENTER_MODE:
+                return ClaimEditResult.success(
+                        session.withMode(intent.mode(), intent.source()).withPreview(ClaimEditPreview.empty()),
+                        ClaimEditPreview.empty(),
+                        List.of("Entered " + intent.mode() + " mode.")
+                );
+            case EXIT_MODE:
+                return ClaimEditResult.success(
+                        ClaimEditorSession.idle(session.playerId()),
+                        ClaimEditPreview.empty(),
+                        List.of("Exited claim editor mode.")
+                );
+            case SELECT_SEGMENT:
+                return handleSelectSegment(session, intent);
+            case ADD_CORNER:
+                return handleAddCorner(session, intent);
+            case ADD_NODE:
+                return handleAddNode(session, intent);
+            case EXPAND_SEGMENT:
+                return handleExpandSegment(session, intent);
+            case CANCEL_PATH:
+                return handleCancelPath(session);
+            default:
+                return ClaimEditResult.failure(
+                        ClaimEditFailureType.AMBIGUOUS_EDIT_REQUEST,
+                        null,
+                        session,
+                        session.preview(),
+                        List.of("Claim editor intent not implemented yet: " + intent.type())
+                );
+        }
     }
 
     private @NotNull ClaimEditResult handleSelectSegment(@NotNull ClaimEditorSession session, @NotNull ClaimEditIntent intent)
@@ -114,7 +124,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
             );
         }
 
-        int edgeIndex = matches.getFirst();
+        int edgeIndex = matches.get(0);
         SegmentSelection selection = new SegmentSelection(resolveClaimId(session), edgeIndex, null, null, null);
         ClaimEditPreview preview = new ClaimEditPreview(
                 polygon,
@@ -298,8 +308,8 @@ public final class ClaimEditorSkeleton implements ClaimEditor
             );
         }
 
-        OrthogonalPoint2i lastPoint = points.getLast();
-        OrthogonalPoint2i firstPoint = points.getFirst();
+        OrthogonalPoint2i lastPoint = points.get(points.size() - 1);
+        OrthogonalPoint2i firstPoint = points.get(0);
         OrthogonalPoint2i rawPoint = point;
 
         if (point.equals(lastPoint))
@@ -368,7 +378,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
             );
             if (!reconnectCandidates.isEmpty())
             {
-                mergeBoundaryPoint = reconnectCandidates.getFirst();
+                mergeBoundaryPoint = reconnectCandidates.get(0);
             }
         }
 
@@ -469,15 +479,63 @@ public final class ClaimEditorSkeleton implements ClaimEditor
         );
     }
 
-    private record BoundaryMergeAttempt(
-            @NotNull OrthogonalPoint2i reconnectPoint,
-            @NotNull List<OrthogonalPoint2i> candidatePoints,
-            @NotNull OrthogonalPolygonValidationResult result,
-            boolean containsOriginal,
-            int area,
-            int overlap,
-            int distance)
+    private static final class BoundaryMergeAttempt
     {
+        private final @NotNull OrthogonalPoint2i reconnectPoint;
+        private final @NotNull List<OrthogonalPoint2i> candidatePoints;
+        private final @NotNull OrthogonalPolygonValidationResult result;
+        private final boolean containsOriginal;
+        private final int area;
+        private final int overlap;
+        private final int distance;
+
+        private BoundaryMergeAttempt(
+                @NotNull OrthogonalPoint2i reconnectPoint,
+                @NotNull List<OrthogonalPoint2i> candidatePoints,
+                @NotNull OrthogonalPolygonValidationResult result,
+                boolean containsOriginal,
+                int area,
+                int overlap,
+                int distance)
+        {
+            this.reconnectPoint = reconnectPoint;
+            this.candidatePoints = List.copyOf(candidatePoints);
+            this.result = result;
+            this.containsOriginal = containsOriginal;
+            this.area = area;
+            this.overlap = overlap;
+            this.distance = distance;
+        }
+
+        @NotNull List<OrthogonalPoint2i> candidatePoints()
+        {
+            return candidatePoints;
+        }
+
+        @NotNull OrthogonalPolygonValidationResult result()
+        {
+            return result;
+        }
+
+        boolean containsOriginal()
+        {
+            return containsOriginal;
+        }
+
+        int area()
+        {
+            return area;
+        }
+
+        int overlap()
+        {
+            return overlap;
+        }
+
+        int distance()
+        {
+            return distance;
+        }
     }
 
     private @NotNull List<OrthogonalPoint2i> findBoundaryReconnectPoints(
@@ -516,7 +574,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
             @NotNull List<OrthogonalPoint2i> reconnectCandidates)
     {
         BoundaryMergeAttempt best = null;
-        OrthogonalPoint2i lastPoint = draftPoints.getLast();
+        OrthogonalPoint2i lastPoint = draftPoints.get(draftPoints.size() - 1);
         for (OrthogonalPoint2i reconnectPoint : reconnectCandidates)
         {
             List<OrthogonalPoint2i> candidatePoints = new ArrayList<>(draftPoints);
@@ -737,7 +795,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
         List<OrthogonalPoint2i> conflictPoints = validationResult.issues().stream()
                 .map(OrthogonalPolygonValidationIssue::point)
                 .filter(point -> point != null)
-                .toList();
+                .collect(Collectors.toList());
         return new ClaimEditPreview(
                 validationResult.polygon() == null ? polygon : validationResult.polygon(),
                 null,
@@ -757,7 +815,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
         List<OrthogonalPoint2i> conflictPoints = validationResult.issues().stream()
                 .map(OrthogonalPolygonValidationIssue::point)
                 .filter(point -> point != null)
-                .toList();
+                .collect(Collectors.toList());
         return new ClaimEditPreview(
                 validationResult.polygon(),
                 null,
@@ -783,8 +841,8 @@ public final class ClaimEditorSkeleton implements ClaimEditor
             @NotNull OrthogonalPolygon polygon,
             @NotNull List<OrthogonalPoint2i> draftPoints)
     {
-        OrthogonalPoint2i start = draftPoints.getFirst();
-        OrthogonalPoint2i end = draftPoints.getLast();
+        OrthogonalPoint2i start = draftPoints.get(0);
+        OrthogonalPoint2i end = draftPoints.get(draftPoints.size() - 1);
 
         OrthogonalPolygon working = ensureBoundaryVertex(ensureBoundaryVertex(polygon, start), end);
         int startIndex = working.corners().indexOf(start);
@@ -827,7 +885,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
             throw new IllegalArgumentException("Point does not lie on the existing claim boundary.");
         }
 
-        return polygon.insertNode(matches.getFirst(), point);
+        return polygon.insertNode(matches.get(0), point);
     }
 
     private @NotNull List<OrthogonalPoint2i> pathAlongPolygon(
@@ -1156,10 +1214,10 @@ public final class ClaimEditorSkeleton implements ClaimEditor
                 throw new IllegalArgumentException("Merged claim boundary could not be followed.");
             }
 
-            current = nextEdges.getFirst();
+            current = nextEdges.get(0);
         }
 
-        if (!traced.getLast().equals(startEdge.start()))
+        if (!traced.get(traced.size() - 1).equals(startEdge.start()))
         {
             debug("traceOccupiedContour close-failure traced=%s", traced);
             throw new IllegalArgumentException("Merged claim boundary did not close.");
@@ -1241,7 +1299,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
             }
         }
 
-        compressed.add(compressed.getFirst());
+        compressed.add(compressed.get(0));
         return compressed;
     }
 
@@ -1257,7 +1315,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
             ContourVertex current = contour.get(i);
             ContourVertex next = contour.get((i + 1) % cycleLength);
             OrthogonalPoint2i point = resolveContourCornerPoint(previous, current, next, occupied);
-            if (mapped.isEmpty() || !mapped.getLast().equals(point))
+            if (mapped.isEmpty() || !mapped.get(mapped.size() - 1).equals(point))
             {
                 mapped.add(point);
             }
@@ -1268,7 +1326,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
             throw new IllegalArgumentException("Merged claim boundary is too small.");
         }
 
-        mapped.add(mapped.getFirst());
+        mapped.add(mapped.get(0));
         return mapped;
     }
 
@@ -1348,14 +1406,19 @@ public final class ClaimEditorSkeleton implements ClaimEditor
 
     private int rotateRight(int direction)
     {
-        return switch (direction)
+        switch (direction)
         {
-            case 0 -> 1;
-            case 1 -> 2;
-            case 2 -> 3;
-            case 3 -> 0;
-            default -> throw new IllegalArgumentException("Unknown contour direction.");
-        };
+            case 0:
+                return 1;
+            case 1:
+                return 2;
+            case 2:
+                return 3;
+            case 3:
+                return 0;
+            default:
+                throw new IllegalArgumentException("Unknown contour direction.");
+        }
     }
 
     private @NotNull List<OrthogonalPoint2i> compressOccupiedBoundaryPath(@NotNull List<OrthogonalPoint2i> traced)
@@ -1384,16 +1447,94 @@ public final class ClaimEditorSkeleton implements ClaimEditor
             }
         }
 
-        compressed.add(compressed.getFirst());
+        compressed.add(compressed.get(0));
         return compressed;
     }
 
-    private record ContourVertex(int x, int z)
+    private static final class ContourVertex
     {
+        private final int x;
+        private final int z;
+
+        private ContourVertex(int x, int z)
+        {
+            this.x = x;
+            this.z = z;
+        }
+
+        int x()
+        {
+            return x;
+        }
+
+        int z()
+        {
+            return z;
+        }
+
+        @Override
+        public boolean equals(Object other)
+        {
+            if (this == other)
+            {
+                return true;
+            }
+            if (!(other instanceof ContourVertex))
+            {
+                return false;
+            }
+            ContourVertex that = (ContourVertex) other;
+            return x == that.x && z == that.z;
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return Objects.hash(x, z);
+        }
     }
 
-    private record ContourEdge(@NotNull ContourVertex start, @NotNull ContourVertex end)
+    private static final class ContourEdge
     {
+        private final @NotNull ContourVertex start;
+        private final @NotNull ContourVertex end;
+
+        private ContourEdge(@NotNull ContourVertex start, @NotNull ContourVertex end)
+        {
+            this.start = start;
+            this.end = end;
+        }
+
+        @NotNull ContourVertex start()
+        {
+            return start;
+        }
+
+        @NotNull ContourVertex end()
+        {
+            return end;
+        }
+
+        @Override
+        public boolean equals(Object other)
+        {
+            if (this == other)
+            {
+                return true;
+            }
+            if (!(other instanceof ContourEdge))
+            {
+                return false;
+            }
+            ContourEdge that = (ContourEdge) other;
+            return start.equals(that.start) && end.equals(that.end);
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return Objects.hash(start, end);
+        }
     }
 
     private @NotNull ClaimEditResult handleAddNode(@NotNull ClaimEditorSession session, @NotNull ClaimEditIntent intent)
@@ -1577,7 +1718,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
         // active segment exists from a previous click.
         if (matches.size() == 1)
         {
-            return matches.getFirst();
+            return matches.get(0);
         }
 
         if (session.activeSegment() != null && matches.contains(session.activeSegment().edgeIndex()))
@@ -1585,7 +1726,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
             return session.activeSegment().edgeIndex();
         }
 
-        return matches.getFirst();
+        return matches.get(0);
     }
 
     private long resolveClaimId(@NotNull ClaimEditorSession session)
@@ -1814,14 +1955,50 @@ public final class ClaimEditorSkeleton implements ClaimEditor
         return visited.size() == occupied.size();
     }
 
-    private record OffsetVector(int dx, int dz)
+    private static final class OffsetVector
     {
+        private final int dx;
+        private final int dz;
+
+        private OffsetVector(int dx, int dz)
+        {
+            this.dx = dx;
+            this.dz = dz;
+        }
+
+        int dx()
+        {
+            return dx;
+        }
+
+        int dz()
+        {
+            return dz;
+        }
     }
 
-    private record SegmentExpansion(
-            @NotNull OrthogonalPolygonValidationResult result,
-            @Nullable SegmentSelection selection)
+    private static final class SegmentExpansion
     {
+        private final @NotNull OrthogonalPolygonValidationResult result;
+        private final @Nullable SegmentSelection selection;
+
+        private SegmentExpansion(
+                @NotNull OrthogonalPolygonValidationResult result,
+                @Nullable SegmentSelection selection)
+        {
+            this.result = result;
+            this.selection = selection;
+        }
+
+        @NotNull OrthogonalPolygonValidationResult result()
+        {
+            return result;
+        }
+
+        @Nullable SegmentSelection selection()
+        {
+            return selection;
+        }
     }
 
     private static void debug(@NotNull String format, Object... args)

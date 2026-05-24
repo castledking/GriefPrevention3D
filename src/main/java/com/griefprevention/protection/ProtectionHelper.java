@@ -60,8 +60,8 @@ public final class ProtectionHelper
             if (mode == ClaimsMode.Creative || mode == ClaimsMode.SurvivalRequiringClaims)
             {
                 // Allow placing chest if it would create an automatic claim.
-                if (trigger instanceof BlockPlaceEvent placeEvent
-                        && placeEvent.getBlock().getType() == Material.CHEST
+                if (trigger instanceof BlockPlaceEvent
+                        && ((BlockPlaceEvent) trigger).getBlock().getType() == Material.CHEST
                         && playerData.getClaims().isEmpty()
                         && GriefPrevention.instance.config_claims_automaticClaimsForNewPlayersRadius > -1)
                     return null;

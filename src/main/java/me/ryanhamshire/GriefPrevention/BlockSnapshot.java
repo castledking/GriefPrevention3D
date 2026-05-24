@@ -83,9 +83,10 @@ public class BlockSnapshot {
             return false;
         }
 
-        if (!(block.getState() instanceof TileState state)) {
+        if (!(block.getState() instanceof TileState)) {
             return false;
         }
+        TileState state = (TileState) block.getState();
 
         return hasQuickShopSignKey(state);
     }

@@ -55,7 +55,8 @@ public class InteractionProtectionHandler implements Listener
         if (item == null || item.getType() != Material.ENDER_EYE) return;
 
         // Use instanceof check instead of direct cast to safely handle potential modded block data implementations
-        if (!(block.getBlockData() instanceof org.bukkit.block.data.type.EndPortalFrame frameData)) return;
+        if (!(block.getBlockData() instanceof org.bukkit.block.data.type.EndPortalFrame)) return;
+        org.bukkit.block.data.type.EndPortalFrame frameData = (org.bukkit.block.data.type.EndPortalFrame) block.getBlockData();
         if (frameData.hasEye()) return;
 
         Player player = event.getPlayer();

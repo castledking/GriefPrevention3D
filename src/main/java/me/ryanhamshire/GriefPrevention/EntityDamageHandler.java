@@ -277,19 +277,20 @@ public class EntityDamageHandler implements Listener {
         Player attacker = null;
         Projectile arrow = null;
         Entity damageSource = event.damager();
-        if (damageSource instanceof Player damager) {
-            attacker = damager;
-        } else if (damageSource instanceof Projectile projectile) {
-            arrow = projectile;
-            if (arrow.getShooter() instanceof Player shooter) {
-                attacker = shooter;
+        if (damageSource instanceof Player) {
+            attacker = (Player) damageSource;
+        } else if (damageSource instanceof Projectile) {
+            arrow = (Projectile) damageSource;
+            if (arrow.getShooter() instanceof Player) {
+                attacker = (Player) arrow.getShooter();
             }
         }
 
         // Handle wind charge damage - wind charges are projectiles that deal knockback and damage
         // When PVP rules are enabled for the world, protect players in claims from wind charge attacks
         String damagerTypeName = damageSource != null ? damageSource.getType().name() : "";
-        if ((damagerTypeName.contains("WIND_CHARGE") || damagerTypeName.equals("BREEZE_WIND_CHARGE")) && event.damaged() instanceof Player defender) {
+        if ((damagerTypeName.contains("WIND_CHARGE") || damagerTypeName.equals("BREEZE_WIND_CHARGE")) && event.damaged() instanceof Player) {
+            Player defender = (Player) event.damaged();
             if (attacker != null && attacker != defender && instance.pvpRulesApply(defender.getWorld())) {
                 // Check if defender is in a protected claim
                 PlayerData defenderData = dataStore.getPlayerData(defender.getUniqueId());
@@ -307,7 +308,8 @@ public class EntityDamageHandler implements Listener {
 
         // Specific handling for PVP-enabled situations.
         if (instance.pvpRulesApply(event.damaged().getWorld())) {
-            if (event.damaged() instanceof Player defender) {
+            if (event.damaged() instanceof Player) {
+                Player defender = (Player) event.damaged();
                 // Protect players from other players' pets when protected from PVP.
                 if (handlePvpDamageByPet(event, attacker, defender))
                     return;
@@ -320,7 +322,8 @@ public class EntityDamageHandler implements Listener {
                 if (attacker != null && handlePvpDamageByPlayer(event, attacker, defender, sendMessages)) {
                     return;
                 }
-            } else if (event.damaged() instanceof Tameable tameable) {
+            } else if (event.damaged() instanceof Tameable) {
+                Tameable tameable = (Tameable) event.damaged();
                 if (attacker != null && handlePvpPetDamageByPlayer(event, tameable, attacker, sendMessages)) {
                     return;
                 }
@@ -365,7 +368,8 @@ public class EntityDamageHandler implements Listener {
                 return true;
         } catch (NoSuchFieldError ignored) {}
 
-        if (entity instanceof Slime slime) {
+        if (entity instanceof Slime) {
+            Slime slime = (Slime) entity;
             // Size 0 "baby" slimes cannot deal damage and are often kept as pets.
             // This is really inconvenient for players who are trying to harvest slimeballs
             // in areas with claims;
@@ -376,11 +380,11 @@ public class EntityDamageHandler implements Listener {
             return slime.getSize() > 0 || slime.getTicksLived() < 1200;
         }
 
-        if (entity instanceof Rabbit rabbit)
-            return rabbit.getRabbitType() == Rabbit.Type.THE_KILLER_BUNNY;
+        if (entity instanceof Rabbit)
+            return ((Rabbit) entity).getRabbitType() == Rabbit.Type.THE_KILLER_BUNNY;
 
-        if ((getTemptableSemiHostiles().contains(type)) && entity instanceof Mob mob)
-            return !hasPersistentData(entity, getLuredByPlayerKey()) && mob.getTarget() != null;
+        if ((getTemptableSemiHostiles().contains(type)) && entity instanceof Mob)
+            return !hasPersistentData(entity, getLuredByPlayerKey()) && ((Mob) entity).getTarget() != null;
 
         return false;
     }
@@ -395,27 +399,25 @@ public class EntityDamageHandler implements Listener {
         // If PVP is enabled, the damaged entity is not a pet, or the pet has no owner,
         // allow.
         if (instance.pvpRulesApply(event.damaged().getWorld())
-                || !(event.damaged() instanceof Tameable tameable)
-                || !tameable.isTamed()) {
+                || !(event.damaged() instanceof Tameable)
+                || !((Tameable) event.damaged()).isTamed()) {
             return false;
         }
         switch (event.cause()) {
             // Block environmental and easy-to-cause damage sources.
-            case BLOCK_EXPLOSION,
-                    ENTITY_EXPLOSION,
-                    FALLING_BLOCK,
-                    FIRE,
-                    FIRE_TICK,
-                    LAVA,
-                    SUFFOCATION,
-                    CONTACT,
-                    DROWNING -> {
+            case BLOCK_EXPLOSION:
+            case ENTITY_EXPLOSION:
+            case FALLING_BLOCK:
+            case FIRE:
+            case FIRE_TICK:
+            case LAVA:
+            case SUFFOCATION:
+            case CONTACT:
+            case DROWNING:
                 event.setCancelled(true);
                 return true;
-            }
-            default -> {
+            default:
                 return false;
-            }
         }
     }
 
@@ -466,8 +468,9 @@ public class EntityDamageHandler implements Listener {
             @NotNull EntityDamageInstance event,
             @Nullable Player attacker,
             @NotNull Player damaged) {
-        if (!(event.damager() instanceof AreaEffectCloud cloud))
+        if (!(event.damager() instanceof AreaEffectCloud))
             return false;
+        AreaEffectCloud cloud = (AreaEffectCloud) event.damager();
 
         // Only intervene when the cloud was actually produced by a player. Mob-sourced
         // AreaEffectClouds (most importantly the Ender Dragon's breath attack) are not
@@ -566,7 +569,10 @@ public class EntityDamageHandler implements Listener {
             @NotNull EntityDamageInstance event,
             @Nullable Player attacker,
             @NotNull Player defender) {
-        if (!(event.damager() instanceof Tameable pet) || !pet.isTamed() || pet.getOwner() == null)
+        if (!(event.damager() instanceof Tameable))
+            return false;
+        Tameable pet = (Tameable) event.damager();
+        if (!pet.isTamed() || pet.getOwner() == null)
             return false;
 
         PlayerData defenderData = dataStore.getPlayerData(defender.getUniqueId());
@@ -712,13 +718,13 @@ public class EntityDamageHandler implements Listener {
             boolean sendMessages) {
         EntityType entityType = event.damaged().getType();
         if (entityType != EntityType.ITEM_FRAME
-                && entityType != EntityType.GLOW_ITEM_FRAME
+                && !isNamedEntityType(entityType, "GLOW_ITEM_FRAME")
                 && entityType != EntityType.ARMOR_STAND
                 && entityType != EntityType.VILLAGER
-                && entityType != EntityType.END_CRYSTAL
+                && !isEndCrystal(entityType)
                 // Item Displays have no hitbox, but display plugins may manually fire events
                 // where appropriate.
-                && entityType != EntityType.ITEM_DISPLAY) {
+                && !isNamedEntityType(entityType, "ITEM_DISPLAY")) {
             return false;
         }
 
@@ -731,8 +737,8 @@ public class EntityDamageHandler implements Listener {
                         || event.damager() instanceof Zombie
                         || event.damager() instanceof Raider
                         || event.damager() instanceof Vex
-                        || event.damager() instanceof Projectile projectile && projectile.getShooter() instanceof Raider
-                        || event.damager() instanceof EvokerFangs fangs && fangs.getOwner() instanceof Raider)) {
+                        || event.damager() instanceof Projectile && ((Projectile) event.damager()).getShooter() instanceof Raider
+                        || event.damager() instanceof EvokerFangs && ((EvokerFangs) event.damager()).getOwner() instanceof Raider)) {
             return true;
         }
 
@@ -754,10 +760,12 @@ public class EntityDamageHandler implements Listener {
         // when the projectile source is within the same claim
         if (attacker == null) {
             // Allow projectiles (like arrows from dispensers) to break armor stands
-            if (entityType == EntityType.ARMOR_STAND && event.damager() instanceof Projectile projectile) {
+            if (entityType == EntityType.ARMOR_STAND && event.damager() instanceof Projectile) {
+                Projectile projectile = (Projectile) event.damager();
                 // Get the projectile source (dispenser, etc.)
                 ProjectileSource source = projectile.getShooter();
-                if (source instanceof BlockProjectileSource blockSource) {
+                if (source instanceof BlockProjectileSource) {
+                    BlockProjectileSource blockSource = (BlockProjectileSource) source;
                     // Check if the dispenser is in the same claim as the armor stand
                     Claim sourceClaim = this.dataStore.getClaimAt(blockSource.getBlock().getLocation(), false, null);
                     if (sourceClaim != null && sourceClaim.getID().equals(claim.getID())) {
@@ -816,7 +824,7 @@ public class EntityDamageHandler implements Listener {
         if (attacker == null
                 && damageSourceType != EntityType.CREEPER
                 && damageSourceType != EntityType.WITHER
-                && damageSourceType != EntityType.END_CRYSTAL
+                && !isEndCrystal(damageSourceType)
                 && damageSourceType != EntityType.AREA_EFFECT_CLOUD
                 && damageSourceType != EntityType.WITCH
                 && !(damageSource instanceof Projectile)
@@ -853,7 +861,7 @@ public class EntityDamageHandler implements Listener {
         }
 
         // Do not message players about fireworks to prevent spam due to multi-hits.
-        sendMessages &= damageSourceType != EntityType.FIREWORK_ROCKET;
+        sendMessages &= !isNamedEntityType(damageSourceType, "FIREWORK_ROCKET");
 
         Supplier<String> override = null;
         if (sendMessages) {
@@ -896,12 +904,13 @@ public class EntityDamageHandler implements Listener {
             @NotNull EntityDamageInstance event,
             @Nullable Player attacker,
             boolean sendMessages) {
-        if (!(event.damaged() instanceof Tameable tameable) || !tameable.isTamed()) {
+        if (!(event.damaged() instanceof Tameable) || !((Tameable) event.damaged()).isTamed()) {
             // If the animal is not owned, specifically allow attacks only if the animal is
             // a wolf.
             return event.damaged().getType() == EntityType.WOLF;
         }
 
+        Tameable tameable = (Tameable) event.damaged();
         AnimalTamer owner = tameable.getOwner();
         if (owner == null) {
             // Treat invalid state of tamed with no owner identically to untamed.
@@ -971,18 +980,19 @@ public class EntityDamageHandler implements Listener {
         // If there is no damage (snowballs, eggs, etc.) or the defender is not a player
         // in a PVP world, do nothing.
         if (event.getDamage() == 0
-                || !(event.getEntity() instanceof Player defender)
-                || !instance.pvpRulesApply(defender.getWorld()))
+                || !(event.getEntity() instanceof Player)
+                || !instance.pvpRulesApply(event.getEntity().getWorld()))
             return;
+        Player defender = (Player) event.getEntity();
 
         // determine which player is attacking, if any
         Player attacker = null;
         Entity damageSource = event.getDamager();
 
-        if (damageSource instanceof Player damager) {
-            attacker = damager;
-        } else if (damageSource instanceof Projectile arrow && arrow.getShooter() instanceof Player shooter) {
-            attacker = shooter;
+        if (damageSource instanceof Player) {
+            attacker = (Player) damageSource;
+        } else if (damageSource instanceof Projectile && ((Projectile) damageSource).getShooter() instanceof Player) {
+            attacker = (Player) ((Projectile) damageSource).getShooter();
         }
 
         // If not PVP or attacking self, do nothing.
@@ -1021,19 +1031,19 @@ public class EntityDamageHandler implements Listener {
         if (damageSource != null) {
             damageSourceType = damageSource.getType();
 
-            if (damageSource instanceof Player player) {
-                attacker = player;
-            } else if (damageSource instanceof Projectile projectile) {
-                arrow = projectile;
-                if (arrow.getShooter() instanceof Player shooter) {
-                    attacker = shooter;
+            if (damageSource instanceof Player) {
+                attacker = (Player) damageSource;
+            } else if (damageSource instanceof Projectile) {
+                arrow = (Projectile) damageSource;
+                if (arrow.getShooter() instanceof Player) {
+                    attacker = (Player) arrow.getShooter();
                 }
             }
         }
 
         // if not a player and not an explosion, always allow
         if (attacker == null && damageSourceType != EntityType.CREEPER && damageSourceType != EntityType.WITHER
-                && damageSourceType != EntityType.TNT) {
+                && !isNamedEntityType(damageSourceType, "TNT", "PRIMED_TNT")) {
             return;
         }
 
@@ -1157,8 +1167,9 @@ public class EntityDamageHandler implements Listener {
                     continue;
 
                 // always impact non players
-                if (!(affected instanceof Player affectedPlayer))
+                if (!(affected instanceof Player))
                     continue;
+                Player affectedPlayer = (Player) affected;
 
                 // otherwise if in no-pvp zone, stop effect
                 // FEATURE: prevent players from engaging in PvP combat inside land claims (when
@@ -1182,16 +1193,42 @@ public class EntityDamageHandler implements Listener {
         }
     }
 
-    private record EntityDamageInstance(
-            @NotNull Entity damaged,
-            @Nullable Entity damager,
-            @NotNull EntityDamageEvent.DamageCause cause,
-            @NotNull Event original) {
+    private static boolean isEndCrystal(@NotNull EntityType entityType) {
+        return isNamedEntityType(entityType, "END_CRYSTAL", "ENDER_CRYSTAL");
+    }
+
+    private static boolean isNamedEntityType(@NotNull EntityType entityType, @NotNull String... names) {
+        String actualName = entityType.name();
+        for (String name : names) {
+            if (actualName.equals(name)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static final class EntityDamageInstance {
+        private final @NotNull Entity damaged;
+        private final @Nullable Entity damager;
+        private final @NotNull EntityDamageEvent.DamageCause cause;
+        private final @NotNull Event original;
+
+        private EntityDamageInstance(
+                @NotNull Entity damaged,
+                @Nullable Entity damager,
+                @NotNull EntityDamageEvent.DamageCause cause,
+                @NotNull Event original)
+        {
+            this.damaged = damaged;
+            this.damager = damager;
+            this.cause = cause;
+            this.original = original;
+        }
 
         EntityDamageInstance(@NotNull EntityDamageEvent event) {
             this(
                     event.getEntity(),
-                    event instanceof EntityDamageByEntityEvent damageBy ? damageBy.getDamager() : null,
+                    event instanceof EntityDamageByEntityEvent ? ((EntityDamageByEntityEvent) event).getDamager() : null,
                     event.getCause(),
                     event);
         }
@@ -1199,14 +1236,30 @@ public class EntityDamageHandler implements Listener {
         EntityDamageInstance(@NotNull EntityCombustEvent event) {
             this(
                     event.getEntity(),
-                    event instanceof EntityCombustByEntityEvent combustBy ? combustBy.getCombuster() : null,
+                    event instanceof EntityCombustByEntityEvent ? ((EntityCombustByEntityEvent) event).getCombuster() : null,
                     EntityDamageEvent.DamageCause.FIRE_TICK,
                     event);
         }
 
         public void setCancelled(boolean cancelled) {
-            if (this.original instanceof Cancellable cancellable)
-                cancellable.setCancelled(cancelled);
+            if (this.original instanceof Cancellable)
+                ((Cancellable) this.original).setCancelled(cancelled);
+        }
+
+        @NotNull Entity damaged() {
+            return damaged;
+        }
+
+        @Nullable Entity damager() {
+            return damager;
+        }
+
+        @NotNull EntityDamageEvent.DamageCause cause() {
+            return cause;
+        }
+
+        @NotNull Event original() {
+            return original;
         }
     }
 

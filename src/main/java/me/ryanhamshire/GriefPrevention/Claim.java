@@ -304,9 +304,9 @@ public class Claim
          }
 
          List<OrthogonalPoint2i> closedPath = new ArrayList<>(shapedCorners);
-         if (!closedPath.getFirst().equals(closedPath.getLast()))
+         if (!closedPath.get(0).equals(closedPath.get(closedPath.size() - 1)))
          {
-             closedPath.add(closedPath.getFirst());
+             closedPath.add(closedPath.get(0));
          }
 
          OrthogonalPolygon polygon = OrthogonalPolygon.fromClosedPath(closedPath);
@@ -325,7 +325,7 @@ public class Claim
                  return cached;
              }
              List<OrthogonalPoint2i> closedPath = new ArrayList<>(Objects.requireNonNull(this.shapedCorners));
-             closedPath.add(this.shapedCorners.getFirst());
+             closedPath.add(this.shapedCorners.get(0));
              OrthogonalPolygon polygon = OrthogonalPolygon.fromClosedPath(closedPath);
              this.cachedBoundaryPolygon = polygon;
              return polygon;
@@ -445,14 +445,22 @@ public class Claim
     }
     private static @NotNull String getPermissionSuffix(@NotNull ClaimPermission permission)
     {
-        return switch (permission)
+        switch (permission)
         {
-            case Manage -> "#manager";
-            case Build -> "#build";
-            case Container, Inventory -> "#inventory";
-            case Access -> "#access";
-            case Edit -> "";
-        };
+            case Manage:
+                return "#manager";
+            case Build:
+                return "#build";
+            case Container:
+            case Inventory:
+                return "#inventory";
+            case Access:
+                return "#access";
+            case Edit:
+                return "";
+            default:
+                throw new IllegalStateException("Unknown claim permission: " + permission);
+        }
     }
  
      private static boolean placeableForFarming(Material material)

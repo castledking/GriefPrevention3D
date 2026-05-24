@@ -37,8 +37,9 @@ public class ClaimCommand extends CommandHandler
             @NotNull String label,
             @NotNull String[] args)
     {
-        if (!(sender instanceof Player player))
+        if (!(sender instanceof Player))
             return false;
+        Player player = (Player) sender;
 
         World world = player.getWorld();
         if (!plugin.claimsEnabledForWorld(world))

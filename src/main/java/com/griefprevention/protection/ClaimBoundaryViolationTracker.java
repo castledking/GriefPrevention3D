@@ -74,10 +74,31 @@ public class ClaimBoundaryViolationTracker
     /**
      * A recorded violation with location and timestamp.
      */
-    private record TrackedViolation(int x, int y, int z, @NotNull String worldName,
-                                    @NotNull ViolationType type, @NotNull ViolationDirection direction,
-                                    int radius, long timestamp)
+    private static final class TrackedViolation
     {
+        private final int x;
+        private final int y;
+        private final int z;
+        private final @NotNull String worldName;
+        private final @NotNull ViolationType type;
+        private final @NotNull ViolationDirection direction;
+        private final int radius;
+        private final long timestamp;
+
+        private TrackedViolation(int x, int y, int z, @NotNull String worldName,
+                                 @NotNull ViolationType type, @NotNull ViolationDirection direction,
+                                 int radius, long timestamp)
+        {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+            this.worldName = worldName;
+            this.type = type;
+            this.direction = direction;
+            this.radius = radius;
+            this.timestamp = timestamp;
+        }
+
         boolean covers(int ox, int oy, int oz, @NotNull String oWorld,
                        @NotNull ViolationType oType, @NotNull ViolationDirection oDirection)
         {
@@ -88,15 +109,80 @@ public class ClaimBoundaryViolationTracker
                     && Math.abs(oy - y) <= radius
                     && Math.abs(oz - z) <= radius;
         }
+
+        long timestamp()
+        {
+            return timestamp;
+        }
     }
 
     /**
      * Pending burst violations waiting to be flushed as a summary.
      */
-    private record PendingBurst(@NotNull ViolationType type, @NotNull ViolationDirection direction,
-                                @NotNull String worldName, int count,
-                                int firstX, int firstY, int firstZ, long firstTimestamp)
+    private static final class PendingBurst
     {
+        private final @NotNull ViolationType type;
+        private final @NotNull ViolationDirection direction;
+        private final @NotNull String worldName;
+        private final int count;
+        private final int firstX;
+        private final int firstY;
+        private final int firstZ;
+        private final long firstTimestamp;
+
+        private PendingBurst(@NotNull ViolationType type, @NotNull ViolationDirection direction,
+                             @NotNull String worldName, int count,
+                             int firstX, int firstY, int firstZ, long firstTimestamp)
+        {
+            this.type = type;
+            this.direction = direction;
+            this.worldName = worldName;
+            this.count = count;
+            this.firstX = firstX;
+            this.firstY = firstY;
+            this.firstZ = firstZ;
+            this.firstTimestamp = firstTimestamp;
+        }
+
+        @NotNull ViolationType type()
+        {
+            return type;
+        }
+
+        @NotNull ViolationDirection direction()
+        {
+            return direction;
+        }
+
+        @NotNull String worldName()
+        {
+            return worldName;
+        }
+
+        int count()
+        {
+            return count;
+        }
+
+        int firstX()
+        {
+            return firstX;
+        }
+
+        int firstY()
+        {
+            return firstY;
+        }
+
+        int firstZ()
+        {
+            return firstZ;
+        }
+
+        long firstTimestamp()
+        {
+            return firstTimestamp;
+        }
     }
 
     // Per-owner tracked violations (keyed by owner UUID)
@@ -297,11 +383,19 @@ public class ClaimBoundaryViolationTracker
         Player player = Bukkit.getPlayer(ownerID);
         if (player == null || !player.isOnline()) return;
 
-        String typeLabel = switch (burst.type())
+        String typeLabel;
+        switch (burst.type())
         {
-            case PISTON -> "piston";
-            case LIQUID -> "liquid";
-        };
+            case PISTON:
+                typeLabel = "piston";
+                break;
+            case LIQUID:
+                typeLabel = "liquid";
+                break;
+            default:
+                typeLabel = "unknown";
+                break;
+        }
 
         if (burst.count() == 1)
         {

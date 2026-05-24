@@ -408,12 +408,21 @@ public abstract class BoundaryVisualization
                 .anyMatch(Claim::isShaped);
     }
 
-    private record DelayedVisualizationTask(
-            @NotNull BoundaryVisualization visualization,
-            @NotNull PlayerData playerData,
-            @NotNull BoundaryVisualizationEvent event)
-            implements Runnable
+    private static final class DelayedVisualizationTask implements Runnable
     {
+        private final @NotNull BoundaryVisualization visualization;
+        private final @NotNull PlayerData playerData;
+        private final @NotNull BoundaryVisualizationEvent event;
+
+        private DelayedVisualizationTask(
+                @NotNull BoundaryVisualization visualization,
+                @NotNull PlayerData playerData,
+                @NotNull BoundaryVisualizationEvent event)
+        {
+            this.visualization = visualization;
+            this.playerData = playerData;
+            this.event = event;
+        }
 
         @Override
         public void run()

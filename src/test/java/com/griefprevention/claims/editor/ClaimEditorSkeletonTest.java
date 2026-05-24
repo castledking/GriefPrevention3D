@@ -1031,9 +1031,9 @@ public class ClaimEditorSkeletonTest
         catch (InvocationTargetException exception)
         {
             Throwable cause = exception.getCause();
-            if (cause instanceof Exception wrapped)
+            if (cause instanceof Exception)
             {
-                throw wrapped;
+                throw (Exception) cause;
             }
             throw exception;
         }

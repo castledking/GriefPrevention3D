@@ -7,7 +7,7 @@ version: "${project.version}"
 description: The self-service anti-griefing plugin for Minecraft servers — now with full 3D subdivisions
 website: https://castled.codes
 authors: [castledking, RoboMWM, BigScary]
-api-version: "1.20"
+api-version: "1.13"
 folia-supported: true
 commands:
   claim:

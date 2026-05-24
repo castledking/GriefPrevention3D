@@ -558,16 +558,65 @@ public final class CommandAliasConfiguration {
             return arguments.get(index);
         }
 
-        public record Argument(@NotNull String name, @Nullable String type, @NotNull List<String> suggestions,
-                boolean optional) {
+        public static final class Argument {
+            private final @NotNull String name;
+            private final @Nullable String type;
+            private final @NotNull List<String> suggestions;
+            private final boolean optional;
+
             public Argument(@NotNull String name, @Nullable String type, @NotNull List<String> suggestions) {
                 this(name, type, suggestions, false);
+            }
+
+            public Argument(@NotNull String name, @Nullable String type, @NotNull List<String> suggestions,
+                    boolean optional) {
+                this.name = name;
+                this.type = type;
+                this.suggestions = List.copyOf(suggestions);
+                this.optional = optional;
+            }
+
+            public @NotNull String name() {
+                return name;
+            }
+
+            public @Nullable String type() {
+                return type;
+            }
+
+            public @NotNull List<String> suggestions() {
+                return suggestions;
+            }
+
+            public boolean optional() {
+                return optional;
             }
         }
     }
 
-    private record ArgumentParseResult(boolean translateArguments,
-            @NotNull Map<String, String> argumentAliases,
-            @NotNull List<Subcommand.Argument> arguments) {
+    private static final class ArgumentParseResult {
+        private final boolean translateArguments;
+        private final @NotNull Map<String, String> argumentAliases;
+        private final @NotNull List<Subcommand.Argument> arguments;
+
+        private ArgumentParseResult(boolean translateArguments,
+                @NotNull Map<String, String> argumentAliases,
+                @NotNull List<Subcommand.Argument> arguments) {
+            this.translateArguments = translateArguments;
+            this.argumentAliases = Map.copyOf(argumentAliases);
+            this.arguments = List.copyOf(arguments);
+        }
+
+        boolean translateArguments() {
+            return translateArguments;
+        }
+
+        @NotNull Map<String, String> argumentAliases() {
+            return argumentAliases;
+        }
+
+        @NotNull List<Subcommand.Argument> arguments() {
+            return arguments;
+        }
     }
 }
