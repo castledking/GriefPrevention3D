@@ -18,13 +18,13 @@
 
 package me.ryanhamshire.GriefPrevention;
 
+import com.griefprevention.compat.BlockDataCompat;
 import me.ryanhamshire.GriefPrevention.util.SchedulerUtil;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World.Environment;
 import org.bukkit.block.Biome;
 import org.bukkit.block.BlockFace;
-import org.bukkit.block.data.type.WallSign;
 import org.bukkit.entity.Player;
 
 import java.util.EnumSet;
@@ -76,11 +76,30 @@ public class RestoreNatureProcessingTask implements Runnable {
                 Material.TALL_GRASS,
                 Material.SNOW,
                 Material.OAK_LOG, Material.SPRUCE_LOG, Material.BIRCH_LOG, Material.JUNGLE_LOG,
-                Material.ACACIA_LOG, Material.DARK_OAK_LOG, Material.MANGROVE_LOG, Material.CHERRY_LOG
+                Material.ACACIA_LOG, Material.DARK_OAK_LOG
         );
+        try {
+            this.notAllowedToHang.add(Material.valueOf("MANGROVE_LOG"));
+        } catch (IllegalArgumentException e) {
+            // 1.8.8: MANGROVE_LOG doesn't exist
+        }
+        try {
+            this.notAllowedToHang.add(Material.valueOf("CHERRY_LOG"));
+        } catch (IllegalArgumentException e) {
+            // 1.8.8: CHERRY_LOG doesn't exist
+        }
 
         if (this.aggressiveMode) {
-            this.notAllowedToHang.add(Material.GRASS_BLOCK);
+            try {
+                this.notAllowedToHang.add(Material.valueOf("GRASS_BLOCK"));
+            } catch (IllegalArgumentException e) {
+                // 1.8.8: use GRASS
+                try {
+                    this.notAllowedToHang.add(Material.valueOf("GRASS"));
+                } catch (IllegalArgumentException e2) {
+                    // Neither exists, skip
+                }
+            }
             this.notAllowedToHang.add(Material.STONE);
         }
 
@@ -93,16 +112,32 @@ public class RestoreNatureProcessingTask implements Runnable {
         // In aggressive or creative mode, also treat these blocks as player-placed
         if (this.aggressiveMode || this.creativeMode) {
             this.playerBlocks.add(Material.IRON_ORE);
-            this.playerBlocks.add(Material.DEEPSLATE_IRON_ORE);
+            try {
+                this.playerBlocks.add(Material.valueOf("DEEPSLATE_IRON_ORE"));
+            } catch (IllegalArgumentException e) {
+                // 1.8.8: DEEPSLATE_IRON_ORE doesn't exist
+            }
             this.playerBlocks.add(Material.GOLD_ORE);
-            this.playerBlocks.add(Material.DEEPSLATE_GOLD_ORE);
+            try {
+                this.playerBlocks.add(Material.valueOf("DEEPSLATE_GOLD_ORE"));
+            } catch (IllegalArgumentException e) {
+                // 1.8.8: DEEPSLATE_GOLD_ORE doesn't exist
+            }
             this.playerBlocks.add(Material.DIAMOND_ORE);
-            this.playerBlocks.add(Material.DEEPSLATE_DIAMOND_ORE);
+            try {
+                this.playerBlocks.add(Material.valueOf("DEEPSLATE_DIAMOND_ORE"));
+            } catch (IllegalArgumentException e) {
+                // 1.8.8: DEEPSLATE_DIAMOND_ORE doesn't exist
+            }
             this.playerBlocks.add(Material.MELON);
             this.playerBlocks.add(Material.MELON_STEM);
             this.playerBlocks.add(Material.BEDROCK);
             this.playerBlocks.add(Material.COAL_ORE);
-            this.playerBlocks.add(Material.DEEPSLATE_COAL_ORE);
+            try {
+                this.playerBlocks.add(Material.valueOf("DEEPSLATE_COAL_ORE"));
+            } catch (IllegalArgumentException e) {
+                // 1.8.8: DEEPSLATE_COAL_ORE doesn't exist
+            }
             this.playerBlocks.add(Material.PUMPKIN);
             this.playerBlocks.add(Material.PUMPKIN_STEM);
         }
@@ -114,16 +149,32 @@ public class RestoreNatureProcessingTask implements Runnable {
             this.playerBlocks.add(Material.JUNGLE_LEAVES);
             this.playerBlocks.add(Material.ACACIA_LEAVES);
             this.playerBlocks.add(Material.DARK_OAK_LEAVES);
-            this.playerBlocks.add(Material.MANGROVE_LEAVES);
-            this.playerBlocks.add(Material.CHERRY_LEAVES);
+            try {
+                this.playerBlocks.add(Material.valueOf("MANGROVE_LEAVES"));
+            } catch (IllegalArgumentException e) {
+                // 1.8.8: MANGROVE_LEAVES doesn't exist
+            }
+            try {
+                this.playerBlocks.add(Material.valueOf("CHERRY_LEAVES"));
+            } catch (IllegalArgumentException e) {
+                // 1.8.8: CHERRY_LEAVES doesn't exist
+            }
             this.playerBlocks.add(Material.OAK_LOG);
             this.playerBlocks.add(Material.SPRUCE_LOG);
             this.playerBlocks.add(Material.BIRCH_LOG);
             this.playerBlocks.add(Material.JUNGLE_LOG);
             this.playerBlocks.add(Material.ACACIA_LOG);
             this.playerBlocks.add(Material.DARK_OAK_LOG);
-            this.playerBlocks.add(Material.MANGROVE_LOG);
-            this.playerBlocks.add(Material.CHERRY_LOG);
+            try {
+                this.playerBlocks.add(Material.valueOf("MANGROVE_LOG"));
+            } catch (IllegalArgumentException e) {
+                // 1.8.8: MANGROVE_LOG doesn't exist
+            }
+            try {
+                this.playerBlocks.add(Material.valueOf("CHERRY_LOG"));
+            } catch (IllegalArgumentException e) {
+                // 1.8.8: CHERRY_LOG doesn't exist
+            }
         }
     }
 
@@ -164,7 +215,7 @@ public class RestoreNatureProcessingTask implements Runnable {
                     if (block != null && blockBelow != null) {
                         if (notAllowedToHang.contains(block.material) && blockBelow.material == Material.AIR) {
                             block.material = Material.AIR;
-                            block.blockData = Material.AIR.createBlockData();
+                            block.blockData = BlockDataCompat.createBlockData(Material.AIR);
                         }
                     }
                 }
@@ -179,7 +230,7 @@ public class RestoreNatureProcessingTask implements Runnable {
                     BlockSnapshot block = snapshots[x][y][z];
                     if (block != null && playerBlocks.contains(block.material) && !isProtectedFromRestore(x, y, z)) {
                         block.material = Material.AIR;
-                        block.blockData = Material.AIR.createBlockData();
+                        block.blockData = BlockDataCompat.createBlockData(Material.AIR);
                     }
                 }
             }
@@ -204,7 +255,7 @@ public class RestoreNatureProcessingTask implements Runnable {
                             if (left != null && right != null &&
                                     left.material == Material.AIR && right.material == Material.AIR) {
                                 block.material = Material.AIR;
-                                block.blockData = Material.AIR.createBlockData();
+                                block.blockData = BlockDataCompat.createBlockData(Material.AIR);
                                 continue;
                             }
                         }
@@ -216,7 +267,7 @@ public class RestoreNatureProcessingTask implements Runnable {
                             if (front != null && back != null &&
                                     front.material == Material.AIR && back.material == Material.AIR) {
                                 block.material = Material.AIR;
-                                block.blockData = Material.AIR.createBlockData();
+                                block.blockData = BlockDataCompat.createBlockData(Material.AIR);
                             }
                         }
                     }
@@ -241,8 +292,9 @@ public class RestoreNatureProcessingTask implements Runnable {
                 continue;
             }
 
-            if (adjacent.blockData instanceof WallSign wallSign) {
-                if (wallSign.getFacing() == face) {
+            if (adjacent.blockData != null && BlockDataCompat.isWallSignFromBlockData(adjacent.blockData)) {
+                BlockFace facing = BlockDataCompat.getWallSignFacingFromBlockData(adjacent.blockData);
+                if (facing == face) {
                     return true;
                 }
             } else if (face == BlockFace.UP) {
@@ -302,7 +354,7 @@ public class RestoreNatureProcessingTask implements Runnable {
 
                         if (solidNeighbors >= 3) {
                             block.material = fillMaterial;
-                            block.blockData = fillMaterial.createBlockData();
+                            block.blockData = BlockDataCompat.createBlockData(fillMaterial);
                         }
                     }
                 }
@@ -328,14 +380,14 @@ public class RestoreNatureProcessingTask implements Runnable {
                             if (block.material == Material.DIRT || block.material == Material.STONE ||
                                     block.material == Material.COBBLESTONE || block.material == Material.GRAVEL) {
                                 block.material = surfaceMaterial;
-                                block.blockData = surfaceMaterial.createBlockData();
+                                block.blockData = BlockDataCompat.createBlockData(surfaceMaterial);
 
                                 // Also fix the block below if needed
                                 if (y > miny) {
                                     BlockSnapshot blockBelow = snapshots[x][y - 1][z];
                                     if (blockBelow != null && blockBelow.material == Material.STONE) {
                                         blockBelow.material = underMaterial;
-                                        blockBelow.blockData = underMaterial.createBlockData();
+                                        blockBelow.blockData = BlockDataCompat.createBlockData(underMaterial);
                                     }
                                 }
                             }
@@ -374,7 +426,16 @@ public class RestoreNatureProcessingTask implements Runnable {
             return Material.MYCELIUM;
         }
 
-        return Material.GRASS_BLOCK;
+        try {
+            return Material.valueOf("GRASS_BLOCK");
+        } catch (IllegalArgumentException e) {
+            // 1.8.8: use GRASS
+            try {
+                return Material.valueOf("GRASS");
+            } catch (IllegalArgumentException e2) {
+                return Material.DIRT; // Fallback
+            }
+        }
     }
 
     private Material getUnderSurfaceMaterial() {
@@ -496,7 +557,11 @@ public class RestoreNatureProcessingTask implements Runnable {
         playerBlocks.add(Material.SPAWNER);
         playerBlocks.add(Material.FARMLAND);
         playerBlocks.add(Material.ENCHANTING_TABLE);
-        playerBlocks.add(Material.BREWING_STAND);
+        try {
+            playerBlocks.add(Material.valueOf("BREWING_STAND"));
+        } catch (IllegalArgumentException e) {
+            // 1.8.8: BREWING_STAND doesn't exist
+        }
         playerBlocks.add(Material.CAULDRON);
         playerBlocks.add(Material.ENDER_CHEST);
         playerBlocks.add(Material.BEACON);

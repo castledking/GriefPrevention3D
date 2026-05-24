@@ -20,8 +20,9 @@ package me.ryanhamshire.GriefPrevention;
 
 import com.griefprevention.visualization.BoundaryVisualization;
 import com.griefprevention.visualization.VisualizationType;
+import me.ryanhamshire.GriefPrevention.compat.CompatUtil;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.ItemStack;
 
 //tells a player about how many claim blocks he has, etc
 //implemented as a task so that it can be delayed
@@ -40,7 +41,8 @@ class EquipShovelProcessingTask implements Runnable
     public void run()
     {
         //if he's not holding the golden shovel anymore, do nothing
-        if (GriefPrevention.instance.getItemInHand(player, EquipmentSlot.HAND).getType() != GriefPrevention.instance.config_claims_modificationTool)
+        ItemStack itemInHand = CompatUtil.getItemInMainHand(player);
+        if (itemInHand == null || itemInHand.getType() != GriefPrevention.instance.config_claims_modificationTool)
             return;
 
         PlayerData playerData = GriefPrevention.instance.dataStore.getPlayerData(player.getUniqueId());

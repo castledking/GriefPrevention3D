@@ -33,22 +33,35 @@ public class MonitoredCommands
         try
         {
             Server server = Bukkit.getServer();
-            Field cmdMapField = server.getClass().getDeclaredField("commandMap");
-            cmdMapField.setAccessible(true);
-            Object obj = cmdMapField.get(server);
-            if (obj instanceof CommandMap)
+            if (server == null)
             {
-                commandMap = (CommandMap) obj;
+                // Server not yet initialized (e.g. during legacy class-loading audit). Skip command map resolution.
+                commandMap = null;
+            }
+            else
+            {
+                Field cmdMapField = server.getClass().getDeclaredField("commandMap");
+                cmdMapField.setAccessible(true);
+                Object obj = cmdMapField.get(server);
+                if (obj instanceof CommandMap)
+                {
+                    commandMap = (CommandMap) obj;
+                }
             }
         }
         catch (ReflectiveOperationException e)
         {
-            GriefPrevention.instance.getLogger().warning(
-                    """
-                    Caught exception trying to access server command map!
-                    Aliases can only be detected for plugin commands declared in relevant plugin.yml files!
-                    """);
-            GriefPrevention.instance.getLogger().log(Level.WARNING, e.getMessage(), e);
+            if (GriefPrevention.instance != null)
+            {
+                GriefPrevention.instance.getLogger().warning(
+                        """
+                        Caught exception trying to access server command map!
+                        Aliases can only be detected for plugin commands declared in relevant plugin.yml files!
+                        """);
+            }
+            if (GriefPrevention.instance != null) {
+                GriefPrevention.instance.getLogger().log(Level.WARNING, e.getMessage(), e);
+            }
         }
     }
 

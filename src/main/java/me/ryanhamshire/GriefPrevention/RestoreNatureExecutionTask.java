@@ -92,7 +92,7 @@ public class RestoreNatureExecutionTask implements Runnable {
                         }
 
                         try {
-                            currentBlock.setBlockData(blockUpdate.blockData, false);
+                            setBlockData(currentBlock, blockUpdate.blockData);
                         } catch (IllegalArgumentException e) {
                             // Just skip this block if there's an issue
                         }
@@ -195,5 +195,18 @@ public class RestoreNatureExecutionTask implements Runnable {
                 playerData.setVisibleBoundaries(null);
             }
         }, 100L);
+    }
+
+    private static void setBlockData(Block block, Object blockData) {
+        if (blockData == null) {
+            return;
+        }
+        try {
+            Class<?> blockDataClass = Class.forName("org.bukkit.block.data.BlockData", false, RestoreNatureExecutionTask.class.getClassLoader());
+            Block.class.getMethod("setBlockData", blockDataClass).invoke(block, blockData);
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError exception) {
+            // Legacy servers don't support BlockData, just set material
+            block.setType(block.getType(), false);
+        }
     }
 }

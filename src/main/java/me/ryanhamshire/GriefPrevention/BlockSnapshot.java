@@ -22,7 +22,6 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.TileState;
-import org.bukkit.block.data.BlockData;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataHolder;
 
@@ -33,10 +32,10 @@ import org.bukkit.persistence.PersistentDataHolder;
 public class BlockSnapshot {
     public Location location;
     public Material material;
-    public BlockData blockData;
+    public Object blockData; // Changed from BlockData to Object for legacy compatibility
     public boolean protectedFromRestore;
 
-    public BlockSnapshot(Location location, Material material, BlockData blockData) {
+    public BlockSnapshot(Location location, Material material, Object blockData) {
         this.location = location;
         this.material = material;
         this.blockData = blockData;
@@ -45,7 +44,7 @@ public class BlockSnapshot {
     public BlockSnapshot(Block block) {
         this.location = block.getLocation();
         this.material = block.getType();
-        this.blockData = block.getBlockData().clone();
+        this.blockData = getBlockData(block);
         this.protectedFromRestore = isQuickShopSign(block);
     }
 
@@ -55,7 +54,28 @@ public class BlockSnapshot {
      */
     public void apply() {
         Block block = location.getBlock();
-        block.setBlockData(blockData, false);
+        setBlockData(block, blockData);
+    }
+
+    private static Object getBlockData(Block block) {
+        try {
+            return Block.class.getMethod("getBlockData").invoke(block);
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError exception) {
+            return null;
+        }
+    }
+
+    private void setBlockData(Block block, Object blockData) {
+        if (blockData == null) {
+            return;
+        }
+        try {
+            Class<?> blockDataClass = Class.forName("org.bukkit.block.data.BlockData", false, BlockSnapshot.class.getClassLoader());
+            Block.class.getMethod("setBlockData", blockDataClass).invoke(block, blockData);
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError exception) {
+            // Legacy servers don't support BlockData, just set material
+            block.setType(this.material, false);
+        }
     }
 
     private boolean isQuickShopSign(Block block) {

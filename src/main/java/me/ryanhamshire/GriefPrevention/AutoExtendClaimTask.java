@@ -41,6 +41,15 @@ public class AutoExtendClaimTask implements Runnable
      */
     public static void scheduleAsync(@NotNull Claim claim)
     {
+        // Pre-1.12 compatibility: NamespacedKey is required for sand biome detection.
+        // The rest of this class is incompatible with older versions anyway,
+        // so bail out early if the class doesn't exist.
+        try {
+            Class.forName("org.bukkit.NamespacedKey");
+        } catch (ClassNotFoundException e) {
+            return;
+        }
+
         // Skip 3D claims - they have explicit Y bounds set by player clicks
         // and should not be auto-extended downward
         if (claim.is3D()) return;
@@ -118,12 +127,28 @@ public class AutoExtendClaimTask implements Runnable
     private final Map<Biome, Set<Material>> biomePlayerMaterials = new HashMap<>();
     private final int minY;
     private final int lowestExistingY;
-    // Definitions of biomes where sand covers surfaces instead of grass.
-    static final Set<NamespacedKey> SAND_SOIL_BIOMES = Set.of(
-            NamespacedKey.minecraft("snowy_beach"),
-            NamespacedKey.minecraft("beach"),
-            NamespacedKey.minecraft("desert")
-    );
+    // Lazily resolved via reflection to avoid class loading failure on pre-1.12 servers
+    // where NamespacedKey doesn't exist.
+    private static Set SAND_SOIL_BIOMES;
+
+    private static Set getSandSoilBiomes() {
+        if (SAND_SOIL_BIOMES == null) {
+            try {
+                Class<?> keyClass = Class.forName("org.bukkit.NamespacedKey");
+                java.lang.reflect.Method minecraft = keyClass.getMethod("minecraft", String.class);
+                SAND_SOIL_BIOMES = java.util.Collections.unmodifiableSet(
+                    new java.util.HashSet<>(java.util.Arrays.asList(
+                        minecraft.invoke(null, "snowy_beach"),
+                        minecraft.invoke(null, "beach"),
+                        minecraft.invoke(null, "desert")
+                    ))
+                );
+            } catch (Throwable e) {
+                SAND_SOIL_BIOMES = java.util.Collections.emptySet();
+            }
+        }
+        return SAND_SOIL_BIOMES;
+    }
 
     private AutoExtendClaimTask(
             @NotNull Claim claim,
@@ -466,7 +491,7 @@ public class AutoExtendClaimTask implements Runnable
         //these are unnatural in sandy biomes, but not elsewhere
         @SuppressWarnings("deprecation")
         var biomeKey = biome.getKey();
-        if (SAND_SOIL_BIOMES.contains(biomeKey) || environment != Environment.NORMAL)
+        if (getSandSoilBiomes().contains(biomeKey) || environment != Environment.NORMAL)
         {
             addMaterialTags(playerBlocks, "LEAVES");
         }

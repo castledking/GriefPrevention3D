@@ -44,7 +44,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockExplodeEvent;
-import org.bukkit.event.block.CauldronLevelChangeEvent;
 import org.bukkit.event.block.EntityBlockFormEvent;
 import org.bukkit.event.entity.CreatureSpawnEvent;
 import org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason;
@@ -878,7 +877,9 @@ public class EntityEventHandler implements Listener
         }
     }
 
-    @EventHandler
+    // NOTE: No @EventHandler here — this method is invoked indirectly by
+    // EntityPickupItemEventHandler (extracted listener) so the EntityPickupItemEvent
+    // class is not eagerly resolved during plugin registration on legacy Bukkit.
     public void onEntityPickUpItem(@NotNull EntityPickupItemEvent event)
     {
         // Hostiles are allowed to equip death drops to preserve the challenge of item retrieval.
@@ -895,26 +896,6 @@ public class EntityEventHandler implements Listener
 
         // FEATURE: Protect freshly-spawned players from PVP.
         preventPvpSpawnCamp(event, player);
-    }
-
-    @EventHandler
-    public void onCauldron(@NotNull CauldronLevelChangeEvent event)
-    {
-        //don't track in worlds where claims are not enabled
-        if (!GriefPrevention.instance.claimsEnabledForWorld(event.getBlock().getWorld())) return;
-
-        // Check if the entity is a player
-        Entity entity = event.getEntity();
-        if (entity == null) return;
-        if (!(entity instanceof Player player)) return;
-
-        //if the player doesn't have build permission, don't allow the interaction
-        Supplier<String> noBuildReason = ProtectionHelper.checkPermission(player, player.getLocation(), ClaimPermission.Build, event);
-        if (noBuildReason != null)
-        {
-            event.setCancelled(true);
-            GriefPrevention.sendMessage(player, TextMode.Err, noBuildReason.get());
-        }
     }
 
     private void protectLockedDrops(@NotNull EntityPickupItemEvent event, @Nullable Player player)

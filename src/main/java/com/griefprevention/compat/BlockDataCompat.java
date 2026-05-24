@@ -1,6 +1,7 @@
 package com.griefprevention.compat;
 
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Entity;
@@ -21,6 +22,8 @@ public final class BlockDataCompat {
     private static final String CHEST_TYPE_CLASS = "org.bukkit.block.data.type.Chest$Type";
     private static final String DISPENSER_CLASS = "org.bukkit.block.data.type.Dispenser";
     private static final String LIGHTABLE_CLASS = "org.bukkit.block.data.Lightable";
+    private static final String WATERLOGGED_CLASS = "org.bukkit.block.data.Waterlogged";
+    private static final String WALL_SIGN_CLASS = "org.bukkit.block.data.type.WallSign";
 
     private BlockDataCompat() {
     }
@@ -49,6 +52,25 @@ public final class BlockDataCompat {
             setBlockData(block, blockData);
             setBlockData(relative, relativeData);
             sendBlockChange(player, relative.getLocation(), relativeData);
+            return true;
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError exception) {
+            return false;
+        }
+    }
+
+    public static boolean setChestType(@NotNull Block block, @NotNull String typeName) {
+        Object blockData = getBlockData(block);
+        Class<?> chestClass = getClass(CHEST_CLASS);
+        Class<?> chestTypeClass = getClass(CHEST_TYPE_CLASS);
+        if (blockData == null || chestClass == null || chestTypeClass == null || !chestClass.isInstance(blockData)) {
+            return false;
+        }
+
+        try {
+            Object typeValue = enumValue(chestTypeClass, typeName);
+            Method setType = chestClass.getMethod("setType", chestTypeClass);
+            setType.invoke(blockData, typeValue);
+            setBlockData(block, blockData);
             return true;
         } catch (ReflectiveOperationException | RuntimeException | LinkageError exception) {
             return false;
@@ -92,6 +114,87 @@ public final class BlockDataCompat {
             Constructor<EntityChangeBlockEvent> constructor = EntityChangeBlockEvent.class
                     .getConstructor(Entity.class, Block.class, blockDataClass);
             return constructor.newInstance(entity, block, blockData);
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError exception) {
+            return null;
+        }
+    }
+
+    public static boolean isWaterlogged(@NotNull Block block) {
+        Object blockData = getBlockData(block);
+        Class<?> waterloggedClass = getClass(WATERLOGGED_CLASS);
+        if (blockData == null || waterloggedClass == null || !waterloggedClass.isInstance(blockData)) {
+            return false;
+        }
+        try {
+            Object result = waterloggedClass.getMethod("isWaterlogged").invoke(blockData);
+            return result instanceof Boolean && (Boolean) result;
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError exception) {
+            return false;
+        }
+    }
+
+    public static boolean isWallSign(@NotNull Block block) {
+        Object blockData = getBlockData(block);
+        Class<?> wallSignClass = getClass(WALL_SIGN_CLASS);
+        return blockData != null && wallSignClass != null && wallSignClass.isInstance(blockData);
+    }
+
+    public static boolean isWallSignFromBlockData(@Nullable Object blockData) {
+        Class<?> wallSignClass = getClass(WALL_SIGN_CLASS);
+        return blockData != null && wallSignClass != null && wallSignClass.isInstance(blockData);
+    }
+
+    public static @Nullable BlockFace getWallSignFacing(@NotNull Block block) {
+        Object blockData = getBlockData(block);
+        Class<?> wallSignClass = getClass(WALL_SIGN_CLASS);
+        if (blockData == null || wallSignClass == null || !wallSignClass.isInstance(blockData)) {
+            return null;
+        }
+        try {
+            Object facing = wallSignClass.getMethod("getFacing").invoke(blockData);
+            if (facing instanceof BlockFace) {
+                return (BlockFace) facing;
+            }
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError exception) {
+            return null;
+        }
+        return null;
+    }
+
+    public static @Nullable BlockFace getWallSignFacingFromBlockData(@Nullable Object blockData) {
+        Class<?> wallSignClass = getClass(WALL_SIGN_CLASS);
+        if (blockData == null || wallSignClass == null || !wallSignClass.isInstance(blockData)) {
+            return null;
+        }
+        try {
+            Object facing = wallSignClass.getMethod("getFacing").invoke(blockData);
+            if (facing instanceof BlockFace) {
+                return (BlockFace) facing;
+            }
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError exception) {
+            return null;
+        }
+        return null;
+    }
+
+    public static boolean setBlockDataLit(@NotNull Block block, boolean lit) {
+        Object blockData = getBlockData(block);
+        Class<?> lightableClass = getClass(LIGHTABLE_CLASS);
+        if (blockData == null || lightableClass == null || !lightableClass.isInstance(blockData)) {
+            return false;
+        }
+        try {
+            lightableClass.getMethod("setLit", boolean.class).invoke(blockData, lit);
+            setBlockData(block, blockData);
+            return true;
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError exception) {
+            return false;
+        }
+    }
+
+    public static @Nullable Object createBlockData(@NotNull Material material) {
+        try {
+            return Material.class.getMethod("createBlockData").invoke(material);
         } catch (ReflectiveOperationException | RuntimeException | LinkageError exception) {
             return null;
         }

@@ -21,6 +21,7 @@ package me.ryanhamshire.GriefPrevention;
 import com.google.common.base.Predicate;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
+import com.griefprevention.api.ClaimToolHandlerRegistry;
 import com.griefprevention.claims.editor.ClaimEditIntent;
 import com.griefprevention.claims.editor.ClaimEditIntentType;
 import com.griefprevention.claims.editor.ClaimEditPreview;
@@ -35,6 +36,7 @@ import com.griefprevention.claims.editor.SegmentSelection;
 import com.griefprevention.commands.CommandAliasConfiguration;
 import com.griefprevention.commands.TabCompletions;
 import com.griefprevention.compat.WorldHeightCompatProvider;
+import me.ryanhamshire.GriefPrevention.compat.CompatUtil;
 import com.griefprevention.geometry.OrthogonalEdge2i;
 import com.griefprevention.geometry.OrthogonalPolygon;
 import com.griefprevention.platform.knockback.KnockbackProtectionListener;
@@ -112,6 +114,7 @@ public class GriefPrevention extends JavaPlugin {
 
     // for convenience, a reference to the instance of this plugin
     public static GriefPrevention instance;
+    private final ClaimToolHandlerRegistry claimToolHandlerRegistry = new ClaimToolHandlerRegistry();
 
     // for logging to the console and log file
     private static Logger log;
@@ -133,6 +136,12 @@ public class GriefPrevention extends JavaPlugin {
 
     // Player event handler
     PlayerEventHandler playerEventHandler;
+
+    public ClaimToolHandlerRegistry getClaimToolHandlerRegistry()
+    {
+        return claimToolHandlerRegistry;
+    }
+
     // configuration variables, loaded/saved from a config.yml
 
     // claim mode for each world
@@ -329,6 +338,29 @@ public class GriefPrevention extends JavaPlugin {
     private static final ConcurrentHashMap<UUID, Long> lastErrorMessageTime = new ConcurrentHashMap<>();
     private static final long ERROR_MESSAGE_COOLDOWN_MS = 10000; // 10 seconds
 
+    // Conditionally register a Listener only if the given event class is available at runtime.
+    private void registerIfClassPresent(org.bukkit.plugin.PluginManager pluginManager,
+                                        String eventClassName,
+                                        java.util.function.Supplier<? extends org.bukkit.event.Listener> factory) {
+        try {
+            Class.forName(eventClassName, false, getClass().getClassLoader());
+        } catch (ClassNotFoundException | LinkageError ignored) {
+            return;
+        }
+        org.bukkit.event.Listener listener;
+        try {
+            listener = factory.get();
+        } catch (LinkageError | RuntimeException exception) {
+            AddLogEntry("Skipping handler for " + eventClassName + " (construction failed): " + exception.getMessage());
+            return;
+        }
+        try {
+            pluginManager.registerEvents(listener, this);
+        } catch (LinkageError | RuntimeException exception) {
+            AddLogEntry("Skipping handler for " + eventClassName + " (registration failed): " + exception.getMessage());
+        }
+    }
+
     // adds a server log entry
     public static synchronized void AddLogEntry(String entry, CustomLogEntryTypes customLogType,
             boolean excludeFromServerLogs) {
@@ -431,9 +463,8 @@ public class GriefPrevention extends JavaPlugin {
         // register for events
         PluginManager pluginManager = this.getServer().getPluginManager();
 
-        // player and claim tool events
+        // player events
         playerEventHandler = new PlayerEventHandler(this.dataStore, this);
-        pluginManager.registerEvents(new ClaimToolDispatcher(this, playerEventHandler), this);
         pluginManager.registerEvents(playerEventHandler, this);
         // Load monitored commands on a 1-tick delay to allow plugins to enable and
         // Bukkit to load commands.yml.
@@ -458,13 +489,35 @@ public class GriefPrevention extends JavaPlugin {
         if (PaperKnockbackHandler.isPaperEventAvailable()) {
             pluginManager.registerEvents(new PaperKnockbackHandler(this.dataStore, this), this);
             AddLogEntry("Using Paper knockback handler for wind charge protection.");
-        } else {
+        } else if (isClassPresent("org.bukkit.event.entity.EntityKnockbackByEntityEvent")) {
             pluginManager.registerEvents(new SpigotKnockbackHandler(this.dataStore, this), this);
             AddLogEntry("Using Spigot knockback handler for wind charge protection.");
+        } else {
+            AddLogEntry("No knockback handler available on this server (legacy API). Wind-charge protection disabled.");
         }
 
         // special interaction-related events
         pluginManager.registerEvents(new InteractionProtectionHandler(), this);
+
+        // Conditionally register modern event handlers (only if the event classes exist at runtime).
+        // Note: use lambdas (not method references) so the target handler class is loaded lazily,
+        // inside the registerIfClassPresent try/catch, on servers that lack the modern event API.
+        registerIfClassPresent(pluginManager, "org.bukkit.event.block.BlockFertilizeEvent",
+                () -> new BlockFertilizeEventHandler(blockEventHandler));
+        registerIfClassPresent(pluginManager, "org.bukkit.event.block.CauldronLevelChangeEvent",
+                () -> new CauldronLevelChangeEventHandler());
+        registerIfClassPresent(pluginManager, "org.bukkit.event.entity.AreaEffectCloudApplyEvent",
+                () -> new AreaEffectCloudApplyEventHandler(entityDamageHandler));
+        registerIfClassPresent(pluginManager, "org.bukkit.event.entity.EntityMountEvent",
+                () -> new EntityMountEventHandler(this.dataStore, this));
+        registerIfClassPresent(pluginManager, "org.bukkit.event.entity.EntityPickupItemEvent",
+                () -> new EntityPickupItemEventHandler(entityEventHandler));
+        registerIfClassPresent(pluginManager, "org.bukkit.event.player.PlayerSignOpenEvent",
+                () -> new PlayerSignOpenEventHandler());
+        registerIfClassPresent(pluginManager, "org.bukkit.event.player.PlayerTakeLecternBookEvent",
+                () -> new PlayerTakeLecternBookEventHandler(this.dataStore));
+        registerIfClassPresent(pluginManager, "org.bukkit.event.raid.RaidTriggerEvent",
+                () -> new RaidTriggerEventHandler(this.dataStore, this));
 
         if (pluginManager.getPlugin("PlaceholderAPI") != null) {
             new PlaceholderAPIExpansion(this).register();
@@ -489,6 +542,15 @@ public class GriefPrevention extends JavaPlugin {
         setUpCommands();
 
         AddLogEntry("Boot finished.");
+    }
+
+    private boolean isClassPresent(String className) {
+        try {
+            Class.forName(className);
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
     }
 
     private void loadCommandAliases() {
@@ -976,9 +1038,9 @@ public class GriefPrevention extends JavaPlugin {
         // default for claim creation/modification tool
         Material defaultModTool = com.griefprevention.compat.MaterialCompat.get("GOLDEN_SHOVEL");
         if (defaultModTool == null) {
-            defaultModTool = com.griefprevention.compat.MaterialCompat.get("GOLD_SPADE");
+            defaultModTool = com.griefprevention.compat.MaterialCompat.get("GOLDEN_SHOVEL");
         }
-        String modificationToolMaterialName = defaultModTool != null ? defaultModTool.name() : "GOLD_SPADE";
+        String modificationToolMaterialName = defaultModTool != null ? defaultModTool.name() : "GOLDEN_SHOVEL";
 
         // get modification tool from config
         modificationToolMaterialName = config.getString("GriefPrevention.Claims.ModificationTool",
@@ -989,7 +1051,12 @@ public class GriefPrevention extends JavaPlugin {
         if (this.config_claims_modificationTool == null) {
             GriefPrevention.AddLogEntry("ERROR: Material " + modificationToolMaterialName
                     + " not found.  Defaulting to the golden shovel.  Please update your config.yml.");
-            this.config_claims_modificationTool = Material.GOLDEN_SHOVEL;
+            try {
+                this.config_claims_modificationTool = Material.valueOf("GOLDEN_SHOVEL");
+            } catch (IllegalArgumentException e) {
+                // 1.8.8: use GOLD_SPADE
+                this.config_claims_modificationTool = Material.valueOf("GOLD_SPADE");
+            }
         }
 
         this.config_pvp_noCombatInPlayerLandClaims = config
@@ -3574,13 +3641,17 @@ public class GriefPrevention extends JavaPlugin {
     }
 
     public static boolean isNewToServer(Player player) {
-        if (player.getStatistic(Statistic.PICKUP, Material.OAK_LOG) > 0 ||
-                player.getStatistic(Statistic.PICKUP, Material.SPRUCE_LOG) > 0 ||
-                player.getStatistic(Statistic.PICKUP, Material.BIRCH_LOG) > 0 ||
-                player.getStatistic(Statistic.PICKUP, Material.JUNGLE_LOG) > 0 ||
-                player.getStatistic(Statistic.PICKUP, Material.ACACIA_LOG) > 0 ||
-                player.getStatistic(Statistic.PICKUP, Material.DARK_OAK_LOG) > 0)
-            return false;
+        try {
+            if (player.getStatistic(Statistic.PICKUP, Material.OAK_LOG) > 0 ||
+                    player.getStatistic(Statistic.PICKUP, Material.SPRUCE_LOG) > 0 ||
+                    player.getStatistic(Statistic.PICKUP, Material.BIRCH_LOG) > 0 ||
+                    player.getStatistic(Statistic.PICKUP, Material.JUNGLE_LOG) > 0 ||
+                    player.getStatistic(Statistic.PICKUP, Material.ACACIA_LOG) > 0 ||
+                    player.getStatistic(Statistic.PICKUP, Material.DARK_OAK_LOG) > 0)
+                return false;
+        } catch (NoSuchFieldError e) {
+            // 1.8.8: Statistic.PICKUP doesn't exist, skip this check
+        }
 
         PlayerData playerData = instance.dataStore.getPlayerData(player.getUniqueId());
         if (!playerData.getClaims().isEmpty())
@@ -3607,9 +3678,9 @@ public class GriefPrevention extends JavaPlugin {
     }
 
     public ItemStack getItemInHand(Player player, EquipmentSlot hand) {
-        if (hand == EquipmentSlot.OFF_HAND)
+        if (hand != null && CompatUtil.hasOffHandEquipmentSlot() && hand == EquipmentSlot.OFF_HAND)
             return player.getInventory().getItemInOffHand();
-        return player.getInventory().getItemInMainHand();
+        return CompatUtil.getItemInMainHand(player);
     }
 
     public boolean claimIsPvPSafeZone(Claim claim) {

@@ -1,9 +1,10 @@
 package me.ryanhamshire.GriefPrevention;
 
+import com.griefprevention.compat.PotionEffectTypeCompat;
+import me.ryanhamshire.GriefPrevention.compat.CompatUtil;
 import me.ryanhamshire.GriefPrevention.events.PreventPvPEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.NamespacedKey;
 import org.bukkit.entity.AnimalTamer;
 import org.bukkit.entity.Animals;
 import org.bukkit.entity.AreaEffectCloud;
@@ -20,7 +21,6 @@ import org.bukkit.entity.Llama;
 import org.bukkit.entity.Mob;
 import org.bukkit.entity.Monster;
 import org.bukkit.entity.Mule;
-import org.bukkit.entity.Phantom;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.entity.Rabbit;
@@ -37,26 +37,24 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityCombustByEntityEvent;
-import org.bukkit.event.entity.AreaEffectCloudApplyEvent;
 import org.bukkit.event.entity.EntityCombustEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityTargetEvent;
 import org.bukkit.event.entity.PotionSplashEvent;
 import org.bukkit.event.vehicle.VehicleDamageEvent;
-import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
-import org.bukkit.potion.PotionEffectTypeCategory;
 import org.bukkit.projectiles.BlockProjectileSource;
 import org.bukkit.projectiles.ProjectileSource;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
@@ -64,20 +62,133 @@ import java.util.function.Supplier;
 
 public class EntityDamageHandler implements Listener {
 
-    private static final Set<PotionEffectType> GRIEF_EFFECTS = Set.of(
-            // Damaging effects
-            PotionEffectType.INSTANT_DAMAGE,
-            PotionEffectType.POISON,
-            PotionEffectType.WITHER,
-            // Effects that could remove entities from normally-secure pens
-            PotionEffectType.JUMP_BOOST,
-            PotionEffectType.LEVITATION);
-    private static final Set<EntityType> TEMPTABLE_SEMI_HOSTILES = Set.of(
-            EntityType.HOGLIN,
-            EntityType.POLAR_BEAR,
-            EntityType.PANDA);
+    private static volatile Set<Object> GRIEF_EFFECTS;
+    private static volatile Set<Object> TEMPTABLE_SEMI_HOSTILES;
 
-    private static final NamespacedKey LURED_BY_PLAYER = NamespacedKey.fromString("griefprevention:lured_by_player");
+    private static Set<Object> getGriefEffects() {
+        Set<Object> cached = GRIEF_EFFECTS;
+        if (cached != null) {
+            return cached;
+        }
+        GRIEF_EFFECTS = PotionEffectTypeCompat.getGriefEffects();
+        return GRIEF_EFFECTS;
+    }
+
+    private static Set<Object> getTemptableSemiHostiles() {
+        Set<Object> cached = TEMPTABLE_SEMI_HOSTILES;
+        if (cached != null) {
+            return cached;
+        }
+        Set<Object> types = new HashSet<>();
+        addEntityTypeByName(types, "HOGLIN");
+        addEntityTypeByName(types, "POLAR_BEAR");
+        addEntityTypeByName(types, "PANDA");
+        TEMPTABLE_SEMI_HOSTILES = types;
+        return types;
+    }
+
+    private static void addEntityTypeByName(Set<Object> set, String name) {
+        try {
+            Class<?> entityTypeClass = Class.forName("org.bukkit.entity.EntityType", false, EntityDamageHandler.class.getClassLoader());
+            Method valueOf = entityTypeClass.getMethod("valueOf", String.class);
+            Object type = valueOf.invoke(null, name);
+            set.add(type);
+        } catch (ReflectiveOperationException | LinkageError ignored) {
+            // Entity type doesn't exist in this version
+        }
+    }
+
+    private static volatile Object LURED_BY_PLAYER;
+
+    private static Object getLuredByPlayerKey() {
+        Object cached = LURED_BY_PLAYER;
+        if (cached != null) {
+            return cached;
+        }
+        try {
+            Class<?> namespacedKeyClass = Class.forName("org.bukkit.NamespacedKey", false, EntityDamageHandler.class.getClassLoader());
+            Method fromString = namespacedKeyClass.getMethod("fromString", String.class);
+            LURED_BY_PLAYER = fromString.invoke(null, "griefprevention:lured_by_player");
+            return LURED_BY_PLAYER;
+        } catch (ReflectiveOperationException | LinkageError exception) {
+            // NamespacedKey doesn't exist in this version, return null
+            return null;
+        }
+    }
+
+    private static Object getPersistentDataByteType() {
+        try {
+            Class<?> dataTypeClass = Class.forName("org.bukkit.persistence.PersistentDataType", false, EntityDamageHandler.class.getClassLoader());
+            return dataTypeClass.getField("BYTE").get(null);
+        } catch (ReflectiveOperationException | LinkageError ignored) {
+            return null;
+        }
+    }
+
+    private static void setPersistentData(Entity entity, Object key, Object type, Object value) {
+        if (key == null || type == null) return;
+        try {
+            ClassLoader cl = EntityDamageHandler.class.getClassLoader();
+            Class<?> namespacedKeyClass = Class.forName("org.bukkit.NamespacedKey", false, cl);
+            Class<?> dataTypeClass = Class.forName("org.bukkit.persistence.PersistentDataType", false, cl);
+            Object container = entity.getPersistentDataContainer();
+            Class<?> containerClass = container.getClass();
+            Method setMethod = containerClass.getMethod("set", namespacedKeyClass, dataTypeClass, Object.class);
+            setMethod.invoke(container, key, type, value);
+        } catch (ReflectiveOperationException | LinkageError exception) {
+            // PersistentDataContainer doesn't support this in this version
+        }
+    }
+
+    private static void removePersistentData(Entity entity, Object key) {
+        if (key == null) return;
+        try {
+            Object container = entity.getPersistentDataContainer();
+            Class<?> containerClass = container.getClass();
+            Method removeMethod = containerClass.getMethod("remove", Class.forName("org.bukkit.NamespacedKey", false, EntityDamageHandler.class.getClassLoader()));
+            removeMethod.invoke(container, key);
+        } catch (ReflectiveOperationException | LinkageError exception) {
+            // PersistentDataContainer doesn't support this in this version
+        }
+    }
+
+    private static boolean hasPersistentData(Entity entity, Object key) {
+        if (key == null) return false;
+        try {
+            ClassLoader cl = EntityDamageHandler.class.getClassLoader();
+            Class<?> namespacedKeyClass = Class.forName("org.bukkit.NamespacedKey", false, cl);
+            Class<?> dataTypeClass = Class.forName("org.bukkit.persistence.PersistentDataType", false, cl);
+            Object byteType = dataTypeClass.getField("BYTE").get(null);
+            Object container = entity.getPersistentDataContainer();
+            Class<?> containerClass = container.getClass();
+            Method hasMethod = containerClass.getMethod("has", namespacedKeyClass, dataTypeClass);
+            return (Boolean) hasMethod.invoke(container, key, byteType);
+        } catch (ReflectiveOperationException | LinkageError exception) {
+            return false;
+        }
+    }
+
+    private static Object getPotionEffectType(PotionEffect effect) {
+        try {
+            return PotionEffect.class.getMethod("getType").invoke(effect);
+        } catch (ReflectiveOperationException | LinkageError exception) {
+            return null;
+        }
+    }
+
+    private static boolean isBeneficialEffect(Object effectType) {
+        if (effectType == null) return false;
+        try {
+            Class<?> potionEffectTypeClass = Class.forName("org.bukkit.potion.PotionEffectType", false, EntityDamageHandler.class.getClassLoader());
+            Method getCategory = potionEffectTypeClass.getMethod("getCategory");
+            Object category = getCategory.invoke(effectType);
+            Class<?> categoryClass = Class.forName("org.bukkit.potion.PotionEffectTypeCategory", false, EntityDamageHandler.class.getClassLoader());
+            Object beneficial = categoryClass.getField("BENEFICIAL").get(null);
+            return category.equals(beneficial);
+        } catch (ReflectiveOperationException | LinkageError exception) {
+            return false;
+        }
+    }
 
     final @NotNull DataStore dataStore;
     final @NotNull GriefPrevention instance;
@@ -94,13 +205,13 @@ public class EntityDamageHandler implements Listener {
         if (!instance.claimsEnabledForWorld(event.getEntity().getWorld()))
             return;
 
-        if (!TEMPTABLE_SEMI_HOSTILES.contains(event.getEntityType()))
+        if (!getTemptableSemiHostiles().contains(event.getEntityType()))
             return;
 
         if (event.getReason() == EntityTargetEvent.TargetReason.TEMPT)
-            event.getEntity().getPersistentDataContainer().set(LURED_BY_PLAYER, PersistentDataType.BYTE, (byte) 1);
+            setPersistentData(event.getEntity(), getLuredByPlayerKey(), getPersistentDataByteType(), (byte) 1);
         else
-            event.getEntity().getPersistentDataContainer().remove(LURED_BY_PLAYER);
+            removePersistentData(event.getEntity(), getLuredByPlayerKey());
 
     }
 
@@ -129,15 +240,15 @@ public class EntityDamageHandler implements Listener {
         // horse protections can be disabled
         if (event.damaged() instanceof Horse && !instance.config_claims_protectHorses)
             return;
-        if (event.damaged() instanceof Donkey && !instance.config_claims_protectDonkeys)
+        if (CompatUtil.canCheckEntityType("Donkey") && event.damaged() instanceof Donkey && !instance.config_claims_protectDonkeys)
             return;
-        if (event.damaged() instanceof Mule && !instance.config_claims_protectDonkeys)
+        if (CompatUtil.canCheckEntityType("Mule") && event.damaged() instanceof Mule && !instance.config_claims_protectDonkeys)
             return;
-        if (event.damaged() instanceof Llama && !instance.config_claims_protectLlamas)
+        if (CompatUtil.canCheckEntityType("Llama") && event.damaged() instanceof Llama && !instance.config_claims_protectLlamas)
             return;
         // protected death loot can't be destroyed, only picked up or despawned due to
         // expiration
-        if (event.damaged().getType() == EntityType.ITEM) {
+        if (event.damaged() instanceof org.bukkit.entity.Item) {
             if (event.damaged().hasMetadata("GP_ITEMOWNER")) {
                 event.setCancelled(true);
             }
@@ -245,8 +356,14 @@ public class EntityDamageHandler implements Listener {
         if (entity instanceof Monster) return true;
 
         EntityType type = entity.getType();
-        if (type == EntityType.GHAST || type == EntityType.MAGMA_CUBE || type == EntityType.SHULKER)
+        if (type == EntityType.GHAST || type == EntityType.MAGMA_CUBE)
             return true;
+
+        // SHULKER doesn't exist in Bukkit 1.8.8, so check it safely
+        try {
+            if (type == EntityType.SHULKER)
+                return true;
+        } catch (NoSuchFieldError ignored) {}
 
         if (entity instanceof Slime slime) {
             // Size 0 "baby" slimes cannot deal damage and are often kept as pets.
@@ -262,8 +379,8 @@ public class EntityDamageHandler implements Listener {
         if (entity instanceof Rabbit rabbit)
             return rabbit.getRabbitType() == Rabbit.Type.THE_KILLER_BUNNY;
 
-        if ((TEMPTABLE_SEMI_HOSTILES.contains(type)) && entity instanceof Mob mob)
-            return !entity.getPersistentDataContainer().has(LURED_BY_PLAYER, PersistentDataType.BYTE) && mob.getTarget() != null;
+        if ((getTemptableSemiHostiles().contains(type)) && entity instanceof Mob mob)
+            return !hasPersistentData(entity, getLuredByPlayerKey()) && mob.getTarget() != null;
 
         return false;
     }
@@ -966,81 +1083,7 @@ public class EntityDamageHandler implements Listener {
         }
     }
 
-    // when an area effect cloud applies effects to entities...
-    @EventHandler(ignoreCancelled = true, priority = EventPriority.LOWEST)
-    public void onAreaEffectCloudApply(@NotNull AreaEffectCloudApplyEvent event) {
-        AreaEffectCloud cloud = event.getEntity();
-        ProjectileSource source = cloud.getSource();
-
-        // Only handle player-thrown potions
-        if (!(source instanceof Player thrower))
-            return;
-
-        // Get the potion effects from the cloud
-        Collection<PotionEffect> effects = cloud.getCustomEffects();
-        boolean isHarmful = effects.stream().anyMatch(effect -> {
-            PotionEffectType type = effect.getType();
-            return type.equals(PotionEffectType.POISON) ||
-                    type.equals(PotionEffectType.SLOWNESS) ||
-                    type.equals(PotionEffectType.WEAKNESS);
-        });
-
-        // Check each affected entity
-        event.getAffectedEntities().removeIf(affected -> {
-            // Always affect the thrower
-            if (affected.equals(thrower))
-                return false;
-
-            // For players, use PvP rules
-            if (affected instanceof Player affectedPlayer) {
-                PlayerData playerData = this.dataStore.getPlayerData(thrower.getUniqueId());
-                Claim claim = this.dataStore.getClaimAt(affected.getLocation(), false, playerData.lastClaim);
-                if (claim != null) {
-                    playerData.lastClaim = claim;
-                    // Check PvP permissions
-                    return handlePvpInClaim(thrower, affectedPlayer, affected.getLocation(), playerData, () -> {
-                    });
-                }
-                return false;
-            }
-            // For entities (mobs)
-            else if (affected instanceof LivingEntity) {
-                Location loc = affected.getLocation();
-                Claim claim = this.dataStore.getClaimAt(loc, false, null);
-
-                // If not in a claim, allow all effects
-                if (claim == null)
-                    return false;
-
-                // If thrower is the owner, allow all effects
-                @SuppressWarnings("deprecation")
-                boolean hasAccess = claim.allowAccess(thrower) == null;
-                if (hasAccess) {
-                    return false;
-                }
-
-                // For non-owners, protect passive mobs from harmful effects
-                if (isHarmful) {
-                    // Protect Animals (passive mobs) from harmful potions in claims
-                    if (affected instanceof Animals) {
-                        Supplier<String> override = () -> instance.dataStore
-                                .getMessage(Messages.NoDamageClaimedEntity, claim.getOwnerName());
-                        final Supplier<String> noContainersReason = claim.checkPermission(thrower,
-                                ClaimPermission.Container, event, override);
-                        return noContainersReason != null; // Remove effect if no permission
-                    }
-                    // Allow harmful effects on hostile mobs
-                    return !(affected instanceof Monster || affected instanceof Slime || affected instanceof Phantom);
-                }
-
-                // Allow non-harmful effects on all mobs
-                return false;
-            }
-
-            return false;
-        });
-    }
-
+    
     // when a splash potion affects one or more entities...
     @EventHandler(ignoreCancelled = true, priority = EventPriority.LOWEST)
     public void onPotionSplash(@NotNull PotionSplashEvent event) {
@@ -1059,11 +1102,11 @@ public class EntityDamageHandler implements Listener {
 
         Collection<PotionEffect> effects = potion.getEffects();
         for (PotionEffect effect : effects) {
-            PotionEffectType effectType = effect.getType();
+            Object effectType = getPotionEffectType(effect);
 
             // Restrict some potions on claimed villagers and animals.
             // Griefers could use potions to kill entities or steal them over fences.
-            if (GRIEF_EFFECTS.contains(effectType)) {
+            if (getGriefEffects().contains(effectType)) {
                 Claim cachedClaim = null;
                 for (LivingEntity affected : event.getAffectedEntities()) {
                     // Always impact the thrower.
@@ -1105,7 +1148,7 @@ public class EntityDamageHandler implements Listener {
                 return;
 
             // otherwise, no restrictions for positive effects
-            if (effectType.getCategory() == PotionEffectTypeCategory.BENEFICIAL)
+            if (isBeneficialEffect(effectType))
                 continue;
 
             for (LivingEntity affected : event.getAffectedEntities()) {

@@ -136,7 +136,7 @@ tasks {
 
     jar {
         archiveBaseName.set(project.name)
-        archiveVersion.set(project.version.toString())
+        archiveVersion.set("")
         from(sourceSets["compatLegacy"].output)
         from(sourceSets["compatModern"].output)
     }

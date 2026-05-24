@@ -111,7 +111,7 @@ public class FakeBlockVisualization extends BlockBoundaryVisualization {
      * - North West (minX, minZ): facing north
      * - North East (maxX, minZ): facing east
      */
-    private void drawRestoreNature(@NotNull Player player, @NotNull Boundary boundary) {
+    protected void drawRestoreNature(@NotNull Player player, @NotNull Boundary boundary) {
         BoundingBox area = boundary.bounds();
         VisualizationType type = boundary.type();
 
@@ -156,7 +156,7 @@ public class FakeBlockVisualization extends BlockBoundaryVisualization {
     /**
      * Add a directional lime glazed terracotta corner block.
      */
-    private void addDirectionalCorner(
+    protected void addDirectionalCorner(
         @NotNull BoundingBox displayZone,
         @NotNull IntVector coordinate,
         @NotNull BlockFace facing,

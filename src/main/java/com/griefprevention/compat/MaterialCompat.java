@@ -27,6 +27,25 @@ public final class MaterialCompat {
         return material != null ? material : Material.getMaterial(normalized);
     }
 
+    private static @Nullable Material PISTON_CACHE;
+    private static @Nullable Material STICKY_PISTON_CACHE;
+
+    public static @NotNull Material PISTON() {
+        if (PISTON_CACHE == null) {
+            PISTON_CACHE = get("PISTON_BASE");
+            if (PISTON_CACHE == null) PISTON_CACHE = get("PISTON");
+        }
+        return PISTON_CACHE;
+    }
+
+    public static @NotNull Material STICKY_PISTON() {
+        if (STICKY_PISTON_CACHE == null) {
+            STICKY_PISTON_CACHE = get("PISTON_STICKY_BASE");
+            if (STICKY_PISTON_CACHE == null) STICKY_PISTON_CACHE = get("STICKY_PISTON");
+        }
+        return STICKY_PISTON_CACHE;
+    }
+
     public static @NotNull Set<Material> availableSet(@NotNull String... names) {
         Set<Material> materials = new LinkedHashSet<>();
         for (String name : names) {

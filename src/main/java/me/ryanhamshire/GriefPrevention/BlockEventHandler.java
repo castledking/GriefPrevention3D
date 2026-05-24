@@ -18,8 +18,10 @@
 
 package me.ryanhamshire.GriefPrevention;
 
+import com.griefprevention.compat.BlockDataCompat;
 import com.griefprevention.compat.MaterialCompat;
 import com.griefprevention.compat.MaterialTagCompat;
+import me.ryanhamshire.GriefPrevention.compat.CompatUtil;
 import com.griefprevention.visualization.BoundaryVisualization;
 import com.griefprevention.visualization.VisualizationType;
 import me.ryanhamshire.GriefPrevention.util.BoundingBox;
@@ -36,10 +38,6 @@ import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.PistonMoveReaction;
-import org.bukkit.block.data.BlockData;
-import org.bukkit.block.data.Lightable;
-import org.bukkit.block.data.type.Chest;
-import org.bukkit.block.data.type.Dispenser;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Fireball;
 import org.bukkit.entity.Player;
@@ -52,7 +50,6 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockBurnEvent;
 import org.bukkit.event.block.BlockDispenseEvent;
-import org.bukkit.event.block.BlockFertilizeEvent;
 import org.bukkit.event.block.BlockFormEvent;
 import org.bukkit.event.block.BlockFromToEvent;
 import org.bukkit.event.block.BlockIgniteEvent;
@@ -401,7 +398,7 @@ public class BlockEventHandler implements Listener
             // Allow players with container trust to place books in lecterns
             PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
             Claim claim = this.dataStore.getClaimAt(block.getLocation(), true, playerData.lastClaim);
-            if (block.getType() == Material.LECTERN && placeEvent.getBlockReplacedState().getType() == Material.LECTERN)
+            if (CompatUtil.isMaterial(block.getType(), "LECTERN") && CompatUtil.isMaterial(placeEvent.getBlockReplacedState().getType(), "LECTERN"))
             {
                 if (claim != null)
                 {
@@ -605,7 +602,7 @@ public class BlockEventHandler implements Listener
 
         //warn players about disabled pistons outside of land claims
         if (GriefPrevention.instance.config_pistonMovement == PistonMode.CLAIMS_ONLY &&
-                (block.getType() == Material.PISTON || block.getType() == Material.STICKY_PISTON) &&
+                (block.getType() == MaterialCompat.PISTON() || block.getType() == MaterialCompat.STICKY_PISTON()) &&
                 claim == null)
         {
             GriefPrevention.sendMessage(player, TextMode.Warn, Messages.NoPistonsOutsideClaims);
@@ -625,12 +622,12 @@ public class BlockEventHandler implements Listener
             claimOwner = claim.getOwnerID();
 
         // Check for double chests placed just outside the claim boundary
-        if (block.getBlockData() instanceof Chest chest)
+        if (BlockDataCompat.isModernChest(block))
         {
             for (BlockFace face : HORIZONTAL_DIRECTIONS)
             {
                 Block relative = block.getRelative(face);
-                if (!(relative.getBlockData() instanceof Chest relativeChest)) continue;
+                if (!BlockDataCompat.isModernChest(relative)) continue;
 
                 Claim relativeClaim = this.dataStore.getClaimAt(relative.getLocation(), true, claim);
                 UUID relativeClaimOwner = relativeClaim == null ? null : relativeClaim.getOwnerID();
@@ -640,14 +637,11 @@ public class BlockEventHandler implements Listener
                 if (Objects.equals(claimOwner, relativeClaimOwner)) break;
 
                 // Change both chests to singular chests
-                chest.setType(Chest.Type.SINGLE);
-                block.setBlockData(chest);
-
-                relativeChest.setType(Chest.Type.SINGLE);
-                relative.setBlockData(relativeChest);
+                BlockDataCompat.setChestType(block, "SINGLE");
+                BlockDataCompat.setChestType(relative, "SINGLE");
 
                 // Resend relative chest block to prevent visual bug
-                player.sendBlockChange(relative.getLocation(), relativeChest);
+                player.sendBlockChange(relative.getLocation(), relative.getBlockData());
                 break;
             }
         }
@@ -962,7 +956,7 @@ public class BlockEventHandler implements Listener
 
                 pistonBlock.getWorld().dropItem(
                         pistonBlock.getLocation(),
-                        new ItemStack(event.isSticky() ? Material.STICKY_PISTON : Material.PISTON));
+                        new ItemStack(event.isSticky() ? MaterialCompat.STICKY_PISTON() : MaterialCompat.PISTON()));
                 pistonBlock.setType(Material.AIR);
                 return true;
             }
@@ -1063,7 +1057,8 @@ public class BlockEventHandler implements Listener
         }
 
         // Arrow ignition.
-        if (igniteEvent.getCause() == IgniteCause.ARROW && igniteEvent.getIgnitingEntity() != null)
+        boolean isArrowCause = CompatUtil.isArrowIgniteCause(igniteEvent.getCause());
+        if (isArrowCause && igniteEvent.getIgnitingEntity() != null)
         {
             // Arrows shot by players may return the shooter, not the arrow.
             if (igniteEvent.getIgnitingEntity() instanceof Player player)
@@ -1077,14 +1072,12 @@ public class BlockEventHandler implements Listener
                 return;
             }
             // Flammable lightable blocks do not fire EntityChangeBlockEvent when igniting.
-            BlockData blockData = igniteEvent.getBlock().getBlockData();
-            if (blockData instanceof Lightable lightable)
+            EntityChangeBlockEvent changeBlockEvent = BlockDataCompat.createLitChangeBlockEvent(
+                    igniteEvent.getIgnitingEntity(),
+                    igniteEvent.getBlock());
+            if (changeBlockEvent != null)
             {
-                // Set lit for resulting data in event. Currently unused, but may be in the future.
-                lightable.setLit(true);
-
                 // Call event.
-                EntityChangeBlockEvent changeBlockEvent = new EntityChangeBlockEvent(igniteEvent.getIgnitingEntity(), igniteEvent.getBlock(), blockData);
                 GriefPrevention.instance.entityEventHandler.onEntityChangeBLock(changeBlockEvent);
 
                 // Respect event result.
@@ -1102,32 +1095,8 @@ public class BlockEventHandler implements Listener
         }
     }
 
-    private Claim lastBlockFertilizeClaim = null;
-    @EventHandler(priority = EventPriority.LOWEST)
-    void onBlockFertilize(@NotNull BlockFertilizeEvent event)
-    {
-        // Don't track in worlds where claims are not enabled.
-        if (!GriefPrevention.instance.claimsEnabledForWorld(event.getBlock().getWorld())) return;
-
-        // Trees are handled by the StructureGrowEvent handler.
-        if (isSapling(event.getBlock().getType())) return;
-
-        onMultiBlockGrow(
-                event.getPlayer(),
-                event.getBlock(),
-                event.getBlocks(),
-                event,
-                sourceClaim ->
-                {
-                    if (sourceClaim != null)
-                    {
-                        lastBlockFertilizeClaim = sourceClaim;
-                    }
-                });
-    }
-
     @SuppressWarnings("null")
-    private <T extends Event & Cancellable> void onMultiBlockGrow(
+    <T extends Event & Cancellable> void onMultiBlockGrow(
             @Nullable Player player,
             @NotNull Block source,
             @NotNull Collection<BlockState> states,
@@ -1155,7 +1124,7 @@ public class BlockEventHandler implements Listener
         else
         {
             // If no player is present (dispenser, natural growth, etc.), use owner comparison.
-            sourceClaim = this.dataStore.getClaimAt(source.getLocation(), false, false, lastBlockFertilizeClaim);
+            sourceClaim = this.dataStore.getClaimAt(source.getLocation(), false, false, null);
             conflictCheck = denyOtherOwnerIntersection(sourceClaim);
         }
 
@@ -1195,7 +1164,20 @@ public class BlockEventHandler implements Listener
 
         Material newType = spreadEvent.getNewState().getType();
         // Ignore grass growth. Grass is inoffensive and causes the majority of normal spread events.
-        if (newType == Material.GRASS_BLOCK) return;
+        boolean isGrassBlock = false;
+        try {
+            Material grassBlock = Material.valueOf("GRASS_BLOCK");
+            isGrassBlock = newType == grassBlock;
+        } catch (IllegalArgumentException e) {
+            // 1.8.8: GRASS_BLOCK doesn't exist, check for GRASS instead
+            try {
+                Material grass = Material.valueOf("GRASS");
+                isGrassBlock = newType == grass;
+            } catch (IllegalArgumentException e2) {
+                // Neither exists, not a grass block
+            }
+        }
+        if (isGrassBlock) return;
 
         // Check for fire against new state so that we catch more edge cases with unexpected world modifications.
         // Note that soul fire does not spread.
@@ -1227,7 +1209,7 @@ public class BlockEventHandler implements Listener
             if (isFire) {
                 extinguishFiniteFire(spreadEvent.getSource());
                 spreadEvent.setCancelled(true);
-            } else if (newType == Material.SCULK_VEIN || newType == Material.MOSS_BLOCK) {
+            } else if (CompatUtil.isMaterial(newType, "SCULK_VEIN") || CompatUtil.isMaterial(newType, "MOSS_BLOCK")) {
                 spreadEvent.setCancelled(true);
             }
             return;
@@ -1485,11 +1467,11 @@ public class BlockEventHandler implements Listener
 
         //from where?
         Block fromBlock = dispenseEvent.getBlock();
-        BlockData fromData = fromBlock.getBlockData();
-        if (!(fromData instanceof Dispenser dispenser)) return;
+        BlockFace facing = BlockDataCompat.getDispenserFacing(fromBlock);
+        if (facing == null) return;
 
         //to where?
-        Block toBlock = fromBlock.getRelative(dispenser.getFacing());
+        Block toBlock = fromBlock.getRelative(facing);
         Claim fromClaim = this.dataStore.getClaimAt(fromBlock.getLocation(), false, null);
         Claim toClaim = this.dataStore.getClaimAt(toBlock.getLocation(), false, fromClaim);
 
@@ -1593,7 +1575,7 @@ public class BlockEventHandler implements Listener
                 if (noPortalReason != null)
                 {
                     GriefPrevention.sendMessage(player, TextMode.Err, noPortalReason.get());
-                    player.setPortalCooldown(40);
+                    CompatUtil.setPortalCooldown(player, 40);
                     return true;
                 }
 
@@ -1605,7 +1587,9 @@ public class BlockEventHandler implements Listener
             predicate = (claim, claimBoundingBox) ->
             {
                 // Non-player entities are denied and set on portal cooldown to prevent repeated attempts.
-                entity.setPortalCooldown(100);
+                if (entity instanceof Player player) {
+                    CompatUtil.setPortalCooldown(player, 100);
+                }
                 return true;
             };
         }

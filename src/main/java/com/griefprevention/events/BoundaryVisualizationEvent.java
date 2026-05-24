@@ -7,6 +7,7 @@ import com.griefprevention.visualization.VisualizationProvider;
 import com.griefprevention.visualization.impl.AntiCheatCompatVisualization;
 import com.griefprevention.visualization.impl.FakeBlockVisualization;
 import com.griefprevention.visualization.impl.GlowingVisualization;
+import com.griefprevention.visualization.impl.LegacyFakeBlockVisualization;
 import me.ryanhamshire.GriefPrevention.GriefPrevention;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
@@ -24,9 +25,40 @@ import java.util.HashSet;
 public class BoundaryVisualizationEvent extends PlayerEvent
 {
 
+    private static boolean hasBlockData()
+    {
+        try {
+            Class.forName("org.bukkit.block.data.BlockData");
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
+    }
+
+    private static boolean hasBlockDisplay()
+    {
+        try {
+            Class.forName("org.bukkit.entity.BlockDisplay");
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
+    }
+
     public static final VisualizationProvider DEFAULT_PROVIDER = (world, visualizeFrom, height) -> {
+        // 1.8.8 fallback: use NMS packet-based visualization since BlockData doesn't exist.
+        // Ignores all config options (glow, anticheat) since those APIs do not exist on 1.8.8.
+        if (!hasBlockData()) {
+            return new LegacyFakeBlockVisualization(world, visualizeFrom, height);
+        }
+
+        // Glow requires BlockDisplay entities (1.19.3+). On older versions (1.13-1.19.2),
+        // fall through to non-glow visualizations even if config_visualizationGlow is true.
+        boolean anticheatEnabled = GriefPrevention.instance.config_visualizationAntiCheatCompat;
+        boolean glowEnabled = GriefPrevention.instance.config_visualizationGlow && hasBlockDisplay();
+
         // If both AntiCheat compatibility and glow are enabled, create a custom visualization that combines both
-        if (GriefPrevention.instance.config_visualizationAntiCheatCompat && GriefPrevention.instance.config_visualizationGlow) {
+        if (anticheatEnabled && glowEnabled) {
             return new GlowingVisualization(world, visualizeFrom, height) {
                 @Override
                 protected boolean isTransparent(@NotNull Block block) {
@@ -37,14 +69,14 @@ public class BoundaryVisualizationEvent extends PlayerEvent
             };
         }
         // If only AntiCheat compatibility is enabled
-        if (GriefPrevention.instance.config_visualizationAntiCheatCompat) {
+        if (anticheatEnabled) {
             return new AntiCheatCompatVisualization(world, visualizeFrom, height);
         }
         // If only glow is enabled
-        if (GriefPrevention.instance.config_visualizationGlow) {
+        if (glowEnabled) {
             return new GlowingVisualization(world, visualizeFrom, height);
         }
-        // Default to FakeBlockVisualization
+        // Default to FakeBlockVisualization (or AntiCheat/legacy variants selected above)
         return new FakeBlockVisualization(world, visualizeFrom, height);
     };
 

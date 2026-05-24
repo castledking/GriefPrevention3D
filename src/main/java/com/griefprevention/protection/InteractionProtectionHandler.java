@@ -34,7 +34,22 @@ public class InteractionProtectionHandler implements Listener
         if (event.getAction() != Action.RIGHT_CLICK_BLOCK) return;
 
         Block block = event.getClickedBlock();
-        if (block == null || block.getType() != Material.END_PORTAL_FRAME) return;
+        if (block == null) return;
+
+        // Check for END_PORTAL_FRAME (1.13+) or ENDER_PORTAL_FRAME (1.8.8-1.12)
+        Material blockType = block.getType();
+        boolean isEndPortalFrame = false;
+        try {
+            isEndPortalFrame = blockType == Material.END_PORTAL_FRAME;
+        } catch (NoSuchFieldError e) {
+            // 1.8.8: use ENDER_PORTAL_FRAME
+            try {
+                isEndPortalFrame = blockType == Material.valueOf("ENDER_PORTAL_FRAME");
+            } catch (IllegalArgumentException e2) {
+                return;
+            }
+        }
+        if (!isEndPortalFrame) return;
 
         ItemStack item = event.getItem();
         if (item == null || item.getType() != Material.ENDER_EYE) return;

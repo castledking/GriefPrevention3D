@@ -1312,10 +1312,14 @@ public abstract class DataStore {
 
         final Location smallerBoundaryCorner = new Location(world, polygon.minX(), y, polygon.minZ());
         final Location greaterBoundaryCorner = new Location(world, polygon.maxX(), y, polygon.maxZ());
-        if (!world.getWorldBorder().isInside(smallerBoundaryCorner)
-                || !world.getWorldBorder().isInside(greaterBoundaryCorner)) {
-            result.succeeded = false;
-            return result;
+        try {
+            if (!world.getWorldBorder().isInside(smallerBoundaryCorner)
+                    || !world.getWorldBorder().isInside(greaterBoundaryCorner)) {
+                result.succeeded = false;
+                return result;
+            }
+        } catch (NoSuchMethodError e) {
+            // 1.8.8: WorldBorder.isInside() doesn't exist; assume inside border
         }
 
         Claim newClaim = new Claim(
@@ -1452,10 +1456,14 @@ public abstract class DataStore {
         // claims can't be made outside the world border
         final Location smallerBoundaryCorner = new Location(world, smallx, smally, smallz);
         final Location greaterBoundaryCorner = new Location(world, bigx, bigy, bigz);
-        if (!world.getWorldBorder().isInside(smallerBoundaryCorner)
-                || !world.getWorldBorder().isInside(greaterBoundaryCorner)) {
-            result.succeeded = false;
-            return result;
+        try {
+            if (!world.getWorldBorder().isInside(smallerBoundaryCorner)
+                    || !world.getWorldBorder().isInside(greaterBoundaryCorner)) {
+                result.succeeded = false;
+                return result;
+            }
+        } catch (NoSuchMethodError e) {
+            // 1.8.8: WorldBorder.isInside() doesn't exist; assume inside border
         }
 
         // creative mode claims always go to bedrock
@@ -1931,10 +1939,14 @@ public abstract class DataStore {
         candidate.greaterBoundaryCorner = new Location(world, newx2, newy2, newz2);
         candidate.setShapedCorners(polygon.corners());
 
-        if (!world.getWorldBorder().isInside(candidate.getLesserBoundaryCorner())
-                || !world.getWorldBorder().isInside(candidate.getGreaterBoundaryCorner())) {
-            result.succeeded = false;
-            return result;
+        try {
+            if (!world.getWorldBorder().isInside(candidate.getLesserBoundaryCorner())
+                    || !world.getWorldBorder().isInside(candidate.getGreaterBoundaryCorner())) {
+                result.succeeded = false;
+                return result;
+            }
+        } catch (NoSuchMethodError e) {
+            // 1.8.8: WorldBorder.isInside() doesn't exist; assume inside border
         }
 
         for (Claim child : claim.children) {

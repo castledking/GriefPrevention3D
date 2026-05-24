@@ -18,60 +18,2898 @@
 
 package me.ryanhamshire.GriefPrevention;
 
+import com.griefprevention.api.ClaimToolContext;
+import com.griefprevention.claims.editor.ClaimEditIntent;
+import com.griefprevention.claims.editor.ClaimEditIntentType;
+import com.griefprevention.claims.editor.ClaimEditPreview;
+import com.griefprevention.claims.editor.ClaimEditResult;
+import com.griefprevention.claims.editor.ClaimEditSource;
+import com.griefprevention.claims.editor.ClaimEditTarget;
+import com.griefprevention.claims.editor.ClaimEditTargetType;
+import com.griefprevention.claims.editor.ClaimEditor;
+import com.griefprevention.claims.editor.ClaimEditorMode;
+import com.griefprevention.claims.editor.ClaimEditorSession;
+import com.griefprevention.claims.editor.ClaimEditorSkeleton;
+import com.griefprevention.compat.MaterialTagCompat;
+import com.griefprevention.events.BoundaryVisualizationEvent;
+import com.griefprevention.geometry.OrthogonalEdge2i;
+import com.griefprevention.geometry.OrthogonalPoint2i;
+import com.griefprevention.geometry.OrthogonalPolygon;
+import com.griefprevention.geometry.OrthogonalPolygonValidationIssueType;
+import com.griefprevention.geometry.OrthogonalPolygonValidationResult;
+import com.griefprevention.visualization.Boundary;
+import com.griefprevention.visualization.BoundaryVisualization;
+import com.griefprevention.visualization.VisualizationType;
+import me.ryanhamshire.GriefPrevention.compat.CompatUtil;
+import me.ryanhamshire.GriefPrevention.events.ClaimInspectionEvent;
+import me.ryanhamshire.GriefPrevention.util.BoundingBox;
+import me.ryanhamshire.GriefPrevention.util.SchedulerUtil;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.OfflinePlayer;
+import org.bukkit.World;
+import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.EventPriority;
-import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.util.BlockIterator;
+import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
-/**
- * Owns claim tool interaction dispatch so the general player listener can ignore
- * cancelled interaction events. The actual tool behavior still lives in
- * {@link PlayerEventHandler} for now while the recode branch peels logic away
- * from that class incrementally.
- */
-final class ClaimToolDispatcher implements Listener
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Deque;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+import java.util.function.Supplier;
+
+final class ClaimToolDispatcher
 {
+    private static final @NotNull ClaimEditor claimEditor = new ClaimEditorSkeleton();
+
     private final @NotNull GriefPrevention instance;
     private final @NotNull PlayerEventHandler playerEventHandler;
+    private final @NotNull DataStore dataStore;
 
     ClaimToolDispatcher(@NotNull GriefPrevention instance, @NotNull PlayerEventHandler playerEventHandler)
     {
         this.instance = instance;
         this.playerEventHandler = playerEventHandler;
+        this.dataStore = instance.dataStore;
     }
 
-    @EventHandler(priority = EventPriority.LOW)
-    void onPlayerInteract(PlayerInteractEvent event)
+    boolean handle(PlayerInteractEvent event, Block clickedBlock, Material clickedBlockType)
     {
         Action action = event.getAction();
         if (action != Action.RIGHT_CLICK_BLOCK && action != Action.RIGHT_CLICK_AIR)
         {
-            return;
+            return false;
         }
 
-        EquipmentSlot hand = event.getHand();
-        if (hand != EquipmentSlot.HAND)
+        EquipmentSlot hand = CompatUtil.getInteractEventHand(event);
+        if (hand != null && hand != EquipmentSlot.HAND)
         {
-            return;
+            return false;
         }
 
         Player player = event.getPlayer();
         ItemStack itemInHand = instance.getItemInHand(player, hand);
         Material materialInHand = itemInHand.getType();
+
         if (materialInHand != instance.config_claims_investigationTool
                 && materialInHand != instance.config_claims_modificationTool)
+        {
+            return false;
+        }
+
+        PlayerData playerData = null;
+
+        if (materialInHand == instance.config_claims_investigationTool)
+        {
+            return handleInvestigationTool(event, player, clickedBlock, clickedBlockType, materialInHand, playerData);
+        }
+
+        return handleModificationTool(event, player, clickedBlock, clickedBlockType, materialInHand, playerData);
+    }
+
+    // ----------------------------------------------------------------------------------------
+    // Investigation Tool (stick)
+    // ----------------------------------------------------------------------------------------
+
+    private boolean handleInvestigationTool(
+            PlayerInteractEvent event,
+            Player player,
+            Block clickedBlock,
+            Material clickedBlockType,
+            Material materialInHand,
+            PlayerData playerData)
+    {
+        Action action = event.getAction();
+
+        // if claims are disabled in this world, do nothing
+        if (!instance.claimsEnabledForWorld(player.getWorld()))
+            return true;
+
+        // If investigation tool is on cooldown, do nothing.
+        if (player.getCooldown(instance.config_claims_investigationTool) > 0)
+            return true;
+        // Set investigation tool on cooldown to prevent spamming.
+        player.setCooldown(instance.config_claims_investigationTool, 1);
+
+        // if holding shift (sneaking), show all claims in area
+        if (player.isSneaking() && player.hasPermission("griefprevention.visualizenearbyclaims")) {
+            // find nearby claims
+            Set<Claim> claims = this.dataStore.getNearbyClaims(player.getLocation());
+
+            // alert plugins of a claim inspection, return if cancelled
+            ClaimInspectionEvent inspectionEvent = new ClaimInspectionEvent(player, null, claims, true);
+            Bukkit.getPluginManager().callEvent(inspectionEvent);
+            if (inspectionEvent.isCancelled())
+                return true;
+
+            // visualize boundaries
+            BoundaryVisualization.visualizeNearbyClaims(player, inspectionEvent.getClaims(),
+                    player.getEyeLocation().getBlockY());
+            GriefPrevention.sendMessage(player, TextMode.Info, Messages.ShowNearbyClaims,
+                    String.valueOf(claims.size()));
+
+            return true;
+        }
+
+        // FEATURE: shovel and stick can be used from a distance away
+        if (action == Action.RIGHT_CLICK_AIR) {
+            // try to find a far away non-air block along line of sight
+            clickedBlock = getTargetBlock(player, 100);
+            clickedBlockType = clickedBlock.getType();
+        }
+
+        // if no block, stop here
+        if (clickedBlock == null) {
+            return true;
+        }
+
+        playerData = this.dataStore.getPlayerData(player.getUniqueId());
+
+        // air indicates too far away
+        if (clickedBlockType == Material.AIR) {
+            if (materialInHand != instance.config_claims_modificationTool) {
+                GriefPrevention.sendRateLimitedErrorMessage(player, Messages.TooFarAway);
+                // Remove visualizations
+                playerData.setVisibleBoundaries(null);
+                return true;
+            }
+            // else: do not message/return here; shovel path below will handle it
+        }
+
+        // if the player is currently resizing a claim, stop resizing and proceed with
+        // inspection.
+        // This allows the stick to "fix" a stuck visualization or conflict zone.
+        if (playerData.claimResizing != null) {
+            playerData.claimResizing = null;
+            playerData.lastShovelLocation = null;
+        }
+
+        Claim claim = this.dataStore.getClaimAt(clickedBlock.getLocation(), false /* ignore height */,
+                playerData.lastClaim);
+
+        // no claim case
+        if (claim == null) {
+            // alert plugins of a claim inspection, return if cancelled
+            ClaimInspectionEvent inspectionEvent = new ClaimInspectionEvent(player, clickedBlock, null);
+            Bukkit.getPluginManager().callEvent(inspectionEvent);
+            if (inspectionEvent.isCancelled())
+                return true;
+
+            GriefPrevention.sendMessage(player, TextMode.Info, Messages.BlockNotClaimed);
+
+            // Clear any existing visualization
+            playerData.setVisibleBoundaries(null);
+            return true; // Important: Add this return to prevent further processing
+        }
+
+        // claim case
+        else {
+            // alert plugins of a claim inspection, return if cancelled
+            ClaimInspectionEvent inspectionEvent = new ClaimInspectionEvent(player, clickedBlock, claim);
+            Bukkit.getPluginManager().callEvent(inspectionEvent);
+            if (inspectionEvent.isCancelled())
+                return true;
+
+            playerData.lastClaim = claim;
+            GriefPrevention.sendMessage(player, TextMode.Info, Messages.BlockClaimed, claim.getOwnerName());
+
+            // visualize boundary. Preserve subdivision colors when probing 3D claims so
+            // parents stay intact.
+            VisualizationType inspectType = claim.is3D() ? VisualizationType.SUBDIVISION_3D
+                    : VisualizationType.CLAIM;
+            BoundaryVisualization.visualizeClaim(player, claim, inspectType);
+
+            if (player.hasPermission("griefprevention.seeclaimsize")) {
+                GriefPrevention.sendMessage(player, TextMode.Info,
+                        "  " + claim.getWidth() + "x" + claim.getHeight() + "=" + claim.getArea());
+            }
+
+            // if permission, tell about the player's offline time
+            if (!claim.isAdminClaim() && (player.hasPermission("griefprevention.deleteclaims")
+                    || player.hasPermission("griefprevention.seeinactivity"))) {
+                if (claim.parent != null) {
+                    claim = claim.parent;
+                }
+                Date lastLogin = new Date(Bukkit.getOfflinePlayer(claim.ownerID).getLastPlayed());
+                Date now = new Date();
+                long daysElapsed = (now.getTime() - lastLogin.getTime()) / (1000 * 60 * 60 * 24);
+
+                GriefPrevention.sendMessage(player, TextMode.Info, Messages.PlayerOfflineTime,
+                        String.valueOf(daysElapsed));
+
+                // drop the data we just loaded, if the player isn't online
+                if (instance.getServer().getPlayer(claim.ownerID) == null)
+                    this.dataStore.clearCachedPlayerData(claim.ownerID);
+            }
+        }
+
+        return true;
+    }
+
+    // ----------------------------------------------------------------------------------------
+    // Modification Tool (golden shovel)
+    // ----------------------------------------------------------------------------------------
+
+    private boolean handleModificationTool(
+            PlayerInteractEvent event,
+            Player player,
+            Block clickedBlock,
+            Material clickedBlockType,
+            Material materialInHand,
+            PlayerData playerData)
+    {
+        Action action = event.getAction();
+
+        boolean cornerSelected = false; // track if we snapped to a 3D corner so AIR guard can be bypassed
+
+        CornerHit cornerHit = raycast3DSubclaimCorner(player, 100);
+        if (cornerHit != null && shouldUse3DCornerHit(player, clickedBlock, cornerHit)) {
+            clickedBlock = player.getWorld().getBlockAt(cornerHit.x, cornerHit.y, cornerHit.z);
+            clickedBlockType = clickedBlock.getType();
+            cornerSelected = true;
+        }
+
+        // FEATURE: shovel and stick can be used from a distance away
+        if (!cornerSelected && action == Action.RIGHT_CLICK_AIR) {
+            // try to find a far away non-air block along line of sight
+            clickedBlock = getTargetBlock(player, 100);
+            clickedBlockType = clickedBlock.getType();
+        }
+
+        // if no block, stop here
+        if (clickedBlock == null) {
+            return true;
+        }
+
+        // can't use the shovel from too far away, unless we snapped to a 3D corner
+        // (corner itself may be air)
+        if (clickedBlockType == Material.AIR && !cornerSelected)
+            return true;
+
+        // if the player doesn't have claims permission, don't do anything
+        if (!player.hasPermission("griefprevention.createclaims")) {
+            GriefPrevention.sendRateLimitedErrorMessage(player, Messages.NoCreateClaimPermission);
+            return true;
+        }
+
+        playerData = this.dataStore.getPlayerData(player.getUniqueId());
+
+        // Handle RestoreNature shovel modes
+        if (playerData.shovelMode == ShovelMode.RestoreNature ||
+                playerData.shovelMode == ShovelMode.RestoreNatureAggressive ||
+                playerData.shovelMode == ShovelMode.RestoreNatureFill) {
+            handleRestoreNature(player, clickedBlock, playerData);
+            return true;
+        }
+
+        if (playerData.shovelMode == ShovelMode.Shaped) {
+            playerData.setEphemeralBasicShapedSegmentPreview(false);
+            if (!GriefPrevention.instance.config_claims_allowShapedClaims) {
+                playerData.shovelMode = ShovelMode.Basic;
+                playerData.claimSubdividing = null;
+                playerData.claimResizing = null;
+                playerData.lastShovelLocation = null;
+                playerData.setClaimEditorSession(null);
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.ShapedClaimsDisabled);
+                return true;
+            }
+            if (handleShapedResizeInteraction(player, playerData, clickedBlock)) {
+                return true;
+            }
+            handleShapedModeInteraction(player, playerData, clickedBlock);
+            return true;
+        }
+
+        // if he's resizing a claim and that claim hasn't been deleted since he started
+        // resizing it
+        if (playerData.claimResizing != null && playerData.claimResizing.inDataStore) {
+            if (clickedBlock.getLocation().equals(playerData.lastShovelLocation))
+                return true;
+
+            if (tryResizeShapedClaim(player, playerData, clickedBlock)) {
+                return true;
+            }
+
+            // figure out what the coords of his new claim would be
+            int newx1, newx2, newz1, newz2, newy1, newy2;
+            if (playerData.lastShovelLocation.getBlockX() == playerData.claimResizing.getLesserBoundaryCorner()
+                    .getBlockX()) {
+                newx1 = clickedBlock.getX();
+                newx2 = playerData.claimResizing.getGreaterBoundaryCorner().getBlockX();
+            } else {
+                newx1 = playerData.claimResizing.getLesserBoundaryCorner().getBlockX();
+                newx2 = clickedBlock.getX();
+            }
+
+            if (playerData.lastShovelLocation.getBlockZ() == playerData.claimResizing.getLesserBoundaryCorner()
+                    .getBlockZ()) {
+                newz1 = clickedBlock.getZ();
+                newz2 = playerData.claimResizing.getGreaterBoundaryCorner().getBlockZ();
+            } else {
+                newz1 = playerData.claimResizing.getLesserBoundaryCorner().getBlockZ();
+                newz2 = clickedBlock.getZ();
+            }
+
+            // Y resizing behavior
+            if (playerData.claimResizing.is3D()) {
+                // For 3D subclaims, allow vertical resizing when the initial corner was at minY
+                // or maxY
+                int currentMinY = playerData.claimResizing.getLesserBoundaryCorner().getBlockY();
+                int currentMaxY = playerData.claimResizing.getGreaterBoundaryCorner().getBlockY();
+                int startY = playerData.lastShovelLocation.getBlockY();
+                int endY = clickedBlock.getY();
+
+                // Special case: If it's a single-layer 3D claim, allow resizing from any corner
+                boolean isSingleLayer = (currentMinY == currentMaxY);
+
+                // Default: preserve Y range
+                newy1 = currentMinY;
+                newy2 = currentMaxY;
+
+                if (isSingleLayer || startY == currentMinY) {
+                    // For single-layer or when dragging from bottom edge: adjust minY
+                    newy1 = Math.min(endY, currentMaxY);
+
+                    // If we're making it taller, set maxY to the new Y
+                    if (endY > currentMaxY) {
+                        newy2 = endY;
+                    }
+                } else if (startY == currentMaxY) {
+                    // Dragging from top edge: adjust maxY
+                    newy2 = Math.max(endY, currentMinY);
+
+                    // If we're making it taller from the bottom, set minY to the new Y
+                    if (endY < currentMinY) {
+                        newy1 = endY;
+                    }
+                }
+
+                // Ensure ordering
+                if (newy1 > newy2) {
+                    int tmp = newy1;
+                    newy1 = newy2;
+                    newy2 = tmp;
+                }
+            } else {
+                // 2D claims keep legacy behavior: extend into ground based on clicked Y
+                newy1 = playerData.claimResizing.getLesserBoundaryCorner().getBlockY();
+                newy2 = playerData.claimResizing.getGreaterBoundaryCorner().getBlockY();
+            }
+
+            this.dataStore.resizeClaimWithChecks(player, playerData, newx1, newx2, newy1, newy2, newz1, newz2);
+
+            return true;
+        }
+
+        // otherwise, since not currently resizing a claim, must be starting a resize,
+        // creating a new claim, or creating a subdivision
+        // Prefer a Y-aware lookup first so we correctly target stacked 3D subclaims at
+        // this Y level.
+        Claim resolvedClaim = this.dataStore.getClaimAt(clickedBlock.getLocation(), false /* respect height */,
+                playerData.lastClaim);
+        if (resolvedClaim == null) {
+            // Fallback to ignore-height search to preserve legacy behavior when no 3D
+            // subclaim matches Y
+            resolvedClaim = this.dataStore.getClaimAt(clickedBlock.getLocation(), true /* ignore height */,
+                    playerData.lastClaim);
+        }
+        Claim claim = playerEventHandler.findDeepestContainingClaim(resolvedClaim, clickedBlock.getLocation());
+        if (claim != null) {
+            playerData.lastClaim = claim;
+        }
+
+        // If this click is exactly at a shared corner, promote to the outermost parent
+        // sharing that corner.
+        if (claim != null) {
+            Claim promoted = claim;
+            while (promoted.parent != null && isCornerMatch(promoted, clickedBlock)) {
+                Claim parent = promoted.parent;
+                if (!isCornerMatch(parent, clickedBlock)) {
+                    break;
+                }
+
+                promoted = parent;
+            }
+
+            claim = promoted;
+        }
+
+        // Fix for Issue: Clicking outside Y-bounds of a 3D claim (e.g. above/below)
+        // should not resolve to that 3D claim
+        // This prevents "One block inside parent" / Overlap errors when trying to
+        // create/resize near a 3D subclaim.
+        if (claim != null && claim.is3D() && !claim.contains(clickedBlock.getLocation(), true, false)) {
+            claim = claim.parent;
+        }
+
+        // Admin3D stacking: if already creating a new 3D admin claim,
+        // bypass the inside-claim restriction and proceed to finish
+        if (claim != null && playerData.shovelMode == ShovelMode.Admin3D && playerData.lastShovelLocation != null) {
+            if (!playerData.lastShovelLocation.getWorld().equals(clickedBlock.getWorld())) {
+                playerData.lastShovelLocation = null;
+                this.playerEventHandler.onPlayerInteract(event);
+                return true;
+            }
+            claim = null;
+        }
+
+        // if within an existing claim, he's not creating a new one
+        if (claim != null) {
+            // if the player has permission to edit the claim or subdivision
+            final String ownerName = claim.getOwnerName();
+            Supplier<String> noEditReason = claim.checkPermission(player, ClaimPermission.Edit, event,
+                    () -> instance.dataStore.getMessage(Messages.CreateClaimFailOverlapOtherPlayer, ownerName));
+            if (noEditReason == null) {
+                // Shift+right-click on a top-level shaped claim edge (basic mode): ephemeral segment selection for
+                // later expansion in shaped mode. Requires AllowShapedClaims; corners use normal resize below.
+                if (playerData.shovelMode == ShovelMode.Basic
+                        && player.isSneaking()
+                        && instance.config_claims_allowShapedClaims
+                        && trySelectShapedBoundarySegmentBasicMode(player, playerData, claim, clickedBlock)) {
+                    return true;
+                }
+
+                // if he clicked on a corner, start resizing it
+                boolean isCorner = isCornerMatch(claim, clickedBlock);
+                if (isCorner) {
+                    // When 2D/3D subdivisions share a corner with the parent, select the parent (so
+                    // e.g. 1x1x1 sub at main corner can be removed by selecting main and deleting).
+                    Claim selection = claim;
+                    while (selection.parent != null) {
+                        Claim parent = selection.parent;
+                        boolean parentContains = parent.contains(clickedBlock.getLocation(), true, false);
+                        if (parentContains && isCornerMatch(parent, clickedBlock)) {
+                            selection = parent;
+                        } else {
+                            break;
+                        }
+                    }
+                    playerData.claimResizing = selection;
+                    playerData.lastShovelLocation = clickedBlock.getLocation();
+                    Messages message;
+                    if (selection.parent != null) {
+                        message = Messages.SubdivisionSelected;
+                    } else {
+                        // ClaimSelected when no children; ClaimSelectedTopLevel when claim has subdivisions
+                        boolean hasNoChildren = selection.children == null || selection.children.isEmpty();
+                        message = hasNoChildren ? Messages.ClaimSelected : Messages.ClaimSelectedTopLevel;
+                    }
+                    GriefPrevention.sendMessage(player, TextMode.Instr, message);
+                    // Refresh visualization in selection/resize mode.
+                    VisualizationType visualizationType;
+                    if (selection.parent == null) {
+                        visualizationType = selection.isAdminClaim() ? VisualizationType.ADMIN_CLAIM
+                                : VisualizationType.CLAIM;
+                    } else {
+                        visualizationType = selection.is3D() ? VisualizationType.SUBDIVISION_3D
+                                : VisualizationType.SUBDIVISION;
+                    }
+
+                    BoundaryVisualization.visualizeClaim(player, selection, visualizationType, clickedBlock);
+                }
+
+                // if he didn't click on a corner and is in subdivision mode, he's creating a
+                // new subdivision
+                else if (playerData.shovelMode == ShovelMode.Subdivide
+                        || playerData.shovelMode == ShovelMode.Subdivide3D) {
+                    // if it's the first click, he's trying to start a new subdivision
+                    if (playerData.lastShovelLocation == null) {
+                        // if the clicked claim was a subdivision, decide whether nesting is allowed
+                        if (claim.parent != null) {
+                            boolean claimIs3D = claim.is3D();
+                            boolean wants3DSubdivision = playerData.shovelMode == ShovelMode.Subdivide3D;
+                            boolean canStartSubdivision;
+
+                            if (!instance.config_claims_allowNestedSubClaims) {
+                                // Nested subdivisions disabled entirely.
+                                canStartSubdivision = false;
+                            } else if (claimIs3D) {
+                                // When nested subclaims enabled and inside a 3D subdivision:
+                                // Only allow if NOT on the same X/Z boundary as the 3D subdivision
+                                boolean onXBoundary = (clickedBlock.getX() == claim.getLesserBoundaryCorner()
+                                        .getBlockX() ||
+                                        clickedBlock.getX() == claim.getGreaterBoundaryCorner().getBlockX());
+                                boolean onZBoundary = (clickedBlock.getZ() == claim.getLesserBoundaryCorner()
+                                        .getBlockZ() ||
+                                        clickedBlock.getZ() == claim.getGreaterBoundaryCorner().getBlockZ());
+
+                                // Block if on exact X/Z boundary (corners), allow nesting otherwise
+                                // Also require 3D mode to stack inside 3D claims
+                                canStartSubdivision = wants3DSubdivision && !(onXBoundary && onZBoundary);
+                            } else {
+                                // Parent is 2D: allow additional subdivisions (2D or 3D) when nesting is
+                                // enabled.
+                                canStartSubdivision = true;
+                            }
+
+                            if (canStartSubdivision) {
+                                GriefPrevention.sendMessage(player, TextMode.Instr, Messages.SubdivisionStart);
+                                playerData.lastShovelLocation = clickedBlock.getLocation();
+                                if (wants3DSubdivision) {
+                                    BoundaryVisualization.visualizeArea(player, new BoundingBox(clickedBlock),
+                                            VisualizationType.INITIALIZE_ZONE_3D, clickedBlock.getY());
+                                }
+                                playerData.claimSubdividing = claim;
+                            } else {
+                                // Show conflict zone visualization for the existing 3D subdivision
+                                if (claimIs3D) {
+                                    GriefPrevention.sendMessage(player, TextMode.Err,
+                                            Messages.ResizeFailOverlapSubdivision);
+                                    visualizeConflict(player, playerData, claim, clickedBlock, true);
+                                } else {
+                                    GriefPrevention.sendMessage(player, TextMode.Err,
+                                            Messages.ResizeFailOverlapSubdivision);
+                                }
+                            }
+                        } else {
+                            // Top-level claim: always allow starting a subdivision.
+                            GriefPrevention.sendMessage(player, TextMode.Instr, Messages.SubdivisionStart);
+                            playerData.lastShovelLocation = clickedBlock.getLocation();
+                            if (playerData.shovelMode == ShovelMode.Subdivide3D) {
+                                BoundaryVisualization.visualizeArea(player, new BoundingBox(clickedBlock),
+                                        VisualizationType.INITIALIZE_ZONE_3D, clickedBlock.getY());
+                            }
+                            playerData.claimSubdividing = claim;
+                        }
+                    }
+
+                    // otherwise, he's trying to finish creating a subdivision by setting the other
+                    // boundary corner
+                    else {
+                        // if last shovel location was in a different world, assume the player is
+                        // starting the create-claim workflow over
+                        if (!playerData.lastShovelLocation.getWorld().equals(clickedBlock.getWorld())) {
+                            playerData.lastShovelLocation = null;
+                            this.playerEventHandler.onPlayerInteract(event);
+                            return true;
+                        }
+
+                        // Determine Y boundaries based on shovel mode
+                        int y1 = playerData.lastShovelLocation.getBlockY();
+                        int y2 = clickedBlock.getY();
+                        int minY, maxY;
+
+                        if (playerData.shovelMode == ShovelMode.Subdivide) {
+                            if (playerData.claimSubdividing == null) {
+                                GriefPrevention.sendMessage(player, TextMode.Err, "No claim selected for subdivision.");
+                                return true;
+                            }
+                            // 2D mode: Always span from parent's bottom to world max height so claim is NOT
+                            // 3D.
+                            // This matches default GP behavior where 2D subclaims ignore height.
+                            int parentMinY = playerData.claimSubdividing.getLesserBoundaryCorner().getBlockY();
+                            int worldMaxY = GriefPrevention.getWorldMaxY(player.getWorld());
+
+                            minY = parentMinY;
+                            maxY = worldMaxY;
+
+                            // For 2D subdivisions, force the created corners to use the full-height span
+                            // so DataStore.createClaim marks is3D=false.
+                            y1 = minY;
+                            y2 = maxY;
+                        } else if (playerData.shovelMode == ShovelMode.Subdivide3D) {
+                            // 3D mode: same-Y -> single-layer 3D; different Y -> bounded 3D
+                            if (Math.abs(y2 - y1) == 0) {
+                                minY = y1;
+                                maxY = y1; // single layer high
+                            } else {
+                                minY = Math.min(y1, y2);
+                                maxY = Math.max(y1, y2);
+                            }
+                        } else {
+                            // Fallback: default to parent Y bounds
+                            if (playerData.claimSubdividing == null) {
+                                GriefPrevention.sendMessage(player, TextMode.Err, "No claim selected for subdivision.");
+                                return true;
+                            }
+                            minY = playerData.claimSubdividing.getLesserBoundaryCorner().getBlockY();
+                            maxY = playerData.claimSubdividing.getGreaterBoundaryCorner().getBlockY();
+                        }
+
+                        // Enforce inner offset if nesting 3D subclaims is enabled
+                        if (instance.config_claims_allowNestedSubClaims && playerData.claimSubdividing != null
+                                && playerData.claimSubdividing.is3D()
+                                && playerData.shovelMode == ShovelMode.Subdivide3D) {
+                            Claim parentClaim = playerData.claimSubdividing;
+                            int inset = 1;
+                            if (inset > 0) {
+                                Location parentMin = parentClaim.getLesserBoundaryCorner();
+                                Location parentMax = parentClaim.getGreaterBoundaryCorner();
+
+                                int parentMinY = Math.min(parentMin.getBlockY(), parentMax.getBlockY());
+                                int parentMaxY = Math.max(parentMin.getBlockY(), parentMax.getBlockY());
+
+                                // Only enforce Y-axis inset for 3D claims, allow X/Z boundaries to match parent
+                                int minAllowedY = parentMinY + inset;
+                                int maxAllowedY = parentMaxY - inset;
+
+                                if (minAllowedY > maxAllowedY) {
+                                    GriefPrevention.sendMessage(player, TextMode.Err,
+                                            Messages.CreateSubdivisionOverlap);
+                                    return true;
+                                }
+
+                                int subMinY = Math.min(minY, maxY);
+                                int subMaxY = Math.max(minY, maxY);
+
+                                if (subMinY < minAllowedY || subMaxY > maxAllowedY) {
+                                    GriefPrevention.sendMessage(player, TextMode.Err,
+                                            Messages.InnerSubdivisionTooClose);
+                                    return true;
+                                }
+                            }
+                        }
+
+                        // Ensure 3D subclaims placed inside 2D parents - allow X/Z boundaries to match
+                        // parent
+                        if (playerData.shovelMode == ShovelMode.Subdivide3D
+                                && playerData.claimSubdividing != null
+                                && !playerData.claimSubdividing.is3D()) {
+                            // No X/Z inset enforcement - allow subdivisions to share parent boundaries
+                            // Only sibling collision checks remain
+                            Claim parentClaim = playerData.claimSubdividing;
+                            int proposedMinX = Math.min(playerData.lastShovelLocation.getBlockX(),
+                                    clickedBlock.getX());
+                            int proposedMaxX = Math.max(playerData.lastShovelLocation.getBlockX(),
+                                    clickedBlock.getX());
+                            int proposedMinZ = Math.min(playerData.lastShovelLocation.getBlockZ(),
+                                    clickedBlock.getZ());
+                            int proposedMaxZ = Math.max(playerData.lastShovelLocation.getBlockZ(),
+                                    clickedBlock.getZ());
+
+                            for (Claim sibling : parentClaim.children) {
+                                if (!sibling.inDataStore || sibling.is3D())
+                                    continue;
+
+                                Location siblingMin = sibling.getLesserBoundaryCorner();
+                                Location siblingMax = sibling.getGreaterBoundaryCorner();
+
+                                int siblingMinX = Math.min(siblingMin.getBlockX(), siblingMax.getBlockX());
+                                int siblingMaxX = Math.max(siblingMin.getBlockX(), siblingMax.getBlockX());
+                                int siblingMinZ = Math.min(siblingMin.getBlockZ(), siblingMax.getBlockZ());
+                                int siblingMaxZ = Math.max(siblingMin.getBlockZ(), siblingMax.getBlockZ());
+
+                                boolean zOverlap = proposedMinZ <= siblingMaxZ && proposedMaxZ >= siblingMinZ;
+                                if (zOverlap) {
+                                    int gapEast = proposedMinX - siblingMaxX;
+                                    if (gapEast >= 0 && gapEast < 1) {
+                                        GriefPrevention.sendMessage(player, TextMode.Err,
+                                                Messages.InnerSubdivisionTooClose);
+                                        return true;
+                                    }
+
+                                    int gapWest = siblingMinX - proposedMaxX;
+                                    if (gapWest >= 0 && gapWest < 1) {
+                                        GriefPrevention.sendMessage(player, TextMode.Err,
+                                                Messages.InnerSubdivisionTooClose);
+                                        return true;
+                                    }
+                                }
+
+                                boolean xOverlap = proposedMinX <= siblingMaxX && proposedMaxX >= siblingMinX;
+                                if (xOverlap) {
+                                    int gapSouth = proposedMinZ - siblingMaxZ;
+                                    if (gapSouth >= 0 && gapSouth < 1) {
+                                        GriefPrevention.sendMessage(player, TextMode.Err,
+                                                Messages.InnerSubdivisionTooClose);
+                                        return true;
+                                    }
+
+                                    int gapNorth = siblingMinZ - proposedMaxZ;
+                                    if (gapNorth >= 0 && gapNorth < 1) {
+                                        GriefPrevention.sendMessage(player, TextMode.Err,
+                                                Messages.InnerSubdivisionTooClose);
+                                        return true;
+                                    }
+                                }
+                            }
+                        }
+
+                        // try to create a new claim (will return null if this subdivision overlaps
+                        // another)
+                        CreateClaimResult subdivisionResult = this.dataStore.createClaim(
+                                player.getWorld(),
+                                playerData.lastShovelLocation.getBlockX(), clickedBlock.getX(),
+                                minY, maxY,
+                                playerData.lastShovelLocation.getBlockZ(), clickedBlock.getZ(),
+                                null, // owner is not used for subdivisions
+                                playerData.claimSubdividing,
+                                null, player);
+
+                        // if it didn't succeed, tell the player why
+                        if (!subdivisionResult.succeeded || subdivisionResult.claim == null) {
+                            if (subdivisionResult.claim != null) {
+                                GriefPrevention.sendMessage(player, TextMode.Err,
+                                        Messages.CreateSubdivisionOverlap);
+                                visualizeConflict(player, playerData, subdivisionResult.claim, clickedBlock,
+                                        subdivisionResult.claim.is3D());
+                            } else {
+                                GriefPrevention.sendMessage(player, TextMode.Err,
+                                        Messages.CreateClaimFailOverlapRegion);
+                            }
+
+                            return true;
+                        }
+
+                        // otherwise, advise him on the /trust command and show him his new subdivision
+                        else {
+                            GriefPrevention.sendMessage(player, TextMode.Success, Messages.SubdivisionSuccess);
+                            VisualizationType subdivisionViz = subdivisionResult.claim.is3D()
+                                    ? VisualizationType.SUBDIVISION_3D
+                                    : VisualizationType.SUBDIVISION;
+                            BoundaryVisualization.visualizeClaim(player, subdivisionResult.claim, subdivisionViz,
+                                    clickedBlock);
+                            playerData.lastShovelLocation = null;
+                            playerData.claimSubdividing = null;
+                        }
+                    }
+                }
+
+                // otherwise tell him he can't create a claim here, and show him the existing
+                // claim
+                // also advise him to consider /abandonclaim or resizing the existing claim
+                else {
+                    // Admin3D mode: allow starting a stacked 3D admin claim at a different Y level
+                    if (playerData.shovelMode == ShovelMode.Admin3D && claim.is3D() && claim.isAdminClaim()
+                            && playerData.lastShovelLocation == null) {
+                        playerData.lastShovelLocation = clickedBlock.getLocation();
+                        GriefPrevention.sendMessage(player, TextMode.Instr, Messages.ClaimStart);
+                        BoundaryVisualization.visualizeArea(player, new BoundingBox(clickedBlock),
+                                VisualizationType.INITIALIZE_ZONE_3D, clickedBlock.getY());
+                        return true;
+                    }
+
+                    GriefPrevention.sendMessage(player, TextMode.Err, Messages.CreateClaimFailOverlap);
+                    visualizeConflict(player, playerData, claim, clickedBlock, claim.is3D());
+                }
+            }
+
+            // otherwise tell the player he can't claim here because it's someone else's
+            // claim, and show him the claim
+            else {
+                GriefPrevention.sendMessage(player, TextMode.Err, noEditReason.get());
+                visualizeConflict(player, playerData, claim, clickedBlock, claim.is3D());
+            }
+
+            return true;
+        }
+
+        // otherwise, the player isn't in an existing claim!
+
+        // if he hasn't already start a claim with a previous shovel action
+        Location lastShovelLocation = playerData.lastShovelLocation;
+        if (lastShovelLocation == null) {
+            // if claims are not enabled in this world and it's not an administrative claim,
+            // display an error message and stop
+            if (!instance.claimsEnabledForWorld(player.getWorld())) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.ClaimsDisabledWorld);
+                return true;
+            }
+
+            // if he's at the claim count per player limit already and doesn't have
+            // permission to bypass, display an error message
+            if (instance.config_claims_maxClaimsPerPlayer > 0 &&
+                    !player.hasPermission("griefprevention.overrideclaimcountlimit") &&
+                    playerData.getClaims().size() >= instance.config_claims_maxClaimsPerPlayer) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.ClaimCreationFailedOverClaimCountLimit);
+                return true;
+            }
+
+            // remember it, and start him on the new claim
+            if (playerData.shovelMode == ShovelMode.Admin3D) {
+                playerData.lastShovelLocation = clickedBlock.getLocation();
+                GriefPrevention.sendMessage(player, TextMode.Instr, Messages.ClaimStart);
+                BoundaryVisualization.visualizeArea(player, new BoundingBox(clickedBlock),
+                        VisualizationType.INITIALIZE_ZONE_3D, clickedBlock.getY());
+            } else {
+                playerData.lastShovelLocation = clickedBlock.getLocation();
+                GriefPrevention.sendMessage(player, TextMode.Instr, Messages.ClaimStart);
+                BoundaryVisualization.visualizeArea(player, new BoundingBox(clickedBlock),
+                        VisualizationType.INITIALIZE_ZONE);
+            }
+        }
+
+        // otherwise, he's trying to finish creating a claim by setting the other
+        // boundary corner
+        else {
+            // if last shovel location was in a different world, assume the player is
+            // starting the create-claim workflow over
+            if (!lastShovelLocation.getWorld().equals(clickedBlock.getWorld())) {
+                playerData.lastShovelLocation = null;
+                this.playerEventHandler.onPlayerInteract(event);
+                return true;
+            }
+
+            // apply pvp rule
+            if (playerData.inPvpCombat()) {
+                GriefPrevention.sendRateLimitedErrorMessage(player, Messages.NoClaimDuringPvP);
+                return true;
+            }
+
+            // apply minimum claim dimensions rule
+            int newWidth;
+            int newHeight;
+
+            try
+            {
+                newWidth = Math.abs(Math.subtractExact(lastShovelLocation.getBlockX(), clickedBlock.getX())) + 1;
+                newHeight = Math.abs(Math.subtractExact(lastShovelLocation.getBlockZ(), clickedBlock.getZ())) + 1;
+            }
+            catch (ArithmeticException e)
+            {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.CreateClaimInsufficientBlocks, String.valueOf(Integer.MAX_VALUE));
+                playerData.lastShovelLocation = null;
+                playerData.claimSubdividing = null;
+                return true;
+            }
+
+            if (playerData.shovelMode != ShovelMode.Admin && playerData.shovelMode != ShovelMode.Admin3D) {
+                if (newWidth < instance.config_claims_minWidth
+                        || newHeight < instance.config_claims_minWidth) {
+                    // this IF block is a workaround for craftbukkit bug which fires two events for
+                    // one interaction
+                    if (newWidth != 1 && newHeight != 1) {
+                        GriefPrevention.sendMessage(player, TextMode.Err, Messages.NewClaimTooNarrow,
+                                String.valueOf(instance.config_claims_minWidth));
+                    }
+                    return true;
+                }
+
+                int newArea = newWidth * newHeight;
+                if (newArea < instance.config_claims_minArea) {
+                    if (newArea != 1) {
+                        GriefPrevention.sendMessage(player, TextMode.Err, Messages.ResizeClaimInsufficientArea,
+                                String.valueOf(instance.config_claims_minArea));
+                    }
+                    return true;
+                }
+            }
+
+            UUID playerID = player.getUniqueId();
+
+            // if not an administrative claim, verify the player has enough claim blocks for
+            // this new claim
+            if (playerData.shovelMode != ShovelMode.Admin && playerData.shovelMode != ShovelMode.Admin3D) {
+                int newClaimArea = newWidth * newHeight;
+                int remainingBlocks = playerData.getRemainingClaimBlocks();
+                if (newClaimArea > remainingBlocks) {
+                    GriefPrevention.sendMessage(player, TextMode.Err, Messages.CreateClaimInsufficientBlocks,
+                            String.valueOf(newClaimArea - remainingBlocks));
+                    instance.dataStore.tryAdvertiseAdminAlternatives(player);
+                    return true;
+                }
+            } else {
+                playerID = null;
+            }
+
+            boolean is3dAdminClaim = playerData.shovelMode == ShovelMode.Admin3D;
+
+            // try to create a new claim
+            CreateClaimResult result = this.dataStore.createClaim(
+                    player.getWorld(),
+                    lastShovelLocation.getBlockX(), clickedBlock.getX(),
+                    is3dAdminClaim ? lastShovelLocation.getBlockY() : lastShovelLocation.getBlockY() - instance.config_claims_claimsExtendIntoGroundDistance,
+                    is3dAdminClaim ? clickedBlock.getY() : clickedBlock.getY() - instance.config_claims_claimsExtendIntoGroundDistance,
+                    lastShovelLocation.getBlockZ(), clickedBlock.getZ(),
+                    playerID,
+                    null, null,
+                    player,
+                    is3dAdminClaim);
+
+            // if it didn't succeed, tell the player why
+            if (!result.succeeded || result.claim == null) {
+                if (result.claim != null) {
+                    GriefPrevention.sendMessage(player, TextMode.Err, Messages.CreateClaimFailOverlapShort);
+                    visualizeConflict(player, playerData, result.claim, clickedBlock, result.claim.is3D());
+                } else {
+                    GriefPrevention.sendMessage(player, TextMode.Err, Messages.CreateClaimFailOverlapRegion);
+                }
+
+                return true;
+            }
+
+            // otherwise, advise him on the /trust command and show him his new claim
+            else {
+                GriefPrevention.sendMessage(player, TextMode.Success, Messages.CreateClaimSuccess);
+                VisualizationType vizType = is3dAdminClaim ? VisualizationType.ADMIN_CLAIM_3D : VisualizationType.CLAIM;
+                BoundaryVisualization.visualizeClaim(player, result.claim, vizType, clickedBlock);
+                playerData.lastShovelLocation = null;
+
+                // if it's a big claim, tell the player about subdivisions
+                if (!player.hasPermission("griefprevention.adminclaims") && result.claim.getArea() >= 1000) {
+                    GriefPrevention.sendMessage(player, TextMode.Info, Messages.BecomeMayor, 200L);
+                    GriefPrevention.sendMessage(player, TextMode.Instr, Messages.SubdivisionVideo2, 201L,
+                            DataStore.SUBDIVISION_VIDEO_URL);
+                }
+
+                AutoExtendClaimTask.scheduleAsync(result.claim);
+            }
+        }
+
+        return true;
+    }
+
+    // ----------------------------------------------------------------------------------------
+    // Helper methods
+    // ----------------------------------------------------------------------------------------
+
+    // Helper container for a corner raycast hit
+    private static class CornerHit {
+        @SuppressWarnings("unused")
+        final Claim claim;
+        final int x, y, z;
+        final double t;
+
+        CornerHit(Claim claim, int x, int y, int z, double t) {
+            this.claim = claim;
+            this.x = x;
+            this.y = y;
+            this.z = z;
+            this.t = t;
+        }
+    }
+
+    private static boolean isCornerMatch(Claim claim, Block block) {
+        if (claim == null || block == null) {
+            return false;
+        }
+
+        int blockX = block.getX();
+        int blockZ = block.getZ();
+
+        if (claim.getCornerIndexAt(blockX, blockZ) < 0) {
+            return false;
+        }
+
+        if (!claim.is3D()) {
+            return true;
+        }
+
+        int blockY = block.getY();
+        Location lesser = claim.getLesserBoundaryCorner();
+        Location greater = claim.getGreaterBoundaryCorner();
+        int minY = Math.min(lesser.getBlockY(), greater.getBlockY());
+        int maxY = Math.max(lesser.getBlockY(), greater.getBlockY());
+        return blockY == minY || blockY == maxY;
+    }
+
+    private boolean shouldUse3DCornerHit(Player player, @Nullable Block clickedBlock, CornerHit cornerHit) {
+        if (clickedBlock == null || clickedBlock.getType() == Material.AIR) {
+            return true;
+        }
+
+        Vector eyePos = player.getEyeLocation().toVector();
+        Vector dir = player.getEyeLocation().getDirection().normalize();
+        Vector clickedCenter = clickedBlock.getLocation().toVector().add(new Vector(0.5, 0.5, 0.5));
+        double clickedT = clickedCenter.subtract(eyePos).dot(dir);
+        return clickedT < 0 || cornerHit.t <= clickedT + 2.0;
+    }
+
+    private boolean tryResizeShapedClaim(@NotNull Player player, @NotNull PlayerData playerData, @NotNull Block clickedBlock)
+    {
+        Claim claim = playerData.claimResizing;
+        if (claim == null || !claim.inDataStore || !claim.isShaped() || claim.parent != null || claim.is3D())
+        {
+            return false;
+        }
+
+        Location anchor = playerData.lastShovelLocation;
+        if (anchor == null)
+        {
+            return false;
+        }
+
+        int cornerIndex = claim.getCornerIndexAt(anchor.getBlockX(), anchor.getBlockZ());
+        if (cornerIndex < 0)
+        {
+            return false;
+        }
+
+        OrthogonalPolygonValidationResult moveResult = resolveShapedResizeMove(
+                player,
+                claim,
+                claim.getBoundaryPolygon(),
+                cornerIndex,
+                new OrthogonalPoint2i(clickedBlock.getX(), clickedBlock.getZ()));
+        if (!moveResult.isValid() || moveResult.polygon() == null)
+        {
+            boolean selfIntersection = moveResult.issues().stream()
+                    .anyMatch(issue -> issue.type() == OrthogonalPolygonValidationIssueType.SELF_INTERSECTION);
+            GriefPrevention.sendMessage(player, TextMode.Err,
+                    selfIntersection ? "That corner move would intersect the claim." : "That corner can't move there.");
+            return true;
+        }
+
+        CreateClaimResult updateResult = this.dataStore.updateShapedClaim(player, playerData, claim, moveResult.polygon());
+        if (!updateResult.succeeded || updateResult.claim == null)
+        {
+            if (updateResult.denialMessage != null)
+            {
+                GriefPrevention.sendMessage(player, TextMode.Err, updateResult.denialMessage.get());
+            }
+            else if (updateResult.claim != null)
+            {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.ResizeFailOverlap);
+                BoundaryVisualization.visualizeClaim(player, updateResult.claim, VisualizationType.CONFLICT_ZONE);
+            }
+            else
+            {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.ResizeFailOverlapRegion);
+            }
+            return true;
+        }
+
+        int claimBlocksRemaining = 0;
+        if (!updateResult.claim.isAdminClaim())
+        {
+            UUID ownerID = updateResult.claim.ownerID;
+            if (ownerID != null)
+            {
+                if (ownerID.equals(player.getUniqueId()))
+                {
+                    claimBlocksRemaining = playerData.getRemainingClaimBlocks();
+                }
+                else
+                {
+                    PlayerData ownerData = this.dataStore.getPlayerData(ownerID);
+                    claimBlocksRemaining = ownerData.getRemainingClaimBlocks();
+                    OfflinePlayer owner = GriefPrevention.instance.getServer().getOfflinePlayer(ownerID);
+                    if (!owner.isOnline())
+                    {
+                        this.dataStore.clearCachedPlayerData(ownerID);
+                    }
+                }
+            }
+        }
+
+        GriefPrevention.sendMessage(player, TextMode.Success, Messages.ClaimResizeSuccess,
+                String.valueOf(claimBlocksRemaining));
+        BoundaryVisualization.visualizeClaim(player, updateResult.claim,
+                updateResult.claim.isAdminClaim() ? VisualizationType.ADMIN_CLAIM : VisualizationType.CLAIM,
+                clickedBlock);
+        playerData.claimResizing = null;
+        playerData.lastShovelLocation = null;
+        return true;
+    }
+
+    private @NotNull OrthogonalPolygonValidationResult resolveShapedResizeMove(
+            @NotNull Player player,
+            @NotNull Claim claim,
+            @NotNull OrthogonalPolygon polygon,
+            int cornerIndex,
+            @NotNull OrthogonalPoint2i target)
+    {
+        OrthogonalPoint2i anchor = polygon.corners().get(cornerIndex);
+        int deltaX = target.x() - anchor.x();
+        int deltaZ = target.z() - anchor.z();
+
+        if (deltaX == 0 && deltaZ == 0)
+        {
+            return polygon.moveCorner(cornerIndex, anchor);
+        }
+
+        // Dragging a corner onto another vertex of the same claim (flattening a nib / collinear bump).
+        // Must use moveCorner: face-run logic uses expandEdge/moveEdgeRun and (a) locateResizeSubsegment only
+        // matches strictly interior edge points, so exact corner clicks miss, and (b) moveEdgeRun can reject
+        // or distort a merge that moveCorner + normalization already handles.
+        for (int i = 0; i < polygon.corners().size(); i++)
+        {
+            if (i != cornerIndex && polygon.corners().get(i).equals(target))
+            {
+                return polygon.moveCorner(cornerIndex, target);
+            }
+        }
+
+        if (deltaX != 0 && deltaZ != 0)
+        {
+            if (polygon.isRemovableNode(cornerIndex) || isConcaveCorner(polygon, cornerIndex))
+            {
+                OrthogonalPolygonValidationResult nibResult = resolveShapedNibResizeMove(player, claim, polygon, cornerIndex, target);
+                if (nibResult.isValid())
+                {
+                    return nibResult;
+                }
+            }
+            return polygon.moveCorner(cornerIndex, target);
+        }
+
+        FaceRun faceRun = findStraightFaceRun(polygon, cornerIndex, deltaX != 0);
+        if (faceRun == null)
+        {
+            return polygon.moveCorner(cornerIndex, target);
+        }
+
+        Integer selectedEdgeIndex = selectResizeSubsegment(player, polygon, faceRun, target);
+        int amount = deltaX != 0 ? deltaX : deltaZ;
+        if (selectedEdgeIndex != null)
+        {
+            return polygon.expandEdge(selectedEdgeIndex, amount);
+        }
+
+        if (polygon.isRemovableNode(cornerIndex) || isConcaveCorner(polygon, cornerIndex))
+        {
+            OrthogonalPolygonValidationResult orthogonalNibResult = resolveOrthogonalShapedNibResizeMove(
+                    player,
+                    claim,
+                    polygon,
+                    cornerIndex,
+                    target);
+            if (orthogonalNibResult != null && orthogonalNibResult.isValid())
+            {
+                return orthogonalNibResult;
+            }
+        }
+
+        // If no subsegment selected but target equals a corner on the face run, use moveCorner
+        // to merge/flatten the nib (e.g., dragging (4,4) onto (8,4) on a Z=4 horizontal face)
+        if (isTargetCornerOnFaceRun(polygon, faceRun, target))
+        {
+            return polygon.moveCorner(cornerIndex, target);
+        }
+
+        return polygon.moveEdgeRun(faceRun.startEdgeIndex(), faceRun.endEdgeIndex(), amount);
+    }
+
+    private boolean isTargetCornerOnFaceRun(
+            @NotNull OrthogonalPolygon polygon,
+            @NotNull FaceRun faceRun,
+            @NotNull OrthogonalPoint2i target)
+    {
+        int edgeIndex = faceRun.startEdgeIndex();
+        while (true)
+        {
+            OrthogonalEdge2i edge = polygon.edges().get(edgeIndex);
+            // Check both endpoints of this edge
+            if (edge.start().equals(target) || edge.end().equals(target))
+            {
+                return true;
+            }
+
+            if (edgeIndex == faceRun.endEdgeIndex())
+            {
+                break;
+            }
+            edgeIndex = (edgeIndex + 1) % polygon.edges().size();
+        }
+        return false;
+    }
+
+    private @NotNull OrthogonalPolygonValidationResult resolveShapedNibResizeMove(
+            @NotNull Player player,
+            @NotNull Claim claim,
+            @NotNull OrthogonalPolygon polygon,
+            int cornerIndex,
+            @NotNull OrthogonalPoint2i target)
+    {
+        OrthogonalPoint2i anchor = polygon.corners().get(cornerIndex);
+        List<ShapedNibResizeAttempt> attempts = new ArrayList<>(2);
+        addShapedNibResizeAttempt(
+                attempts,
+                polygon,
+                tryShapedNibResizeCandidate(
+                        player,
+                        claim,
+                        polygon,
+                        anchor,
+                        new OrthogonalPoint2i(anchor.x(), target.z()),
+                        target,
+                        new OrthogonalPoint2i(target.x(), anchor.z()))
+        );
+        addShapedNibResizeAttempt(
+                attempts,
+                polygon,
+                tryShapedNibResizeCandidate(
+                        player,
+                        claim,
+                        polygon,
+                        anchor,
+                        new OrthogonalPoint2i(target.x(), anchor.z()),
+                        target,
+                        new OrthogonalPoint2i(anchor.x(), target.z()))
+        );
+
+        ShapedNibResizeAttempt bestAttempt = selectBestShapedNibResizeAttempt(attempts);
+        if (bestAttempt != null)
+        {
+            return bestAttempt.result();
+        }
+
+        return polygon.moveCorner(cornerIndex, target);
+    }
+
+    private boolean isConcaveCorner(@NotNull OrthogonalPolygon polygon, int cornerIndex)
+    {
+        List<OrthogonalPoint2i> corners = polygon.corners();
+        if (cornerIndex < 0 || cornerIndex >= corners.size() || corners.size() < 4)
+        {
+            return false;
+        }
+
+        OrthogonalPoint2i previous = corners.get(Math.floorMod(cornerIndex - 1, corners.size()));
+        OrthogonalPoint2i current = corners.get(cornerIndex);
+        OrthogonalPoint2i next = corners.get((cornerIndex + 1) % corners.size());
+
+        long edgeAX = current.x() - previous.x();
+        long edgeAZ = current.z() - previous.z();
+        long edgeBX = next.x() - current.x();
+        long edgeBZ = next.z() - current.z();
+        long cross = edgeAX * edgeBZ - edgeAZ * edgeBX;
+        int crossSign = Long.compare(cross, 0L);
+        if (crossSign == 0)
+        {
+            return false;
+        }
+
+        int winding = polygonWindingSign(polygon.corners());
+        return winding != 0 && crossSign != winding;
+    }
+
+    private int polygonWindingSign(@NotNull List<OrthogonalPoint2i> corners)
+    {
+        long area2 = 0L;
+        for (int i = 0; i < corners.size(); i++)
+        {
+            OrthogonalPoint2i current = corners.get(i);
+            OrthogonalPoint2i next = corners.get((i + 1) % corners.size());
+            area2 += (long) current.x() * next.z() - (long) next.x() * current.z();
+        }
+
+        return Long.compare(area2, 0L);
+    }
+
+    private @Nullable OrthogonalPolygonValidationResult resolveOrthogonalShapedNibResizeMove(
+            @NotNull Player player,
+            @NotNull Claim claim,
+            @NotNull OrthogonalPolygon polygon,
+            int cornerIndex,
+            @NotNull OrthogonalPoint2i target)
+    {
+        OrthogonalPoint2i anchor = polygon.corners().get(cornerIndex);
+        int deltaX = target.x() - anchor.x();
+        int deltaZ = target.z() - anchor.z();
+        if ((deltaX == 0) == (deltaZ == 0))
+        {
+            return null;
+        }
+
+        OrthogonalPoint2i secondOutside;
+        OrthogonalPoint2i reconnectProbe;
+        if (deltaX == 0)
+        {
+            int playerX = player.getLocation().getBlockX();
+            if (playerX == anchor.x())
+            {
+                return null;
+            }
+
+            secondOutside = new OrthogonalPoint2i(playerX, target.z());
+            reconnectProbe = new OrthogonalPoint2i(playerX, anchor.z());
+        }
+        else
+        {
+            int playerZ = player.getLocation().getBlockZ();
+            if (playerZ == anchor.z())
+            {
+                return null;
+            }
+
+            secondOutside = new OrthogonalPoint2i(target.x(), playerZ);
+            reconnectProbe = new OrthogonalPoint2i(anchor.x(), playerZ);
+        }
+
+        if (secondOutside.equals(anchor) || secondOutside.equals(target) || reconnectProbe.equals(secondOutside))
+        {
+            return null;
+        }
+
+        ClaimEditorSession session = ClaimEditorSession.idle(player.getUniqueId())
+                .withMode(com.griefprevention.claims.editor.ClaimEditorMode.SHAPED, ClaimEditSource.TOOL)
+                .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, claim.getID()))
+                .withPreview(new ClaimEditPreview(polygon, null, List.of(), null, List.of(), List.of(), List.of()))
+                .withOpenPath(new com.griefprevention.claims.editor.ShapedPathDraft(claim.getID(), List.of(anchor), null, false));
+
+        ClaimEditResult first = claimEditor.apply(
+                session,
+                new ClaimEditIntent(
+                        ClaimEditIntentType.ADD_CORNER,
+                        ClaimEditSource.TOOL,
+                        null,
+                        claim.getID(),
+                        target,
+                        null,
+                        true,
+                        List.of()
+                )
+        );
+        if (!first.success())
+        {
+            return null;
+        }
+
+        ClaimEditResult second = claimEditor.apply(
+                first.session(),
+                new ClaimEditIntent(
+                        ClaimEditIntentType.ADD_CORNER,
+                        ClaimEditSource.TOOL,
+                        null,
+                        claim.getID(),
+                        secondOutside,
+                        null,
+                        true,
+                        List.of()
+                )
+        );
+        if (!second.success())
+        {
+            return null;
+        }
+
+        ClaimEditResult merged = claimEditor.apply(
+                second.session(),
+                new ClaimEditIntent(
+                        ClaimEditIntentType.ADD_CORNER,
+                        ClaimEditSource.TOOL,
+                        null,
+                        claim.getID(),
+                        reconnectProbe,
+                        null,
+                        true,
+                        List.of()
+                )
+        );
+        if (!merged.success() || merged.preview().polygon() == null)
+        {
+            return null;
+        }
+
+        OrthogonalPolygonValidationResult result = OrthogonalPolygon.validatePath(merged.preview().polygon().closedPath());
+        if (!result.isValid() || result.polygon() == null || !polygonContainsPolygon(result.polygon(), polygon))
+        {
+            return null;
+        }
+
+        return result;
+    }
+
+    private @Nullable OrthogonalPolygonValidationResult tryShapedNibResizeCandidate(
+            @NotNull Player player,
+            @NotNull Claim claim,
+            @NotNull OrthogonalPolygon polygon,
+            @NotNull OrthogonalPoint2i anchor,
+            @NotNull OrthogonalPoint2i firstStep,
+            @NotNull OrthogonalPoint2i target,
+            @NotNull OrthogonalPoint2i reconnect)
+    {
+        if (firstStep.equals(anchor)
+                || firstStep.equals(target)
+                || reconnect.equals(anchor)
+                || reconnect.equals(firstStep)
+                || reconnect.equals(target))
+        {
+            return null;
+        }
+
+        ClaimEditorSession session = ClaimEditorSession.idle(player.getUniqueId())
+                .withMode(com.griefprevention.claims.editor.ClaimEditorMode.SHAPED, ClaimEditSource.TOOL)
+                .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, claim.getID()))
+                .withPreview(new ClaimEditPreview(polygon, null, List.of(), null, List.of(), List.of(), List.of()))
+                .withOpenPath(new com.griefprevention.claims.editor.ShapedPathDraft(
+                        claim.getID(),
+                        List.of(anchor, firstStep),
+                        null,
+                        false));
+
+        ClaimEditResult second = claimEditor.apply(
+                session,
+                new ClaimEditIntent(
+                        ClaimEditIntentType.ADD_CORNER,
+                        ClaimEditSource.TOOL,
+                        null,
+                        claim.getID(),
+                        target,
+                        null,
+                        true,
+                        List.of()
+                )
+        );
+        if (!second.success())
+        {
+            return null;
+        }
+
+        ClaimEditResult merged = claimEditor.apply(
+                second.session(),
+                new ClaimEditIntent(
+                        ClaimEditIntentType.ADD_CORNER,
+                        ClaimEditSource.TOOL,
+                        null,
+                        claim.getID(),
+                        reconnect,
+                        null,
+                        true,
+                        List.of()
+                )
+        );
+        if (!merged.success() || merged.preview().polygon() == null)
+        {
+            return null;
+        }
+
+        return OrthogonalPolygon.validatePath(merged.preview().polygon().closedPath());
+    }
+
+    private void addShapedNibResizeAttempt(
+            @NotNull List<ShapedNibResizeAttempt> attempts,
+            @NotNull OrthogonalPolygon originalPolygon,
+            @Nullable OrthogonalPolygonValidationResult result)
+    {
+        if (result == null || !result.isValid() || result.polygon() == null)
         {
             return;
         }
 
-        // Claim tools should not continue into the general interaction listener.
-        event.setCancelled(true);
-        this.playerEventHandler.onPlayerInteract(event);
+        attempts.add(new ShapedNibResizeAttempt(
+                result,
+                polygonContainsPolygon(result.polygon(), originalPolygon),
+                polygonArea(result.polygon()),
+                polygonOverlapArea(originalPolygon, result.polygon())
+        ));
+    }
+
+    private @Nullable ShapedNibResizeAttempt selectBestShapedNibResizeAttempt(
+            @NotNull List<ShapedNibResizeAttempt> attempts)
+    {
+        ShapedNibResizeAttempt best = null;
+        for (ShapedNibResizeAttempt attempt : attempts)
+        {
+            if (!attempt.containsOriginal())
+            {
+                continue;
+            }
+
+            if (best == null || compareShapedNibResizeAttempts(attempt, best) < 0)
+            {
+                best = attempt;
+            }
+        }
+
+        return best;
+    }
+
+    private int compareShapedNibResizeAttempts(
+            @NotNull ShapedNibResizeAttempt first,
+            @NotNull ShapedNibResizeAttempt second)
+    {
+        if (first.area() != second.area())
+        {
+            return Integer.compare(second.area(), first.area());
+        }
+
+        if (first.overlap() != second.overlap())
+        {
+            return Integer.compare(second.overlap(), first.overlap());
+        }
+
+        return 0;
+    }
+
+    private boolean polygonContains(@NotNull OrthogonalPolygon polygon, @NotNull OrthogonalPoint2i point)
+    {
+        if (polygon.corners().contains(point))
+        {
+            return true;
+        }
+
+        if (!polygon.edgeIndexesContainingInteriorPoint(point).isEmpty())
+        {
+            return true;
+        }
+
+        double sampleX = point.x() + 0.5D;
+        double sampleZ = point.z() + 0.5D;
+        boolean inside = false;
+        List<OrthogonalPoint2i> corners = polygon.corners();
+        for (int i = 0, j = corners.size() - 1; i < corners.size(); j = i++)
+        {
+            OrthogonalPoint2i a = corners.get(i);
+            OrthogonalPoint2i b = corners.get(j);
+            boolean crosses = (a.z() > sampleZ) != (b.z() > sampleZ);
+            if (!crosses)
+            {
+                continue;
+            }
+
+            double intersectionX = (double) (b.x() - a.x()) * (sampleZ - a.z()) / (double) (b.z() - a.z()) + a.x();
+            if (sampleX < intersectionX)
+            {
+                inside = !inside;
+            }
+        }
+
+        return inside;
+    }
+
+    private int polygonArea(@NotNull OrthogonalPolygon polygon)
+    {
+        int area = 0;
+        for (int x = polygon.minX(); x <= polygon.maxX(); x++)
+        {
+            for (int z = polygon.minZ(); z <= polygon.maxZ(); z++)
+            {
+                if (polygonContains(polygon, new OrthogonalPoint2i(x, z)))
+                {
+                    area++;
+                }
+            }
+        }
+
+        return area;
+    }
+
+    private boolean polygonContainsPolygon(@NotNull OrthogonalPolygon container, @NotNull OrthogonalPolygon contents)
+    {
+        for (int x = contents.minX(); x <= contents.maxX(); x++)
+        {
+            for (int z = contents.minZ(); z <= contents.maxZ(); z++)
+            {
+                OrthogonalPoint2i point = new OrthogonalPoint2i(x, z);
+                if (polygonContains(contents, point) && !polygonContains(container, point))
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private int polygonOverlapArea(@NotNull OrthogonalPolygon first, @NotNull OrthogonalPolygon second)
+    {
+        int area = 0;
+        int minX = Math.max(first.minX(), second.minX());
+        int maxX = Math.min(first.maxX(), second.maxX());
+        int minZ = Math.max(first.minZ(), second.minZ());
+        int maxZ = Math.min(first.maxZ(), second.maxZ());
+
+        for (int x = minX; x <= maxX; x++)
+        {
+            for (int z = minZ; z <= maxZ; z++)
+            {
+                OrthogonalPoint2i point = new OrthogonalPoint2i(x, z);
+                if (polygonContains(first, point) && polygonContains(second, point))
+                {
+                    area++;
+                }
+            }
+        }
+
+        return area;
+    }
+
+    private record ShapedNibResizeAttempt(
+            @NotNull OrthogonalPolygonValidationResult result,
+            boolean containsOriginal,
+            int area,
+            int overlap)
+    {
+    }
+
+    private @Nullable FaceRun findStraightFaceRun(
+            @NotNull OrthogonalPolygon polygon,
+            int cornerIndex,
+            boolean movingVerticalFace)
+    {
+        int edgeCount = polygon.edges().size();
+        int previousEdgeIndex = Math.floorMod(cornerIndex - 1, edgeCount);
+        int nextEdgeIndex = cornerIndex % edgeCount;
+        Integer anchorEdgeIndex = null;
+
+        OrthogonalEdge2i previousEdge = polygon.edges().get(previousEdgeIndex);
+        if ((movingVerticalFace && previousEdge.isVertical()) || (!movingVerticalFace && previousEdge.isHorizontal()))
+        {
+            anchorEdgeIndex = previousEdgeIndex;
+        }
+
+        OrthogonalEdge2i nextEdge = polygon.edges().get(nextEdgeIndex);
+        if ((movingVerticalFace && nextEdge.isVertical()) || (!movingVerticalFace && nextEdge.isHorizontal()))
+        {
+            anchorEdgeIndex = nextEdgeIndex;
+        }
+
+        if (anchorEdgeIndex == null)
+        {
+            return null;
+        }
+
+        OrthogonalEdge2i referenceEdge = polygon.edges().get(anchorEdgeIndex);
+        boolean horizontal = referenceEdge.isHorizontal();
+        int coordinate = horizontal ? referenceEdge.start().z() : referenceEdge.start().x();
+
+        int startEdgeIndex = anchorEdgeIndex;
+        while (true)
+        {
+            int previousIndex = Math.floorMod(startEdgeIndex - 1, edgeCount);
+            if (previousIndex == anchorEdgeIndex)
+            {
+                break;
+            }
+
+            OrthogonalEdge2i edge = polygon.edges().get(previousIndex);
+            if (!isSameStraightFace(edge, horizontal, coordinate))
+            {
+                break;
+            }
+
+            startEdgeIndex = previousIndex;
+        }
+
+        int endEdgeIndex = anchorEdgeIndex;
+        while (true)
+        {
+            int nextIndex = (endEdgeIndex + 1) % edgeCount;
+            if (nextIndex == startEdgeIndex)
+            {
+                break;
+            }
+
+            OrthogonalEdge2i edge = polygon.edges().get(nextIndex);
+            if (!isSameStraightFace(edge, horizontal, coordinate))
+            {
+                break;
+            }
+
+            endEdgeIndex = nextIndex;
+        }
+
+        return new FaceRun(startEdgeIndex, endEdgeIndex, horizontal);
+    }
+
+    private boolean isSameStraightFace(@NotNull OrthogonalEdge2i edge, boolean horizontal, int coordinate)
+    {
+        if (horizontal)
+        {
+            return edge.isHorizontal() && edge.start().z() == coordinate;
+        }
+
+        return edge.isVertical() && edge.start().x() == coordinate;
+    }
+
+    private @Nullable Integer selectResizeSubsegment(
+            @NotNull Player player,
+            @NotNull OrthogonalPolygon polygon,
+            @NotNull FaceRun faceRun,
+            @NotNull OrthogonalPoint2i target)
+    {
+        int targetCoordinate = faceRun.horizontal() ? target.x() : target.z();
+        Integer targetEdgeIndex = locateResizeSubsegment(polygon, faceRun, targetCoordinate);
+        if (targetEdgeIndex != null)
+        {
+            return targetEdgeIndex;
+        }
+
+        int playerCoordinate = faceRun.horizontal()
+                ? player.getLocation().getBlockX()
+                : player.getLocation().getBlockZ();
+        return locateResizeSubsegment(polygon, faceRun, playerCoordinate);
+    }
+
+    private @Nullable Integer locateResizeSubsegment(
+            @NotNull OrthogonalPolygon polygon,
+            @NotNull FaceRun faceRun,
+            int tangentCoordinate)
+    {
+        int edgeIndex = faceRun.startEdgeIndex();
+        while (true)
+        {
+            OrthogonalEdge2i edge = polygon.edges().get(edgeIndex);
+            int min = faceRun.horizontal() ? edge.minX() : edge.minZ();
+            int max = faceRun.horizontal() ? edge.maxX() : edge.maxZ();
+            if (tangentCoordinate > min && tangentCoordinate < max)
+            {
+                return edgeIndex;
+            }
+
+            if (edgeIndex == faceRun.endEdgeIndex())
+            {
+                break;
+            }
+
+            edgeIndex = (edgeIndex + 1) % polygon.edges().size();
+        }
+
+        return null;
+    }
+
+    private record FaceRun(int startEdgeIndex, int endEdgeIndex, boolean horizontal)
+    {
+    }
+
+    private boolean handleShapedResizeInteraction(
+            @NotNull Player player,
+            @NotNull PlayerData playerData,
+            @NotNull Block clickedBlock)
+    {
+        if (playerData.claimResizing != null && playerData.claimResizing.inDataStore) {
+            if (clickedBlock.getLocation().equals(playerData.lastShovelLocation)) {
+                return true;
+            }
+
+            if (tryResizeShapedClaim(player, playerData, clickedBlock)) {
+                return true;
+            }
+
+            int newx1, newx2, newz1, newz2, newy1, newy2;
+            if (playerData.lastShovelLocation.getBlockX() == playerData.claimResizing.getLesserBoundaryCorner()
+                    .getBlockX()) {
+                newx1 = clickedBlock.getX();
+                newx2 = playerData.claimResizing.getGreaterBoundaryCorner().getBlockX();
+            } else {
+                newx1 = playerData.claimResizing.getLesserBoundaryCorner().getBlockX();
+                newx2 = clickedBlock.getX();
+            }
+
+            if (playerData.lastShovelLocation.getBlockZ() == playerData.claimResizing.getLesserBoundaryCorner()
+                    .getBlockZ()) {
+                newz1 = clickedBlock.getZ();
+                newz2 = playerData.claimResizing.getGreaterBoundaryCorner().getBlockZ();
+            } else {
+                newz1 = playerData.claimResizing.getLesserBoundaryCorner().getBlockZ();
+                newz2 = clickedBlock.getZ();
+            }
+
+            if (playerData.claimResizing.is3D()) {
+                int currentMinY = playerData.claimResizing.getLesserBoundaryCorner().getBlockY();
+                int currentMaxY = playerData.claimResizing.getGreaterBoundaryCorner().getBlockY();
+                int startY = playerData.lastShovelLocation.getBlockY();
+                int endY = clickedBlock.getY();
+                boolean isSingleLayer = (currentMinY == currentMaxY);
+                newy1 = currentMinY;
+                newy2 = currentMaxY;
+                if (isSingleLayer || startY == currentMinY) {
+                    newy1 = Math.min(endY, currentMaxY);
+                    if (endY > currentMaxY) newy2 = endY;
+                } else if (startY == currentMaxY) {
+                    newy2 = Math.max(endY, currentMinY);
+                    if (endY < currentMinY) newy1 = endY;
+                }
+                if (newy1 > newy2) {
+                    int tmp = newy1;
+                    newy1 = newy2;
+                    newy2 = tmp;
+                }
+            } else {
+                newy1 = playerData.claimResizing.getLesserBoundaryCorner().getBlockY();
+                newy2 = playerData.claimResizing.getGreaterBoundaryCorner().getBlockY();
+            }
+
+            this.dataStore.resizeClaimWithChecks(player, playerData, newx1, newx2, newy1, newy2, newz1, newz2);
+            return true;
+        }
+
+        Claim clickedClaim = this.dataStore.getClaimAt(clickedBlock.getLocation(), true, playerData.lastClaim);
+        while (clickedClaim != null && clickedClaim.parent != null) {
+            clickedClaim = clickedClaim.parent;
+        }
+
+        if (clickedClaim == null) {
+            return false;
+        }
+
+        Supplier<String> noEditReason = clickedClaim.checkPermission(player, ClaimPermission.Edit, null);
+        if (noEditReason != null) {
+            return false;
+        }
+
+        if (!isCornerMatch(clickedClaim, clickedBlock)) {
+            return false;
+        }
+
+        if (playerData.getClaimEditorSession().openPath() != null) {
+            if (canStartResizeFromOpenPath(playerData.getClaimEditorSession(), clickedClaim, clickedBlock)) {
+                playerData.setClaimEditorSession(
+                        loadClaimIntoShapedSession(playerData.getClaimEditorSession().withOpenPath(null), clickedClaim));
+            } else {
+                return false;
+            }
+        }
+
+        startClaimResizeSelection(player, playerData, clickedClaim, clickedBlock);
+        return true;
+    }
+
+    private boolean canStartResizeFromOpenPath(
+            @NotNull ClaimEditorSession session,
+            @NotNull Claim claim,
+            @NotNull Block clickedBlock)
+    {
+        if (session.activeTarget() == null
+                || session.activeTarget().claimId() == null
+                || !session.activeTarget().claimId().equals(claim.getID())
+                || session.openPath() == null
+                || session.openPath().points().size() != 1) {
+            return false;
+        }
+
+        OrthogonalPoint2i onlyPoint = session.openPath().points().getFirst();
+        return onlyPoint.x() == clickedBlock.getX() && onlyPoint.z() == clickedBlock.getZ();
+    }
+
+    private void startClaimResizeSelection(
+            @NotNull Player player,
+            @NotNull PlayerData playerData,
+            @NotNull Claim claim,
+            @NotNull Block clickedBlock)
+    {
+        Claim selection = claim;
+        while (selection.parent != null) {
+            Claim parent = selection.parent;
+            boolean parentContains = parent.contains(clickedBlock.getLocation(), true, false);
+            if (parentContains && isCornerMatch(parent, clickedBlock)) {
+                selection = parent;
+            } else {
+                break;
+            }
+        }
+
+        playerData.claimResizing = selection;
+        playerData.lastShovelLocation = clickedBlock.getLocation();
+        Messages message;
+        if (selection.parent != null) {
+            message = Messages.SubdivisionSelected;
+        } else {
+            boolean hasNoChildren = selection.children == null || selection.children.isEmpty();
+            message = hasNoChildren ? Messages.ClaimSelected : Messages.ClaimSelectedTopLevel;
+        }
+        GriefPrevention.sendMessage(player, TextMode.Instr, message);
+
+        VisualizationType visualizationType;
+        if (selection.parent == null) {
+            visualizationType = selection.isAdminClaim() ? VisualizationType.ADMIN_CLAIM : VisualizationType.CLAIM;
+        } else {
+            visualizationType = selection.is3D() ? VisualizationType.SUBDIVISION_3D : VisualizationType.SUBDIVISION;
+        }
+        BoundaryVisualization.visualizeClaim(player, selection, visualizationType, clickedBlock);
+    }
+
+    private boolean trySelectShapedBoundarySegmentBasicMode(
+            @NotNull Player player,
+            @NotNull PlayerData playerData,
+            @NotNull Claim deepestClaim,
+            @NotNull Block clickedBlock)
+    {
+        Claim claim = deepestClaim;
+        while (claim != null && claim.parent != null)
+        {
+            claim = claim.parent;
+        }
+        if (claim == null || !claim.isShaped() || claim.is3D())
+        {
+            return false;
+        }
+        Supplier<String> noEdit = claim.checkPermission(player, ClaimPermission.Edit, null);
+        if (noEdit != null)
+        {
+            return false;
+        }
+
+        OrthogonalPoint2i point = new OrthogonalPoint2i(clickedBlock.getX(), clickedBlock.getZ());
+        if (claim.getCornerIndexAt(point.x(), point.z()) >= 0)
+        {
+            return false;
+        }
+
+        OrthogonalPolygon polygon = claim.getBoundaryPolygon();
+        List<Integer> matches = polygon.edgeIndexesContainingInteriorPoint(point);
+        if (matches.size() != 1)
+        {
+            return false;
+        }
+
+        ClaimEditorSession session = ClaimEditorSession.idle(player.getUniqueId())
+                .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.TOOL);
+        session = loadClaimIntoShapedSession(session, claim);
+
+        ClaimEditResult result = claimEditor.apply(
+                session,
+                new ClaimEditIntent(
+                        ClaimEditIntentType.SELECT_SEGMENT,
+                        ClaimEditSource.TOOL,
+                        null,
+                        claim.getID(),
+                        point,
+                        null,
+                        true,
+                        List.of()
+                )
+        );
+
+        if (!result.success())
+        {
+            applyClaimEditResult(player, playerData, result);
+            return true;
+        }
+
+        applyClaimEditResult(player, playerData, result);
+        playerData.setEphemeralBasicShapedSegmentPreview(true);
+        playerData.lastClaim = claim;
+        BoundaryVisualization.visualizeClaim(
+                player,
+                claim,
+                claim.isAdminClaim() ? VisualizationType.ADMIN_CLAIM : VisualizationType.CLAIM,
+                clickedBlock);
+        return true;
+    }
+
+    private void handleShapedModeInteraction(@NotNull Player player, @NotNull PlayerData playerData, @NotNull Block clickedBlock) {
+        ClaimEditorSession session = playerData.getClaimEditorSession();
+        if (session.mode() != com.griefprevention.claims.editor.ClaimEditorMode.SHAPED) {
+            session = session.withMode(com.griefprevention.claims.editor.ClaimEditorMode.SHAPED, ClaimEditSource.TOOL);
+        }
+
+        if (session.activeTarget() != null
+                && session.activeTarget().type() == ClaimEditTargetType.EXISTING_PARENT_CLAIM
+                && session.openPath() != null
+                && session.activeTarget().claimId() != null) {
+            Claim targetClaim = this.dataStore.getClaim(session.activeTarget().claimId());
+            if (targetClaim != null) {
+                Claim clickedClaim = this.dataStore.getClaimAt(clickedBlock.getLocation(), true, playerData.lastClaim);
+                while (clickedClaim != null && clickedClaim.parent != null) {
+                    clickedClaim = clickedClaim.parent;
+                }
+
+                if (clickedClaim != null && !clickedClaim.getID().equals(targetClaim.getID())) {
+                    GriefPrevention.sendMessage(player, TextMode.Err, "Finish this reshape path before editing a different claim.");
+                    return;
+                }
+
+                BoundaryNodeEnsureResult targetBoundaryResult = ensureBoundaryNodeForShapedPath(
+                        player,
+                        playerData,
+                        targetClaim,
+                        clickedBlock,
+                        loadClaimIntoShapedSession(session, targetClaim)
+                );
+                if (targetBoundaryResult.claim() == null) {
+                    return;
+                }
+                targetClaim = targetBoundaryResult.claim();
+                if (targetBoundaryResult.markerEdited() && !player.isSneaking()) {
+                    return;
+                }
+
+                ClaimEditorSession targetSession = loadClaimIntoShapedSession(playerData.getClaimEditorSession(), targetClaim);
+                OrthogonalPoint2i targetPoint = snapOutsideShapedCornerToMinimumDistance(
+                        targetClaim,
+                        targetSession,
+                        new OrthogonalPoint2i(clickedBlock.getX(), clickedBlock.getZ())
+                );
+                ClaimEditResult result = claimEditor.apply(
+                        targetSession,
+                        new ClaimEditIntent(
+                                ClaimEditIntentType.ADD_CORNER,
+                                ClaimEditSource.TOOL,
+                                null,
+                                targetClaim.getID(),
+                                targetPoint,
+                                null,
+                                true,
+                                List.of()
+                        )
+                );
+                applyClaimEditResult(player, playerData, result);
+                if (result.success()) {
+                    if (result.preview().polygon() != null
+                            && result.session().openPath() != null
+                            && result.session().openPath().closureReady()) {
+                        finalizeExistingClaimReshape(player, playerData, targetClaim, result, clickedBlock);
+                    } else {
+                        visualizeShapedEditState(player, result.session(), clickedBlock.getY());
+                    }
+                }
+                return;
+            }
+        }
+
+        Claim claim = this.dataStore.getClaimAt(clickedBlock.getLocation(), true, playerData.lastClaim);
+        while (claim != null && claim.parent != null) {
+            claim = claim.parent;
+        }
+
+        if (claim == null) {
+            Claim targetClaim = resolveExistingShapedTarget(session);
+            if (targetClaim != null && (session.openPath() != null || session.activeSegment() != null)) {
+                session = loadClaimIntoShapedSession(playerData.getClaimEditorSession(), targetClaim);
+
+                OrthogonalPoint2i clickedPoint = new OrthogonalPoint2i(clickedBlock.getX(), clickedBlock.getZ());
+                session = seedOpenPathFromActiveSegmentIfNeeded(session, targetClaim, clickedPoint);
+                playerData.setClaimEditorSession(session);
+
+                String reconnectError = validateExistingMergeReconnect(targetClaim, session, clickedPoint);
+                if (reconnectError != null) {
+                    GriefPrevention.sendMessage(player, TextMode.Err, reconnectError);
+                    visualizeShapedEditState(player, session, clickedBlock.getY());
+                    return;
+                }
+
+                OrthogonalPoint2i adjustedPoint = snapOutsideShapedCornerToMinimumDistance(
+                        targetClaim,
+                        session,
+                        clickedPoint
+                );
+                ClaimEditResult result = claimEditor.apply(
+                        session,
+                        new ClaimEditIntent(
+                                ClaimEditIntentType.ADD_CORNER,
+                                ClaimEditSource.TOOL,
+                                null,
+                                targetClaim.getID(),
+                                adjustedPoint,
+                                null,
+                                true,
+                                List.of()
+                        )
+                );
+                applyClaimEditResult(player, playerData, result);
+                if (result.success()) {
+                    if (result.preview().polygon() != null
+                            && result.session().openPath() != null
+                            && result.session().openPath().closureReady()) {
+                        finalizeExistingClaimReshape(player, playerData, targetClaim, result, clickedBlock);
+                    } else {
+                        visualizeShapedEditState(player, result.session(), clickedBlock.getY());
+                    }
+                }
+                return;
+            }
+
+            ClaimEditResult result = claimEditor.apply(
+                    session.withTarget(new ClaimEditTarget(ClaimEditTargetType.NEW_PARENT_CLAIM, null)),
+                    new ClaimEditIntent(
+                            ClaimEditIntentType.ADD_CORNER,
+                            ClaimEditSource.TOOL,
+                            null,
+                            null,
+                            new OrthogonalPoint2i(clickedBlock.getX(), clickedBlock.getZ()),
+                            null,
+                            true,
+                            List.of()
+                    )
+            );
+            applyClaimEditResult(player, playerData, result);
+            if (result.success()) {
+                if (result.preview().polygon() != null) {
+                    finalizeShapedClaimCreation(player, playerData, result, clickedBlock);
+                } else {
+                    visualizeShapedEditState(player, result.session(), clickedBlock.getY());
+                }
+            }
+            return;
+        }
+
+        playerData.lastClaim = claim;
+
+        if (claim.is3D()) {
+            GriefPrevention.sendMessage(player, TextMode.Err, "Shaped mode only works on top-level 2D claims.");
+            return;
+        }
+
+        Supplier<String> noEditReason = claim.checkPermission(player, ClaimPermission.Edit, null);
+        if (noEditReason != null) {
+            GriefPrevention.sendMessage(player, TextMode.Err, noEditReason.get());
+            return;
+        }
+
+        // Check if player clicked inside their claim but NOT on the boundary
+        OrthogonalPoint2i clickedPoint = new OrthogonalPoint2i(clickedBlock.getX(), clickedBlock.getZ());
+        if (!isBoundaryPoint(claim.getBoundaryPolygon(), clickedPoint)
+                && claim.contains(clickedBlock.getLocation(), true, false)) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.ShapedClaimInteriorClick);
+            visualizeConflict(player, playerData, claim, clickedBlock, claim.is3D());
+            return;
+        }
+
+        if (isCornerMatch(claim, clickedBlock) && session.openPath() == null) {
+            startClaimResizeSelection(player, playerData, claim, clickedBlock);
+            return;
+        }
+
+        session = loadClaimIntoShapedSession(session, claim);
+        BoundaryNodeEnsureResult boundaryNodeResult = ensureBoundaryNodeForShapedPath(
+                player,
+                playerData,
+                claim,
+                clickedBlock,
+                session
+        );
+        if (boundaryNodeResult.claim() == null) {
+            return;
+        }
+        claim = boundaryNodeResult.claim();
+        if (boundaryNodeResult.markerEdited() && !player.isSneaking()) {
+            return;
+        }
+
+        session = loadClaimIntoShapedSession(playerData.getClaimEditorSession(), claim);
+        OrthogonalPoint2i adjustedPoint = snapOutsideShapedCornerToMinimumDistance(
+                claim,
+                session,
+                new OrthogonalPoint2i(clickedBlock.getX(), clickedBlock.getZ())
+        );
+        ClaimEditResult result = claimEditor.apply(
+                session,
+                new ClaimEditIntent(
+                        ClaimEditIntentType.ADD_CORNER,
+                        ClaimEditSource.TOOL,
+                        null,
+                        claim.getID(),
+                        adjustedPoint,
+                        null,
+                        true,
+                        List.of()
+                )
+        );
+        applyClaimEditResult(player, playerData, result);
+        if (result.success()) {
+            if (result.preview().polygon() != null
+                    && result.session().openPath() != null
+                    && result.session().openPath().closureReady()) {
+                finalizeExistingClaimReshape(player, playerData, claim, result, clickedBlock);
+            } else {
+                visualizeShapedEditState(player, result.session(), clickedBlock.getY());
+            }
+        }
+    }
+
+    private @NotNull BoundaryNodeEnsureResult ensureBoundaryNodeForShapedPath(
+            @NotNull Player player,
+            @NotNull PlayerData playerData,
+            @NotNull Claim claim,
+            @NotNull Block clickedBlock,
+            @NotNull ClaimEditorSession session)
+    {
+        if (session.openPath() != null) {
+            return new BoundaryNodeEnsureResult(claim, false);
+        }
+
+        OrthogonalPoint2i point = new OrthogonalPoint2i(clickedBlock.getX(), clickedBlock.getZ());
+        if (!isBoundaryInteriorPoint(claim, point)) {
+            return new BoundaryNodeEnsureResult(claim, false);
+        }
+        if (!meetsMinimumNodeSpacing(claim, point))
+        {
+            GriefPrevention.sendMessage(
+                    player,
+                    TextMode.Err,
+                    Messages.NewClaimTooNarrow,
+                    String.valueOf(Math.max(1, GriefPrevention.instance.config_claims_shapedMinWidth)));
+            return new BoundaryNodeEnsureResult(null, false);
+        }
+
+        ClaimEditResult result = claimEditor.apply(
+                session,
+                new ClaimEditIntent(
+                        ClaimEditIntentType.ADD_NODE,
+                        ClaimEditSource.TOOL,
+                        null,
+                        claim.getID(),
+                        point,
+                        null,
+                        true,
+                        List.of()
+                )
+        );
+        applyClaimEditResult(player, playerData, result);
+        if (!result.success()) {
+            return new BoundaryNodeEnsureResult(null, false);
+        }
+
+        persistShapedBoundaryMarkers(player, playerData, claim, result, clickedBlock);
+        Claim updatedClaim = this.dataStore.getClaim(claim.getID());
+        return new BoundaryNodeEnsureResult(updatedClaim != null ? updatedClaim : claim, true);
+    }
+
+    private record BoundaryNodeEnsureResult(@Nullable Claim claim, boolean markerEdited) {}
+
+    private boolean meetsMinimumNodeSpacing(@NotNull Claim claim, @NotNull OrthogonalPoint2i point)
+    {
+        int minimumEdgeLength = Math.max(0, GriefPrevention.instance.config_claims_shapedMinWidth - 1);
+        if (minimumEdgeLength <= 0)
+        {
+            return true;
+        }
+
+        OrthogonalPolygon polygon = claim.getBoundaryPolygon();
+        List<Integer> edgeIndexes = polygon.edgeIndexesContainingInteriorPoint(point);
+        if (edgeIndexes.size() != 1)
+        {
+            return false;
+        }
+
+        OrthogonalEdge2i edge = polygon.edges().get(edgeIndexes.getFirst());
+        int distanceToStart = Math.abs(point.x() - edge.start().x()) + Math.abs(point.z() - edge.start().z());
+        int distanceToEnd = Math.abs(point.x() - edge.end().x()) + Math.abs(point.z() - edge.end().z());
+        return distanceToStart >= minimumEdgeLength && distanceToEnd >= minimumEdgeLength;
+    }
+
+    private @NotNull OrthogonalPoint2i snapOutsideShapedCornerToMinimumDistance(
+            @NotNull Claim claim,
+            @NotNull ClaimEditorSession session,
+            @NotNull OrthogonalPoint2i clickedPoint)
+    {
+        int minimumEdgeLength = Math.max(0, GriefPrevention.instance.config_claims_shapedMinWidth - 1);
+
+        if (session.openPath() == null || session.openPath().points().size() != 1)
+        {
+            return clickedPoint;
+        }
+
+        OrthogonalPoint2i anchor = session.openPath().points().getFirst();
+        OrthogonalPolygon boundaryPolygon = claim.getBoundaryPolygon();
+        if (!isBoundaryPoint(boundaryPolygon, anchor) || isBoundaryPoint(boundaryPolygon, clickedPoint))
+        {
+            return clickedPoint;
+        }
+
+        World world = claim.getLesserBoundaryCorner().getWorld();
+        if (world == null)
+        {
+            return clickedPoint;
+        }
+
+        Location probe = new Location(world, clickedPoint.x(), claim.getLesserBoundaryCorner().getBlockY(), clickedPoint.z());
+        if (claim.contains(probe, true, false))
+        {
+            return clickedPoint;
+        }
+
+        int deltaX = clickedPoint.x() - anchor.x();
+        int deltaZ = clickedPoint.z() - anchor.z();
+        if (deltaX == 0 && deltaZ == 0)
+        {
+            return clickedPoint;
+        }
+
+        if (Math.abs(deltaX) < Math.abs(deltaZ))
+        {
+            int direction = Integer.signum(deltaZ);
+            if (direction == 0)
+            {
+                return clickedPoint;
+            }
+
+            // Keep the first outside step pointed away from the claim boundary.
+            if (claim.contains(new Location(world, anchor.x(), claim.getLesserBoundaryCorner().getBlockY(), anchor.z() + direction), true, false))
+            {
+                direction *= -1;
+            }
+            int snappedDistance = Math.max(Math.abs(deltaZ), minimumEdgeLength);
+            return new OrthogonalPoint2i(anchor.x(), anchor.z() + direction * snappedDistance);
+        }
+
+        int direction = Integer.signum(deltaX);
+        if (direction == 0)
+        {
+            return clickedPoint;
+        }
+
+        // Keep the first outside step pointed away from the claim boundary.
+        if (claim.contains(new Location(world, anchor.x() + direction, claim.getLesserBoundaryCorner().getBlockY(), anchor.z()), true, false))
+        {
+            direction *= -1;
+        }
+        int snappedDistance = Math.max(Math.abs(deltaX), minimumEdgeLength);
+        return new OrthogonalPoint2i(anchor.x() + direction * snappedDistance, anchor.z());
+    }
+
+    private @Nullable Claim resolveExistingShapedTarget(@NotNull ClaimEditorSession session)
+    {
+        if (session.activeTarget() == null
+                || session.activeTarget().type() != ClaimEditTargetType.EXISTING_PARENT_CLAIM
+                || session.activeTarget().claimId() == null)
+        {
+            return null;
+        }
+
+        return this.dataStore.getClaim(session.activeTarget().claimId());
+    }
+
+    private @NotNull ClaimEditorSession seedOpenPathFromActiveSegmentIfNeeded(
+            @NotNull ClaimEditorSession session,
+            @NotNull Claim claim,
+            @NotNull OrthogonalPoint2i clickedPoint)
+    {
+        if (session.openPath() != null || session.activeSegment() == null || session.preview().polygon() == null)
+        {
+            return session;
+        }
+
+        OrthogonalPolygon polygon = session.preview().polygon();
+        int edgeIndex = session.activeSegment().edgeIndex();
+        if (edgeIndex < 0 || edgeIndex >= polygon.edges().size())
+        {
+            return session;
+        }
+
+        OrthogonalEdge2i edge = polygon.edges().get(edgeIndex);
+        OrthogonalPoint2i start = edge.start();
+        OrthogonalPoint2i end = edge.end();
+        OrthogonalPoint2i anchor = manhattanDistance(clickedPoint, start) <= manhattanDistance(clickedPoint, end)
+                ? start
+                : end;
+
+        com.griefprevention.claims.editor.ShapedPathDraft draft =
+                new com.griefprevention.claims.editor.ShapedPathDraft(claim.getID(), List.of(anchor), null, false);
+        ClaimEditPreview preview = new ClaimEditPreview(
+                polygon,
+                session.activeSegment(),
+                draft.points(),
+                null,
+                List.of(),
+                List.of(),
+                List.of("Segment point added.")
+        );
+        return session.withOpenPath(draft).withPreview(preview);
+    }
+
+    private int manhattanDistance(@NotNull OrthogonalPoint2i first, @NotNull OrthogonalPoint2i second)
+    {
+        return Math.abs(first.x() - second.x()) + Math.abs(first.z() - second.z());
+    }
+
+    private @Nullable String validateExistingMergeReconnect(
+            @NotNull Claim claim,
+            @NotNull ClaimEditorSession session,
+            @NotNull OrthogonalPoint2i clickedPoint)
+    {
+        if (session.openPath() == null || !isBoundaryPoint(claim.getBoundaryPolygon(), clickedPoint))
+        {
+            return null;
+        }
+
+        List<OrthogonalPoint2i> points = session.openPath().points();
+        OrthogonalPolygon boundaryPolygon = claim.getBoundaryPolygon();
+        boolean hasOutsideCorner = points.stream()
+                .skip(1)
+                .anyMatch(point -> !isBoundaryPoint(boundaryPolygon, point));
+        if (!hasOutsideCorner)
+        {
+            return "Cannot merge yet: add at least one outside corner before reconnecting to the claim boundary.";
+        }
+
+        OrthogonalPoint2i lastPoint = points.getLast();
+        if (!isOrthogonalStep(lastPoint, clickedPoint))
+        {
+            return "Cannot merge yet: reconnect point must be orthogonally aligned with the current endpoint.";
+        }
+
+        return null;
+    }
+
+    private boolean isOrthogonalStep(@NotNull OrthogonalPoint2i first, @NotNull OrthogonalPoint2i second)
+    {
+        return (first.x() == second.x()) ^ (first.z() == second.z());
+    }
+
+    private boolean isBoundaryInteriorPoint(@NotNull Claim claim, @NotNull OrthogonalPoint2i point)
+    {
+        if (claim.getCornerIndexAt(point.x(), point.z()) >= 0) {
+            return false;
+        }
+
+        return !claim.getBoundaryPolygon().edgeIndexesContainingInteriorPoint(point).isEmpty();
+    }
+
+    private boolean isBoundaryPoint(@NotNull OrthogonalPolygon polygon, @NotNull OrthogonalPoint2i point)
+    {
+        if (polygon.corners().contains(point)) {
+            return true;
+        }
+
+        return polygon.edges().stream().anyMatch(edge -> edge.containsPoint(point));
+    }
+
+    private @NotNull ClaimEditorSession loadClaimIntoShapedSession(@NotNull ClaimEditorSession session, @NotNull Claim claim) {
+        if (session.activeTarget() != null
+                && session.activeTarget().claimId() != null
+                && session.activeTarget().claimId().equals(claim.getID())
+                && session.preview().polygon() != null) {
+            return session;
+        }
+
+        OrthogonalPolygon polygon = claim.getBoundaryPolygon();
+        return session.withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, claim.getID()))
+                .withOpenPath(null)
+                .withActiveSegment(null)
+                .withPreview(new ClaimEditPreview(polygon, null, List.of(), null, List.of(), List.of(), List.of()));
+    }
+
+    private void finalizeShapedClaimCreation(
+            @NotNull Player player,
+            @NotNull PlayerData playerData,
+            @NotNull ClaimEditResult result,
+            @NotNull Block clickedBlock) {
+        OrthogonalPolygon polygon = result.preview().polygon();
+        if (polygon == null) {
+            return;
+        }
+
+        // Normalize the polygon to clean up collinear boundary markers
+        // This removes intermediate points on straight edges for a cleaner boundary
+        OrthogonalPolygonValidationResult normalizedResult = OrthogonalPolygon.validatePath(polygon.closedPath());
+        if (normalizedResult.isValid() && normalizedResult.polygon() != null) {
+            polygon = normalizedResult.polygon();
+        }
+
+        int claimDepth = clickedBlock.getY() - instance.config_claims_claimsExtendIntoGroundDistance;
+        CreateClaimResult createResult = this.dataStore.createShapedClaim(
+                player.getWorld(),
+                polygon,
+                claimDepth,
+                player.getUniqueId(),
+                player);
+
+        if (!createResult.succeeded || createResult.claim == null) {
+            if (createResult.denialMessage != null) {
+                GriefPrevention.sendMessage(player, TextMode.Err, createResult.denialMessage.get());
+            } else if (createResult.claim != null) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.CreateClaimFailOverlapShort);
+                visualizeConflict(player, playerData, createResult.claim, clickedBlock, createResult.claim.is3D());
+            } else {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.CreateClaimFailOverlapRegion);
+            }
+            visualizeShapedEditState(player, result.session(), clickedBlock.getY());
+            return;
+        }
+
+        playerData.lastClaim = createResult.claim;
+        ClaimEditorSession shapedSession = ClaimEditorSession.idle(playerData.playerID)
+                .withMode(com.griefprevention.claims.editor.ClaimEditorMode.SHAPED, ClaimEditSource.TOOL);
+        playerData.setClaimEditorSession(loadClaimIntoShapedSession(shapedSession, createResult.claim));
+        GriefPrevention.sendMessage(player, TextMode.Success, Messages.CreateClaimSuccess);
+        BoundaryVisualization.visualizeClaim(player, createResult.claim, VisualizationType.CLAIM, clickedBlock);
+
+        if (!player.hasPermission("griefprevention.adminclaims") && createResult.claim.getArea() >= 1000) {
+            GriefPrevention.sendMessage(player, TextMode.Info, Messages.BecomeMayor, 200L);
+            GriefPrevention.sendMessage(player, TextMode.Instr, Messages.SubdivisionVideo2, 201L,
+                    DataStore.SUBDIVISION_VIDEO_URL);
+        }
+
+        AutoExtendClaimTask.scheduleAsync(createResult.claim);
+    }
+
+    private void finalizeExistingClaimReshape(
+            @NotNull Player player,
+            @NotNull PlayerData playerData,
+            @NotNull Claim claim,
+            @NotNull ClaimEditResult result,
+            @NotNull Block clickedBlock) {
+        OrthogonalPolygon polygon = result.preview().polygon();
+        if (polygon == null) {
+            return;
+        }
+
+        // Normalize the polygon to clean up collinear boundary markers
+        // This removes intermediate points on straight edges for a cleaner boundary
+        OrthogonalPolygonValidationResult normalizedResult = OrthogonalPolygon.validatePath(polygon.closedPath());
+        if (normalizedResult.isValid() && normalizedResult.polygon() != null) {
+            polygon = normalizedResult.polygon();
+        }
+
+        CreateClaimResult updateResult = this.dataStore.updateShapedClaim(player, playerData, claim, polygon);
+        if (!updateResult.succeeded || updateResult.claim == null) {
+            if (updateResult.denialMessage != null) {
+                GriefPrevention.sendMessage(player, TextMode.Err, updateResult.denialMessage.get());
+            } else if (updateResult.claim != null) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.CreateClaimFailOverlapShort);
+                visualizeConflict(player, playerData, updateResult.claim, clickedBlock, updateResult.claim.is3D());
+            } else {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.CreateClaimFailOverlapRegion);
+            }
+            visualizeShapedEditState(player, result.session(), clickedBlock.getY());
+            return;
+        }
+
+        ClaimEditorSession shapedSession = ClaimEditorSession.idle(playerData.playerID)
+                .withMode(com.griefprevention.claims.editor.ClaimEditorMode.SHAPED, ClaimEditSource.TOOL);
+        playerData.lastClaim = updateResult.claim;
+        playerData.setClaimEditorSession(loadClaimIntoShapedSession(shapedSession, updateResult.claim));
+        BoundaryVisualization.visualizeClaim(player, updateResult.claim,
+                updateResult.claim.isAdminClaim() ? VisualizationType.ADMIN_CLAIM : VisualizationType.CLAIM,
+                clickedBlock);
+    }
+
+    private void persistShapedBoundaryMarkers(
+            @NotNull Player player,
+            @NotNull PlayerData playerData,
+            @NotNull Claim claim,
+            @NotNull ClaimEditResult result,
+            @NotNull Block clickedBlock) {
+        OrthogonalPolygon polygon = result.preview().polygon();
+        if (polygon == null) {
+            return;
+        }
+
+        CreateClaimResult updateResult = this.dataStore.updateShapedClaim(player, playerData, claim, polygon);
+        if (!updateResult.succeeded || updateResult.claim == null) {
+            if (updateResult.denialMessage != null) {
+                GriefPrevention.sendMessage(player, TextMode.Err, updateResult.denialMessage.get());
+            } else if (updateResult.claim != null) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.CreateClaimFailOverlapShort);
+                visualizeConflict(player, playerData, updateResult.claim, clickedBlock, updateResult.claim.is3D());
+            } else {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.CreateClaimFailOverlapRegion);
+            }
+            return;
+        }
+
+        ClaimEditorSession shapedSession = loadClaimIntoShapedSession(
+                ClaimEditorSession.idle(playerData.playerID)
+                        .withMode(com.griefprevention.claims.editor.ClaimEditorMode.SHAPED, ClaimEditSource.TOOL),
+                updateResult.claim
+        );
+        ClaimEditPreview preview = new ClaimEditPreview(
+                updateResult.claim.getBoundaryPolygon(),
+                result.session().activeSegment(),
+                List.of(),
+                null,
+                List.of(),
+                List.of(),
+                result.messages()
+        );
+        playerData.lastClaim = updateResult.claim;
+        playerData.setClaimEditorSession(shapedSession.withActiveSegment(result.session().activeSegment()).withPreview(preview));
+        BoundaryVisualization.visualizeClaim(player, updateResult.claim,
+                updateResult.claim.isAdminClaim() ? VisualizationType.ADMIN_CLAIM : VisualizationType.CLAIM,
+                clickedBlock);
+    }
+
+    private void visualizeShapedEditState(
+            @NotNull Player player,
+            @NotNull ClaimEditorSession session,
+            int y) {
+        Set<Boundary> boundaries = new HashSet<>();
+        World world = player.getWorld();
+        OrthogonalPolygon selectedPolygon = null;
+
+        if (session.activeTarget() != null
+                && session.activeTarget().type() == ClaimEditTargetType.EXISTING_PARENT_CLAIM
+                && session.activeTarget().claimId() != null) {
+            Claim targetClaim = this.dataStore.getClaim(session.activeTarget().claimId());
+            if (targetClaim != null) {
+                VisualizationType type = targetClaim.isAdminClaim() ? VisualizationType.ADMIN_CLAIM : VisualizationType.CLAIM;
+                boundaries.add(new Boundary(targetClaim, type));
+                selectedPolygon = targetClaim.getBoundaryPolygon();
+            }
+        }
+
+        // Visualize draft points as proper segments with glowstone side markers
+        List<OrthogonalPoint2i> draftPoints = session.preview().draftPoints();
+        for (int i = 0; i < draftPoints.size(); i++) {
+            OrthogonalPoint2i point = draftPoints.get(i);
+            boolean onSelectedBoundary = selectedPolygon != null && isBoundaryPoint(selectedPolygon, point);
+
+            // Draw segment legs for every additional draft point, even when the endpoint is on an existing boundary.
+            if (i > 0) {
+                OrthogonalPoint2i prevPoint = draftPoints.get(i - 1);
+                Location start = new Location(world, prevPoint.x(), y, prevPoint.z());
+                Location end = new Location(world, point.x(), y, point.z());
+                boundaries.add(new Boundary(new BoundingBox(start, end), VisualizationType.CLAIM));
+            }
+
+            if (!onSelectedBoundary) {
+                boundaries.add(new Boundary(
+                        new BoundingBox(new Location(world, point.x(), y, point.z()), new Location(world, point.x(), y, point.z())),
+                        VisualizationType.INITIALIZE_ZONE));
+            }
+        }
+
+        if (session.preview().snappedPoint() != null) {
+            OrthogonalPoint2i point = session.preview().snappedPoint();
+            if (selectedPolygon == null || !isBoundaryPoint(selectedPolygon, point)) {
+                boundaries.add(new Boundary(
+                        new BoundingBox(new Location(world, point.x(), y, point.z()), new Location(world, point.x(), y, point.z())),
+                        VisualizationType.INITIALIZE_ZONE));
+            }
+        }
+
+        for (OrthogonalPoint2i point : session.preview().conflictPoints()) {
+            boundaries.add(new Boundary(
+                    new BoundingBox(new Location(world, point.x(), y, point.z()), new Location(world, point.x(), y, point.z())),
+                    VisualizationType.CONFLICT_ZONE));
+        }
+
+        if (!boundaries.isEmpty()) {
+            BoundaryVisualization.callAndVisualize(new BoundaryVisualizationEvent(player, boundaries, player.getEyeLocation().getBlockY()));
+        }
+    }
+
+    private void applyClaimEditResult(@NotNull Player player, @NotNull PlayerData playerData, @NotNull ClaimEditResult result) {
+        playerData.setClaimEditorSession(result.session());
+
+        if (!result.success()) {
+            if (result.fallbackMessage() != null) {
+                GriefPrevention.sendMessage(player, TextMode.Err, result.fallbackMessage());
+                return;
+            }
+
+            for (String message : result.messages()) {
+                GriefPrevention.sendMessage(player, TextMode.Err, message);
+            }
+            return;
+        }
+
+        for (String message : result.messages()) {
+            GriefPrevention.sendMessage(player, TextMode.Instr, message);
+        }
+    }
+
+    // Raycast from player's eye to detect intersection near any 3D subclaim corner
+    // within maxDistance.
+    // Returns the closest corner hit along the ray, or null if none.
+    private CornerHit raycast3DSubclaimCorner(Player player, int maxDistance) {
+        Vector eyePos = player.getEyeLocation().toVector();
+        Vector dir = player.getEyeLocation().getDirection().normalize();
+        World world = player.getWorld();
+
+        CornerHit best = null;
+        double bestT = Double.POSITIVE_INFINITY;
+        double threshold = 1.2; // be more forgiving when aiming at corners
+
+        for (Claim root : this.dataStore.getClaims()) {
+            if (root == null || !root.inDataStore)
+                continue;
+            if (!world.equals(root.getLesserBoundaryCorner().getWorld()))
+                continue;
+            Deque<Claim> stack = new ArrayDeque<>();
+            stack.push(root);
+
+            while (!stack.isEmpty()) {
+                Claim current = stack.pop();
+                if (current == null || !current.inDataStore)
+                    continue;
+                if (!world.equals(current.getLesserBoundaryCorner().getWorld()))
+                    continue;
+
+                if (current.is3D()) {
+                    Location lesser = current.getLesserBoundaryCorner();
+                    Location greater = current.getGreaterBoundaryCorner();
+
+                    int minX = Math.min(lesser.getBlockX(), greater.getBlockX());
+                    int maxX = Math.max(lesser.getBlockX(), greater.getBlockX());
+                    int minY = Math.min(lesser.getBlockY(), greater.getBlockY());
+                    int maxY = Math.max(lesser.getBlockY(), greater.getBlockY());
+                    int minZ = Math.min(lesser.getBlockZ(), greater.getBlockZ());
+                    int maxZ = Math.max(lesser.getBlockZ(), greater.getBlockZ());
+
+                    int[] xs = new int[] { minX, maxX };
+                    int[] ys = new int[] { minY, maxY };
+                    int[] zs = new int[] { minZ, maxZ };
+
+                    for (int xi : xs)
+                        for (int yi : ys)
+                            for (int zi : zs) {
+                                // Evaluate the real corner itself
+                                CornerHit candidate = evaluateCornerCandidate(
+                                        eyePos, dir, maxDistance, threshold, current,
+                                        xi + 0.5, yi + 0.5, zi + 0.5,
+                                        xi, yi, zi);
+                                if (candidate != null && candidate.t < bestT) {
+                                    bestT = candidate.t;
+                                    best = candidate;
+                                }
+
+                                // Allow aiming at interior extensions (+/-1 block toward claim interior)
+                                if (maxX - minX >= 1) {
+                                    int offsetX = xi == minX ? xi + 1 : xi - 1;
+                                    candidate = evaluateCornerCandidate(
+                                            eyePos, dir, maxDistance, threshold, current,
+                                            offsetX + 0.5, yi + 0.5, zi + 0.5,
+                                            xi, yi, zi);
+                                    if (candidate != null && candidate.t < bestT) {
+                                        bestT = candidate.t;
+                                        best = candidate;
+                                    }
+                                }
+
+                                if (maxZ - minZ >= 1) {
+                                    int offsetZ = zi == minZ ? zi + 1 : zi - 1;
+                                    candidate = evaluateCornerCandidate(
+                                            eyePos, dir, maxDistance, threshold, current,
+                                            xi + 0.5, yi + 0.5, offsetZ + 0.5,
+                                            xi, yi, zi);
+                                    if (candidate != null && candidate.t < bestT) {
+                                        bestT = candidate.t;
+                                        best = candidate;
+                                    }
+                                }
+
+                                if (maxY - minY >= 1) {
+                                    int offsetY = yi == minY ? yi + 1 : yi - 1;
+                                    candidate = evaluateCornerCandidate(
+                                            eyePos, dir, maxDistance, threshold, current,
+                                            xi + 0.5, offsetY + 0.5, zi + 0.5,
+                                            xi, yi, zi);
+                                    if (candidate != null && candidate.t < bestT) {
+                                        bestT = candidate.t;
+                                        best = candidate;
+                                    }
+                                }
+
+                                if (maxY == minY) {
+                                    int aboveY = yi + 1;
+                                    if (aboveY <= GriefPrevention.getWorldMaxY(world)) {
+                                        candidate = evaluateCornerCandidate(
+                                                eyePos, dir, maxDistance, threshold, current,
+                                                xi + 0.5, aboveY + 0.5, zi + 0.5,
+                                                xi, yi, zi);
+                                        if (candidate != null && candidate.t < bestT) {
+                                            bestT = candidate.t;
+                                            best = candidate;
+                                        }
+                                    }
+
+                                    int belowY = yi - 1;
+                                    if (belowY >= GriefPrevention.getWorldMinY(world)) {
+                                        candidate = evaluateCornerCandidate(
+                                                eyePos, dir, maxDistance, threshold, current,
+                                                xi + 0.5, belowY + 0.5, zi + 0.5,
+                                                xi, yi, zi);
+                                        if (candidate != null && candidate.t < bestT) {
+                                            bestT = candidate.t;
+                                            best = candidate;
+                                        }
+                                    }
+                                }
+                            }
+                }
+
+                if (!current.children.isEmpty()) {
+                    for (Claim child : current.children) {
+                        if (child != null && child.inDataStore) {
+                            stack.push(child);
+                        }
+                    }
+                }
+            }
+        }
+
+        return best;
+    }
+
+    private CornerHit evaluateCornerCandidate(
+            Vector eyePos,
+            Vector dir,
+            int maxDistance,
+            double threshold,
+            Claim claim,
+            double targetX,
+            double targetY,
+            double targetZ,
+            int hitX,
+            int hitY,
+            int hitZ) {
+        Vector target = new Vector(targetX, targetY, targetZ);
+        Vector toTarget = target.clone().subtract(eyePos);
+
+        double t = toTarget.dot(dir);
+        if (t < 0 || t > maxDistance) {
+            return null;
+        }
+
+        Vector closestPoint = eyePos.clone().add(dir.clone().multiply(t));
+        double distance = closestPoint.distance(target);
+        if (distance > threshold) {
+            return null;
+        }
+
+        return new CornerHit(claim, hitX, hitY, hitZ, t);
+    }
+
+    static Block getTargetBlock(Player player, int maxDistance) throws IllegalStateException {
+        Location eye = player.getEyeLocation();
+        Material eyeMaterial = eye.getBlock().getType();
+        boolean passThroughWater = (eyeMaterial == Material.WATER);
+        BlockIterator iterator = new BlockIterator(player.getLocation(), player.getEyeHeight(), maxDistance);
+        Block result = player.getLocation().getBlock().getRelative(BlockFace.UP);
+        while (iterator.hasNext()) {
+            result = iterator.next();
+            Material type = result.getType();
+            if (!MaterialTagCompat.isTagged("REPLACEABLE", type) || (!passThroughWater && type == Material.WATER))
+                return result;
+        }
+
+        return result;
+    }
+
+    private void handleRestoreNature(Player player, Block clickedBlock, PlayerData playerData) {
+        World world = clickedBlock.getWorld();
+        int centerX = clickedBlock.getX();
+        int centerZ = clickedBlock.getZ();
+        int minY = GriefPrevention.getWorldMinY(world);
+        int maxY = GriefPrevention.getWorldMaxY(world);
+        int radius = 5;
+        if (playerData.shovelMode == ShovelMode.RestoreNatureFill) {
+            radius = Math.max(1, Math.min(playerData.fillRadius, 10));
+        }
+        int minX = centerX - radius;
+        int maxX = centerX + radius;
+        int minZ = centerZ - radius;
+        int maxZ = centerZ + radius;
+        int sizeX = maxX - minX + 1;
+        int sizeY = maxY - minY;
+        int sizeZ = maxZ - minZ + 1;
+        BlockSnapshot[][][] snapshots = new BlockSnapshot[sizeX][sizeY][sizeZ];
+        for (int x = 0; x < sizeX; x++) {
+            for (int z = 0; z < sizeZ; z++) {
+                for (int y = 0; y < sizeY; y++) {
+                    Block block = world.getBlockAt(minX + x, minY + y, minZ + z);
+                    snapshots[x][y][z] = new BlockSnapshot(block);
+                }
+            }
+        }
+        Location lesserCorner = new Location(world, minX, minY, minZ);
+        Location greaterCorner = new Location(world, maxX, maxY - 1, maxZ);
+        boolean aggressiveMode = playerData.shovelMode == ShovelMode.RestoreNatureAggressive;
+        org.bukkit.block.Biome biome = clickedBlock.getBiome();
+        boolean creativeMode = instance.creativeRulesApply(clickedBlock.getLocation());
+        RestoreNatureProcessingTask processingTask = new RestoreNatureProcessingTask(
+                snapshots,
+                minY,
+                world.getEnvironment(),
+                biome,
+                lesserCorner,
+                greaterCorner,
+                world.getSeaLevel(),
+                aggressiveMode,
+                creativeMode,
+                player);
+        SchedulerUtil.runAsyncNow(instance, processingTask);
+        GriefPrevention.sendMessage(player, TextMode.Info, "Restoring nature in the selected area...");
+    }
+
+    private void visualizeConflict(Player player, PlayerData playerData, Claim claim, Block clickedBlock,
+            boolean is3D) {
+        VisualizationType conflictType = is3D ? VisualizationType.CONFLICT_ZONE_3D : VisualizationType.CONFLICT_ZONE;
+        BoundaryVisualization.visualizeClaim(player, claim, conflictType, clickedBlock);
+
+        // If glow is enabled, auto-clear after 5 seconds
+        if (GriefPrevention.instance.config_visualizationGlow) {
+            SchedulerUtil.runLaterEntity(GriefPrevention.instance, player, () -> {
+                playerData.setVisibleBoundaries(null);
+            }, 100L);
+        }
     }
 }

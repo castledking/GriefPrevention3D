@@ -22,6 +22,13 @@ public final class BlockFertilizeEventHandler implements Listener {
         // Trees are handled by the StructureGrowEvent handler.
         if (BlockEventHandler.isSapling(event.getBlock().getType())) return;
 
-        this.blockEventHandler.onBlockFertilize(event);
+        blockEventHandler.onMultiBlockGrow(
+                event.getPlayer(),
+                event.getBlock(),
+                event.getBlocks(),
+                event,
+                sourceClaim -> {
+                    // No-op for BlockFertilizeEvent
+                });
     }
 }
