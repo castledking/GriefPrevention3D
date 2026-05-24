@@ -79,31 +79,28 @@ function gameVersionTypeId(version) {
 }
 
 function resolveGameVersionIds(availableVersions, configuredVersions) {
-  const byName = new Map();
-  const bySlug = new Map();
-
-  for (const version of availableVersions) {
-    if (!version || version.id === undefined) continue;
-
-    if (version.name && !byName.has(normalizeVersionKey(version.name))) {
-      byName.set(normalizeVersionKey(version.name), version);
-    }
-    if (version.slug && !bySlug.has(normalizeVersionKey(version.slug))) {
-      bySlug.set(normalizeVersionKey(version.slug), version);
-    }
-  }
-
-  const ids = [];
-  const resolved = [];
+  const selections = [];
   const missing = [];
   for (const versionName of configuredVersions) {
     const key = normalizeVersionKey(versionName);
-    const version = byName.get(key) || bySlug.get(slugFor(versionName));
-    if (!version) {
+    const slug = slugFor(versionName);
+    const candidates = availableVersions.filter(version =>
+      version &&
+      version.id !== undefined &&
+      (
+        (version.name && normalizeVersionKey(version.name) === key) ||
+        (version.slug && normalizeVersionKey(version.slug) === slug)
+      )
+    );
+
+    if (!candidates.length) {
       missing.push(versionName);
-    } else if (!ids.includes(version.id)) {
-      ids.push(version.id);
-      resolved.push(`${versionName}=${version.id}:${gameVersionTypeId(version) ?? 'unknown'}`);
+    } else {
+      selections.push({
+        name: versionName,
+        candidates,
+        index: 0,
+      });
     }
   }
 
@@ -111,7 +108,45 @@ function resolveGameVersionIds(availableVersions, configuredVersions) {
     throw new Error(`Could not resolve CurseForge game version IDs for: ${missing.join(', ')}`);
   }
 
-  return { ids, resolved };
+  return selectedGameVersionState(selections);
+}
+
+function selectedGameVersionState(selections) {
+  const ids = [];
+  const resolved = [];
+
+  for (const selection of selections) {
+    const version = selection.candidates[selection.index];
+    if (!version || ids.includes(version.id)) continue;
+
+    ids.push(version.id);
+    const candidateCount = selection.candidates.length;
+    resolved.push(
+      `${selection.name}=${version.id}:${gameVersionTypeId(version) ?? 'unknown'}:${selection.index + 1}/${candidateCount}`
+    );
+  }
+
+  return { ids, resolved, selections };
+}
+
+function replaceInvalidGameVersion(selections, invalidId) {
+  const selected = selections.find(selection => selection.candidates[selection.index]?.id === invalidId);
+  if (!selected) {
+    return false;
+  }
+
+  selected.index += 1;
+  if (selected.index < selected.candidates.length) {
+    const replacement = selected.candidates[selected.index];
+    log(
+      `CurseForge rejected ${selected.name} ID ${invalidId}; trying alternate ID ${replacement.id}` +
+      ` (${selected.index + 1}/${selected.candidates.length})`
+    );
+  } else {
+    log(`CurseForge rejected ${selected.name} ID ${invalidId}; no alternate IDs remain, dropping this version`);
+  }
+
+  return true;
 }
 
 function invalidGameVersionId(error) {
@@ -121,28 +156,34 @@ function invalidGameVersionId(error) {
 
 async function uploadWithInvalidVersionRetry({ token, projectId, metadata, jarPath }) {
   const rejected = [];
-  const remaining = [...metadata.gameVersions];
+  const selections = metadata.gameVersionSelections;
 
-  while (remaining.length > 0) {
+  while (true) {
+    const state = selectedGameVersionState(selections);
+    if (!state.ids.length) {
+      break;
+    }
+
+    log(`Trying CurseForge game versions: ${state.resolved.join(', ')}`);
     try {
       return await uploadToCurseForge({
         token,
         projectId,
         metadata: {
           ...metadata,
-          gameVersions: remaining,
+          gameVersionSelections: undefined,
+          gameVersions: state.ids,
         },
         jarPath,
       });
     } catch (error) {
       const badId = invalidGameVersionId(error);
-      if (badId == null || !remaining.includes(badId)) {
+      if (badId == null || !state.ids.includes(badId)) {
         throw error;
       }
 
       rejected.push(badId);
-      remaining.splice(remaining.indexOf(badId), 1);
-      log(`CurseForge rejected game version ID ${badId}; retrying without it`);
+      replaceInvalidGameVersion(selections, badId);
     }
   }
 
@@ -243,6 +284,7 @@ async function main() {
     changelogType: 'markdown',
     displayName: `${repoName} ${displayVersion}`,
     gameVersions,
+    gameVersionSelections: resolvedGameVersions.selections,
     releaseType: releaseTypeFor(version),
   };
 
@@ -255,7 +297,10 @@ async function main() {
   log(`Release type: ${metadata.releaseType}`);
   if (dryRun) {
     log('DRY RUN - skipping CurseForge submission');
-    log(JSON.stringify(metadata, null, 2));
+    log(JSON.stringify({
+      ...metadata,
+      gameVersionSelections: undefined,
+    }, null, 2));
     return;
   }
 
