@@ -1888,8 +1888,17 @@ public class PlayerEventHandler implements Listener {
                         (CompatUtil.isMaterial(clickedBlockType, "ROOTED_DIRT") && MaterialTagCompat.isTagged("ITEMS_HOES", event.getMaterial())) ||
                         CompatUtil.isMaterial(clickedBlockType, "SWEET_BERRY_BUSH") ||
                         CompatUtil.isMaterial(clickedBlockType, "DECORATED_POT")))) {
-            if (this.claimToolDispatcher.handle(event, clickedBlock, clickedBlockType)) {
-                return;
+            // Only call claim tool dispatcher if player is holding a claim tool
+            ItemStack itemInHand;
+            try {
+                itemInHand = player.getInventory().getItemInMainHand();
+            } catch (NoSuchMethodError e) {
+                itemInHand = player.getItemInHand();
+            }
+            if (itemInHand != null && (itemInHand.getType() == instance.config_claims_modificationTool || itemInHand.getType() == instance.config_claims_investigationTool)) {
+                if (this.claimToolDispatcher.handle(event, clickedBlock, clickedBlockType)) {
+                    return;
+                }
             }
             if (playerData == null)
                 playerData = this.dataStore.getPlayerData(player.getUniqueId());
@@ -2100,8 +2109,14 @@ public class PlayerEventHandler implements Listener {
                 return;
             }
 
-            else if (this.claimToolDispatcher.handle(event, clickedBlock, clickedBlockType))
-            {
+            // Only call claim tool dispatcher if player is holding a claim tool
+            if (itemInHand != null && (itemInHand.getType() == instance.config_claims_modificationTool || itemInHand.getType() == instance.config_claims_investigationTool)) {
+                if (this.claimToolDispatcher.handle(event, clickedBlock, clickedBlockType))
+                {
+                    return;
+                }
+            } else {
+                // Not holding a claim tool, skip all claim tool logic below
                 return;
             }
 
