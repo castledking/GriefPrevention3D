@@ -2844,14 +2844,36 @@ final class ClaimToolDispatcher
         boolean passThroughWater = (eyeMaterial == Material.WATER);
         BlockIterator iterator = new BlockIterator(player.getLocation(), player.getEyeHeight(), maxDistance);
         Block result = player.getLocation().getBlock().getRelative(BlockFace.UP);
+        boolean hasTags = MaterialTagCompat.isTagged("REPLACEABLE", Material.AIR);
         while (iterator.hasNext()) {
             result = iterator.next();
             Material type = result.getType();
-            if (!MaterialTagCompat.isTagged("REPLACEABLE", type) || (!passThroughWater && type == Material.WATER))
+            if (hasTags) {
+                if (!MaterialTagCompat.isTagged("REPLACEABLE", type) || (!passThroughWater && type == Material.WATER))
+                    return result;
+            } else {
+                // Pre-1.13: Tags don't exist, check transparent materials manually
+                if (type == Material.AIR
+                        || type == Material.WATER
+                        || type == Material.LAVA
+                        || type == Material.DEAD_BUSH
+                        || type == Material.SNOW
+                        || type == Material.VINE
+                        || type == Material.FIRE
+                        || isTallGrass(type))
+                    continue;
                 return result;
+            }
         }
 
         return result;
+    }
+
+    // Resolves tall grass material name across versions (LONG_GRASS on 1.8.8, GRASS on 1.13+)
+    private static boolean isTallGrass(Material material) {
+        if (material == null) return false;
+        String name = material.name();
+        return "LONG_GRASS".equals(name) || "GRASS".equals(name) || "TALL_GRASS".equals(name);
     }
 
     private void handleRestoreNature(Player player, Block clickedBlock, PlayerData playerData) {
