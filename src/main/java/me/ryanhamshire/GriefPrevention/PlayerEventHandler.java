@@ -1165,7 +1165,11 @@ class PlayerEventHandler implements Listener {
         // If we're moving from one claim to another, or from a claim to wilderness,
         // we need to update the player's permissions
         if (fromClaim != toClaim) {
-            player.updateCommands();
+            try {
+                player.updateCommands();
+            } catch (NoSuchMethodError ignore) {
+                // Pre-1.13: updateCommands() doesn't exist
+            }
         }
     }
 
