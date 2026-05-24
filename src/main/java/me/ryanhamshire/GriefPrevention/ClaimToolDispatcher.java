@@ -286,18 +286,26 @@ final class ClaimToolDispatcher
         if (!cornerSelected && action == Action.RIGHT_CLICK_AIR) {
             // try to find a far away non-air block along line of sight
             clickedBlock = getTargetBlock(player, 100);
+            if (clickedBlock == null) {
+                GriefPrevention.AddLogEntry("[GP Debug] getTargetBlock returned null for " + player.getName(), CustomLogEntryTypes.Debug, false);
+                return true;
+            }
             clickedBlockType = clickedBlock.getType();
+            GriefPrevention.AddLogEntry("[GP Debug] getTargetBlock found " + clickedBlockType.name() + " @ " + clickedBlock.getX() + "," + clickedBlock.getY() + "," + clickedBlock.getZ() + " for " + player.getName(), CustomLogEntryTypes.Debug, false);
         }
 
         // if no block, stop here
         if (clickedBlock == null) {
+            GriefPrevention.AddLogEntry("[GP Debug] clickedBlock is null for " + player.getName(), CustomLogEntryTypes.Debug, false);
             return true;
         }
 
         // can't use the shovel from too far away, unless we snapped to a 3D corner
         // (corner itself may be air)
-        if (clickedBlockType == Material.AIR && !cornerSelected)
+        if (clickedBlockType == Material.AIR && !cornerSelected) {
+            GriefPrevention.AddLogEntry("[GP Debug] clickedBlock is AIR for " + player.getName(), CustomLogEntryTypes.Debug, false);
             return true;
+        }
 
         // if the player doesn't have claims permission, don't do anything
         if (!player.hasPermission("griefprevention.createclaims")) {
