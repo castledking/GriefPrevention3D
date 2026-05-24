@@ -1470,6 +1470,20 @@ public class GriefPrevention extends JavaPlugin {
         }
     }
 
+    private boolean setDebugLoggingEnabled(boolean enabled) {
+        this.config_logs_debugEnabled = enabled;
+
+        FileConfiguration config = YamlConfiguration.loadConfiguration(new File(DataStore.configFilePath));
+        config.set("GriefPrevention.Abridged Logs.Included Entry Types.Debug", enabled);
+        try {
+            config.save(DataStore.configFilePath);
+            return true;
+        } catch (IOException exception) {
+            AddLogEntry("Unable to write to the configuration file at \"" + DataStore.configFilePath + "\"");
+            return false;
+        }
+    }
+
     private static class TrustTabCompleter implements org.bukkit.command.TabCompleter {
         @Override
         public java.util.List<String> onTabComplete(org.bukkit.command.CommandSender sender,
@@ -2724,6 +2738,31 @@ public class GriefPrevention extends JavaPlugin {
                 GriefPrevention.AddLogEntry(
                         "Configuration updated.  If you have updated your Grief Prevention JAR, you still need to /reload or reboot your server.");
             }
+
+            return true;
+        }
+        else if (cmd.getName().equalsIgnoreCase("gpdebug")) {
+            if (args.length > 1) {
+                return false;
+            }
+
+            boolean enabled;
+            if (args.length == 0) {
+                enabled = !this.config_logs_debugEnabled;
+            } else if (args[0].equalsIgnoreCase("on") || args[0].equalsIgnoreCase("true")) {
+                enabled = true;
+            } else if (args[0].equalsIgnoreCase("off") || args[0].equalsIgnoreCase("false")) {
+                enabled = false;
+            } else {
+                return false;
+            }
+
+            boolean saved = this.setDebugLoggingEnabled(enabled);
+            String message = "Debug logging is now " + (enabled ? "enabled" : "disabled") + ".";
+            if (!saved) {
+                message += " The in-memory setting was changed, but config.yml could not be saved.";
+            }
+            sender.sendMessage((saved ? TextMode.Success : TextMode.Err) + message);
 
             return true;
         }

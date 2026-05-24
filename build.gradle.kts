@@ -149,6 +149,45 @@ tasks {
         }
     }
 
+    val checkPomVersion by registering {
+        group = "verification"
+        description = "Fails if pom.xml and Gradle project versions drift apart."
+
+        inputs.file("pom.xml")
+        inputs.property("gradleVersion", project.version.toString())
+
+        doLast {
+            val document = javax.xml.parsers.DocumentBuilderFactory.newInstance()
+                .newDocumentBuilder()
+                .parse(file("pom.xml"))
+            val projectNode = document.documentElement
+            val children = projectNode.childNodes
+            var pomVersion: String? = null
+
+            for (index in 0 until children.length) {
+                val child = children.item(index)
+                if (child.nodeType == org.w3c.dom.Node.ELEMENT_NODE && child.nodeName == "version") {
+                    pomVersion = child.textContent.trim()
+                    break
+                }
+            }
+
+            val gradleVersion = project.version.toString()
+            if (pomVersion == null) {
+                throw GradleException("pom.xml does not declare a project <version>.")
+            }
+            if (pomVersion != gradleVersion) {
+                throw GradleException(
+                    "pom.xml version $pomVersion does not match Gradle version $gradleVersion."
+                )
+            }
+        }
+    }
+
+    named("check") {
+        dependsOn(checkPomVersion)
+    }
+
     val compileGpFlagsCompatibility by registering(JavaCompile::class) {
         group = "verification"
         description = "Compiles GPFlags against this checkout's Bukkit-facing API."

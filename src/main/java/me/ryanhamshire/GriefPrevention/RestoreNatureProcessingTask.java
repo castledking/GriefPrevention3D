@@ -19,6 +19,7 @@
 package me.ryanhamshire.GriefPrevention;
 
 import com.griefprevention.compat.BlockDataCompat;
+import com.griefprevention.compat.MaterialCompat;
 import me.ryanhamshire.GriefPrevention.util.SchedulerUtil;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -555,7 +556,7 @@ public class RestoreNatureProcessingTask implements Runnable {
         playerBlocks.add(Material.BRICKS);
         playerBlocks.add(Material.OBSIDIAN);
         playerBlocks.add(Material.SPAWNER);
-        playerBlocks.add(Material.FARMLAND);
+        playerBlocks.addAll(MaterialCompat.availableSet("FARMLAND", "SOIL"));
         playerBlocks.add(Material.ENCHANTING_TABLE);
         try {
             playerBlocks.add(Material.valueOf("BREWING_STAND"));

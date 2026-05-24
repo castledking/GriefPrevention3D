@@ -198,6 +198,10 @@ commands:
     description: Reloads Grief Prevention's configuration settings.  Does NOT totally reload the entire plugin.
     usage: /<command>
     permission: griefprevention.reload
+  gpdebug:
+    description: Toggles Grief Prevention debug logging.
+    usage: /<command> [on|off]
+    permission: griefprevention.debug
   ignoreplayer:
     description: Ignores another player's chat messages.
     usage: /<command> <player name>
@@ -271,6 +275,7 @@ permissions:
       griefprevention.deathblow: true
       griefprevention.softmute: true
       griefprevention.reload: true
+      griefprevention.debug: true
       griefprevention.visualizenearbyclaims: true
       griefprevention.overrideclaimcountlimit: true
       griefprevention.transferclaim: true
@@ -344,6 +349,9 @@ permissions:
     default: op
   griefprevention.reload:
     description: Grants access to /gpreload.
+    default: op
+  griefprevention.debug:
+    description: Grants access to /gpdebug.
     default: op
   griefprevention.softmute:
     description: Grants access to /softmute.
