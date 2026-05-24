@@ -44,11 +44,15 @@ jobs:
         with:
           java-version: 21
           distribution: temurin
-          cache: maven
+          cache: gradle
 
-      - name: Build with Maven
+      - name: Grant execute permission for gradlew
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_modrinth || inputs.run_spigot }}
-        run: mvn --batch-mode package -DskipTests
+        run: chmod +x gradlew
+
+      - name: Build with Gradle
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_modrinth || inputs.run_spigot }}
+        run: ./gradlew build -x test
 
       - name: Determine version
         id: version
@@ -58,7 +62,7 @@ jobs:
           elif [ -n "${{ inputs.version }}" ]; then
             VERSION=${{ inputs.version }}
           else
-            VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+            VERSION=$(./gradlew properties -q | grep "^version:" | awk '{print $2}')
           fi
           echo "version=${VERSION}" >> $GITHUB_OUTPUT
 
@@ -66,7 +70,7 @@ jobs:
         id: find-jar
         if: ${{ github.event_name != 'workflow_dispatch' || inputs.run_modrinth || inputs.run_spigot }}
         run: |
-          JAR=$(find target -name "GriefPrevention3D*.jar" -not -name "*-javadoc.jar" -not -name "*-sources.jar" | head -n1)
+          JAR=$(find build/libs -name "GriefPrevention3D*.jar" -not -name "*-javadoc.jar" -not -name "*-sources.jar" | head -n1)
           echo "jar=${JAR}" >> $GITHUB_OUTPUT
 
       # --- Step 1: Modrinth ---

@@ -21,10 +21,13 @@ jobs:
         with:
           java-version: 21
           distribution: temurin
-          cache: maven
+          cache: gradle
 
-      - name: Build with Maven
-        run: mvn --batch-mode package -DskipTests
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Build with Gradle
+        run: ./gradlew build -x test
 
       - name: Get version
         id: version
@@ -33,14 +36,14 @@ jobs:
             VERSION=${GITHUB_REF#refs/tags/}
             echo "version=${VERSION}" >> $GITHUB_OUTPUT
           else
-            VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+            VERSION=$(./gradlew properties -q | grep "^version:" | awk '{print $2}')
             echo "version=${VERSION}" >> $GITHUB_OUTPUT
           fi
 
       - name: Find JAR file
         id: find-jar
         run: |
-          JAR=$(find target -name "GriefPrevention3D*.jar" -not -name "*-javadoc.jar" -not -name "*-sources.jar" | head -n1)
+          JAR=$(find build/libs -name "GriefPrevention3D*.jar" -not -name "*-javadoc.jar" -not -name "*-sources.jar" | head -n1)
           echo "jar=${JAR}" >> $GITHUB_OUTPUT
           echo "Found JAR: ${JAR}"
 

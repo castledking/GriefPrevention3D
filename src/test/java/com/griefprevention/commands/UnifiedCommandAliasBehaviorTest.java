@@ -124,7 +124,7 @@ class UnifiedCommandAliasBehaviorTest
         command.onCommand(sender, mock(Command.class), "claim", new String[] { "help" });
 
         // Let's see what messages are actually being sent
-        verify(sender, atLeastOnce()).sendMessage("§6Available /claim commands (Page 1/2):");
+        verify(sender, atLeastOnce()).sendMessage("§6Available /claim commands (Page 1/1):");
         verify(sender, atLeastOnce()).sendMessage("");
         // The help entry should be sent but isn't
         verify(sender, atLeastOnce()).sendMessage("CUSTOM claim create [radius] :: Create or expand a claim centered on you.");
@@ -187,7 +187,7 @@ class UnifiedCommandAliasBehaviorTest
                 return "CUSTOM " + command + " :: " + description;
             }
             if (message == Messages.ClaimHelpHeader) {
-                return "§6Available /claim commands (Page 1/2):";
+                return "§6Available /claim commands (Page 1/1):";
             }
             if (message == Messages.ClaimHelpLegend || message == Messages.ClaimHelpPagination) {
                 return "";

@@ -19,6 +19,6 @@ jobs:
         with:
           java-version: ${{ matrix.java }}
           distribution: temurin
-          cache: maven
+          cache: gradle
       - name: "Test"
-        run: mvn --batch-mode verify
+        run: ./gradlew test
