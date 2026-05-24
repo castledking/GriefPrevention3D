@@ -74,61 +74,16 @@ async function fetchGameVersions(token) {
   throw new Error('Game versions API returned an unrecognized response shape');
 }
 
-async function fetchGameDependencies(token) {
-  const response = await fetch(`${API_BASE}/game/dependencies`, {
-    headers: {
-      'X-Api-Token': token,
-      'User-Agent': 'GriefPrevention3DReleaseBot/1.0',
-    },
-  });
-  const responseText = await response.text();
-  if (!response.ok) {
-    throw new Error(`Game dependencies API ${response.status}: ${responseText}`);
-  }
-
-  const parsed = JSON.parse(responseText);
-  if (Array.isArray(parsed)) return parsed;
-  if (Array.isArray(parsed.data)) return parsed.data;
-  if (Array.isArray(parsed.dependencies)) return parsed.dependencies;
-  throw new Error('Game dependencies API returned an unrecognized response shape');
-}
-
 function gameVersionTypeId(version) {
   return version.gameVersionTypeID ?? version.gameVersionTypeId ?? version.gameVersionTypeID;
 }
 
-function resolveAllowedDependencyIds(availableDependencies, allowedSlugs) {
-  const dependencyIds = new Set();
-  const missing = [];
-
-  for (const slug of allowedSlugs) {
-    const normalizedSlug = normalizeVersionKey(slug);
-    const dependency = availableDependencies.find(candidate =>
-      normalizeVersionKey(candidate.slug || '') === normalizedSlug ||
-      normalizeVersionKey(candidate.name || '') === normalizedSlug
-    );
-
-    if (dependency && dependency.id !== undefined) {
-      dependencyIds.add(dependency.id);
-    } else {
-      missing.push(slug);
-    }
-  }
-
-  if (missing.length) {
-    throw new Error(`Could not resolve CurseForge dependency IDs for: ${missing.join(', ')}`);
-  }
-
-  return dependencyIds;
-}
-
-function resolveGameVersionIds(availableVersions, configuredVersions, allowedDependencyIds) {
+function resolveGameVersionIds(availableVersions, configuredVersions) {
   const byName = new Map();
   const bySlug = new Map();
 
   for (const version of availableVersions) {
     if (!version || version.id === undefined) continue;
-    if (!allowedDependencyIds.has(gameVersionTypeId(version))) continue;
 
     if (version.name && !byName.has(normalizeVersionKey(version.name))) {
       byName.set(normalizeVersionKey(version.name), version);
@@ -148,17 +103,50 @@ function resolveGameVersionIds(availableVersions, configuredVersions, allowedDep
       missing.push(versionName);
     } else if (!ids.includes(version.id)) {
       ids.push(version.id);
-      resolved.push(`${versionName}=${version.id}`);
+      resolved.push(`${versionName}=${version.id}:${gameVersionTypeId(version) ?? 'unknown'}`);
     }
   }
 
   if (missing.length) {
-    throw new Error(
-      `Could not resolve CurseForge game version IDs for allowed dependencies: ${missing.join(', ')}`
-    );
+    throw new Error(`Could not resolve CurseForge game version IDs for: ${missing.join(', ')}`);
   }
 
   return { ids, resolved };
+}
+
+function invalidGameVersionId(error) {
+  const match = String(error.message || error).match(/Invalid game version ID:\s*(\d+)/i);
+  return match ? Number(match[1]) : null;
+}
+
+async function uploadWithInvalidVersionRetry({ token, projectId, metadata, jarPath }) {
+  const rejected = [];
+  const remaining = [...metadata.gameVersions];
+
+  while (remaining.length > 0) {
+    try {
+      return await uploadToCurseForge({
+        token,
+        projectId,
+        metadata: {
+          ...metadata,
+          gameVersions: remaining,
+        },
+        jarPath,
+      });
+    } catch (error) {
+      const badId = invalidGameVersionId(error);
+      if (badId == null || !remaining.includes(badId)) {
+        throw error;
+      }
+
+      rejected.push(badId);
+      remaining.splice(remaining.indexOf(badId), 1);
+      log(`CurseForge rejected game version ID ${badId}; retrying without it`);
+    }
+  }
+
+  throw new Error(`CurseForge rejected every resolved game version ID: ${rejected.join(', ')}`);
 }
 
 function buildMultipartBody(metadata, jarPath) {
@@ -246,13 +234,8 @@ async function main() {
 
   const projectId = env('CURSEFORGE_PROJECT_ID', String(curseforge.project_id));
   const configuredVersions = curseforge.game_versions || [];
-  const allowedDependencySlugs = curseforge.dependency_slugs || ['bukkit'];
-  const [availableDependencies, availableVersions] = await Promise.all([
-    fetchGameDependencies(token),
-    fetchGameVersions(token),
-  ]);
-  const allowedDependencyIds = resolveAllowedDependencyIds(availableDependencies, allowedDependencySlugs);
-  const resolvedGameVersions = resolveGameVersionIds(availableVersions, configuredVersions, allowedDependencyIds);
+  const availableVersions = await fetchGameVersions(token);
+  const resolvedGameVersions = resolveGameVersionIds(availableVersions, configuredVersions);
   const gameVersions = resolvedGameVersions.ids;
   const displayVersion = version.startsWith('v') ? version : `v${version}`;
   const metadata = {
@@ -267,7 +250,6 @@ async function main() {
     metadata.relations = curseforge.relations;
   }
 
-  log(`Allowed CurseForge dependencies: ${allowedDependencySlugs.join(', ')}`);
   log(`Resolved ${gameVersions.length} CurseForge game version IDs`);
   log(`Resolved versions: ${resolvedGameVersions.resolved.join(', ')}`);
   log(`Release type: ${metadata.releaseType}`);
@@ -277,7 +259,7 @@ async function main() {
     return;
   }
 
-  const result = await uploadToCurseForge({ token, projectId, metadata, jarPath });
+  const result = await uploadWithInvalidVersionRetry({ token, projectId, metadata, jarPath });
   log(`CurseForge upload complete: file id ${result.id}`);
 }
 
