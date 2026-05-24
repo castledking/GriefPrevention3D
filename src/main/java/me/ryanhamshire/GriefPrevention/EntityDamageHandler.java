@@ -7,12 +7,10 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.entity.AnimalTamer;
 import org.bukkit.entity.Animals;
-import org.bukkit.entity.AreaEffectCloud;
 import org.bukkit.entity.Creature;
 import org.bukkit.entity.Donkey;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
-import org.bukkit.entity.EvokerFangs;
 import org.bukkit.entity.Explosive;
 import org.bukkit.entity.Horse;
 import org.bukkit.entity.LightningStrike;
@@ -24,11 +22,9 @@ import org.bukkit.entity.Mule;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.entity.Rabbit;
-import org.bukkit.entity.Raider;
 import org.bukkit.entity.Slime;
 import org.bukkit.entity.Tameable;
 import org.bukkit.entity.ThrownPotion;
-import org.bukkit.entity.Vex;
 import org.bukkit.entity.Zombie;
 import org.bukkit.entity.minecart.ExplosiveMinecart;
 import org.bukkit.event.Cancellable;
@@ -362,11 +358,8 @@ public class EntityDamageHandler implements Listener {
         if (type == EntityType.GHAST || type == EntityType.MAGMA_CUBE)
             return true;
 
-        // SHULKER doesn't exist in Bukkit 1.8.8, so check it safely
-        try {
-            if (type == EntityType.SHULKER)
-                return true;
-        } catch (NoSuchFieldError ignored) {}
+        if (isNamedEntityType(type, "SHULKER"))
+            return true;
 
         if (entity instanceof Slime) {
             Slime slime = (Slime) entity;
@@ -468,15 +461,15 @@ public class EntityDamageHandler implements Listener {
             @NotNull EntityDamageInstance event,
             @Nullable Player attacker,
             @NotNull Player damaged) {
-        if (!(event.damager() instanceof AreaEffectCloud))
+        Entity damager = event.damager();
+        if (damager == null || !isNamedEntityType(damager.getType(), "AREA_EFFECT_CLOUD"))
             return false;
-        AreaEffectCloud cloud = (AreaEffectCloud) event.damager();
 
         // Only intervene when the cloud was actually produced by a player. Mob-sourced
         // AreaEffectClouds (most importantly the Ender Dragon's breath attack) are not
         // PvP and must not be cancelled here, otherwise dragon fights become trivial in
         // admin-claimed end islands. See upstream GriefPrevention/GriefPrevention#2577.
-        if (!(cloud.getSource() instanceof Player))
+        if (!(invokeNoArg(damager, "getSource") instanceof Player))
             return false;
 
         PlayerData damagedData = dataStore.getPlayerData(damaged.getUniqueId());
@@ -735,10 +728,10 @@ public class EntityDamageHandler implements Listener {
                         // why exception? so admins can set up a village which can't be CHANGED by
                         // players, but must be "protected" by players.
                         || event.damager() instanceof Zombie
-                        || event.damager() instanceof Raider
-                        || event.damager() instanceof Vex
-                        || event.damager() instanceof Projectile && ((Projectile) event.damager()).getShooter() instanceof Raider
-                        || event.damager() instanceof EvokerFangs && ((EvokerFangs) event.damager()).getOwner() instanceof Raider)) {
+                        || isRaidEntity(event.damager())
+                        || isNamedEntity(event.damager(), "VEX")
+                        || projectileShooterIsRaidEntity(event.damager())
+                        || evokerFangsOwnerIsRaidEntity(event.damager()))) {
             return true;
         }
 
@@ -825,7 +818,7 @@ public class EntityDamageHandler implements Listener {
                 && damageSourceType != EntityType.CREEPER
                 && damageSourceType != EntityType.WITHER
                 && !isEndCrystal(damageSourceType)
-                && damageSourceType != EntityType.AREA_EFFECT_CLOUD
+                && !isNamedEntityType(damageSourceType, "AREA_EFFECT_CLOUD")
                 && damageSourceType != EntityType.WITCH
                 && !(damageSource instanceof Projectile)
                 && !(damageSource instanceof Explosive)
@@ -957,7 +950,7 @@ public class EntityDamageHandler implements Listener {
      */
     private void preventInfiniteBounce(@Nullable Projectile projectile, @NotNull Entity entity) {
         if (projectile != null) {
-            if (projectile.getType() == EntityType.TRIDENT) {
+            if (isNamedEntityType(projectile.getType(), "TRIDENT")) {
                 // Instead of removing a trident, teleport it to the entity's foot location and
                 // remove velocity.
                 projectile.teleport(entity);
@@ -1197,7 +1190,52 @@ public class EntityDamageHandler implements Listener {
         return isNamedEntityType(entityType, "END_CRYSTAL", "ENDER_CRYSTAL");
     }
 
-    private static boolean isNamedEntityType(@NotNull EntityType entityType, @NotNull String... names) {
+    private static boolean isNamedEntity(@Nullable Entity entity, @NotNull String... names) {
+        return entity != null && isNamedEntityType(entity.getType(), names);
+    }
+
+    private static boolean isRaidEntity(@Nullable Entity entity) {
+        return isNamedEntity(entity,
+                "PILLAGER",
+                "RAVAGER",
+                "EVOKER",
+                "VINDICATOR",
+                "ILLUSIONER",
+                "WITCH");
+    }
+
+    private static boolean projectileShooterIsRaidEntity(@Nullable Entity entity) {
+        if (!(entity instanceof Projectile)) {
+            return false;
+        }
+
+        ProjectileSource shooter = ((Projectile) entity).getShooter();
+        return shooter instanceof Entity && isRaidEntity((Entity) shooter);
+    }
+
+    private static boolean evokerFangsOwnerIsRaidEntity(@Nullable Entity entity) {
+        if (!isNamedEntity(entity, "EVOKER_FANGS")) {
+            return false;
+        }
+
+        Object owner = invokeNoArg(entity, "getOwner");
+        return owner instanceof Entity && isRaidEntity((Entity) owner);
+    }
+
+    private static @Nullable Object invokeNoArg(@NotNull Object target, @NotNull String methodName) {
+        try {
+            Method method = target.getClass().getMethod(methodName);
+            return method.invoke(target);
+        } catch (ReflectiveOperationException | RuntimeException ignored) {
+            return null;
+        }
+    }
+
+    private static boolean isNamedEntityType(@Nullable EntityType entityType, @NotNull String... names) {
+        if (entityType == null) {
+            return false;
+        }
+
         String actualName = entityType.name();
         for (String name : names) {
             if (actualName.equals(name)) {

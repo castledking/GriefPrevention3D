@@ -1,7 +1,6 @@
 package me.ryanhamshire.GriefPrevention;
 
 import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.event.EventHandler;
@@ -40,7 +39,7 @@ public class SpigotKnockbackHandler implements Listener {
         String sourceTypeName = source.getType().name();
         
         if (!sourceTypeName.contains("WIND_CHARGE") && !sourceTypeName.equals("BREEZE_WIND_CHARGE")) {
-            if (source.getType() != EntityType.TRIDENT) {
+            if (!sourceTypeName.equals("TRIDENT")) {
                 return;
             }
         }
