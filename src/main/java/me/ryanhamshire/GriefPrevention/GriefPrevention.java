@@ -37,6 +37,7 @@ import com.griefprevention.commands.CommandAliasConfiguration;
 import com.griefprevention.commands.TabCompletions;
 import com.griefprevention.compat.WorldHeightCompatProvider;
 import me.ryanhamshire.GriefPrevention.compat.CompatUtil;
+import me.ryanhamshire.GriefPrevention.compat.LegacyRightClickAirHandler;
 import com.griefprevention.geometry.OrthogonalEdge2i;
 import com.griefprevention.geometry.OrthogonalPolygon;
 import com.griefprevention.platform.knockback.KnockbackProtectionListener;
@@ -518,6 +519,19 @@ public class GriefPrevention extends JavaPlugin {
                 () -> new PlayerTakeLecternBookEventHandler(this.dataStore));
         registerIfClassPresent(pluginManager, "org.bukkit.event.raid.RaidTriggerEvent",
                 () -> new RaidTriggerEventHandler(this.dataStore, this));
+
+        // Pre-1.13: inject packet handler for right-click-on-air with claim tools
+        // PaperSpigot 1.8.8 suppresses PlayerInteractEvent(RIGHT_CLICK_AIR) for
+        // non-interactive items (shovels, sticks). This handler intercepts the
+        // PacketPlayInBlockPlace(-1,-1,-1) and fires a synthetic event.
+        if (LegacyRightClickAirHandler.isAvailable() && !isClassPresent("org.bukkit.block.data.BlockData")) {
+            try {
+                pluginManager.registerEvents(new LegacyRightClickAirHandler(), this);
+                AddLogEntry("Registered legacy right-click air handler (pre-1.13).");
+            } catch (Exception e) {
+                AddLogEntry("Failed to register legacy right-click air handler: " + e.getMessage());
+            }
+        }
 
         if (pluginManager.getPlugin("PlaceholderAPI") != null) {
             new PlaceholderAPIExpansion(this).register();
