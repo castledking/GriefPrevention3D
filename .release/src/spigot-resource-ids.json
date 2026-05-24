@@ -5,6 +5,7 @@
     "modrinth_project_id": "pqVXF7b5",
     "curseforge": {
       "project_id": 1552252,
+      "dependency_slugs": ["bukkit"],
       "game_versions": [
         "1.8","1.8.1","1.8.3",
         "1.9",
