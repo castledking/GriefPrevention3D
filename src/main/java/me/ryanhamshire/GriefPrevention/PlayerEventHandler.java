@@ -137,7 +137,7 @@ import me.ryanhamshire.GriefPrevention.util.SchedulerUtil;
 
 import me.ryanhamshire.GriefPrevention.util.TaskHandle;
 
-class PlayerEventHandler implements Listener {
+public class PlayerEventHandler implements Listener {
     private static final @NotNull ClaimEditor claimEditor = new ClaimEditorSkeleton();
     private final DataStore dataStore;
     private final GriefPrevention instance;
@@ -1611,11 +1611,13 @@ class PlayerEventHandler implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onItemHeldChange(PlayerItemHeldEvent event) {
         Player player = event.getPlayer();
+        GriefPrevention.AddLogEntry("[GP Debug] onItemHeldChange: player=" + player.getName() + ", newSlot=" + event.getNewSlot(), CustomLogEntryTypes.Debug, false);
 
         // if he's switching to the golden shovel
         int newSlot = event.getNewSlot();
         ItemStack newItemStack = player.getInventory().getItem(newSlot);
         if (newItemStack != null && newItemStack.getType() == instance.config_claims_modificationTool) {
+            GriefPrevention.AddLogEntry("[GP Debug] onItemHeldChange: switching to golden shovel", CustomLogEntryTypes.Debug, false);
             // give the player his available claim blocks count and claiming instructions,
             // but only if he keeps the shovel equipped for a minimum time, to avoid mouse
             // wheel spam
@@ -1775,12 +1777,16 @@ class PlayerEventHandler implements Listener {
     }
 
     // when a player interacts with the world
-    @EventHandler(priority = EventPriority.LOW, ignoreCancelled = true)
+    @EventHandler(priority = EventPriority.LOW)
     void onPlayerInteract(PlayerInteractEvent event) {
+        GriefPrevention.AddLogEntry("[GP Debug] PlayerEventHandler.onPlayerInteract: player=" + event.getPlayer().getName() + ", action=" + event.getAction(), CustomLogEntryTypes.Debug, false);
+
         // not interested in left-click-on-air actions
         Action action = event.getAction();
-        if (action == Action.LEFT_CLICK_AIR)
+        if (action == Action.LEFT_CLICK_AIR) {
+            GriefPrevention.AddLogEntry("[GP Debug] PlayerEventHandler.onPlayerInteract: LEFT_CLICK_AIR, returning", CustomLogEntryTypes.Debug, false);
             return;
+        }
 
         Player player = event.getPlayer();
         Block clickedBlock = event.getClickedBlock(); // null returned here means interacting with air
@@ -4886,5 +4892,20 @@ class PlayerEventHandler implements Listener {
                 playerData.setVisibleBoundaries(null);
             }, 100L);
         }
+    }
+
+    // Direct entrypoint for legacy right-click-air from Netty packet handler
+    // This bypasses the public event system to avoid duplicates
+    public void handleLegacyRightClickAir(Player player, org.bukkit.inventory.ItemStack packetItem, float yaw, float pitch) {
+        // Create a minimal event for the dispatcher (not fired publicly)
+        PlayerInteractEvent event = new PlayerInteractEvent(
+            player,
+            Action.RIGHT_CLICK_AIR,
+            packetItem,
+            null,
+            org.bukkit.block.BlockFace.SELF
+        );
+        
+        this.claimToolDispatcher.handle(event, null, Material.AIR, packetItem, yaw, pitch);
     }
 }

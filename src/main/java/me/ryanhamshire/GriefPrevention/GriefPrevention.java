@@ -136,7 +136,7 @@ public class GriefPrevention extends JavaPlugin {
     CustomLogger customLogger;
 
     // Player event handler
-    PlayerEventHandler playerEventHandler;
+    public PlayerEventHandler playerEventHandler;
 
     public ClaimToolHandlerRegistry getClaimToolHandlerRegistry()
     {

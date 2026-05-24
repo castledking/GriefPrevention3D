@@ -88,6 +88,16 @@ final class ClaimToolDispatcher
 
     boolean handle(PlayerInteractEvent event, Block clickedBlock, Material clickedBlockType)
     {
+        return handle(event, clickedBlock, clickedBlockType, null);
+    }
+
+    boolean handle(PlayerInteractEvent event, Block clickedBlock, Material clickedBlockType, ItemStack overrideItem)
+    {
+        return handle(event, clickedBlock, clickedBlockType, overrideItem, null, null);
+    }
+
+    boolean handle(PlayerInteractEvent event, Block clickedBlock, Material clickedBlockType, ItemStack overrideItem, Float yaw, Float pitch)
+    {
         Action action = event.getAction();
         if (action != Action.RIGHT_CLICK_BLOCK && action != Action.RIGHT_CLICK_AIR)
         {
@@ -101,7 +111,7 @@ final class ClaimToolDispatcher
         }
 
         Player player = event.getPlayer();
-        ItemStack itemInHand = instance.getItemInHand(player, hand);
+        ItemStack itemInHand = overrideItem != null ? overrideItem : instance.getItemInHand(player, hand);
         Material materialInHand = itemInHand.getType();
 
         if (materialInHand != instance.config_claims_investigationTool
@@ -114,10 +124,10 @@ final class ClaimToolDispatcher
 
         if (materialInHand == instance.config_claims_investigationTool)
         {
-            return handleInvestigationTool(event, player, clickedBlock, clickedBlockType, materialInHand, playerData);
+            return handleInvestigationTool(event, player, clickedBlock, clickedBlockType, materialInHand, playerData, yaw, pitch);
         }
 
-        return handleModificationTool(event, player, clickedBlock, clickedBlockType, materialInHand, playerData);
+        return handleModificationTool(event, player, clickedBlock, clickedBlockType, materialInHand, playerData, yaw, pitch);
     }
 
     // ----------------------------------------------------------------------------------------
@@ -130,19 +140,15 @@ final class ClaimToolDispatcher
             Block clickedBlock,
             Material clickedBlockType,
             Material materialInHand,
-            PlayerData playerData)
+            PlayerData playerData,
+            Float yaw,
+            Float pitch)
     {
         Action action = event.getAction();
 
         // if claims are disabled in this world, do nothing
         if (!instance.claimsEnabledForWorld(player.getWorld()))
             return true;
-
-        // If investigation tool is on cooldown, do nothing.
-        if (player.getCooldown(instance.config_claims_investigationTool) > 0)
-            return true;
-        // Set investigation tool on cooldown to prevent spamming.
-        player.setCooldown(instance.config_claims_investigationTool, 1);
 
         // if holding shift (sneaking), show all claims in area
         if (player.isSneaking() && player.hasPermission("griefprevention.visualizenearbyclaims")) {
@@ -167,7 +173,11 @@ final class ClaimToolDispatcher
         // FEATURE: shovel and stick can be used from a distance away
         if (action == Action.RIGHT_CLICK_AIR) {
             // try to find a far away non-air block along line of sight
-            clickedBlock = getTargetBlock(player, 100);
+            if (yaw != null && pitch != null) {
+                clickedBlock = getTargetBlock(player, 100, yaw.floatValue(), pitch.floatValue());
+            } else {
+                clickedBlock = getTargetBlock(player, 100);
+            }
             clickedBlockType = clickedBlock.getType();
         }
 
@@ -269,9 +279,13 @@ final class ClaimToolDispatcher
             Block clickedBlock,
             Material clickedBlockType,
             Material materialInHand,
-            PlayerData playerData)
+            PlayerData playerData,
+            Float yaw,
+            Float pitch)
     {
         Action action = event.getAction();
+
+        GriefPrevention.AddLogEntry("[GP Debug] handleModificationTool called for " + player.getName() + ", action: " + action, CustomLogEntryTypes.Debug, false);
 
         boolean cornerSelected = false; // track if we snapped to a 3D corner so AIR guard can be bypassed
 
@@ -285,7 +299,11 @@ final class ClaimToolDispatcher
         // FEATURE: shovel and stick can be used from a distance away
         if (!cornerSelected && action == Action.RIGHT_CLICK_AIR) {
             // try to find a far away non-air block along line of sight
-            clickedBlock = getTargetBlock(player, 100);
+            if (yaw != null && pitch != null) {
+                clickedBlock = getTargetBlock(player, 100, yaw.floatValue(), pitch.floatValue());
+            } else {
+                clickedBlock = getTargetBlock(player, 100);
+            }
             if (clickedBlock == null) {
                 GriefPrevention.AddLogEntry("[GP Debug] getTargetBlock returned null for " + player.getName(), CustomLogEntryTypes.Debug, false);
                 return true;
@@ -306,6 +324,8 @@ final class ClaimToolDispatcher
             GriefPrevention.AddLogEntry("[GP Debug] clickedBlock is AIR for " + player.getName(), CustomLogEntryTypes.Debug, false);
             return true;
         }
+
+        GriefPrevention.AddLogEntry("[GP Debug] Passed initial checks, continuing for " + player.getName(), CustomLogEntryTypes.Debug, false);
 
         // if the player doesn't have claims permission, don't do anything
         if (!player.hasPermission("griefprevention.createclaims")) {
@@ -819,7 +839,9 @@ final class ClaimToolDispatcher
 
         // if he hasn't already start a claim with a previous shovel action
         Location lastShovelLocation = playerData.lastShovelLocation;
+        GriefPrevention.AddLogEntry("[GP Debug] lastShovelLocation: " + (lastShovelLocation == null ? "null" : lastShovelLocation.getX() + "," + lastShovelLocation.getY() + "," + lastShovelLocation.getZ()), CustomLogEntryTypes.Debug, false);
         if (lastShovelLocation == null) {
+            GriefPrevention.AddLogEntry("[GP Debug] Starting new claim (lastShovelLocation is null)", CustomLogEntryTypes.Debug, false);
             // if claims are not enabled in this world and it's not an administrative claim,
             // display an error message and stop
             if (!instance.claimsEnabledForWorld(player.getWorld())) {
@@ -853,6 +875,7 @@ final class ClaimToolDispatcher
         // otherwise, he's trying to finish creating a claim by setting the other
         // boundary corner
         else {
+            GriefPrevention.AddLogEntry("[GP Debug] Entered else block - finishing claim", CustomLogEntryTypes.Debug, false);
             // if last shovel location was in a different world, assume the player is
             // starting the create-claim workflow over
             if (!lastShovelLocation.getWorld().equals(clickedBlock.getWorld())) {
@@ -871,10 +894,12 @@ final class ClaimToolDispatcher
             int newWidth;
             int newHeight;
 
+            GriefPrevention.AddLogEntry("[GP Debug] Calculating claim dimensions", CustomLogEntryTypes.Debug, false);
             try
             {
                 newWidth = Math.abs(Math.subtractExact(lastShovelLocation.getBlockX(), clickedBlock.getX())) + 1;
                 newHeight = Math.abs(Math.subtractExact(lastShovelLocation.getBlockZ(), clickedBlock.getZ())) + 1;
+                GriefPrevention.AddLogEntry("[GP Debug] Calculated dimensions: " + newWidth + "x" + newHeight, CustomLogEntryTypes.Debug, false);
             }
             catch (ArithmeticException e)
             {
@@ -2847,18 +2872,40 @@ final class ClaimToolDispatcher
     }
 
     static Block getTargetBlock(Player player, int maxDistance) throws IllegalStateException {
-        Location eye = player.getEyeLocation();
+        return getTargetBlock(player, maxDistance, player.getLocation().getYaw(), player.getLocation().getPitch());
+    }
+
+    static Block getTargetBlock(Player player, int maxDistance, float yaw, float pitch) throws IllegalStateException {
+        Location loc = player.getLocation();
+        Location eye = loc.clone().add(0, player.getEyeHeight(), 0);
+        eye.setYaw(yaw);
+        eye.setPitch(pitch);
+
         Material eyeMaterial = eye.getBlock().getType();
         boolean passThroughWater = (eyeMaterial == Material.WATER);
-        BlockIterator iterator = new BlockIterator(player.getLocation(), player.getEyeHeight(), maxDistance);
-        Block result = player.getLocation().getBlock().getRelative(BlockFace.UP);
         boolean hasTags = MaterialTagCompat.isTagged("REPLACEABLE", Material.AIR);
+
+        Vector direction = eye.getDirection();
+        BlockIterator iterator = new BlockIterator(
+            player.getWorld(),
+            eye.toVector(),
+            direction,
+            0,
+            maxDistance
+        );
+
+        Block result = eye.getBlock();
+        int iterations = 0;
+
         while (iterator.hasNext()) {
             result = iterator.next();
+            iterations++;
             Material type = result.getType();
             if (hasTags) {
-                if (!MaterialTagCompat.isTagged("REPLACEABLE", type) || (!passThroughWater && type == Material.WATER))
+                if (!MaterialTagCompat.isTagged("REPLACEABLE", type) || (!passThroughWater && type == Material.WATER)) {
+                    GriefPrevention.AddLogEntry("[GP Debug] getTargetBlock: found block after " + iterations + " iterations: " + type.name() + " @ " + result.getX() + "," + result.getY() + "," + result.getZ(), CustomLogEntryTypes.Debug, false);
                     return result;
+                }
             } else {
                 // Pre-1.13: Tags don't exist, check transparent materials manually
                 if (type == Material.AIR
@@ -2870,10 +2917,12 @@ final class ClaimToolDispatcher
                         || type == Material.FIRE
                         || isTallGrass(type))
                     continue;
+                GriefPrevention.AddLogEntry("[GP Debug] getTargetBlock: found block after " + iterations + " iterations: " + type.name() + " @ " + result.getX() + "," + result.getY() + "," + result.getZ(), CustomLogEntryTypes.Debug, false);
                 return result;
             }
         }
 
+        GriefPrevention.AddLogEntry("[GP Debug] getTargetBlock: no block found after " + iterations + " iterations, returning last result", CustomLogEntryTypes.Debug, false);
         return result;
     }
 
