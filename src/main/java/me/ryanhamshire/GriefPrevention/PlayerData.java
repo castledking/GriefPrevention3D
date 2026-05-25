@@ -82,6 +82,9 @@ public class PlayerData
     //the claim this player is currently resizing
     public Claim claimResizing = null;
 
+    //whether claimResizing should be preferred by commands while waiting for the second shovel click
+    public boolean claimSelectionActive = false;
+
     //the claim this player is currently subdividing
     public Claim claimSubdividing = null;
 

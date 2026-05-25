@@ -160,6 +160,20 @@ public abstract class BoundaryVisualization
     }
 
     /**
+     * Helper method for quickly visualizing an area with a custom style.
+     *
+     * @param player the {@link Player} visualizing the area
+     * @param boundingBox the {@link BoundingBox} being visualized
+     * @param style the {@link VisualizationStyle style of visualization}
+     */
+    public static void visualizeArea(
+            @NotNull Player player,
+            @NotNull BoundingBox boundingBox,
+            @NotNull VisualizationStyle style) {
+        visualizeArea(player, boundingBox, style, player.getEyeLocation().getBlockY());
+    }
+
+    /**
      * Helper method for quickly visualizing an area at a specific Y height.
      *
      * @param player the {@link Player} visualizing the area
@@ -172,8 +186,24 @@ public abstract class BoundaryVisualization
             @NotNull BoundingBox boundingBox,
             @NotNull VisualizationType type,
             int height) {
+        visualizeArea(player, boundingBox, (VisualizationStyle) type, height);
+    }
+
+    /**
+     * Helper method for quickly visualizing an area at a specific Y height with a custom style.
+     *
+     * @param player the {@link Player} visualizing the area
+     * @param boundingBox the {@link BoundingBox} being visualized
+     * @param style the {@link VisualizationStyle style of visualization}
+     * @param height the Y height at which to render the visualization
+     */
+    public static void visualizeArea(
+            @NotNull Player player,
+            @NotNull BoundingBox boundingBox,
+            @NotNull VisualizationStyle style,
+            int height) {
         @SuppressWarnings("null")
-        Set<Boundary> boundaries = Set.of(new Boundary(boundingBox, type));
+        Set<Boundary> boundaries = Set.of(new Boundary(boundingBox, style));
         BoundaryVisualizationEvent event = new BoundaryVisualizationEvent(player,
                 boundaries,
                 height);
@@ -196,6 +226,21 @@ public abstract class BoundaryVisualization
     }
 
     /**
+     * Helper method for quickly visualizing a claim with a custom style.
+     *
+     * @param player the {@link Player} visualizing the area
+     * @param claim the {@link Claim} being visualized
+     * @param style the {@link VisualizationStyle style of visualization}
+     */
+    public static void visualizeClaim(
+            @NotNull Player player,
+            @NotNull Claim claim,
+            @NotNull VisualizationStyle style)
+    {
+        visualizeClaim(player, claim, style, player.getEyeLocation().getBlockY());
+    }
+
+    /**
      * Helper method for quickly visualizing a claim and all its children.
      *
      * @param player the {@link Player} visualizing the area
@@ -213,6 +258,23 @@ public abstract class BoundaryVisualization
     }
 
     /**
+     * Helper method for quickly visualizing a claim and all its children with a custom style.
+     *
+     * @param player the {@link Player} visualizing the area
+     * @param claim the {@link Claim} being visualized
+     * @param style the {@link VisualizationStyle style of visualization}
+     * @param block the {@link Block} on which the visualization was initiated
+     */
+    public static void visualizeClaim(
+            @NotNull Player player,
+            @NotNull Claim claim,
+            @NotNull VisualizationStyle style,
+            @NotNull Block block)
+    {
+        visualizeClaim(player, claim, style, block.getY());
+    }
+
+    /**
      * Helper method for quickly visualizing a claim and all its children.
      *
      * @param player the {@link Player} visualizing the area
@@ -226,7 +288,24 @@ public abstract class BoundaryVisualization
             @NotNull VisualizationType type,
             int height)
     {
-        BoundaryVisualizationEvent event = new BoundaryVisualizationEvent(player, defineBoundaries(claim, type), height);
+        visualizeClaim(player, claim, (VisualizationStyle) type, height);
+    }
+
+    /**
+     * Helper method for quickly visualizing a claim and all its children with a custom style.
+     *
+     * @param player the {@link Player} visualizing the area
+     * @param claim the {@link Claim} being visualized
+     * @param style the {@link VisualizationStyle}
+     * @param height the height at which the visualization was initiated
+     */
+    private static void visualizeClaim(
+            @NotNull Player player,
+            @NotNull Claim claim,
+            @NotNull VisualizationStyle style,
+            int height)
+    {
+        BoundaryVisualizationEvent event = new BoundaryVisualizationEvent(player, defineBoundaries(claim, style), height);
         callAndVisualize(event);
     }
 
@@ -290,6 +369,19 @@ public abstract class BoundaryVisualization
         return boundaries;
     }
 
+    private static Collection<Boundary> defineBoundaries(Claim claim, VisualizationStyle style)
+    {
+        if (style instanceof VisualizationType)
+        {
+            return defineBoundaries(claim, (VisualizationType) style);
+        }
+        if (claim == null) return Set.of();
+
+        Set<Boundary> boundaries = new HashSet<>();
+        addClaimWithDescendants(boundaries, claim, style);
+        return boundaries;
+    }
+
     private static void addClaimWithDescendants(Set<Boundary> boundaries, Claim claim, VisualizationType type)
     {
         boundaries.add(new Boundary(claim, type));
@@ -303,6 +395,18 @@ public abstract class BoundaryVisualization
                     : VisualizationType.SUBDIVISION;
 
             addClaimWithDescendants(boundaries, child, childType);
+        }
+    }
+
+    private static void addClaimWithDescendants(Set<Boundary> boundaries, Claim claim, VisualizationStyle style)
+    {
+        boundaries.add(new Boundary(claim, style));
+
+        for (Claim child : claim.children)
+        {
+            if (!child.inDataStore) continue;
+
+            addClaimWithDescendants(boundaries, child, style);
         }
     }
 

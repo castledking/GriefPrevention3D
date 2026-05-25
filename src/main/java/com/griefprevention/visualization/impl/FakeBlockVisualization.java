@@ -2,6 +2,7 @@ package com.griefprevention.visualization.impl;
 
 import com.griefprevention.compat.MaterialTagCompat;
 import com.griefprevention.util.IntVector;
+import com.griefprevention.visualization.BlockBoundaryRenderer;
 import com.griefprevention.visualization.BlockBoundaryVisualization;
 import com.griefprevention.visualization.Boundary;
 import com.griefprevention.visualization.BoundaryVisualization;
@@ -48,19 +49,41 @@ public class FakeBlockVisualization extends BlockBoundaryVisualization {
     @Override
     protected @NotNull Consumer<@NotNull IntVector> addCornerElements(@NotNull Boundary boundary)
     {
+        VisualizationType type = fallbackType(boundary);
         return createElementAdder(
-                boundary.type().getBlockRenderer().createCornerBlockData(boundary),
-                boundary.type(),
-                usesExactPlacement(boundary.type()));
+                getBlockRenderer(boundary).createCornerBlockData(boundary),
+                type,
+                usesExactPlacement(type));
     }
 
     @Override
     protected @NotNull Consumer<@NotNull IntVector> addSideElements(@NotNull Boundary boundary)
     {
+        VisualizationType type = fallbackType(boundary);
         return createElementAdder(
-                boundary.type().getBlockRenderer().createSideBlockData(boundary),
-                boundary.type(),
-                usesExactPlacement(boundary.type()));
+                getBlockRenderer(boundary).createSideBlockData(boundary),
+                type,
+                usesExactPlacement(type));
+    }
+
+    protected @NotNull BlockBoundaryRenderer getBlockRenderer(@NotNull Boundary boundary)
+    {
+        BlockBoundaryRenderer renderer = boundary.style().getBlockRenderer();
+        if (renderer != null)
+        {
+            return renderer;
+        }
+
+        GriefPrevention.instance.getLogger().warning(
+                "Visualization style " + boundary.style().getKey()
+                        + " has no block renderer; falling back to " + VisualizationType.CLAIM.getKey() + ".");
+        return VisualizationType.CLAIM.getBlockRenderer();
+    }
+
+    protected @NotNull VisualizationType fallbackType(@NotNull Boundary boundary)
+    {
+        VisualizationType type = boundary.type();
+        return type != null ? type : VisualizationType.CLAIM;
     }
 
     private boolean usesExactPlacement(@NotNull VisualizationType type)
@@ -84,17 +107,18 @@ public class FakeBlockVisualization extends BlockBoundaryVisualization {
 
     @Override
     protected void draw(@NotNull Player player, @NotNull Boundary boundary) {
+        VisualizationType type = boundary.type();
         // Use 3D-specific drawing for 3D subdivisions, 3D conflict zones, and 3D admin claims
-        boolean is3DType = boundary.type() == VisualizationType.SUBDIVISION_3D
-                || boundary.type() == VisualizationType.CONFLICT_ZONE_3D
-                || boundary.type() == VisualizationType.ADMIN_CLAIM_3D
-                || boundary.type() == VisualizationType.INITIALIZE_ZONE_3D
-                || (boundary.type() == VisualizationType.ADMIN_CLAIM
+        boolean is3DType = type == VisualizationType.SUBDIVISION_3D
+                || type == VisualizationType.CONFLICT_ZONE_3D
+                || type == VisualizationType.ADMIN_CLAIM_3D
+                || type == VisualizationType.INITIALIZE_ZONE_3D
+                || (type == VisualizationType.ADMIN_CLAIM
                     && boundary.claim() != null
                     && boundary.claim().is3D());
         if (is3DType) {
             drawRespectingYBoundaries(player, boundary);
-        } else if (boundary.type() == VisualizationType.RESTORE_NATURE) {
+        } else if (type == VisualizationType.RESTORE_NATURE) {
             drawRestoreNature(player, boundary);
         } else {
             // Always use the original visualization position, not the player's current position
@@ -113,7 +137,7 @@ public class FakeBlockVisualization extends BlockBoundaryVisualization {
      */
     protected void drawRestoreNature(@NotNull Player player, @NotNull Boundary boundary) {
         BoundingBox area = boundary.bounds();
-        VisualizationType type = boundary.type();
+        VisualizationType type = fallbackType(boundary);
 
         // Create display zone
         final int displayZoneRadius = 75;

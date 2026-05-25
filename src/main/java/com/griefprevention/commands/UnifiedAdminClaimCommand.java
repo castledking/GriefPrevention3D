@@ -511,9 +511,7 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
 
     private boolean deleteCurrentClaim(Player player) {
         PlayerData playerData = plugin.dataStore.getPlayerData(player.getUniqueId());
-        // Prefer claim selected via shovel corner (selection session) when set
-        Claim claim = playerData.claimResizing != null ? playerData.claimResizing
-                : plugin.dataStore.getClaimAt(player.getLocation(), false, null);
+        Claim claim = plugin.getSelectedOrCurrentClaim(player, false);
         if (claim == null) {
             GriefPrevention.sendMessage(player, TextMode.Err, Messages.DeleteClaimMissing);
             return true;
@@ -528,6 +526,7 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
                 plugin.deleteClaimPublic(claim, true);
                 if (playerData.claimResizing == claim) {
                     playerData.claimResizing = null;
+                    playerData.claimSelectionActive = false;
                     playerData.lastShovelLocation = null;
                 }
                 GriefPrevention.sendMessage(player, TextMode.Success, Messages.DeleteSuccess);

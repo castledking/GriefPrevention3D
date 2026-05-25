@@ -2,14 +2,20 @@ package com.griefprevention.test;
 
 import com.griefprevention.geometry.OrthogonalPoint2i;
 import com.griefprevention.geometry.OrthogonalPolygon;
+import com.griefprevention.visualization.Boundary;
 import com.griefprevention.visualization.BoundaryVisualization;
+import com.griefprevention.visualization.VisualizationStyle;
+import com.griefprevention.visualization.VisualizationStyleRegistry;
 import com.griefprevention.visualization.VisualizationType;
 import me.ryanhamshire.GriefPrevention.Claim;
 import me.ryanhamshire.GriefPrevention.ClaimPermission;
 import me.ryanhamshire.GriefPrevention.DataStore;
+import me.ryanhamshire.GriefPrevention.GriefPrevention;
 import me.ryanhamshire.GriefPrevention.Messages;
 import me.ryanhamshire.GriefPrevention.PlayerData;
+import me.ryanhamshire.GriefPrevention.util.BoundingBox;
 import org.bukkit.Location;
+import org.bukkit.block.Block;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.junit.jupiter.api.Test;
@@ -153,6 +159,34 @@ class AddonCompatibilitySurfaceTest {
             enumConstant(VisualizationType.class, "SUBDIVISION_3D");
             enumConstant(VisualizationType.class, "ADMIN_CLAIM_3D");
             method(BoundaryVisualization.class, "visualizeClaim", Player.class, Claim.class, VisualizationType.class);
+        });
+    }
+
+    @Test
+    void visualizationStyleApiRemainsAvailable() {
+        assertDoesNotThrow(() -> {
+            method(VisualizationStyle.class, "getKey");
+            method(VisualizationStyle.class, "getBlockRenderer");
+            method(VisualizationType.class, "getKey");
+            method(VisualizationType.class, "fromKey", String.class);
+
+            method(VisualizationStyleRegistry.class, "register", VisualizationStyle.class);
+            method(VisualizationStyleRegistry.class, "unregister", String.class);
+            method(VisualizationStyleRegistry.class, "get", String.class);
+            method(VisualizationStyleRegistry.class, "getStyles");
+
+            method(GriefPrevention.class, "getVisualizationStyleRegistry");
+
+            Boundary.class.getConstructor(BoundingBox.class, VisualizationStyle.class);
+            Boundary.class.getConstructor(BoundingBox.class, VisualizationStyle.class, Claim.class);
+            Boundary.class.getConstructor(Claim.class, VisualizationStyle.class);
+            method(Boundary.class, "style");
+            method(Boundary.class, "type");
+
+            method(BoundaryVisualization.class, "visualizeArea", Player.class, BoundingBox.class, VisualizationStyle.class);
+            method(BoundaryVisualization.class, "visualizeArea", Player.class, BoundingBox.class, VisualizationStyle.class, int.class);
+            method(BoundaryVisualization.class, "visualizeClaim", Player.class, Claim.class, VisualizationStyle.class);
+            method(BoundaryVisualization.class, "visualizeClaim", Player.class, Claim.class, VisualizationStyle.class, Block.class);
         });
     }
 

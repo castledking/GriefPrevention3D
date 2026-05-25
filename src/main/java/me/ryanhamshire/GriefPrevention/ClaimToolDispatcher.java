@@ -314,16 +314,8 @@ final class ClaimToolDispatcher
 
         boolean cornerSelected = false; // track if we snapped to a 3D corner so AIR guard can be bypassed
 
-        CornerHit cornerHit = raycast3DSubclaimCorner(player, 100);
-        if (cornerHit != null && shouldUse3DCornerHit(player, clickedBlock, cornerHit)) {
-            clickedBlock = player.getWorld().getBlockAt(cornerHit.x, cornerHit.y, cornerHit.z);
-            clickedBlockType = clickedBlock.getType();
-            cornerSelected = true;
-        }
-
-        // FEATURE: shovel and stick can be used from a distance away
-        if (!cornerSelected && action == Action.RIGHT_CLICK_AIR) {
-            // try to find a far away non-air block along line of sight
+        if (action == Action.RIGHT_CLICK_AIR) {
+            // try to find a far away non-air block along line of sight first
             if (yaw != null && pitch != null) {
                 clickedBlock = getTargetBlock(player, 100, yaw.floatValue(), pitch.floatValue());
             } else {
@@ -335,6 +327,25 @@ final class ClaimToolDispatcher
             }
             clickedBlockType = clickedBlock.getType();
             GriefPrevention.AddLogEntry("[GP Debug] getTargetBlock found " + clickedBlockType.name() + " @ " + clickedBlock.getX() + "," + clickedBlock.getY() + "," + clickedBlock.getZ() + " for " + player.getName(), CustomLogEntryTypes.Debug, false);
+        }
+
+        // Load playerData early so we can correctly gate 3D corner snapping.
+        // Critical: during an in-progress resize/subdivide we must NOT snap to existing 3D
+        // corners, otherwise the second click gets pulled back onto a corner of the claim
+        // being resized — either matching lastShovelLocation (no-op) or collapsing the claim
+        // to a 1-block-thin sliver. PlayerEventHandler's path already gates via
+        // ClaimToolInteractionState.shouldAttempt3DCornerSelection; mirror that here.
+        if (playerData == null) {
+            playerData = this.dataStore.getPlayerData(player.getUniqueId());
+        }
+
+        if (ClaimToolInteractionState.shouldAttempt3DCornerSelection(playerData)) {
+            CornerHit cornerHit = raycast3DSubclaimCorner(player, 100);
+            if (cornerHit != null && shouldUse3DCornerHit(player, clickedBlock, cornerHit)) {
+                clickedBlock = player.getWorld().getBlockAt(cornerHit.x, cornerHit.y, cornerHit.z);
+                clickedBlockType = clickedBlock.getType();
+                cornerSelected = true;
+            }
         }
 
         // if no block, stop here
@@ -538,40 +549,7 @@ final class ClaimToolDispatcher
                 // if he clicked on a corner, start resizing it
                 boolean isCorner = isCornerMatch(claim, clickedBlock);
                 if (isCorner) {
-                    // When 2D/3D subdivisions share a corner with the parent, select the parent (so
-                    // e.g. 1x1x1 sub at main corner can be removed by selecting main and deleting).
-                    Claim selection = claim;
-                    while (selection.parent != null) {
-                        Claim parent = selection.parent;
-                        boolean parentContains = parent.contains(clickedBlock.getLocation(), true, false);
-                        if (parentContains && isCornerMatch(parent, clickedBlock)) {
-                            selection = parent;
-                        } else {
-                            break;
-                        }
-                    }
-                    playerData.claimResizing = selection;
-                    playerData.lastShovelLocation = clickedBlock.getLocation();
-                    Messages message;
-                    if (selection.parent != null) {
-                        message = Messages.SubdivisionSelected;
-                    } else {
-                        // ClaimSelected when no children; ClaimSelectedTopLevel when claim has subdivisions
-                        boolean hasNoChildren = selection.children == null || selection.children.isEmpty();
-                        message = hasNoChildren ? Messages.ClaimSelected : Messages.ClaimSelectedTopLevel;
-                    }
-                    GriefPrevention.sendMessage(player, TextMode.Instr, message);
-                    // Refresh visualization in selection/resize mode.
-                    VisualizationType visualizationType;
-                    if (selection.parent == null) {
-                        visualizationType = selection.isAdminClaim() ? VisualizationType.ADMIN_CLAIM
-                                : VisualizationType.CLAIM;
-                    } else {
-                        visualizationType = selection.is3D() ? VisualizationType.SUBDIVISION_3D
-                                : VisualizationType.SUBDIVISION;
-                    }
-
-                    BoundaryVisualization.visualizeClaim(player, selection, visualizationType, clickedBlock);
+                    startClaimResizeSelection(player, playerData, claim, clickedBlock);
                 }
 
                 // if he didn't click on a corner and is in subdivision mode, he's creating a
@@ -2000,15 +1978,9 @@ final class ClaimToolDispatcher
         }
 
         playerData.claimResizing = selection;
+        playerData.claimSelectionActive = instance.config_claims_useClaimSelectSessions;
         playerData.lastShovelLocation = clickedBlock.getLocation();
-        Messages message;
-        if (selection.parent != null) {
-            message = Messages.SubdivisionSelected;
-        } else {
-            boolean hasNoChildren = selection.children == null || selection.children.isEmpty();
-            message = hasNoChildren ? Messages.ClaimSelected : Messages.ClaimSelectedTopLevel;
-        }
-        GriefPrevention.sendMessage(player, TextMode.Instr, message);
+        GriefPrevention.sendMessage(player, TextMode.Instr, claimResizeStartMessage(selection));
 
         VisualizationType visualizationType;
         if (selection.parent == null) {
@@ -2017,6 +1989,20 @@ final class ClaimToolDispatcher
             visualizationType = selection.is3D() ? VisualizationType.SUBDIVISION_3D : VisualizationType.SUBDIVISION;
         }
         BoundaryVisualization.visualizeClaim(player, selection, visualizationType, clickedBlock);
+    }
+
+    private Messages claimResizeStartMessage(@NotNull Claim selection)
+    {
+        if (!instance.config_claims_useClaimSelectSessions || !instance.config_claims_useClaimSelectedMessages) {
+            return Messages.ResizeStart;
+        }
+
+        if (selection.parent != null) {
+            return Messages.SubdivisionSelected;
+        }
+
+        boolean hasNoChildren = selection.children == null || selection.children.isEmpty();
+        return hasNoChildren ? Messages.ClaimSelected : Messages.ClaimSelectedTopLevel;
     }
 
     private boolean trySelectShapedBoundarySegmentBasicMode(

@@ -114,6 +114,7 @@ public enum Messages
     ResizeNeedMoreBlocks("You don't have enough blocks for this size.  You need {0} more.", "0: how many needed"),
     ClaimResizeSuccess("Claim resized.  {0} available claim blocks remaining.", "0: remaining blocks"),
     ResizeFailOverlap("Can't resize here because it would overlap another nearby claim."),
+    ResizeStart("Resizing claim.  Use your shovel again at the new location for this corner."),
     ClaimSelected("Claim selected. Use your shovel again to set the other corner and resize.\nNote: You can now run /claim abandon while this claim is selected."),
     ClaimSelectedTopLevel("Claim selected. Use your shovel again to set the other corner and resize.\nNote: You can now run /claim abandon toplevel while this claim is selected."),
     SubdivisionSelected("Subdivision selected. You can manage permissions for this specific area.\n&6You can run commands like:\n&7- &f/trust&7, &f/untrust\n&7- &f/containertrust&7, &f/accesstrust\n&7- &f/abandonclaim\n&6or you can right click again to resize."),

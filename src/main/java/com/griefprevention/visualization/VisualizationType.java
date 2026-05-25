@@ -6,41 +6,56 @@ import org.bukkit.block.data.Lightable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.Locale;
+import java.util.Objects;
 import java.util.function.Supplier;
 
 /**
  * Constants for types of boundaries.
  */
-public enum VisualizationType
+public enum VisualizationType implements VisualizationStyle
 {
 
     /** Boundaries for a user claim. */
-    CLAIM,
+    CLAIM("griefprevention:claim"),
     /** Boundaries for an administrative claim. */
-    ADMIN_CLAIM,
+    ADMIN_CLAIM("griefprevention:admin_claim"),
     /** Boundaries for a 3D administrative claim with vertical limits. */
-    ADMIN_CLAIM_3D,
+    ADMIN_CLAIM_3D("griefprevention:admin_claim_3d"),
     /** Boundaries for a claim subdivision. */
-    SUBDIVISION,
+    SUBDIVISION("griefprevention:subdivision"),
     /** Boundaries for a 3D claim subdivision with vertical limits. */
-    SUBDIVISION_3D,
+    SUBDIVISION_3D("griefprevention:subdivision_3d"),
     /** Boundaries for a new claim area. */
-    INITIALIZE_ZONE,
+    INITIALIZE_ZONE("griefprevention:initialize_zone"),
     /** Boundaries for a new 3D claim area (exact Y placement). */
-    INITIALIZE_ZONE_3D,
+    INITIALIZE_ZONE_3D("griefprevention:initialize_zone_3d"),
     /** Boundaries for a conflicting area. */
-    CONFLICT_ZONE,
+    CONFLICT_ZONE("griefprevention:conflict_zone"),
     /** Boundaries for a conflicting 3D subdivision area. */
-    CONFLICT_ZONE_3D,
+    CONFLICT_ZONE_3D("griefprevention:conflict_zone_3d"),
     /** Boundaries showing a restored nature area. */
-    RESTORE_NATURE;
+    RESTORE_NATURE("griefprevention:restore_nature");
 
+    private final @NotNull String key;
     private BlockBoundaryRenderer blockRenderer;
+
+    VisualizationType(@NotNull String key)
+    {
+        this.key = key;
+    }
+
+    @Override
+    public @NotNull String getKey()
+    {
+        return key;
+    }
 
     /**
      * Get the block renderer for this visualization type.
      * Lazy initialization to handle 1.8.8 compatibility.
      */
+    @Override
     public @NotNull BlockBoundaryRenderer getBlockRenderer()
     {
         if (blockRenderer == null) {
@@ -105,6 +120,19 @@ public enum VisualizationType
                         () -> createBlockData(hasBlockData, Material.GLOWSTONE),
                         () -> createBlockData(hasBlockData, Material.GOLD_BLOCK));
         }
+    }
+
+    public static @Nullable VisualizationType fromKey(@NotNull String key)
+    {
+        String normalizedKey = Objects.requireNonNull(key, "key").trim().toLowerCase(Locale.ROOT);
+        for (VisualizationType type : values())
+        {
+            if (type.key.equals(normalizedKey))
+            {
+                return type;
+            }
+        }
+        return null;
     }
 
     private static @NotNull BlockBoundaryRenderer blockRenderer(

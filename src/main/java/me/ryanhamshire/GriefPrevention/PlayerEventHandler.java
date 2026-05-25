@@ -2330,40 +2330,7 @@ public class PlayerEventHandler implements Listener {
                     // if he clicked on a corner, start resizing it
                     boolean isCorner = isCornerMatch(claim, clickedBlock);
                     if (isCorner) {
-                        // When 2D/3D subdivisions share a corner with the parent, select the parent (so
-                        // e.g. 1x1x1 sub at main corner can be removed by selecting main and deleting).
-                        Claim selection = claim;
-                        while (selection.parent != null) {
-                            Claim parent = selection.parent;
-                            boolean parentContains = parent.contains(clickedBlock.getLocation(), true, false);
-                            if (parentContains && isCornerMatch(parent, clickedBlock)) {
-                                selection = parent;
-                            } else {
-                                break;
-                            }
-                        }
-                        playerData.claimResizing = selection;
-                        playerData.lastShovelLocation = clickedBlock.getLocation();
-                        Messages message;
-                        if (selection.parent != null) {
-                            message = Messages.SubdivisionSelected;
-                        } else {
-                            // ClaimSelected when no children; ClaimSelectedTopLevel when claim has subdivisions
-                            boolean hasNoChildren = selection.children == null || selection.children.isEmpty();
-                            message = hasNoChildren ? Messages.ClaimSelected : Messages.ClaimSelectedTopLevel;
-                        }
-                        GriefPrevention.sendMessage(player, TextMode.Instr, message);
-                        // Refresh visualization in selection/resize mode.
-                        VisualizationType visualizationType;
-                        if (selection.parent == null) {
-                            visualizationType = selection.isAdminClaim() ? VisualizationType.ADMIN_CLAIM
-                                    : VisualizationType.CLAIM;
-                        } else {
-                            visualizationType = selection.is3D() ? VisualizationType.SUBDIVISION_3D
-                                    : VisualizationType.SUBDIVISION;
-                        }
-
-                        BoundaryVisualization.visualizeClaim(player, selection, visualizationType, clickedBlock);
+                        startClaimResizeSelection(player, playerData, claim, clickedBlock);
                     }
 
                     // if he didn't click on a corner and is in subdivision mode, he's creating a
@@ -2457,7 +2424,7 @@ public class PlayerEventHandler implements Listener {
                                 // 3D.
                                 // This matches default GP behavior where 2D subclaims ignore height.
                                 int parentMinY = playerData.claimSubdividing.getLesserBoundaryCorner().getBlockY();
-                                int worldMaxY = player.getWorld().getMaxHeight();
+                                int worldMaxY = GriefPrevention.getWorldMaxY(player.getWorld());
 
                                 minY = parentMinY;
                                 maxY = worldMaxY;
@@ -3775,15 +3742,9 @@ public class PlayerEventHandler implements Listener {
         }
 
         playerData.claimResizing = selection;
+        playerData.claimSelectionActive = instance.config_claims_useClaimSelectSessions;
         playerData.lastShovelLocation = clickedBlock.getLocation();
-        Messages message;
-        if (selection.parent != null) {
-            message = Messages.SubdivisionSelected;
-        } else {
-            boolean hasNoChildren = selection.children == null || selection.children.isEmpty();
-            message = hasNoChildren ? Messages.ClaimSelected : Messages.ClaimSelectedTopLevel;
-        }
-        GriefPrevention.sendMessage(player, TextMode.Instr, message);
+        GriefPrevention.sendMessage(player, TextMode.Instr, claimResizeStartMessage(selection));
 
         VisualizationType visualizationType;
         if (selection.parent == null) {
@@ -3792,6 +3753,20 @@ public class PlayerEventHandler implements Listener {
             visualizationType = selection.is3D() ? VisualizationType.SUBDIVISION_3D : VisualizationType.SUBDIVISION;
         }
         BoundaryVisualization.visualizeClaim(player, selection, visualizationType, clickedBlock);
+    }
+
+    private Messages claimResizeStartMessage(@NotNull Claim selection)
+    {
+        if (!instance.config_claims_useClaimSelectSessions || !instance.config_claims_useClaimSelectedMessages) {
+            return Messages.ResizeStart;
+        }
+
+        if (selection.parent != null) {
+            return Messages.SubdivisionSelected;
+        }
+
+        boolean hasNoChildren = selection.children == null || selection.children.isEmpty();
+        return hasNoChildren ? Messages.ClaimSelected : Messages.ClaimSelectedTopLevel;
     }
 
     /**

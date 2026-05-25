@@ -55,28 +55,30 @@ public class LegacyFakeBlockVisualization extends FakeBlockVisualization
     @Override
     protected @NotNull Consumer<@NotNull IntVector> addCornerElements(@NotNull Boundary boundary)
     {
+        VisualizationType type = fallbackType(boundary);
         return createLegacyElementAdder(
-                cornerMaterialFor(boundary.type()),
-                cornerDataFor(boundary.type()),
-                boundary.type(),
-                usesExactPlacement(boundary.type()));
+                cornerMaterialFor(type),
+                cornerDataFor(type),
+                type,
+                usesExactPlacement(type));
     }
 
     @Override
     protected @NotNull Consumer<@NotNull IntVector> addSideElements(@NotNull Boundary boundary)
     {
+        VisualizationType type = fallbackType(boundary);
         return createLegacyElementAdder(
-                sideMaterialFor(boundary.type()),
-                sideDataFor(boundary.type()),
-                boundary.type(),
-                usesExactPlacement(boundary.type()));
+                sideMaterialFor(type),
+                sideDataFor(type),
+                type,
+                usesExactPlacement(type));
     }
 
     @Override
     protected void drawRestoreNature(@NotNull Player player, @NotNull Boundary boundary)
     {
         BoundingBox area = boundary.bounds();
-        VisualizationType type = boundary.type();
+        VisualizationType type = fallbackType(boundary);
 
         final int displayZoneRadius = 75;
         int baseX = this.visualizeFrom.x();

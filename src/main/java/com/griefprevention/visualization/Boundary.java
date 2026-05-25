@@ -13,7 +13,7 @@ import java.util.Objects;
 public final class Boundary
 {
     private final @NotNull BoundingBox bounds;
-    private final @NotNull VisualizationType type;
+    private final @NotNull VisualizationStyle style;
     private final @Nullable Claim claim;
 
     /**
@@ -29,8 +29,24 @@ public final class Boundary
 
     public Boundary(@NotNull BoundingBox bounds, @NotNull VisualizationType type, @Nullable Claim claim)
     {
-        this.bounds = bounds;
-        this.type = type;
+        this(bounds, (VisualizationStyle) type, claim);
+    }
+
+    /**
+     * Construct a new {@code Boundary} for a {@link BoundingBox} with a custom visualization style.
+     *
+     * @param bounds the {@code BoundingBox}
+     * @param style the {@link VisualizationStyle}
+     */
+    public Boundary(@NotNull BoundingBox bounds, @NotNull VisualizationStyle style)
+    {
+        this(bounds, style, null);
+    }
+
+    public Boundary(@NotNull BoundingBox bounds, @NotNull VisualizationStyle style, @Nullable Claim claim)
+    {
+        this.bounds = Objects.requireNonNull(bounds, "bounds");
+        this.style = Objects.requireNonNull(style, "style");
         this.claim = claim;
     }
 
@@ -43,6 +59,17 @@ public final class Boundary
     public Boundary(@NotNull Claim claim, @NotNull VisualizationType type)
     {
         this(createBoundingBox(claim), type, claim);
+    }
+
+    /**
+     * Construct a new {@code Boundary} for a {@link Claim} with a custom visualization style.
+     *
+     * @param claim the {@code Claim}
+     * @param style the {@link VisualizationStyle}
+     */
+    public Boundary(@NotNull Claim claim, @NotNull VisualizationStyle style)
+    {
+        this(createBoundingBox(claim), style, claim);
     }
     
     /**
@@ -73,9 +100,19 @@ public final class Boundary
         return bounds;
     }
 
-    public @NotNull VisualizationType type()
+    public @NotNull VisualizationStyle style()
     {
-        return type;
+        return style;
+    }
+
+    /**
+     * Get the built-in visualization type for this boundary.
+     *
+     * @return the built-in type, or {@code null} when this boundary uses a custom style
+     */
+    public @Nullable VisualizationType type()
+    {
+        return style instanceof VisualizationType ? (VisualizationType) style : null;
     }
 
     public @Nullable Claim claim()
@@ -96,19 +133,19 @@ public final class Boundary
         }
         Boundary boundary = (Boundary) other;
         return bounds.equals(boundary.bounds)
-                && type == boundary.type
+                && style.equals(boundary.style)
                 && Objects.equals(claim, boundary.claim);
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(bounds, type, claim);
+        return Objects.hash(bounds, style, claim);
     }
 
     @Override
     public String toString()
     {
-        return "Boundary[bounds=" + bounds + ", type=" + type + ", claim=" + claim + ']';
+        return "Boundary[bounds=" + bounds + ", style=" + style + ", claim=" + claim + ']';
     }
 }

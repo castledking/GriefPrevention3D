@@ -36,6 +36,7 @@ import com.griefprevention.claims.editor.SegmentSelection;
 import com.griefprevention.commands.CommandAliasConfiguration;
 import com.griefprevention.commands.TabCompletions;
 import com.griefprevention.compat.WorldHeightCompatProvider;
+import com.griefprevention.visualization.VisualizationStyleRegistry;
 import me.ryanhamshire.GriefPrevention.compat.CompatUtil;
 import me.ryanhamshire.GriefPrevention.compat.LegacyRightClickAirHandler;
 import com.griefprevention.geometry.OrthogonalEdge2i;
@@ -116,6 +117,7 @@ public class GriefPrevention extends JavaPlugin {
     // for convenience, a reference to the instance of this plugin
     public static GriefPrevention instance;
     private final ClaimToolHandlerRegistry claimToolHandlerRegistry = new ClaimToolHandlerRegistry();
+    private final VisualizationStyleRegistry visualizationStyleRegistry = new VisualizationStyleRegistry();
 
     // for logging to the console and log file
     private static Logger log;
@@ -141,6 +143,11 @@ public class GriefPrevention extends JavaPlugin {
     public ClaimToolHandlerRegistry getClaimToolHandlerRegistry()
     {
         return claimToolHandlerRegistry;
+    }
+
+    public VisualizationStyleRegistry getVisualizationStyleRegistry()
+    {
+        return visualizationStyleRegistry;
     }
 
     // configuration variables, loaded/saved from a config.yml
@@ -202,6 +209,8 @@ public class GriefPrevention extends JavaPlugin {
     public boolean config_claims_allowNestedSubClaims; // whether nested subdivisions may be created inside other
                                                        // subdivisions
     public boolean config_claims_allowShapedClaims; // whether shaped claim creation and editing tools are enabled
+    public boolean config_claims_useClaimSelectSessions; // whether selected resize corners become command targets
+    public boolean config_claims_useClaimSelectedMessages; // whether selected-claim command help replaces ResizeStart
     public boolean config_claims_legacySubdivisionFormat; // whether to use original GP subdivision format (separate files)
                                                           // REQUIRED for GPExpansion compatibility. Default: false
 
@@ -906,6 +915,8 @@ public class GriefPrevention extends JavaPlugin {
         this.config_claims_allowTrappedInAdminClaims = config.getBoolean("GriefPrevention.Claims.AllowTrappedInAdminClaims", false);
         this.config_claims_allowNestedSubClaims = config.getBoolean("GriefPrevention.Claims.AllowNestedSubClaims", false);
         this.config_claims_allowShapedClaims = config.getBoolean("GriefPrevention.Claims.AllowShapedClaims", false);
+        this.config_claims_useClaimSelectSessions = config.getBoolean("GriefPrevention.Claims.UseClaimSelectSessions", true);
+        this.config_claims_useClaimSelectedMessages = config.getBoolean("GriefPrevention.Claims.UseClaimSelectedMessages", false);
         this.config_claims_legacySubdivisionFormat = config.getBoolean("GriefPrevention.Claims.LegacySubdivisionFormat", false);
 
         this.config_claims_maxClaimsPerPlayer = config.getInt("GriefPrevention.Claims.MaximumNumberOfClaimsPerPlayer", 0);
@@ -1129,6 +1140,8 @@ public class GriefPrevention extends JavaPlugin {
         outConfig.set("GriefPrevention.Claims.AllowTrappedInAdminClaims", this.config_claims_allowTrappedInAdminClaims);
         outConfig.set("GriefPrevention.Claims.AllowNestedSubClaims", this.config_claims_allowNestedSubClaims);
         outConfig.set("GriefPrevention.Claims.AllowShapedClaims", this.config_claims_allowShapedClaims);
+        outConfig.set("GriefPrevention.Claims.UseClaimSelectSessions", this.config_claims_useClaimSelectSessions);
+        outConfig.set("GriefPrevention.Claims.UseClaimSelectedMessages", this.config_claims_useClaimSelectedMessages);
         outConfig.set("GriefPrevention.Claims.LegacySubdivisionFormat", this.config_claims_legacySubdivisionFormat);
         outConfig.set("GriefPrevention.Claims.MaximumNumberOfClaimsPerPlayer", this.config_claims_maxClaimsPerPlayer);
         outConfig.set("GriefPrevention.Claims.VillagerTradingRequiresPermission",
@@ -2065,9 +2078,7 @@ public class GriefPrevention extends JavaPlugin {
         // deleteclaim
         else if (cmd.getName().equalsIgnoreCase("deleteclaim") && player != null) {
             PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
-            // Prefer claim selected via shovel corner (selection session) when set
-            Claim claim = playerData.claimResizing != null ? playerData.claimResizing
-                    : this.dataStore.getClaimAt(player.getLocation(), false /* ignore height */, null);
+            Claim claim = getSelectedOrCurrentClaim(player, playerData, false);
 
             if (claim == null) {
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.DeleteClaimMissing);
@@ -2082,6 +2093,7 @@ public class GriefPrevention extends JavaPlugin {
 
                         if (playerData.claimResizing == claim) {
                             playerData.claimResizing = null;
+                            playerData.claimSelectionActive = false;
                             playerData.lastShovelLocation = null;
                         }
 
@@ -2942,7 +2954,10 @@ public class GriefPrevention extends JavaPlugin {
             @NotNull PlayerData playerData,
             boolean ignoreHeight)
     {
-        if (playerData.claimResizing != null && playerData.claimResizing.inDataStore) {
+        if (this.config_claims_useClaimSelectSessions
+                && playerData.claimSelectionActive
+                && playerData.claimResizing != null
+                && playerData.claimResizing.inDataStore) {
             return playerData.claimResizing;
         }
 
