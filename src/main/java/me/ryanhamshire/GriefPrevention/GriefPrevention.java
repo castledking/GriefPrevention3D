@@ -664,9 +664,9 @@ public class GriefPrevention extends JavaPlugin {
     }
     
     /**
-     * Refresh the Bukkit command map for all online players by toggling their gamemode.
-     * This forces the client to re-sync available commands.
-     * Safely handles players who may disconnect during the process.
+     * Refresh the Bukkit command map for all online players.
+     * Modern clients receive an explicit command tree update; legacy clients query
+     * tab completions live, so there is no client command tree to resend.
      */
     private void refreshCommandMapForAllPlayers() {
         @SuppressWarnings("unchecked")
@@ -675,64 +675,23 @@ public class GriefPrevention extends JavaPlugin {
         if (onlinePlayers.isEmpty()) {
             return;
         }
-        
-        // Store original gamemodes and flight state for each player
-        java.util.Map<java.util.UUID, GameMode> originalGamemodes = new java.util.HashMap<>();
-        java.util.Map<java.util.UUID, Boolean> originalAllowFlight = new java.util.HashMap<>();
-        java.util.Map<java.util.UUID, Boolean> originalFlying = new java.util.HashMap<>();
-        for (Player player : onlinePlayers) {
-            if (player.isOnline()) {
-                originalGamemodes.put(player.getUniqueId(), player.getGameMode());
-                originalAllowFlight.put(player.getUniqueId(), player.getAllowFlight());
-                originalFlying.put(player.getUniqueId(), player.isFlying());
-            }
-        }
-        
-        // Toggle gamemode for each player (switch to a different mode momentarily)
+
+        int refreshed = 0;
         for (Player player : onlinePlayers) {
             if (!player.isOnline()) continue;
-            
-            GameMode original = originalGamemodes.get(player.getUniqueId());
-            if (original == null) continue;
-            
-            // Pick a temporary gamemode different from current
-            GameMode tempMode = (original == GameMode.CREATIVE) ? GameMode.SURVIVAL : GameMode.CREATIVE;
-            
+
             try {
-                player.setGameMode(tempMode);
-                if (Boolean.TRUE.equals(originalAllowFlight.get(player.getUniqueId()))) {
-                    player.setAllowFlight(true);
-                    if (Boolean.TRUE.equals(originalFlying.get(player.getUniqueId()))) {
-                        player.setFlying(true);
-                    }
-                }
+                player.updateCommands();
+                refreshed++;
+            } catch (NoSuchMethodError e) {
+                GriefPrevention.AddLogEntry("Command map refresh skipped; this server does not support Player#updateCommands().");
+                return;
             } catch (Exception e) {
-                getLogger().warning("Failed to toggle gamemode for " + player.getName() + ": " + e.getMessage());
+                getLogger().warning("Failed to update commands for " + player.getName() + ": " + e.getMessage());
             }
         }
-        
-        // Schedule restoration of original gamemodes after 1 tick
-        SchedulerUtil.runLaterGlobal(this, () -> {
-            for (java.util.Map.Entry<java.util.UUID, GameMode> entry : originalGamemodes.entrySet()) {
-                Player player = getServer().getPlayer(entry.getKey());
-                if (player != null && player.isOnline()) {
-                    try {
-                        player.setGameMode(entry.getValue());
-                        Boolean allowFlight = originalAllowFlight.get(entry.getKey());
-                        Boolean flying = originalFlying.get(entry.getKey());
-                        if (allowFlight != null) {
-                            player.setAllowFlight(allowFlight);
-                            if (allowFlight) {
-                                player.setFlying(Boolean.TRUE.equals(flying));
-                            }
-                        }
-                    } catch (Exception e) {
-                        getLogger().warning("Failed to restore gamemode for " + player.getName() + ": " + e.getMessage());
-                    }
-                }
-            }
-            GriefPrevention.AddLogEntry("Command map refresh complete for " + originalGamemodes.size() + " player(s).");
-        }, 1L);
+
+        GriefPrevention.AddLogEntry("Command map refresh complete for " + refreshed + " player(s).");
     }
 
     private void loadConfig() {
