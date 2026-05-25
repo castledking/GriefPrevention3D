@@ -79,8 +79,7 @@ Stop _responding_ to grief and prevent it instead. GriefPrevention stops grief b
   - Maintains all anti-grief protections
 
 ## Supported Platforms: Spigot, Paper, Purpur, and Folia.
-### GriefPrevention3D targets and supports the latest available version of these platforms. Older versions of GriefPrevention can be found on [BukkitDev](https://dev.bukkit.org/projects/grief-prevention/files). These older versions are not supported.
-Other server implementations of the Bukkit API _should_ work, but are untested.
+### GriefPrevention3D targets and supports 1.8 - latest available version of these platforms.
 
 ## Download
 ### [⬇ Download the GriefPrevention3D.jar plugin here.](https://github.com/castledking/GriefPrevention3D/releases)
