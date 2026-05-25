@@ -361,6 +361,9 @@ public class FakeBlockVisualization extends BlockBoundaryVisualization {
      */
     protected boolean isTransparent(@NotNull Block block) {
         Material blockMaterial = block.getType();
+        if (isPathBlock(blockMaterial)) {
+            return false;
+        }
 
         // Custom per-material definitions.
         switch (blockMaterial) {
@@ -384,5 +387,10 @@ public class FakeBlockVisualization extends BlockBoundaryVisualization {
         @SuppressWarnings("deprecation")
         boolean transparent = block.getType().isTransparent();
         return transparent;
+    }
+
+    protected static boolean isPathBlock(@NotNull Material material) {
+        String materialName = material.name();
+        return materialName.equals("DIRT_PATH") || materialName.equals("GRASS_PATH");
     }
 }

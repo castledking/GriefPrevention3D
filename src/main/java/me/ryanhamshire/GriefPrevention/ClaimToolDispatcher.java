@@ -52,6 +52,7 @@ import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
+import org.bukkit.event.Event;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.EquipmentSlot;
@@ -112,6 +113,10 @@ final class ClaimToolDispatcher
 
         Player player = event.getPlayer();
         ItemStack itemInHand = overrideItem != null ? overrideItem : instance.getItemInHand(player, hand);
+        if (itemInHand == null)
+        {
+            return false;
+        }
         Material materialInHand = itemInHand.getType();
 
         if (materialInHand != instance.config_claims_investigationTool
@@ -119,6 +124,8 @@ final class ClaimToolDispatcher
         {
             return false;
         }
+
+        suppressVanillaClaimToolUse(event);
 
         PlayerData playerData = null;
 
@@ -128,6 +135,24 @@ final class ClaimToolDispatcher
         }
 
         return handleModificationTool(event, player, clickedBlock, clickedBlockType, materialInHand, playerData, yaw, pitch);
+    }
+
+    private static void suppressVanillaClaimToolUse(@NotNull PlayerInteractEvent event)
+    {
+        if (event.getAction() != Action.RIGHT_CLICK_BLOCK)
+        {
+            return;
+        }
+
+        try
+        {
+            event.setUseItemInHand(Event.Result.DENY);
+            event.setUseInteractedBlock(Event.Result.DENY);
+        }
+        catch (NoSuchMethodError ignored)
+        {
+            event.setCancelled(true);
+        }
     }
 
     // ----------------------------------------------------------------------------------------

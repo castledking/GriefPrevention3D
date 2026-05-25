@@ -62,6 +62,10 @@ public class BoundaryVisualizationEvent extends PlayerEvent
             return new GlowingVisualization(world, visualizeFrom, height) {
                 @Override
                 protected boolean isTransparent(@NotNull Block block) {
+                    if (isPathBlock(block.getType())) {
+                        return false;
+                    }
+
                     // Use AntiCheat's transparency check
                     Collection<BoundingBox> boundingBoxes = block.getCollisionShape().getBoundingBoxes();
                     return boundingBoxes.isEmpty() || !boundingBoxes.stream().allMatch(box -> box.getVolume() == 1.0);

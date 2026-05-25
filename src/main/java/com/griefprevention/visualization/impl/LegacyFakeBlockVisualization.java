@@ -247,6 +247,10 @@ public class LegacyFakeBlockVisualization extends FakeBlockVisualization
     protected boolean isTransparent(@NotNull Block block)
     {
         Material blockMaterial = block.getType();
+        if (isPathBlock(blockMaterial))
+        {
+            return false;
+        }
 
         switch (blockMaterial)
         {
