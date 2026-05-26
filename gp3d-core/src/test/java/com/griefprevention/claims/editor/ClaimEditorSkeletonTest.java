@@ -1,10 +1,9 @@
 package com.griefprevention.claims.editor;
 
+import com.griefprevention.geometry.OrthogonalDirection;
 import com.griefprevention.geometry.OrthogonalPoint2i;
 import com.griefprevention.geometry.OrthogonalPolygon;
-import me.ryanhamshire.GriefPrevention.Messages;
 import org.junit.jupiter.api.Test;
-import org.bukkit.block.BlockFace;
 
 import java.util.List;
 import java.util.UUID;
@@ -364,7 +363,7 @@ public class ClaimEditorSkeletonTest
         );
 
         assertFalse(result.success());
-        assertEquals(Messages.MustHoldModificationToolForThat, result.fallbackMessage());
+        assertEquals(ClaimEditMessageKey.MUST_HOLD_MODIFICATION_TOOL_FOR_THAT, result.fallbackMessage());
     }
 
     @Test
@@ -533,7 +532,7 @@ public class ClaimEditorSkeletonTest
         );
 
         assertFalse(result.success());
-        assertEquals(Messages.MustHoldModificationToolForThat, result.fallbackMessage());
+        assertEquals(ClaimEditMessageKey.MUST_HOLD_MODIFICATION_TOOL_FOR_THAT, result.fallbackMessage());
     }
 
     @Test
@@ -650,7 +649,7 @@ public class ClaimEditorSkeletonTest
     void expandsSelectedSegmentTowardRequestedFace()
     {
         ClaimEditor editor = new ClaimEditorSkeleton();
-        SegmentSelection selection = new SegmentSelection(42L, 1, null, null, BlockFace.NORTH);
+        SegmentSelection selection = new SegmentSelection(42L, 1, null, null, OrthogonalDirection.NORTH);
         ClaimEditorSession session = ClaimEditorSession.idle(UUID.randomUUID())
                 .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.COMMAND)
                 .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, 42L))
@@ -767,7 +766,7 @@ public class ClaimEditorSkeletonTest
         );
 
         assertFalse(result.success());
-        assertEquals(Messages.MustHoldModificationToolForThat, result.fallbackMessage());
+        assertEquals(ClaimEditMessageKey.MUST_HOLD_MODIFICATION_TOOL_FOR_THAT, result.fallbackMessage());
     }
 
     @Test

@@ -1,6 +1,6 @@
 package com.griefprevention.claims.editor;
 
-import org.bukkit.block.BlockFace;
+import com.griefprevention.geometry.OrthogonalDirection;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Objects;
@@ -14,20 +14,20 @@ public final class SegmentSelection
     private final int edgeIndex;
     private final @Nullable Integer startNodeIndex;
     private final @Nullable Integer endNodeIndex;
-    private final @Nullable BlockFace outwardFace;
+    private final @Nullable OrthogonalDirection outwardDirection;
 
     public SegmentSelection(
             long claimId,
             int edgeIndex,
             @Nullable Integer startNodeIndex,
             @Nullable Integer endNodeIndex,
-            @Nullable BlockFace outwardFace)
+            @Nullable OrthogonalDirection outwardDirection)
     {
         this.claimId = claimId;
         this.edgeIndex = edgeIndex;
         this.startNodeIndex = startNodeIndex;
         this.endNodeIndex = endNodeIndex;
-        this.outwardFace = outwardFace;
+        this.outwardDirection = outwardDirection;
     }
 
     public long claimId()
@@ -50,9 +50,9 @@ public final class SegmentSelection
         return this.endNodeIndex;
     }
 
-    public @Nullable BlockFace outwardFace()
+    public @Nullable OrthogonalDirection outwardDirection()
     {
-        return this.outwardFace;
+        return this.outwardDirection;
     }
 
     @Override
@@ -65,13 +65,13 @@ public final class SegmentSelection
                 && this.edgeIndex == that.edgeIndex
                 && Objects.equals(this.startNodeIndex, that.startNodeIndex)
                 && Objects.equals(this.endNodeIndex, that.endNodeIndex)
-                && this.outwardFace == that.outwardFace;
+                && this.outwardDirection == that.outwardDirection;
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(this.claimId, this.edgeIndex, this.startNodeIndex, this.endNodeIndex, this.outwardFace);
+        return Objects.hash(this.claimId, this.edgeIndex, this.startNodeIndex, this.endNodeIndex, this.outwardDirection);
     }
 
     @Override
@@ -81,7 +81,7 @@ public final class SegmentSelection
                 + ", edgeIndex=" + this.edgeIndex
                 + ", startNodeIndex=" + this.startNodeIndex
                 + ", endNodeIndex=" + this.endNodeIndex
-                + ", outwardFace=" + this.outwardFace
+                + ", outwardDirection=" + this.outwardDirection
                 + "]";
     }
 }

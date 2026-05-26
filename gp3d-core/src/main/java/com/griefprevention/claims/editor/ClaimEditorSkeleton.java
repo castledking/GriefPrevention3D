@@ -1,13 +1,12 @@
 package com.griefprevention.claims.editor;
 
 import com.griefprevention.geometry.OrthogonalEdge2i;
+import com.griefprevention.geometry.OrthogonalDirection;
 import com.griefprevention.geometry.OrthogonalPoint2i;
 import com.griefprevention.geometry.OrthogonalPolygon;
 import com.griefprevention.geometry.OrthogonalPolygonValidationIssue;
 import com.griefprevention.geometry.OrthogonalPolygonValidationIssueType;
 import com.griefprevention.geometry.OrthogonalPolygonValidationResult;
-import me.ryanhamshire.GriefPrevention.Messages;
-import org.bukkit.block.BlockFace;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -81,7 +80,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
         {
             return ClaimEditResult.failure(
                     ClaimEditFailureType.NOT_EDITABLE_FROM_HERE,
-                    Messages.MustHoldModificationToolForThat,
+                    ClaimEditMessageKey.MUST_HOLD_MODIFICATION_TOOL_FOR_THAT,
                     session,
                     session.preview(),
                     List.of("You must be holding a golden shovel to do that.")
@@ -156,7 +155,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
         {
             return ClaimEditResult.failure(
                     ClaimEditFailureType.NOT_EDITABLE_FROM_HERE,
-                    Messages.MustHoldModificationToolForThat,
+                    ClaimEditMessageKey.MUST_HOLD_MODIFICATION_TOOL_FOR_THAT,
                     session,
                     session.preview(),
                     List.of("You must be holding a golden shovel to do that.")
@@ -251,7 +250,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
         {
             return ClaimEditResult.failure(
                     ClaimEditFailureType.NOT_EDITABLE_FROM_HERE,
-                    Messages.MustHoldModificationToolForThat,
+                    ClaimEditMessageKey.MUST_HOLD_MODIFICATION_TOOL_FOR_THAT,
                     session,
                     session.preview(),
                     List.of("You must be holding a golden shovel to do that.")
@@ -1554,7 +1553,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
         {
             return ClaimEditResult.failure(
                     ClaimEditFailureType.NOT_EDITABLE_FROM_HERE,
-                    Messages.MustHoldModificationToolForThat,
+                    ClaimEditMessageKey.MUST_HOLD_MODIFICATION_TOOL_FOR_THAT,
                     session,
                     session.preview(),
                     List.of("You must be holding a golden shovel to do that.")
@@ -1760,10 +1759,10 @@ public final class ClaimEditorSkeleton implements ClaimEditor
         OrthogonalEdge2i edge = polygon.edges().get(activeSegment.edgeIndex());
         OffsetVector outward = outwardOffset(polygon, edge);
         int signedAmount = amount;
-        if (activeSegment.outwardFace() != null)
+        if (activeSegment.outwardDirection() != null)
         {
-            BlockFace positiveFace = edge.outwardFaceForPositiveOffset();
-            signedAmount = activeSegment.outwardFace() == positiveFace ? amount : -amount;
+            OrthogonalDirection positiveDirection = edge.outwardDirectionForPositiveOffset();
+            signedAmount = activeSegment.outwardDirection() == positiveDirection ? amount : -amount;
         }
         int offsetX = outward.dx() * signedAmount;
         int offsetZ = outward.dz() * signedAmount;

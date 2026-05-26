@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "id": "griefprevention3d",
+  "version": "${version}",
+  "name": "GriefPrevention3D",
+  "description": "Native Fabric adapter for GriefPrevention3D claim protection.",
+  "authors": [
+    "castledking",
+    "RoboMWM",
+    "BigScary"
+  ],
+  "contact": {
+    "homepage": "https://castled.codes",
+    "sources": "https://github.com/castledking/GriefPrevention3D"
+  },
+  "license": "GPL-3.0-or-later",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "com.griefprevention.fabric.GriefPreventionFabric"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.18.2",
+    "fabric-api": "*",
+    "minecraft": "${minecraftVersion}",
+    "java": ">=21"
+  }
+}

@@ -1,6 +1,5 @@
 package com.griefprevention.claims.editor;
 
-import me.ryanhamshire.GriefPrevention.Messages;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -14,7 +13,7 @@ public final class ClaimEditResult
 {
     private final boolean success;
     private final @Nullable ClaimEditFailureType failureType;
-    private final @Nullable Messages fallbackMessage;
+    private final @Nullable ClaimEditMessageKey fallbackMessage;
     private final @NotNull ClaimEditorSession session;
     private final @NotNull ClaimEditPreview preview;
     private final @NotNull List<String> messages;
@@ -22,7 +21,7 @@ public final class ClaimEditResult
     public ClaimEditResult(
             boolean success,
             @Nullable ClaimEditFailureType failureType,
-            @Nullable Messages fallbackMessage,
+            @Nullable ClaimEditMessageKey fallbackMessage,
             @NotNull ClaimEditorSession session,
             @NotNull ClaimEditPreview preview,
             @NotNull List<String> messages)
@@ -46,7 +45,7 @@ public final class ClaimEditResult
 
     public static @NotNull ClaimEditResult failure(
             @NotNull ClaimEditFailureType failureType,
-            @Nullable Messages fallbackMessage,
+            @Nullable ClaimEditMessageKey fallbackMessage,
             @NotNull ClaimEditorSession session,
             @NotNull ClaimEditPreview preview,
             @NotNull List<String> messages
@@ -65,7 +64,7 @@ public final class ClaimEditResult
         return failureType;
     }
 
-    public @Nullable Messages fallbackMessage()
+    public @Nullable ClaimEditMessageKey fallbackMessage()
     {
         return fallbackMessage;
     }

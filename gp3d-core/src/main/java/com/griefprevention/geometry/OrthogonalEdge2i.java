@@ -1,6 +1,5 @@
 package com.griefprevention.geometry;
 
-import org.bukkit.block.BlockFace;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Objects;
@@ -89,16 +88,16 @@ public final class OrthogonalEdge2i
         return containsPoint(point) && !point.equals(start) && !point.equals(end);
     }
 
-    public @NotNull BlockFace outwardFaceForPositiveOffset()
+    public @NotNull OrthogonalDirection outwardDirectionForPositiveOffset()
     {
         if (isHorizontal())
         {
-            return BlockFace.SOUTH;
+            return OrthogonalDirection.SOUTH;
         }
 
         if (isVertical())
         {
-            return BlockFace.EAST;
+            return OrthogonalDirection.EAST;
         }
 
         throw new IllegalStateException("Non-orthogonal edges do not have a normal.");

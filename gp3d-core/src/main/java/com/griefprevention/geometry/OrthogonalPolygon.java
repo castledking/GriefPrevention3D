@@ -1,6 +1,5 @@
 package com.griefprevention.geometry;
 
-import org.bukkit.block.BlockFace;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -286,16 +285,16 @@ public final class OrthogonalPolygon
         return validatePath(OrthogonalPolygonValidator.closePath(normalizeCorners(updatedCorners)));
     }
 
-    public @NotNull BlockFace outwardFaceForEdge(int edgeIndex, int amount)
+    public @NotNull OrthogonalDirection outwardDirectionForEdge(int edgeIndex, int amount)
     {
         OrthogonalEdge2i edge = this.edges.get(edgeIndex);
-        BlockFace positiveFace = edge.outwardFaceForPositiveOffset();
+        OrthogonalDirection positiveDirection = edge.outwardDirectionForPositiveOffset();
         if (amount >= 0)
         {
-            return positiveFace;
+            return positiveDirection;
         }
 
-        return positiveFace.getOppositeFace();
+        return positiveDirection.opposite();
     }
 
     public int minX()

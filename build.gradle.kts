@@ -16,6 +16,7 @@ val gpFlagsRepo = providers.gradleProperty("gpFlagsRepo")
     .orElse("/mnt/storage/repos/GPFlags")
 val gpExpansionRepo = providers.gradleProperty("gpExpansionRepo")
     .orElse("/mnt/storage/repos/GPExpansion")
+val coreProject = project(":gp3d-core")
 
 repositories {
     mavenCentral()
@@ -75,6 +76,7 @@ configurations {
 }
 
 dependencies {
+    implementation(coreProject)
     compileOnly("org.spigotmc:spigot-api:$minecraftVersion-R0.1-SNAPSHOT")
     paperApi("io.papermc.paper:paper-api:$paperMinecraftVersion-R0.1-SNAPSHOT")
     compileOnly("org.jetbrains:annotations:26.0.2")
@@ -137,6 +139,8 @@ tasks {
     jar {
         archiveBaseName.set(project.name)
         archiveVersion.set("")
+        dependsOn(coreProject.tasks.named("classes"))
+        from(coreProject.layout.buildDirectory.dir("classes/java/main"))
         from(sourceSets["compatLegacy"].output)
         from(sourceSets["compatModern"].output)
     }
@@ -284,8 +288,8 @@ tasks {
     val checkLegacyClassLoading by registering(JavaExec::class) {
         group = "verification"
         description = "Initializes key plugin classes with only legacy Bukkit on the runtime classpath."
-        dependsOn(named("classes"), named("compatLegacyClasses"))
-        classpath = sourceSets["compatLegacy"].runtimeClasspath
+        dependsOn(named("classes"), named("compatLegacyClasses"), coreProject.tasks.named("classes"))
+        classpath = sourceSets["compatLegacy"].runtimeClasspath + files(coreProject.layout.buildDirectory.dir("classes/java/main"))
         mainClass.set("com.griefprevention.compat.legacy.LegacyClassLoadingCheck")
         args(
             "me.ryanhamshire.GriefPrevention.GriefPrevention",
