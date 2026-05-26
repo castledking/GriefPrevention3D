@@ -673,6 +673,9 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
     }
 
     private boolean needsShovel(PlayerData playerData, Player player) {
+        if (player.hasPermission("griefprevention.createclaims.toolbypass")) {
+            return false;
+        }
         return playerData.getClaims().size() < 2
                 && player.getGameMode() != GameMode.CREATIVE
                 && player.getInventory().getItemInMainHand().getType() != plugin.config_claims_modificationTool;

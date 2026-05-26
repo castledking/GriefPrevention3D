@@ -19,6 +19,7 @@
 package me.ryanhamshire.GriefPrevention;
 
 import com.griefprevention.api.ClaimToolContext;
+import com.griefprevention.claims.editor.BukkitClaimEditMessages;
 import com.griefprevention.claims.editor.ClaimEditIntent;
 import com.griefprevention.claims.editor.ClaimEditIntentType;
 import com.griefprevention.claims.editor.ClaimEditPreview;
@@ -42,6 +43,9 @@ import com.griefprevention.visualization.BoundaryVisualization;
 import com.griefprevention.visualization.VisualizationType;
 import me.ryanhamshire.GriefPrevention.compat.CompatUtil;
 import me.ryanhamshire.GriefPrevention.events.ClaimInspectionEvent;
+import me.ryanhamshire.GriefPrevention.events.StartClaimCreationEvent;
+import me.ryanhamshire.GriefPrevention.events.StartClaimResizeEvent;
+import me.ryanhamshire.GriefPrevention.events.StartSubdivideClaimCreationEvent;
 import me.ryanhamshire.GriefPrevention.util.BoundingBox;
 import me.ryanhamshire.GriefPrevention.util.SchedulerUtil;
 import org.bukkit.Bukkit;
@@ -587,6 +591,9 @@ final class ClaimToolDispatcher
                             }
 
                             if (canStartSubdivision) {
+                                if (startSubdivisionCreationCancelled(player, clickedBlock, claim)) {
+                                    return true;
+                                }
                                 GriefPrevention.sendMessage(player, TextMode.Instr, Messages.SubdivisionStart);
                                 playerData.lastShovelLocation = clickedBlock.getLocation();
                                 if (wants3DSubdivision) {
@@ -607,6 +614,9 @@ final class ClaimToolDispatcher
                             }
                         } else {
                             // Top-level claim: always allow starting a subdivision.
+                            if (startSubdivisionCreationCancelled(player, clickedBlock, claim)) {
+                                return true;
+                            }
                             GriefPrevention.sendMessage(player, TextMode.Instr, Messages.SubdivisionStart);
                             playerData.lastShovelLocation = clickedBlock.getLocation();
                             if (playerData.shovelMode == ShovelMode.Subdivide3D) {
@@ -816,6 +826,9 @@ final class ClaimToolDispatcher
                     // Admin3D mode: allow starting a stacked 3D admin claim at a different Y level
                     if (playerData.shovelMode == ShovelMode.Admin3D && claim.is3D() && claim.isAdminClaim()
                             && playerData.lastShovelLocation == null) {
+                        if (startClaimCreationCancelled(player, clickedBlock)) {
+                            return true;
+                        }
                         playerData.lastShovelLocation = clickedBlock.getLocation();
                         GriefPrevention.sendMessage(player, TextMode.Instr, Messages.ClaimStart);
                         BoundaryVisualization.visualizeArea(player, new BoundingBox(clickedBlock),
@@ -862,6 +875,9 @@ final class ClaimToolDispatcher
             }
 
             // remember it, and start him on the new claim
+            if (startClaimCreationCancelled(player, clickedBlock)) {
+                return true;
+            }
             if (playerData.shovelMode == ShovelMode.Admin3D) {
                 playerData.lastShovelLocation = clickedBlock.getLocation();
                 GriefPrevention.sendMessage(player, TextMode.Instr, Messages.ClaimStart);
@@ -1977,6 +1993,12 @@ final class ClaimToolDispatcher
             }
         }
 
+        StartClaimResizeEvent event = new StartClaimResizeEvent(player, selection, clickedBlock);
+        Bukkit.getPluginManager().callEvent(event);
+        if (event.isCancelled()) {
+            return;
+        }
+
         playerData.claimResizing = selection;
         playerData.claimSelectionActive = instance.config_claims_useClaimSelectSessions;
         playerData.lastShovelLocation = clickedBlock.getLocation();
@@ -1989,6 +2011,23 @@ final class ClaimToolDispatcher
             visualizationType = selection.is3D() ? VisualizationType.SUBDIVISION_3D : VisualizationType.SUBDIVISION;
         }
         BoundaryVisualization.visualizeClaim(player, selection, visualizationType, clickedBlock);
+    }
+
+    private boolean startClaimCreationCancelled(@NotNull Player player, @NotNull Block clickedBlock)
+    {
+        StartClaimCreationEvent event = new StartClaimCreationEvent(player, clickedBlock);
+        Bukkit.getPluginManager().callEvent(event);
+        return event.isCancelled();
+    }
+
+    private boolean startSubdivisionCreationCancelled(
+            @NotNull Player player,
+            @NotNull Block clickedBlock,
+            @NotNull Claim parent)
+    {
+        StartSubdivideClaimCreationEvent event = new StartSubdivideClaimCreationEvent(player, clickedBlock, parent);
+        Bukkit.getPluginManager().callEvent(event);
+        return event.isCancelled();
     }
 
     private Messages claimResizeStartMessage(@NotNull Claim selection)
@@ -2782,7 +2821,7 @@ final class ClaimToolDispatcher
 
         if (!result.success()) {
             if (result.fallbackMessage() != null) {
-                GriefPrevention.sendMessage(player, TextMode.Err, result.fallbackMessage());
+                GriefPrevention.sendMessage(player, TextMode.Err, BukkitClaimEditMessages.toMessage(result.fallbackMessage()));
                 return;
             }
 

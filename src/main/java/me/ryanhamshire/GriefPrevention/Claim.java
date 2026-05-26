@@ -18,12 +18,14 @@
 
 package me.ryanhamshire.GriefPrevention;
 
-import com.griefprevention.geometry.OrthogonalEdge2i;
+import com.griefprevention.claims.ClaimBounds;
+import com.griefprevention.claims.ClaimSnapshot;
+import com.griefprevention.claims.ClaimTrustLevel;
+import com.griefprevention.claims.ClaimTrustSnapshot;
 import com.griefprevention.geometry.OrthogonalPoint2i;
 import com.griefprevention.geometry.OrthogonalPolygon;
 import com.griefprevention.compat.MaterialCompat;
 import me.ryanhamshire.GriefPrevention.events.ClaimPermissionCheckEvent;
-import me.ryanhamshire.GriefPrevention.util.BoundingBox;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.Location;
@@ -254,34 +256,17 @@ public class Claim
      //measurements.  all measurements are in blocks
      public int getArea()
      {
-         if (this.isShaped())
-         {
-             // O(edges) lattice-cell count via Pick's theorem; avoids a (width * height) scan
-             // that rebuilt & revalidated the boundary polygon on every cell.
-             return this.getBoundaryPolygon().cellCount();
-         }
-
-         try
-         {
-             int dX = Math.addExact(Math.subtractExact(greaterBoundaryCorner.getBlockX(), lesserBoundaryCorner.getBlockX()), 1);
-             int dZ = Math.addExact(Math.subtractExact(greaterBoundaryCorner.getBlockZ(), lesserBoundaryCorner.getBlockZ()), 1);
-             return Math.multiplyExact(dX, dZ);
-         }
-         catch (ArithmeticException e)
-         {
-             // If a claim's area exceeds the max value an int can hold, return max value.
-             return Integer.MAX_VALUE;
-         }
+         return this.getClaimBounds().area();
      }
  
      public int getWidth()
      {
-         return this.greaterBoundaryCorner.getBlockX() - this.lesserBoundaryCorner.getBlockX() + 1;
+         return this.getClaimBounds().xLength();
      }
  
      public int getHeight()
      {
-         return this.greaterBoundaryCorner.getBlockZ() - this.lesserBoundaryCorner.getBlockZ() + 1;
+         return this.getClaimBounds().zLength();
      }
 
      public boolean isShaped()
@@ -337,6 +322,71 @@ public class Claim
                  this.getGreaterBoundaryCorner().getBlockX(),
                  this.getGreaterBoundaryCorner().getBlockZ()
          );
+     }
+
+     public @NotNull ClaimBounds getClaimBounds()
+     {
+         int minY = this.getMinY();
+         int maxY = this.getMaxY();
+         if (this.isShaped())
+         {
+             return ClaimBounds.shaped(this.getBoundaryPolygon(), minY, maxY);
+         }
+
+         return ClaimBounds.rectangle(
+                 this.getLesserBoundaryCorner().getBlockX(),
+                 minY,
+                 this.getLesserBoundaryCorner().getBlockZ(),
+                 this.getGreaterBoundaryCorner().getBlockX(),
+                 maxY,
+                 this.getGreaterBoundaryCorner().getBlockZ()
+         );
+     }
+
+     public @NotNull ClaimSnapshot getSnapshot()
+     {
+         World world = this.lesserBoundaryCorner.getWorld();
+         String worldKey = world == null ? "" : world.getName();
+         return new ClaimSnapshot(
+                 this.id,
+                 worldKey,
+                 this.getOwnerID(),
+                 this.parent == null ? null : this.parent.id,
+                 this.getClaimBounds(),
+                 this.is3D,
+                 this.parent != null
+         );
+     }
+
+     public @NotNull ClaimTrustSnapshot getTrustSnapshot()
+     {
+         Map<String, ClaimTrustLevel> permissions = new HashMap<>();
+         for (Map.Entry<String, ClaimPermission> entry : this.playerIDToClaimPermissionMap.entrySet())
+         {
+             permissions.put(entry.getKey(), toClaimTrustLevel(entry.getValue()));
+         }
+
+         return new ClaimTrustSnapshot(this.getOwnerID(), permissions, this.managers, this.deniedPermissions);
+     }
+
+     private static @NotNull ClaimTrustLevel toClaimTrustLevel(@NotNull ClaimPermission permission)
+     {
+         switch (permission)
+         {
+             case Edit:
+                 return ClaimTrustLevel.EDIT;
+             case Manage:
+                 return ClaimTrustLevel.MANAGE;
+             case Build:
+                 return ClaimTrustLevel.BUILD;
+             case Container:
+             case Inventory:
+                 return ClaimTrustLevel.CONTAINER;
+             case Access:
+                 return ClaimTrustLevel.ACCESS;
+             default:
+                 throw new IllegalStateException("Unknown claim permission: " + permission);
+         }
      }
 
      public int getCornerIndexAt(int x, int z)
@@ -1058,33 +1108,9 @@ public class Claim
          int y = location.getY() % 1 == 0 ? location.getBlockY() : location.getBlockY() + 1;
          int z = location.getBlockZ();
 
-         int minX = Math.min(lesserBoundaryCorner.getBlockX(), greaterBoundaryCorner.getBlockX());
-         int maxX = Math.max(lesserBoundaryCorner.getBlockX(), greaterBoundaryCorner.getBlockX());
-         int minZ = Math.min(lesserBoundaryCorner.getBlockZ(), greaterBoundaryCorner.getBlockZ());
-         int maxZ = Math.max(lesserBoundaryCorner.getBlockZ(), greaterBoundaryCorner.getBlockZ());
-
-         if (x < minX || x > maxX || z < minZ || z > maxZ) {
+         boolean ignoreY = ignoreHeight || (!this.is3D && this.parent != null);
+         if (!this.getClaimBounds().contains(x, y, z, ignoreY)) {
              return false;
-         }
-
-         if (this.isShaped() && !this.containsColumn(x, z)) {
-             return false;
-         }
-
-         if (!ignoreHeight) {
-             if (this.is3D) {
-                 int minY = Math.min(lesserBoundaryCorner.getBlockY(), greaterBoundaryCorner.getBlockY());
-                 int maxY = Math.max(lesserBoundaryCorner.getBlockY(), greaterBoundaryCorner.getBlockY());
-                 if (y < minY || y > maxY) {
-                     return false;
-                 }
-             } else if (this.parent == null) { // Only top-level claims span full height
-                 int worldMinY = GriefPrevention.getWorldMinY(location.getWorld());
-                 int worldMaxY = GriefPrevention.getWorldMaxY(location.getWorld());
-                 if (y < worldMinY || y > worldMaxY) {
-                     return false;
-                 }
-             }
          }
      
          // Handle subdivision exclusion - properly respect 3D boundaries
@@ -1108,9 +1134,7 @@ public class Claim
             // For non-3D claims, Y boundaries are not enforced, so always return true.
             return true;
         }
-        int minY = Math.min(this.lesserBoundaryCorner.getBlockY(), this.greaterBoundaryCorner.getBlockY());
-        int maxY = Math.max(this.lesserBoundaryCorner.getBlockY(), this.greaterBoundaryCorner.getBlockY());
-        return y >= minY && y <= maxY;
+        return this.getClaimBounds().containsY(y);
     }
 
     /**
@@ -1238,95 +1262,7 @@ public class Claim
     //used internally to prevent overlaps when creating claims
     boolean overlaps(Claim otherClaim)
     {
-        if (!Objects.equals(this.lesserBoundaryCorner.getWorld(), otherClaim.getLesserBoundaryCorner().getWorld())) return false;
-
-        // For 3D subclaims, check all axes including Y
-        // For 2D claims, ignore Y (only check X/Z)
-        // For mixed 2D/3D claims, we need to check Y boundaries properly
-        boolean ignoreY = !this.is3D() && !otherClaim.is3D();
-        if (!new BoundingBox(this).intersects(new BoundingBox(otherClaim), ignoreY))
-        {
-            return false;
-        }
-
-        if (ignoreY && (this.isShaped() || otherClaim.isShaped()))
-        {
-            return this.intersects2D(otherClaim);
-        }
-
-        return true;
-    }
-
-    private boolean containsColumn(int x, int z)
-    {
-        if (!this.isShaped())
-        {
-            int minX = Math.min(this.lesserBoundaryCorner.getBlockX(), this.greaterBoundaryCorner.getBlockX());
-            int maxX = Math.max(this.lesserBoundaryCorner.getBlockX(), this.greaterBoundaryCorner.getBlockX());
-            int minZ = Math.min(this.lesserBoundaryCorner.getBlockZ(), this.greaterBoundaryCorner.getBlockZ());
-            int maxZ = Math.max(this.lesserBoundaryCorner.getBlockZ(), this.greaterBoundaryCorner.getBlockZ());
-            return x >= minX && x <= maxX && z >= minZ && z <= maxZ;
-        }
-
-        OrthogonalPoint2i blockPoint = new OrthogonalPoint2i(x, z);
-        OrthogonalPolygon polygon = this.getBoundaryPolygon();
-        for (OrthogonalEdge2i edge : polygon.edges())
-        {
-            if (edge.containsPoint(blockPoint))
-            {
-                return true;
-            }
-        }
-
-        return isInsidePolygon(blockPoint, polygon);
-    }
-
-    private boolean intersects2D(@NotNull Claim otherClaim)
-    {
-        int minX = Math.max(this.getLesserBoundaryCorner().getBlockX(), otherClaim.getLesserBoundaryCorner().getBlockX());
-        int maxX = Math.min(this.getGreaterBoundaryCorner().getBlockX(), otherClaim.getGreaterBoundaryCorner().getBlockX());
-        int minZ = Math.max(this.getLesserBoundaryCorner().getBlockZ(), otherClaim.getLesserBoundaryCorner().getBlockZ());
-        int maxZ = Math.min(this.getGreaterBoundaryCorner().getBlockZ(), otherClaim.getGreaterBoundaryCorner().getBlockZ());
-
-        for (int x = minX; x <= maxX; x++)
-        {
-            for (int z = minZ; z <= maxZ; z++)
-            {
-                if (this.containsColumn(x, z) && otherClaim.containsColumn(x, z))
-                {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    private static boolean isInsidePolygon(@NotNull OrthogonalPoint2i point, @NotNull OrthogonalPolygon polygon)
-    {
-        double sampleX = point.x() + 0.5D;
-        double sampleZ = point.z() + 0.5D;
-        boolean inside = false;
-        List<OrthogonalPoint2i> corners = polygon.corners();
-
-        for (int i = 0, j = corners.size() - 1; i < corners.size(); j = i++)
-        {
-            OrthogonalPoint2i a = corners.get(i);
-            OrthogonalPoint2i b = corners.get(j);
-            boolean crosses = (a.z() > sampleZ) != (b.z() > sampleZ);
-            if (!crosses)
-            {
-                continue;
-            }
-
-            double intersectionX = (double) (b.x() - a.x()) * (sampleZ - a.z()) / (double) (b.z() - a.z()) + a.x();
-            if (sampleX < intersectionX)
-            {
-                inside = !inside;
-            }
-        }
-
-        return inside;
+        return this.getSnapshot().overlaps(otherClaim.getSnapshot());
     }
 
      @Deprecated(since = "17.0.0", forRemoval = true)

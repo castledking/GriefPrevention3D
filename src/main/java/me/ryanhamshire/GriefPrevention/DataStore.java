@@ -19,6 +19,8 @@
 package me.ryanhamshire.GriefPrevention;
 
 import com.google.common.io.Files;
+import com.griefprevention.claims.ClaimSnapshot;
+import com.griefprevention.claims.ClaimSnapshotIndex;
 import com.griefprevention.geometry.OrthogonalPolygon;
 import com.griefprevention.visualization.BoundaryVisualization;
 import com.griefprevention.visualization.VisualizationType;
@@ -26,6 +28,7 @@ import me.ryanhamshire.GriefPrevention.events.ClaimCreatedEvent;
 import me.ryanhamshire.GriefPrevention.events.ClaimDeletedEvent;
 import me.ryanhamshire.GriefPrevention.events.ClaimExtendEvent;
 import me.ryanhamshire.GriefPrevention.events.ClaimResizeEvent;
+import me.ryanhamshire.GriefPrevention.events.PreDeleteClaimEvent;
 import me.ryanhamshire.GriefPrevention.events.ClaimTransferEvent;
 import me.ryanhamshire.GriefPrevention.util.BoundingBox;
 import org.bukkit.Bukkit;
@@ -77,6 +80,7 @@ public abstract class DataStore {
     // claim id to claim cache
     public final Map<Long, Claim> claimIDMap = new ConcurrentHashMap<>();
     ConcurrentHashMap<Long, ArrayList<Claim>> chunksToClaimsMap = new ConcurrentHashMap<>();
+    private final ClaimSnapshotIndex claimSnapshotIndex = new ClaimSnapshotIndex();
 
     // in-memory cache for messages
     private String[] messages;
@@ -185,6 +189,7 @@ public abstract class DataStore {
 
         // make a note of the data store schema version
         this.setSchemaVersion(latestSchemaVersion);
+        this.rebuildClaimSnapshotIndex();
 
     }
 
@@ -434,6 +439,7 @@ public abstract class DataStore {
             }
 
             newClaim.inDataStore = true;
+            this.indexClaimSnapshot(newClaim);
             if (writeToStorage) {
                 this.saveClaim(newClaim);
             }
@@ -454,6 +460,7 @@ public abstract class DataStore {
         addToChunkClaimMap(newClaim);
 
         newClaim.inDataStore = true;
+        this.indexClaimTree(newClaim);
 
         // except for administrative claims (which have no owner), update the owner's
         // playerData with the new claim
@@ -508,6 +515,38 @@ public abstract class DataStore {
                     this.chunksToClaimsMap.remove(chunkHash);
                 }
             }
+        }
+    }
+
+    private void rebuildClaimSnapshotIndex() {
+        this.claimSnapshotIndex.clear();
+        for (Claim claim : this.claims) {
+            this.indexClaimTree(claim);
+        }
+    }
+
+    private void indexClaimTree(Claim claim) {
+        this.indexClaimSnapshot(claim);
+        for (Claim child : claim.children) {
+            this.indexClaimTree(child);
+        }
+    }
+
+    private void indexClaimSnapshot(Claim claim) {
+        if (claim.id == null) {
+            return;
+        }
+
+        if (claim.inDataStore) {
+            this.claimSnapshotIndex.put(claim.getSnapshot());
+        } else {
+            this.claimSnapshotIndex.remove(claim.id);
+        }
+    }
+
+    private void removeClaimSnapshot(Claim claim) {
+        if (claim.id != null) {
+            this.claimSnapshotIndex.remove(claim.id);
         }
     }
 
@@ -833,6 +872,38 @@ public abstract class DataStore {
     }
 
     synchronized void deleteClaim(Claim claim, boolean fireEvent, boolean ignored) {
+        this.deleteClaimWithResult(claim, fireEvent, ignored);
+    }
+
+    synchronized boolean deleteClaimWithResult(Claim claim, boolean fireEvent, boolean ignored) {
+        if (fireEvent && preDeleteCancelled(claim)) {
+            return false;
+        }
+
+        this.deleteClaimUnchecked(claim, fireEvent, ignored);
+        return true;
+    }
+
+    private boolean preDeleteCancelled(Claim claim) {
+        PreDeleteClaimEvent event = new PreDeleteClaimEvent(claim);
+        Bukkit.getPluginManager().callEvent(event);
+        if (event.isCancelled()) {
+            return true;
+        }
+
+        if (!claim.children.isEmpty()) {
+            java.util.List<Claim> childrenSnapshot = new java.util.ArrayList<>(claim.children);
+            for (Claim child : childrenSnapshot) {
+                if (preDeleteCancelled(child)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private void deleteClaimUnchecked(Claim claim, boolean fireEvent, boolean ignored) {
         // Debug logging for claim deletion
         if (GriefPrevention.instance.config_logs_debugEnabled) {
             String claimType = claim.parent != null ? "Subdivision" : (claim.isAdminClaim() ? "Admin Claim" : "Top-level Claim");
@@ -851,7 +922,7 @@ public abstract class DataStore {
         if (!claim.children.isEmpty()) {
             java.util.List<Claim> childrenSnapshot = new java.util.ArrayList<>(claim.children);
             for (Claim child : childrenSnapshot) {
-                this.deleteClaim(child, fireEvent, ignored);
+                this.deleteClaimUnchecked(child, fireEvent, ignored);
             }
         }
 
@@ -878,6 +949,7 @@ public abstract class DataStore {
         }
 
         removeFromChunkClaimMap(claim);
+        this.removeClaimSnapshot(claim);
 
         // remove from secondary storage
         this.deleteClaimFromSecondaryStorage(claim);
@@ -1223,6 +1295,10 @@ public abstract class DataStore {
     // finds a claim by ID
     public synchronized Claim getClaim(long id) {
         return this.claimIDMap.get(id);
+    }
+
+    public synchronized @NotNull List<ClaimSnapshot> getClaimSnapshots() {
+        return this.claimSnapshotIndex.snapshots();
     }
 
     // returns a read-only access point for the list of all land claims
@@ -1843,6 +1919,7 @@ public abstract class DataStore {
                     localClaim.lesserBoundaryCorner.setY(depth);
                     localClaim.greaterBoundaryCorner
                             .setY(Math.max(localClaim.greaterBoundaryCorner.getBlockY(), depth));
+                    this.indexClaimSnapshot(localClaim);
                     this.saveClaim(localClaim);
                 });
     }
@@ -1900,6 +1977,7 @@ public abstract class DataStore {
             }
             result.claim = claim;
             addToChunkClaimMap(claim); // add the new boundary to the chunk cache
+            this.indexClaimSnapshot(claim);
         }
 
         return result;
@@ -1995,6 +2073,7 @@ public abstract class DataStore {
         claim.setShapedCorners(polygon.corners());
         this.saveClaim(claim);
         addToChunkClaimMap(claim);
+        this.indexClaimSnapshot(claim);
 
         result.succeeded = true;
         result.claim = claim;

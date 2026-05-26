@@ -19,11 +19,14 @@
 package me.ryanhamshire.GriefPrevention;
 
 import me.ryanhamshire.GriefPrevention.events.ClaimExpirationEvent;
+import me.ryanhamshire.GriefPrevention.events.ClaimsInactivityExpireEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 
 class CleanupUnusedClaimTask implements Runnable
 {
@@ -60,7 +63,8 @@ class CleanupUnusedClaimTask implements Runnable
             {
                 if (expireEventCanceled())
                     return;
-                GriefPrevention.instance.dataStore.deleteClaim(claim, true, true);
+                if (!GriefPrevention.instance.dataStore.deleteClaimWithResult(claim, true, true))
+                    return;
 
                 GriefPrevention.AddLogEntry(" " + claim.getOwnerName() + "'s new player claim expired.", CustomLogEntryTypes.AdminActivity);
             }
@@ -76,6 +80,9 @@ class CleanupUnusedClaimTask implements Runnable
             {
                 if (expireEventCanceled())
                     return;
+
+                List<Claim> expiredClaims = new ArrayList<>(ownerData.getClaims());
+                Bukkit.getPluginManager().callEvent(new ClaimsInactivityExpireEvent(claim.ownerID, expiredClaims));
 
                 //delete them
                 GriefPrevention.instance.dataStore.deleteClaimsForPlayer(claim.ownerID, true);

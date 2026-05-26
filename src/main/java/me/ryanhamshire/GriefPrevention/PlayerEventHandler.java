@@ -18,6 +18,7 @@
 
 package me.ryanhamshire.GriefPrevention;
 
+import com.griefprevention.claims.editor.BukkitClaimEditMessages;
 import com.griefprevention.claims.editor.ClaimEditIntent;
 import com.griefprevention.claims.editor.ClaimEditIntentType;
 import com.griefprevention.claims.editor.ClaimEditPreview;
@@ -1460,7 +1461,8 @@ public class PlayerEventHandler implements Listener {
             return;
 
         // don't allow container access during pvp combat in claimed areas
-        if ((entity instanceof StorageMinecart || entity instanceof PoweredMinecart)) {
+        if (!instance.config_pvp_allowContainerAccess
+                && (entity instanceof StorageMinecart || entity instanceof PoweredMinecart)) {
             if (playerData.inPvpCombat()) {
                 Claim claim = this.dataStore.getClaimAt(entity.getLocation(), false, playerData.lastClaim);
                 if (claim != null) {
@@ -1918,7 +1920,12 @@ public class PlayerEventHandler implements Listener {
 
             // block container use during pvp combat in claimed areas only - in wilderness, allow
             // access since blocking won't prevent attackers from getting those items anyway
-            if (playerData.inPvpCombat() && claim != null) {
+            boolean respawnAnchorPvpException = instance.config_pvp_allowRespawnAnchor
+                    && CompatUtil.isMaterial(clickedBlockType, "RESPAWN_ANCHOR");
+            if (playerData.inPvpCombat()
+                    && claim != null
+                    && !instance.config_pvp_allowContainerAccess
+                    && !respawnAnchorPvpException) {
                 GriefPrevention.sendRateLimitedErrorMessage(player, Messages.PvPNoContainers);
                 event.setCancelled(true);
                 return;
@@ -4552,7 +4559,7 @@ public class PlayerEventHandler implements Listener {
 
         if (!result.success()) {
             if (result.fallbackMessage() != null) {
-                GriefPrevention.sendMessage(player, TextMode.Err, result.fallbackMessage());
+                GriefPrevention.sendMessage(player, TextMode.Err, BukkitClaimEditMessages.toMessage(result.fallbackMessage()));
                 return;
             }
 

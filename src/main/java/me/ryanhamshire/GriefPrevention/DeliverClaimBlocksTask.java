@@ -67,8 +67,9 @@ class DeliverClaimBlocksTask implements Runnable
         PlayerData playerData = dataStore.getPlayerData(player.getUniqueId());
 
         // check if player is idle (considered idle if player's facing direction has not changed)
-        boolean isIdle = playerData.lastAfkCheckLocation != null
+        boolean detectedIdle = playerData.lastAfkCheckLocation != null
                 && playerData.lastAfkCheckLocation.getDirection().equals(player.getLocation().getDirection());
+        boolean isIdle = detectedIdle && !player.hasPermission("griefprevention.accruals.afkbypass");
 
         //remember current location for next time
         playerData.lastAfkCheckLocation = player.getLocation();
@@ -76,6 +77,13 @@ class DeliverClaimBlocksTask implements Runnable
         try
         {
             //determine how fast blocks accrue for this player; can be modified by addons
+            if (!player.hasPermission("griefprevention.accruals"))
+            {
+                GriefPrevention.AddLogEntry(player.getName() + " does not have permission to accrue claim blocks.",
+                        CustomLogEntryTypes.Debug, true);
+                return;
+            }
+
             int accrualRate = instance.config_claims_blocksAccruedPerHour_default;
 
             //fire event for addons

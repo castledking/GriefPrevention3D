@@ -148,6 +148,11 @@ class AddonCompatibilitySurfaceTest {
             load("me.ryanhamshire.GriefPrevention.events.TrustChangedEvent");
             load("me.ryanhamshire.GriefPrevention.events.ClaimPermissionCheckEvent");
             load("me.ryanhamshire.GriefPrevention.events.ClaimExpirationEvent");
+            load("me.ryanhamshire.GriefPrevention.events.ClaimsInactivityExpireEvent");
+            load("me.ryanhamshire.GriefPrevention.events.PreDeleteClaimEvent");
+            load("me.ryanhamshire.GriefPrevention.events.StartClaimCreationEvent");
+            load("me.ryanhamshire.GriefPrevention.events.StartSubdivideClaimCreationEvent");
+            load("me.ryanhamshire.GriefPrevention.events.StartClaimResizeEvent");
             load("me.ryanhamshire.GriefPrevention.events.SaveTrappedPlayerEvent");
             load("me.ryanhamshire.GriefPrevention.events.ProtectDeathDropsEvent");
             load("me.ryanhamshire.GriefPrevention.events.PreventPvPEvent");

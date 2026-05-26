@@ -258,9 +258,18 @@ permissions:
   griefprevention.createclaims:
     description: Grants permission to create claims.
     default: true
+  griefprevention.createclaims.toolbypass:
+    description: Allows a player to create claims via command without holding the modification tool.
+    default: true
   griefprevention.witherexplosions:
     description: Grants permission to toggle wither explosions in claims.
     default: true
+  griefprevention.accruals:
+    description: Allows a player to accrue claim blocks at the configured hourly rate.
+    default: true
+  griefprevention.accruals.afkbypass:
+    description: Allows a player to accrue claim blocks while idle.
+    default: op
   griefprevention.admin.*:
     description: Grants all administrative functionality.
     children:
@@ -287,6 +296,7 @@ permissions:
       griefprevention.claimbook: true
       griefprevention.notignorable: true
       griefprevention.seeinactivity: true
+      griefprevention.accruals.afkbypass: true
       griefprevention.eavesdrop.immune: true
       griefprevention.deleteclaimsinworld: true
       griefprevention.unlockothersdrops: true

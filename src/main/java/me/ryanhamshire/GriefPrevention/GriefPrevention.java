@@ -22,6 +22,7 @@ import com.google.common.base.Predicate;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.griefprevention.api.ClaimToolHandlerRegistry;
+import com.griefprevention.claims.editor.BukkitClaimEditMessages;
 import com.griefprevention.claims.editor.ClaimEditIntent;
 import com.griefprevention.claims.editor.ClaimEditIntentType;
 import com.griefprevention.claims.editor.ClaimEditPreview;
@@ -40,6 +41,7 @@ import com.griefprevention.visualization.VisualizationStyleRegistry;
 import me.ryanhamshire.GriefPrevention.compat.CompatUtil;
 import me.ryanhamshire.GriefPrevention.compat.LegacyRightClickAirHandler;
 import com.griefprevention.geometry.OrthogonalEdge2i;
+import com.griefprevention.geometry.OrthogonalDirection;
 import com.griefprevention.geometry.OrthogonalPolygon;
 import com.griefprevention.platform.knockback.KnockbackProtectionListener;
 import com.griefprevention.protection.InteractionProtectionHandler;
@@ -257,6 +259,8 @@ public class GriefPrevention extends JavaPlugin {
     public int config_pvp_combatTimeoutSeconds; // how long combat is considered to continue after the most recent
                                                 // damage
     public boolean config_pvp_allowCombatItemDrop; // whether a player can drop items during combat to hide them
+    public boolean config_pvp_allowContainerAccess; // whether players may access claimed containers during PvP combat
+    public boolean config_pvp_allowRespawnAnchor; // whether players may use respawn anchors during PvP combat
     public ArrayList<String> config_pvp_blockedCommands; // list of commands which may not be used during pvp combat
     public boolean config_pvp_noCombatInPlayerLandClaims; // whether players may fight in player-owned land claims
     public boolean config_pvp_noCombatInAdminLandClaims; // whether players may fight in admin-owned land claims
@@ -960,6 +964,8 @@ public class GriefPrevention extends JavaPlugin {
         this.config_pvp_punishLogout = config.getBoolean("GriefPrevention.PvP.PunishLogout", true);
         this.config_pvp_combatTimeoutSeconds = config.getInt("GriefPrevention.PvP.CombatTimeoutSeconds", 15);
         this.config_pvp_allowCombatItemDrop = config.getBoolean("GriefPrevention.PvP.AllowCombatItemDrop", false);
+        this.config_pvp_allowContainerAccess = config.getBoolean("GriefPrevention.PvP.AllowContainerAccess", false);
+        this.config_pvp_allowRespawnAnchor = config.getBoolean("GriefPrevention.PvP.AllowRespawnAnchor", false);
         String bannedPvPCommandsList = config.getString("GriefPrevention.PvP.BlockedSlashCommands",
                 "/home;/vanish;/spawn;/tpa");
 
@@ -1185,6 +1191,8 @@ public class GriefPrevention extends JavaPlugin {
         outConfig.set("GriefPrevention.PvP.PunishLogout", this.config_pvp_punishLogout);
         outConfig.set("GriefPrevention.PvP.CombatTimeoutSeconds", this.config_pvp_combatTimeoutSeconds);
         outConfig.set("GriefPrevention.PvP.AllowCombatItemDrop", this.config_pvp_allowCombatItemDrop);
+        outConfig.set("GriefPrevention.PvP.AllowContainerAccess", this.config_pvp_allowContainerAccess);
+        outConfig.set("GriefPrevention.PvP.AllowRespawnAnchor", this.config_pvp_allowRespawnAnchor);
         outConfig.set("GriefPrevention.PvP.BlockedSlashCommands", bannedPvPCommandsList);
         outConfig.set("GriefPrevention.PvP.ProtectPlayersInLandClaims.PlayerOwnedClaims",
                 this.config_pvp_noCombatInPlayerLandClaims);
@@ -2089,7 +2097,9 @@ public class GriefPrevention extends JavaPlugin {
                         GriefPrevention.sendMessage(player, TextMode.Warn, Messages.DeletionSubdivisionWarning);
                         playerData.warnedAboutMajorDeletion = true;
                     } else {
-                        this.dataStore.deleteClaim(claim, true, true);
+                        if (!this.dataStore.deleteClaimWithResult(claim, true, true)) {
+                            return true;
+                        }
 
                         if (playerData.claimResizing == claim) {
                             playerData.claimResizing = null;
@@ -2919,7 +2929,9 @@ public class GriefPrevention extends JavaPlugin {
             return true;
         } else {
             // delete it
-            this.dataStore.deleteClaim(claim, true, false);
+            if (!this.dataStore.deleteClaimWithResult(claim, true, false)) {
+                return true;
+            }
 
             // clear selection session if we were deleting the selected claim
             if (playerData.claimResizing == claim) {
@@ -4775,8 +4787,8 @@ public class GriefPrevention extends JavaPlugin {
         Integer edgeIndex = resolveBoundarySegmentForPlayer(claim.getBoundaryPolygon(), player.getLocation());
         if (edgeIndex != null) {
             OrthogonalEdge2i edge = claim.getBoundaryPolygon().edges().get(edgeIndex);
-            BlockFace expansionFace = resolveExpansionFaceForPlayer(edge, player.getLocation());
-            SegmentSelection selection = new SegmentSelection(claim.getID(), edgeIndex, null, null, expansionFace);
+            OrthogonalDirection expansionDirection = resolveExpansionDirectionForPlayer(edge, player.getLocation());
+            SegmentSelection selection = new SegmentSelection(claim.getID(), edgeIndex, null, null, expansionDirection);
             ClaimEditPreview preview = new ClaimEditPreview(
                     claim.getBoundaryPolygon(),
                     selection,
@@ -4838,22 +4850,22 @@ public class GriefPrevention extends JavaPlugin {
                 : nearestHorizontalEdge(polygon, playerLocation.getBlockX(), playerLocation.getZ(), false);
     }
 
-    private @NotNull BlockFace resolveExpansionFaceForPlayer(
+    private @NotNull OrthogonalDirection resolveExpansionDirectionForPlayer(
             @NotNull OrthogonalEdge2i edge,
             @NotNull Location playerLocation)
     {
         org.bukkit.util.Vector direction = playerLocation.getDirection();
         if (edge.isHorizontal())
         {
-            return direction.getZ() >= 0 ? BlockFace.SOUTH : BlockFace.NORTH;
+            return direction.getZ() >= 0 ? OrthogonalDirection.SOUTH : OrthogonalDirection.NORTH;
         }
 
         if (edge.isVertical())
         {
-            return direction.getX() >= 0 ? BlockFace.EAST : BlockFace.WEST;
+            return direction.getX() >= 0 ? OrthogonalDirection.EAST : OrthogonalDirection.WEST;
         }
 
-        return edge.outwardFaceForPositiveOffset();
+        return edge.outwardDirectionForPositiveOffset();
     }
 
     private @Nullable Integer nearestVerticalEdge(
@@ -4917,7 +4929,7 @@ public class GriefPrevention extends JavaPlugin {
 
         if (!result.success()) {
             if (result.fallbackMessage() != null) {
-                GriefPrevention.sendMessage(player, TextMode.Err, result.fallbackMessage());
+                GriefPrevention.sendMessage(player, TextMode.Err, BukkitClaimEditMessages.toMessage(result.fallbackMessage()));
                 return;
             }
 
