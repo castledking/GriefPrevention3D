@@ -4837,19 +4837,9 @@ public class PlayerEventHandler implements Listener {
         // Defense in depth: also confirm the player is actually holding a brush.
         // The PlayerInteractEvent path may have already swapped tools, but the
         // brushing entity-change should only originate from a brush in hand.
-        ItemStack mainHand;
-        ItemStack offHand = null;
-        try {
-            mainHand = player.getInventory().getItemInMainHand();
-            try {
-                offHand = player.getInventory().getItemInOffHand();
-            } catch (NoSuchMethodError e) {
-                // 1.8.8: no off-hand
-                offHand = new ItemStack(Material.AIR);
-            }
-        } catch (NoSuchMethodError e) {
-            // 1.8.8: fall back to old method
-            mainHand = player.getItemInHand();
+        ItemStack mainHand = CompatUtil.getItemInMainHand(player);
+        ItemStack offHand = CompatUtil.getItemInOffHand(player);
+        if (offHand == null) {
             offHand = new ItemStack(Material.AIR);
         }
         try {

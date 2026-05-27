@@ -302,4 +302,59 @@ public class CompatUtil {
             // 1.8.8: updateCommands doesn't exist
         }
     }
+
+    /**
+     * Check if EntityExplodeEvent has getExplosionResult() method (1.13+)
+     */
+    public static boolean hasExplosionResult() {
+        try {
+            Class.forName("org.bukkit.ExplosionResult");
+            return true;
+        } catch (ClassNotFoundException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Get explosion result safely (1.13+)
+     * Returns null if not available (assumes normal explosion)
+     */
+    public static Object getExplosionResult(org.bukkit.event.entity.EntityExplodeEvent event) {
+        try {
+            return event.getExplosionResult();
+        } catch (NoSuchMethodError | NoClassDefFoundError e) {
+            // 1.8.8: getExplosionResult doesn't exist
+            return null;
+        }
+    }
+
+    /**
+     * Get explosion result safely for BlockExplodeEvent (1.13+)
+     * Returns null if not available (assumes normal explosion)
+     */
+    public static Object getExplosionResult(org.bukkit.event.block.BlockExplodeEvent event) {
+        try {
+            return event.getExplosionResult();
+        } catch (NoSuchMethodError | NoClassDefFoundError e) {
+            // 1.8.8: getExplosionResult doesn't exist
+            return null;
+        }
+    }
+
+    /**
+     * Check if explosion result is TRIGGER_BLOCK (1.13+)
+     * Returns false for 1.8.8 (assumes normal explosion)
+     */
+    public static boolean isTriggerBlockExplosion(Object explosionResult) {
+        if (explosionResult == null) {
+            return false;
+        }
+        try {
+            Class<?> explosionResultClass = Class.forName("org.bukkit.ExplosionResult");
+            Object triggerBlock = explosionResultClass.getField("TRIGGER_BLOCK").get(null);
+            return explosionResult.equals(triggerBlock);
+        } catch (ClassNotFoundException | NoSuchFieldException | IllegalAccessException e) {
+            return false;
+        }
+    }
 }

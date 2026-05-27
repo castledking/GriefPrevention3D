@@ -57,7 +57,6 @@ import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.entity.EntityInteractEvent;
 
 import org.bukkit.event.entity.ExpBottleEvent;
-import org.bukkit.event.entity.ItemMergeEvent;
 import org.bukkit.event.entity.ItemSpawnEvent;
 import org.bukkit.event.hanging.HangingBreakByEntityEvent;
 import org.bukkit.event.hanging.HangingBreakEvent;
@@ -401,7 +400,8 @@ public class EntityEventHandler implements Listener
         if (explodeEvent.blockList().isEmpty()) return;
 
         // Explosion causes interactable blocks (levers, buttons, etc.) to change state.
-        if (explodeEvent.getExplosionResult() == ExplosionResult.TRIGGER_BLOCK)
+        Object explosionResult = CompatUtil.getExplosionResult(explodeEvent);
+        if (CompatUtil.isTriggerBlockExplosion(explosionResult))
         {
             handleExplodeInteract(explodeEvent.getLocation(), explodeEvent.getEntity(), explodeEvent.blockList(), explodeEvent);
         }
@@ -412,24 +412,8 @@ public class EntityEventHandler implements Listener
         }
     }
 
-    //when a block explodes...
-    @EventHandler(ignoreCancelled = true, priority = EventPriority.LOWEST)
-    public void onBlockExplode(BlockExplodeEvent explodeEvent)
-    {
-        // If there aren't any affected blocks, there's nothing to do. Vanilla mob griefing rule causes this.
-        if (explodeEvent.blockList().isEmpty()) return;
-
-        // Explosion causes interactable blocks (levers, buttons, etc.) to change state.
-        if (explodeEvent.getExplosionResult() == ExplosionResult.TRIGGER_BLOCK)
-        {
-            handleExplodeInteract(explodeEvent.getBlock().getLocation(), null, explodeEvent.blockList(), explodeEvent);
-        }
-        // Explosion damages world.
-        else
-        {
-            handleExplosion(explodeEvent.getBlock().getLocation(), null, explodeEvent.blockList());
-        }
-    }
+    // BlockExplodeEvent handler moved to separate class for 1.8.8 compatibility
+    // BlockExplodeEvent doesn't exist in 1.8.8 Spigot, registered conditionally
 
     void handleExplodeInteract(@NotNull Location location, @Nullable Entity entity, @NotNull List<Block> blocks, @NotNull Event event)
     {
@@ -722,13 +706,8 @@ public class EntityEventHandler implements Listener
         }
     }
 
-    @EventHandler(ignoreCancelled = true, priority = EventPriority.LOWEST)
-    public void onItemMerge(ItemMergeEvent event)
-    {
-        Item item = event.getEntity();
-        List<MetadataValue> data = item.getMetadata("GP_ITEMOWNER");
-        event.setCancelled(!data.isEmpty());
-    }
+    // ItemMergeEvent handler moved to separate class for 1.8.8 compatibility
+    // ItemMergeEvent doesn't exist in 1.8.8 Spigot, registered conditionally
 
     //when an entity picks up an item
     @EventHandler(priority = EventPriority.LOWEST)

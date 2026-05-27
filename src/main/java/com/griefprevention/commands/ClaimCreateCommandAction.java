@@ -11,6 +11,7 @@ import me.ryanhamshire.GriefPrevention.Messages;
 import me.ryanhamshire.GriefPrevention.PlayerData;
 import me.ryanhamshire.GriefPrevention.ShovelMode;
 import me.ryanhamshire.GriefPrevention.TextMode;
+import me.ryanhamshire.GriefPrevention.compat.CompatUtil;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.World;
@@ -249,7 +250,7 @@ final class ClaimCreateCommandAction implements TabExecutor
         }
         return playerData.getClaims().size() < 2
                 && player.getGameMode() != GameMode.CREATIVE
-                && player.getInventory().getItemInMainHand().getType() != plugin.config_claims_modificationTool;
+                && CompatUtil.getItemInMainHand(player).getType() != plugin.config_claims_modificationTool;
     }
 
     private int getClaimMinRadius()

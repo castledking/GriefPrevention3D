@@ -533,6 +533,10 @@ public class GriefPrevention extends JavaPlugin {
                 () -> new EntityMountEventHandler(this.dataStore, this));
         registerIfClassPresent(pluginManager, "org.bukkit.event.entity.EntityPickupItemEvent",
                 () -> new EntityPickupItemEventHandler(this.dataStore));
+        registerIfClassPresent(pluginManager, "org.bukkit.event.block.BlockExplodeEvent",
+                () -> new BlockExplodeEventHandler(this.dataStore));
+        registerIfClassPresent(pluginManager, "org.bukkit.event.entity.ItemMergeEvent",
+                () -> new ItemMergeEventHandler());
         registerIfClassPresent(pluginManager, "org.bukkit.event.player.PlayerSignOpenEvent",
                 () -> new PlayerSignOpenEventHandler());
         registerIfClassPresent(pluginManager, "org.bukkit.event.player.PlayerTakeLecternBookEvent",
@@ -4611,7 +4615,7 @@ public class GriefPrevention extends JavaPlugin {
         }
 
         boolean holdingModificationTool = player.getGameMode() == GameMode.CREATIVE
-                || player.getInventory().getItemInMainHand().getType() == GriefPrevention.instance.config_claims_modificationTool
+                || CompatUtil.getItemInMainHand(player).getType() == GriefPrevention.instance.config_claims_modificationTool
                 || player.hasPermission("griefprevention.extendclaim.toolbypass");
         if (!holdingModificationTool) {
             GriefPrevention.sendMessage(player, TextMode.Err, Messages.MustHoldModificationToolForThat);
