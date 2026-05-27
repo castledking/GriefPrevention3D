@@ -13,7 +13,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 
 public final class EntityPickupItemEventHandler implements Listener {
@@ -46,7 +45,7 @@ public final class EntityPickupItemEventHandler implements Listener {
 
         OfflinePlayer owner = GriefPrevention.instance.getServer().getOfflinePlayer(ownerID);
 
-        if (!owner.isOnline() || Objects.equals(player, owner)) return;
+        if (!owner.isOnline() || (player != null && player.getUniqueId().equals(ownerID))) return;
 
         PlayerData playerData = this.dataStore.getPlayerData(ownerID);
 
@@ -70,7 +69,8 @@ public final class EntityPickupItemEventHandler implements Listener {
                 && (GriefPrevention.instance.getItemInHand(player, EquipmentSlot.HAND).getType() == org.bukkit.Material.AIR)) {
             PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
             if (playerData.pvpImmune) {
-                event.setCancelled(true);
+                playerData.pvpImmune = false;
+                GriefPrevention.sendMessage(player, TextMode.Warn, Messages.PvPImmunityEnd);
             }
         }
     }
