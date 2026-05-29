@@ -3,6 +3,7 @@ package com.griefprevention.api;
 import org.bukkit.command.CommandSender;
 
 import java.util.List;
+import java.util.Collections;
 
 /**
  * Addon interface for extending /claim and /aclaim tab completion and command flow.
@@ -32,7 +33,7 @@ public interface ClaimCommandAddon {
      * @return additional subcommand names; empty list if none
      */
     default List<String> getSubcommandCompletions(CommandSender sender, String rootCommand) {
-        return List.of();
+        return Collections.emptyList();
     }
 
     /**

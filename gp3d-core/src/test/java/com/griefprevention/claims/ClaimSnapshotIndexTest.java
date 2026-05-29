@@ -8,6 +8,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import java.util.Arrays;
+import java.util.Collections;
 
 class ClaimSnapshotIndexTest
 {
@@ -20,7 +22,7 @@ class ClaimSnapshotIndexTest
         index.put(claim);
 
         assertSame(claim, index.get(1L));
-        assertEquals(List.of(claim), index.snapshots());
+        assertEquals(Collections.singletonList(claim), index.snapshots());
     }
 
     @Test
@@ -33,8 +35,8 @@ class ClaimSnapshotIndexTest
         index.put(oldClaim);
         index.put(newClaim);
 
-        assertEquals(List.of(), index.candidates("world", ClaimBounds.rectangle(0, 0, 0, 0, 0, 0)));
-        assertEquals(List.of(newClaim), index.candidates("world", ClaimBounds.rectangle(100, 0, 100, 100, 0, 100)));
+        assertEquals(Collections.emptyList(), index.candidates("world", ClaimBounds.rectangle(0, 0, 0, 0, 0, 0)));
+        assertEquals(Collections.singletonList(newClaim), index.candidates("world", ClaimBounds.rectangle(100, 0, 100, 100, 0, 100)));
     }
 
     @Test
@@ -47,7 +49,7 @@ class ClaimSnapshotIndexTest
 
         assertSame(claim, index.remove(1L));
         assertNull(index.get(1L));
-        assertEquals(List.of(), index.candidates("world", ClaimBounds.rectangle(0, 0, 0, 0, 0, 0)));
+        assertEquals(Collections.emptyList(), index.candidates("world", ClaimBounds.rectangle(0, 0, 0, 0, 0, 0)));
     }
 
     @Test
@@ -60,8 +62,8 @@ class ClaimSnapshotIndexTest
         index.put(overworld);
         index.put(nether);
 
-        assertEquals(List.of(overworld), index.candidates("world", ClaimBounds.rectangle(0, 0, 0, 0, 0, 0)));
-        assertEquals(List.of(nether), index.candidates("world_nether", ClaimBounds.rectangle(0, 0, 0, 0, 0, 0)));
+        assertEquals(Collections.singletonList(overworld), index.candidates("world", ClaimBounds.rectangle(0, 0, 0, 0, 0, 0)));
+        assertEquals(Collections.singletonList(nether), index.candidates("world_nether", ClaimBounds.rectangle(0, 0, 0, 0, 0, 0)));
     }
 
     @Test
@@ -73,7 +75,7 @@ class ClaimSnapshotIndexTest
         ClaimSnapshot child3dWide = claim(3L, "world", 1L, true, ClaimBounds.rectangle(0, 0, 0, 10, 30, 10));
         ClaimSnapshot child3dNarrow = claim(4L, "world", 1L, true, ClaimBounds.rectangle(0, 5, 0, 10, 8, 10));
 
-        index.rebuild(List.of(parent, child2d, child3dWide, child3dNarrow));
+        index.rebuild(Arrays.asList(parent, child2d, child3dWide, child3dNarrow));
 
         assertSame(child3dNarrow, index.findAt("world", 5, 6, 5, false, false));
         assertSame(child3dWide, index.findAt("world", 5, 20, 5, false, false));
@@ -87,7 +89,7 @@ class ClaimSnapshotIndexTest
         ClaimSnapshot parent = claim(1L, "world", null, false, ClaimBounds.rectangle(0, -64, 0, 20, 320, 20));
         ClaimSnapshot child = claim(2L, "world", 1L, false, ClaimBounds.rectangle(0, 0, 0, 10, 10, 10));
 
-        index.rebuild(List.of(parent, child));
+        index.rebuild(Arrays.asList(parent, child));
 
         assertSame(child, index.findAt("world", 5, 70, 5, false, false));
         assertSame(parent, index.findAt("world", 5, 70, 5, false, true));

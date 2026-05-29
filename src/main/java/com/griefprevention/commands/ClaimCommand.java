@@ -8,7 +8,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-@Deprecated(forRemoval = true, since = "18.0")
+@Deprecated
 public class ClaimCommand extends CommandHandler
 {
     private final ClaimCreateCommandAction createAction;

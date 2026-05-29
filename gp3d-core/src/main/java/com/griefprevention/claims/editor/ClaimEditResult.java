@@ -5,6 +5,8 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Collections;
+import java.util.ArrayList;
 
 /**
  * Output from applying an editor intent.
@@ -31,7 +33,7 @@ public final class ClaimEditResult
         this.fallbackMessage = fallbackMessage;
         this.session = session;
         this.preview = preview;
-        this.messages = List.copyOf(messages);
+        this.messages = Collections.unmodifiableList(new ArrayList<>(messages));
     }
 
     public static @NotNull ClaimEditResult success(

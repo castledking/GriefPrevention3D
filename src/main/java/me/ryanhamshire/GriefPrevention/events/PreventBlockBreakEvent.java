@@ -10,7 +10,7 @@ import org.jetbrains.annotations.NotNull;
  * @deprecated Listen to {@link ClaimPermissionCheckEvent} and check if
  * {@link ClaimPermissionCheckEvent#getTriggeringEvent()} {@code instanceof} {@link BlockBreakEvent}.
  */
-@Deprecated(since = "17.0.0")
+@Deprecated
 public class PreventBlockBreakEvent extends Event implements Cancellable
 {
     private final @NotNull BlockBreakEvent innerEvent;
@@ -20,7 +20,7 @@ public class PreventBlockBreakEvent extends Event implements Cancellable
      *
      * @param innerEvent the inner {@link BlockBreakEvent}
      */
-    @Deprecated(since = "17.0.0")
+    @Deprecated
     public PreventBlockBreakEvent(@NotNull BlockBreakEvent innerEvent)
     {
         this.innerEvent = innerEvent;
@@ -31,7 +31,7 @@ public class PreventBlockBreakEvent extends Event implements Cancellable
      *
      * @return the inner {@code BlockBreakEvent}
      */
-    @Deprecated(since = "17.0.0")
+    @Deprecated
     public @NotNull BlockBreakEvent getInnerEvent()
     {
         return this.innerEvent;
@@ -40,14 +40,14 @@ public class PreventBlockBreakEvent extends Event implements Cancellable
     // Listenable event requirements
     private static final HandlerList HANDLERS = new HandlerList();
 
-    @Deprecated(since = "17.0.0")
+    @Deprecated
     public static HandlerList getHandlerList()
     {
         return HANDLERS;
     }
 
     @Override
-    @Deprecated(since = "17.0.0")
+    @Deprecated
     public @NotNull HandlerList getHandlers()
     {
         return HANDLERS;
@@ -57,14 +57,14 @@ public class PreventBlockBreakEvent extends Event implements Cancellable
     private boolean cancelled = false;
 
     @Override
-    @Deprecated(since = "17.0.0")
+    @Deprecated
     public boolean isCancelled()
     {
         return cancelled;
     }
 
     @Override
-    @Deprecated(since = "17.0.0")
+    @Deprecated
     public void setCancelled(boolean cancelled)
     {
         this.cancelled = cancelled;

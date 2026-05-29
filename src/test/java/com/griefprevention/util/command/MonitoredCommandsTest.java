@@ -38,6 +38,8 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
+import java.util.Arrays;
+import java.util.Collections;
 
 @SuppressWarnings("null")
 class MonitoredCommandsTest
@@ -65,13 +67,13 @@ class MonitoredCommandsTest
         Command command = mock(clazz);
         doReturn(command).when(commandMap).getCommand("test");
         doReturn("test").when(command).getLabel();
-        doReturn(List.of("tset")).when(command).getAliases();
+        doReturn(Collections.singletonList("tset")).when(command).getAliases();
 
-        MonitoredCommands monitor = new MonitoredCommands(List.of("/test"));
+        MonitoredCommands monitor = new MonitoredCommands(Collections.singletonList("/test"));
 
         assertTrue(monitor.isMonitoredCommand(new MonitorableCommand("/test")));
         assertTrue(monitor.isMonitoredCommand(new MonitorableCommand("/tset")));
-        List<String> invalidPrefixes = new ArrayList<>(List.of("/minecraft:", "/bukkit:", "/invalid:"));
+        List<String> invalidPrefixes = new ArrayList<>(Arrays.asList("/minecraft:", "/bukkit:", "/invalid:"));
         if (prefix != null)
         {
             assertTrue(monitor.isMonitoredCommand(new MonitorableCommand(prefix + "test")));
@@ -88,11 +90,7 @@ class MonitoredCommandsTest
 
     private static Collection<Arguments> commandsAndPrefixes()
     {
-        return List.of(
-                Arguments.of(Command.class, null),
-                Arguments.of(BukkitCommand.class, "/bukkit:"),
-                Arguments.of(MinecraftCommand.class, "/minecraft:")
-        );
+        return Arrays.asList(Arguments.of(Command.class, null), Arguments.of(BukkitCommand.class, "/bukkit:"), Arguments.of(MinecraftCommand.class, "/minecraft:"));
     }
 
     @Test
@@ -101,14 +99,14 @@ class MonitoredCommandsTest
         Command command = mock();
         doReturn(command).when(commandMap).getCommand("prefix:test");
         doReturn("prefix:test").when(command).getLabel();
-        doReturn(List.of("tset")).when(command).getAliases();
+        doReturn(Collections.singletonList("tset")).when(command).getAliases();
 
         Plugin plugin = mock();
         doReturn("PreFix").when(plugin).getName();
         PluginManager pluginManager = server.getPluginManager();
         doReturn(new Plugin[]{plugin}).when(pluginManager).getPlugins();
 
-        MonitoredCommands monitor = new MonitoredCommands(List.of("/test"));
+        MonitoredCommands monitor = new MonitoredCommands(Collections.singletonList("/test"));
 
         assertFalse(monitor.isMonitoredCommand(new MonitorableCommand("/test")));
         assertTrue(monitor.isMonitoredCommand(new MonitorableCommand("/prefix:test")));
@@ -128,7 +126,7 @@ class MonitoredCommandsTest
         doReturn(command).when(commandMap).getCommand("test");
         doReturn("test").when(command).getLabel();
 
-        MonitoredCommands monitor = new MonitoredCommands(List.of(monitored));
+        MonitoredCommands monitor = new MonitoredCommands(Collections.singletonList(monitored));
 
         assertTrue(monitor.isMonitoredCommand(new MonitorableCommand(executed)));
     }
@@ -145,7 +143,7 @@ class MonitoredCommandsTest
         doReturn(command).when(commandMap).getCommand("test");
         doReturn("test").when(command).getLabel();
 
-        MonitoredCommands monitor = new MonitoredCommands(List.of(monitored));
+        MonitoredCommands monitor = new MonitoredCommands(Collections.singletonList(monitored));
 
         assertTrue(monitor.isMonitoredCommand(new MonitorableCommand('/' + monitored)));
         assertFalse(monitor.isMonitoredCommand(new MonitorableCommand(executed)));
@@ -156,7 +154,7 @@ class MonitoredCommandsTest
     {
         setCommandMap(null);
 
-        MonitoredCommands monitor = new MonitoredCommands(List.of("/test"));
+        MonitoredCommands monitor = new MonitoredCommands(Collections.singletonList("/test"));
 
         assertTrue(monitor.isMonitoredCommand(new MonitorableCommand("/test")));
         assertTrue(monitor.isMonitoredCommand(new MonitorableCommand("/bukkit:test")));
@@ -176,13 +174,9 @@ class MonitoredCommandsTest
 
         doReturn(command).when(server).getPluginCommand("test");
 
-        MonitoredCommands monitor = new MonitoredCommands(List.of("/test"));
+        MonitoredCommands monitor = new MonitoredCommands(Collections.singletonList("/test"));
 
-        List<String> expectedAliases = List.of(
-                "/test", "/tset",
-                "/testplugin:test", "/testplugin:tset",
-                "/minecraft:test", "/bukkit:test"
-        );
+        List<String> expectedAliases = Arrays.asList("/test", "/tset", "/testplugin:test", "/testplugin:tset", "/minecraft:test", "/bukkit:test");
         for (String alias : expectedAliases)
         {
             assertTrue(monitor.isMonitoredCommand(new MonitorableCommand(alias)));
@@ -208,7 +202,7 @@ class MonitoredCommandsTest
         Plugin plugin2 = mock();
         doReturn("AliasArray").when(plugin2).getName();
         commandData = new HashMap<>();
-        commandData.put("aliases", List.of("cool"));
+        commandData.put("aliases", Collections.singletonList("cool"));
         commands = new HashMap<>();
         commands.put("test", commandData);
         pdf = spy(new PluginDescriptionFile("AliasArray", "2", "com.example.SampleText"));
@@ -236,7 +230,7 @@ class MonitoredCommandsTest
         PluginManager pluginManager = server.getPluginManager();
         doReturn(new Plugin[]{plugin1, plugin2, plugin3, plugin4}).when(pluginManager).getPlugins();
 
-        MonitoredCommands monitor = new MonitoredCommands(List.of("/test"));
+        MonitoredCommands monitor = new MonitoredCommands(Collections.singletonList("/test"));
 
         assertTrue(monitor.isMonitoredCommand(new MonitorableCommand("/test")));
         assertTrue(monitor.isMonitoredCommand(new MonitorableCommand("/bukkit:test")));
@@ -263,13 +257,10 @@ class MonitoredCommandsTest
 
         doReturn(command).when(server).getPluginCommand("test");
 
-        MonitoredCommands monitor = new MonitoredCommands(List.of("/test"));
+        MonitoredCommands monitor = new MonitoredCommands(Collections.singletonList("/test"));
 
-        List<String> expectedAliases = List.of(
-                "/test", "/testplugin:test",
-                "/testplugin:tset", // Prefixed copies of conflicted aliases must be registered.
-                "/minecraft:test", "/bukkit:test"
-        );
+        List<String> expectedAliases = Arrays.asList("/test", "/testplugin:test", "/testplugin:tset", // Prefixed copies of conflicted aliases must be registered.
+                "/minecraft:test", "/bukkit:test");
         for (String alias : expectedAliases)
         {
             assertTrue(monitor.isMonitoredCommand(new MonitorableCommand(alias)));
@@ -283,7 +274,7 @@ class MonitoredCommandsTest
         Constructor<PluginCommand> constructor = PluginCommand.class.getDeclaredConstructor(String.class, Plugin.class);
         constructor.setAccessible(true);
         PluginCommand command = constructor.newInstance("test", owner);
-        command.setAliases(List.of("tset"));
+        command.setAliases(Collections.singletonList("tset"));
         return command;
     }
 

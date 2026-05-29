@@ -6,6 +6,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Collections;
 
 /**
  * An in-progress orthogonal path before it becomes a committed polygon edit.
@@ -25,14 +26,14 @@ public final class ShapedPathDraft
     )
     {
         this.claimId = claimId;
-        this.points = List.copyOf(points);
+        this.points = Collections.unmodifiableList(new ArrayList<>(points));
         this.snappedPreviewPoint = snappedPreviewPoint;
         this.closureReady = closureReady;
     }
 
     public static @NotNull ShapedPathDraft empty(@Nullable Long claimId)
     {
-        return new ShapedPathDraft(claimId, List.of(), null, false);
+        return new ShapedPathDraft(claimId, Collections.emptyList(), null, false);
     }
 
     public @Nullable Long claimId()

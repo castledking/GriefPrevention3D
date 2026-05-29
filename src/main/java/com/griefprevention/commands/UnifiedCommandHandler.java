@@ -30,6 +30,7 @@ import org.bukkit.command.defaults.BukkitCommand;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import com.griefprevention.compat.Compat;
 
 /**
  * Base class for unified command handlers that support subcommands
@@ -104,7 +105,7 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
         // Register every name in commands list (except canonical) so e.g. /claim and /claims both host subcommands
         if (rootCommandEnabled && rootCommandConfig != null) {
             for (String name : rootCommandConfig.getCommands()) {
-                if (name == null || name.isBlank()) continue;
+                if (name == null || Compat.isBlank(name)) continue;
                 String normalized = name.trim().toLowerCase(Locale.ROOT);
                 if (!normalized.equals(canonicalCommand)) {
                     registerDynamicRootCommand(normalized);
@@ -203,7 +204,7 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
             if (enumStandalone == null || enumStandalone.isEmpty()) {
                 return;
             }
-            standaloneNames = List.of(enumStandalone);
+            standaloneNames = Collections.singletonList(enumStandalone);
         }
 
         // Check if standalone is disabled (empty list in config means disabled)
@@ -214,7 +215,7 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
 
         // Register each standalone command name
         for (String standaloneName : standaloneNames) {
-            if (standaloneName == null || standaloneName.isBlank()) continue;
+            if (standaloneName == null || Compat.isBlank(standaloneName)) continue;
             registerDynamicStandaloneCommand(standaloneName.trim(), finalSubcommandName, handler, tabExecutor, config);
         }
     }
@@ -361,12 +362,12 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
         if (config == null) return;
 
         String description = config.getDescription();
-        if (description != null && !description.isBlank()) {
+        if (description != null && !Compat.isBlank(description)) {
             pluginCommand.setDescription(description);
         }
 
         String permission = config.getPermission();
-        if (permission != null && !permission.isBlank()) {
+        if (permission != null && !Compat.isBlank(permission)) {
             pluginCommand.setPermission(permission);
         }
     }
@@ -711,7 +712,7 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
         }
 
         String fallback = rootCommandConfig.getFallback();
-        if (fallback == null || fallback.isBlank()) {
+        if (fallback == null || Compat.isBlank(fallback)) {
             return false;
         }
 
@@ -777,7 +778,7 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
             return true;
         }
         String permission = config.getPermission();
-        return permission == null || permission.isBlank() || sender.hasPermission(permission);
+        return permission == null || Compat.isBlank(permission) || sender.hasPermission(permission);
     }
 
     /**
@@ -982,12 +983,12 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
         }
 
         String description = rootCommandConfig.getDescription();
-        if (description != null && !description.isBlank()) {
+        if (description != null && !Compat.isBlank(description)) {
             pluginCommand.setDescription(description);
         }
 
         String permission = rootCommandConfig.getPermission();
-        if (permission != null && !permission.isBlank()) {
+        if (permission != null && !Compat.isBlank(permission)) {
             pluginCommand.setPermission(permission);
         }
     }
@@ -1025,14 +1026,14 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
 
     protected void sendUsageMessage(@NotNull CommandSender sender, @NotNull String canonical) {
         String usage = getUsageText(canonical);
-        if (usage == null || usage.isBlank()) {
+        if (usage == null || Compat.isBlank(usage)) {
             return;
         }
 
         sender.sendMessage(ChatColor.RED + "Usage: " + ChatColor.YELLOW + usage);
 
         String description = rootCommandConfig != null ? rootCommandConfig.getDescription() : null;
-        if (description != null && !description.isBlank()) {
+        if (description != null && !Compat.isBlank(description)) {
             sender.sendMessage(ChatColor.GRAY + description);
         }
     }
@@ -1118,7 +1119,7 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
             CommandAliasConfiguration.Subcommand config = entry.getValue();
 
             String subcommandUsage = getUsageText(canonical);
-            if (subcommandUsage == null || subcommandUsage.isBlank()) {
+            if (subcommandUsage == null || Compat.isBlank(subcommandUsage)) {
                 continue;
             }
 
@@ -1201,7 +1202,7 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
         CommandAliasConfiguration.Subcommand config = subcommandConfigs.get(canonical);
         if (config != null) {
             String usage = config.getUsage();
-            if (usage != null && !usage.isBlank()) {
+            if (usage != null && !Compat.isBlank(usage)) {
                 return formatUsageText(usage);
             }
 

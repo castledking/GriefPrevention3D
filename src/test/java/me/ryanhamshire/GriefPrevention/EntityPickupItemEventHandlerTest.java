@@ -103,7 +103,7 @@ class EntityPickupItemEventHandlerTest
         when(ownerMetadata.value()).thenReturn(playerId);
 
         Item item = mock(Item.class);
-        when(item.getMetadata("GP_ITEMOWNER")).thenReturn(List.of(ownerMetadata));
+        when(item.getMetadata("GP_ITEMOWNER")).thenReturn(Collections.singletonList(ownerMetadata));
         EntityPickupItemEvent event = mock(EntityPickupItemEvent.class);
         when(event.getEntity()).thenReturn(player);
         when(event.getItem()).thenReturn(item);

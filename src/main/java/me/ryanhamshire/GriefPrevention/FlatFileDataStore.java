@@ -48,6 +48,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
+import java.util.Collections;
 
 //manages data stored in the file system
 public class FlatFileDataStore extends DataStore
@@ -515,7 +516,7 @@ public class FlatFileDataStore extends DataStore
         List<OrthogonalPoint2i> corners = claim.getShapedCorners();
         if (corners == null || corners.isEmpty())
         {
-            return List.of();
+            return Collections.emptyList();
         }
 
         List<String> serialized = new ArrayList<>(corners.size());
@@ -530,7 +531,7 @@ public class FlatFileDataStore extends DataStore
     {
         if (serializedCorners == null || serializedCorners.isEmpty())
         {
-            return List.of();
+            return Collections.emptyList();
         }
 
         List<OrthogonalPoint2i> corners = new ArrayList<>(serializedCorners.size());

@@ -83,6 +83,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.BiPredicate;
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -941,7 +942,7 @@ public class BlockEventHandler implements Listener
                 Location pistonCenter = pistonBlock.getLocation().add(0.5, 0.5, 0.5);
                 final Claim blockingClaim = claim;
                 @SuppressWarnings("null")
-                var nearestPlayer = Bukkit.getOnlinePlayers().stream()
+                Optional<? extends Player> nearestPlayer = Bukkit.getOnlinePlayers().stream()
                         .filter(p -> p.getWorld() == pistonBlock.getWorld())
                         .filter(p -> pistonClaim == null
                                 ? p.getLocation().distanceSquared(pistonCenter) < 32 * 32

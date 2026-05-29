@@ -9,6 +9,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.Arrays;
 
 class ClaimBoundsTest
 {
@@ -76,14 +77,6 @@ class ClaimBoundsTest
 
     private static OrthogonalPolygon lShape()
     {
-        return OrthogonalPolygon.fromClosedPath(List.of(
-                new OrthogonalPoint2i(0, 0),
-                new OrthogonalPoint2i(4, 0),
-                new OrthogonalPoint2i(4, 1),
-                new OrthogonalPoint2i(1, 1),
-                new OrthogonalPoint2i(1, 4),
-                new OrthogonalPoint2i(0, 4),
-                new OrthogonalPoint2i(0, 0)
-        ));
+        return OrthogonalPolygon.fromClosedPath(Arrays.asList(new OrthogonalPoint2i(0, 0), new OrthogonalPoint2i(4, 0), new OrthogonalPoint2i(4, 1), new OrthogonalPoint2i(1, 1), new OrthogonalPoint2i(1, 4), new OrthogonalPoint2i(0, 4), new OrthogonalPoint2i(0, 0)));
     }
 }

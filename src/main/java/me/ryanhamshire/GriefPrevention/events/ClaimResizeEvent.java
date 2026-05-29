@@ -44,7 +44,7 @@ public class ClaimResizeEvent extends ClaimChangeEvent
      * @return the resulting {@code Claim}
      * @deprecated Use {@link #getTo()} instead.
      */
-    @Deprecated(forRemoval = true, since = "16.18")
+    @Deprecated
     public @NotNull Claim getClaim()
     {
         return getTo();

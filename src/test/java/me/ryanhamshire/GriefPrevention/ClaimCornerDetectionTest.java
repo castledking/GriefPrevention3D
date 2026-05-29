@@ -8,6 +8,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import java.util.Collections;
 
 class ClaimCornerDetectionTest
 {
@@ -77,10 +78,10 @@ class ClaimCornerDetectionTest
                 new Location(null, x1, y1, z1),
                 new Location(null, x2, y2, z2),
                 null,
-                List.of(),
-                List.of(),
-                List.of(),
-                List.of(),
+                Collections.emptyList(),
+                Collections.emptyList(),
+                Collections.emptyList(),
+                Collections.emptyList(),
                 false,
                 1L,
                 true);

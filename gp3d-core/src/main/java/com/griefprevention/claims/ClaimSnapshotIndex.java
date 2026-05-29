@@ -107,7 +107,7 @@ public final class ClaimSnapshotIndex
         Map<Long, Set<Long>> worldChunks = this.chunkClaimIdsByWorld.get(worldKey);
         if (worldChunks == null)
         {
-            return List.of();
+            return Collections.emptyList();
         }
 
         Set<Long> candidateIds = new LinkedHashSet<>();

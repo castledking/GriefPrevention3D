@@ -106,7 +106,7 @@ class CustomLogger
             File logFile = new File(filepath);
 
             //dump content
-            java.nio.file.Files.writeString(logFile.toPath(), this.queuedEntries.toString(), StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+            java.nio.file.Files.write(logFile.toPath(), this.queuedEntries.toString().getBytes(StandardCharsets.UTF_8), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
 
             //in case of a failure to write the above due to exception,
             //the unwritten entries will remain the buffer for the next write to retry

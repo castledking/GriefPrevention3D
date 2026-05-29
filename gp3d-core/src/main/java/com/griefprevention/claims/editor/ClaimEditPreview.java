@@ -8,6 +8,8 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Collections;
+import java.util.ArrayList;
 
 /**
  * A non-committed result to visualize or describe back to the player.
@@ -33,11 +35,11 @@ public final class ClaimEditPreview
     {
         this.polygon = polygon;
         this.highlightedSegment = highlightedSegment;
-        this.draftPoints = List.copyOf(draftPoints);
+        this.draftPoints = Collections.unmodifiableList(new ArrayList<>(draftPoints));
         this.snappedPoint = snappedPoint;
-        this.conflictPoints = List.copyOf(conflictPoints);
-        this.issues = List.copyOf(issues);
-        this.messages = List.copyOf(messages);
+        this.conflictPoints = Collections.unmodifiableList(new ArrayList<>(conflictPoints));
+        this.issues = Collections.unmodifiableList(new ArrayList<>(issues));
+        this.messages = Collections.unmodifiableList(new ArrayList<>(messages));
     }
 
     public @Nullable OrthogonalPolygon polygon()
@@ -77,7 +79,7 @@ public final class ClaimEditPreview
 
     public static @NotNull ClaimEditPreview empty()
     {
-        return new ClaimEditPreview(null, null, List.of(), null, List.of(), List.of(), List.of());
+        return new ClaimEditPreview(null, null, Collections.emptyList(), null, Collections.emptyList(), Collections.emptyList(), Collections.emptyList());
     }
 
     @Override

@@ -5,6 +5,7 @@ import org.bukkit.command.CommandSender;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
+import com.griefprevention.compat.Compat;
 
 /**
  * Registry for addons that extend /claim and /aclaim completions and command execution.
@@ -50,7 +51,7 @@ public final class ClaimCommandAddonRegistry {
                 List<String> extra = addon.getTabCompletions(sender, rootCommand, subcommand, args);
                 if (extra != null) {
                     for (String s : extra) {
-                        if (s != null && !s.isBlank() && !result.contains(s)
+                        if (s != null && !Compat.isBlank(s) && !result.contains(s)
                                 && (lowerPrefix.isEmpty() || s.toLowerCase().startsWith(lowerPrefix))) {
                             result.add(s);
                         }
@@ -77,7 +78,7 @@ public final class ClaimCommandAddonRegistry {
                 List<String> extra = addon.getSubcommandCompletions(sender, rootCommand);
                 if (extra != null) {
                     for (String s : extra) {
-                        if (s != null && !s.isBlank() && !result.contains(s)
+                        if (s != null && !Compat.isBlank(s) && !result.contains(s)
                                 && (lowerPrefix.isEmpty() || s.toLowerCase().startsWith(lowerPrefix))) {
                             result.add(s);
                         }

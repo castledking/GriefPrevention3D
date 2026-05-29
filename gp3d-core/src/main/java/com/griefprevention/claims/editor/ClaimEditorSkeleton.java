@@ -19,6 +19,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.Arrays;
+import java.util.Collections;
 
 /**
  * Minimal placeholder implementation to anchor the recode editor boundary.
@@ -34,13 +36,13 @@ public final class ClaimEditorSkeleton implements ClaimEditor
                 return ClaimEditResult.success(
                         session.withMode(intent.mode(), intent.source()).withPreview(ClaimEditPreview.empty()),
                         ClaimEditPreview.empty(),
-                        List.of("Entered " + intent.mode() + " mode.")
+                        Collections.singletonList("Entered " + intent.mode() + " mode.")
                 );
             case EXIT_MODE:
                 return ClaimEditResult.success(
                         ClaimEditorSession.idle(session.playerId()),
                         ClaimEditPreview.empty(),
-                        List.of("Exited claim editor mode.")
+                        Collections.singletonList("Exited claim editor mode.")
                 );
             case SELECT_SEGMENT:
                 return handleSelectSegment(session, intent);
@@ -58,7 +60,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
                         null,
                         session,
                         session.preview(),
-                        List.of("Claim editor intent not implemented yet: " + intent.type())
+                        Collections.singletonList("Claim editor intent not implemented yet: " + intent.type())
                 );
         }
     }
@@ -72,7 +74,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
                     null,
                     session,
                     session.preview(),
-                    List.of("Segments can only be selected while in shaped mode.")
+                    Collections.singletonList("Segments can only be selected while in shaped mode.")
             );
         }
 
@@ -83,7 +85,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
                     ClaimEditMessageKey.MUST_HOLD_MODIFICATION_TOOL_FOR_THAT,
                     session,
                     session.preview(),
-                    List.of("You must be holding a golden shovel to do that.")
+                    Collections.singletonList("You must be holding a golden shovel to do that.")
             );
         }
 
@@ -95,7 +97,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
                     null,
                     session,
                     session.preview(),
-                    List.of("No parent claim boundary is selected for segment editing.")
+                    Collections.singletonList("No parent claim boundary is selected for segment editing.")
             );
         }
 
@@ -107,7 +109,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
                     null,
                     session,
                     session.preview(),
-                    List.of("No segment selection point was provided.")
+                    Collections.singletonList("No segment selection point was provided.")
             );
         }
 
@@ -119,7 +121,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
                     null,
                     session,
                     session.preview(),
-                    List.of("That point does not resolve to a single editable segment.")
+                    Collections.singletonList("That point does not resolve to a single editable segment.")
             );
         }
 
@@ -132,7 +134,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
                 session.preview().snappedPoint(),
                 session.preview().conflictPoints(),
                 session.preview().issues(),
-                List.of("Segment selected.")
+                Collections.singletonList("Segment selected.")
         );
         ClaimEditorSession updatedSession = session.withActiveSegment(selection).withPreview(preview);
         return ClaimEditResult.success(updatedSession, preview, preview.messages());
@@ -147,7 +149,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
                     null,
                     session,
                     session.preview(),
-                    List.of("Segments can only be expanded while in shaped mode.")
+                    Collections.singletonList("Segments can only be expanded while in shaped mode.")
             );
         }
 
@@ -158,7 +160,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
                     ClaimEditMessageKey.MUST_HOLD_MODIFICATION_TOOL_FOR_THAT,
                     session,
                     session.preview(),
-                    List.of("You must be holding a golden shovel to do that.")
+                    Collections.singletonList("You must be holding a golden shovel to do that.")
             );
         }
 
@@ -170,7 +172,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
                     null,
                     session,
                     session.preview(),
-                    List.of("Select a claim segment before expanding it.")
+                    Collections.singletonList("Select a claim segment before expanding it.")
             );
         }
 
@@ -182,7 +184,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
                     null,
                     session,
                     session.preview(),
-                    List.of("No parent claim boundary is selected for segment editing.")
+                    Collections.singletonList("No parent claim boundary is selected for segment editing.")
             );
         }
 
@@ -202,7 +204,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
                     null,
                     session,
                     session.preview(),
-                    List.of(exception.getMessage())
+                    Collections.singletonList(exception.getMessage())
             );
         }
 
@@ -210,7 +212,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
         {
             ClaimEditPreview preview = previewFromPolygonValidation(
                     validationResult,
-                    List.of("That segment cannot be expanded there.")
+                    Collections.singletonList("That segment cannot be expanded there.")
             );
             ClaimEditFailureType failureType = validationResult.issues().stream()
                     .anyMatch(issue -> issue.type() == OrthogonalPolygonValidationIssueType.SELF_INTERSECTION)
@@ -223,11 +225,11 @@ public final class ClaimEditorSkeleton implements ClaimEditor
         ClaimEditPreview preview = new ClaimEditPreview(
                 updatedPolygon,
                 updatedSelection,
-                List.of(),
+                Collections.emptyList(),
                 null,
-                List.of(),
-                List.of(),
-                List.of("Segment expanded.")
+                Collections.emptyList(),
+                Collections.emptyList(),
+                Collections.singletonList("Segment expanded.")
         );
         ClaimEditorSession updatedSession = session.withActiveSegment(updatedSelection).withPreview(preview);
         return ClaimEditResult.success(updatedSession, preview, preview.messages());
@@ -242,7 +244,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
                     null,
                     session,
                     session.preview(),
-                    List.of("Corners can only be added while in shaped mode.")
+                    Collections.singletonList("Corners can only be added while in shaped mode.")
             );
         }
 
@@ -253,7 +255,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
                     ClaimEditMessageKey.MUST_HOLD_MODIFICATION_TOOL_FOR_THAT,
                     session,
                     session.preview(),
-                    List.of("You must be holding a golden shovel to do that.")
+                    Collections.singletonList("You must be holding a golden shovel to do that.")
             );
         }
 
@@ -265,7 +267,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
                     null,
                     session,
                     session.preview(),
-                    List.of("No shaped corner point was provided.")
+                    Collections.singletonList("No shaped corner point was provided.")
             );
         }
 
@@ -290,7 +292,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
                         null,
                         session,
                         session.preview(),
-                        List.of("Start reshaping by clicking an existing claim boundary point.")
+                        Collections.singletonList("Start reshaping by clicking an existing claim boundary point.")
                 );
             }
 
@@ -298,7 +300,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
             ClaimEditPreview preview = draftPreview(
                     updatedDraft,
                     basePolygon,
-                    List.of(basePolygon == null ? "First shaped corner set." : "Segment point added.")
+                    Collections.singletonList(basePolygon == null ? "First shaped corner set." : "Segment point added.")
             );
             return ClaimEditResult.success(
                     session.withOpenPath(updatedDraft).withPreview(preview),
@@ -318,7 +320,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
                     null,
                     session,
                     session.preview(),
-                    List.of("That corner is already the current endpoint.")
+                    Collections.singletonList("That corner is already the current endpoint.")
             );
         }
 
@@ -331,7 +333,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
             if (point.equals(lastPoint))
             {
                 ShapedPathDraft snappedDraft = draft.withSnappedPreview(point);
-                ClaimEditPreview preview = draftPreview(snappedDraft, basePolygon, List.of("Shaped claims must turn on the same X or Z axis."));
+                ClaimEditPreview preview = draftPreview(snappedDraft, basePolygon, Collections.singletonList("Shaped claims must turn on the same X or Z axis."));
                 return ClaimEditResult.failure(
                         ClaimEditFailureType.INVALID_GEOMETRY,
                         null,
@@ -348,8 +350,8 @@ public final class ClaimEditorSkeleton implements ClaimEditor
                     ClaimEditFailureType.INVALID_GEOMETRY,
                     null,
                     session,
-                    draftPreview(draft, basePolygon, List.of("That corner is already part of the current shaped path.")),
-                    List.of("That corner is already part of the current shaped path.")
+                    draftPreview(draft, basePolygon, Collections.singletonList("That corner is already part of the current shaped path.")),
+                    Collections.singletonList("That corner is already part of the current shaped path.")
             );
         }
 
@@ -359,13 +361,13 @@ public final class ClaimEditorSkeleton implements ClaimEditor
                     ClaimEditFailureType.INVALID_GEOMETRY,
                     null,
                     session,
-                    draftPreview(draft, basePolygon, List.of("A shaped claim needs at least 4 corners before it can close.")),
-                    List.of("A shaped claim needs at least 4 corners before it can close.")
+                    draftPreview(draft, basePolygon, Collections.singletonList("A shaped claim needs at least 4 corners before it can close.")),
+                    Collections.singletonList("A shaped claim needs at least 4 corners before it can close.")
             );
         }
 
         List<OrthogonalPoint2i> candidatePoints = new ArrayList<>(points);
-        List<OrthogonalPoint2i> reconnectCandidates = List.of();
+        List<OrthogonalPoint2i> reconnectCandidates = Collections.emptyList();
         OrthogonalPoint2i mergeBoundaryPoint = null;
         if (basePolygon != null)
         {
@@ -395,7 +397,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
                 ClaimEditPreview preview = closedPreview(
                         updatedDraft,
                         bestMerge.result().polygon(),
-                        List.of("Boundary reshape path merged.")
+                        Collections.singletonList("Boundary reshape path merged.")
                 );
                 return ClaimEditResult.success(
                         session.withOpenPath(updatedDraft).withPreview(preview),
@@ -407,7 +409,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
             ClaimEditPreview preview = draftPreview(
                     new ShapedPathDraft(draft.claimId(), candidatePoints, null, false),
                     basePolygon,
-                    List.of("That reshape path cannot merge cleanly into the existing claim boundary.")
+                    Collections.singletonList("That reshape path cannot merge cleanly into the existing claim boundary.")
             );
             return ClaimEditResult.failure(
                     ClaimEditFailureType.INVALID_GEOMETRY,
@@ -428,7 +430,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
             ClaimEditPreview preview = draftPreview(
                     updatedDraft,
                     basePolygon,
-                    List.of("Segment point added.")
+                    Collections.singletonList("Segment point added.")
             );
             return ClaimEditResult.success(
                     session.withOpenPath(updatedDraft).withPreview(preview),
@@ -444,8 +446,8 @@ public final class ClaimEditorSkeleton implements ClaimEditor
                     updatedDraft,
                     basePolygon,
                     rawPoint.equals(point)
-                            ? List.of("Shaped corner added.")
-                            : List.of("Shaped corner snapped into orthogonal alignment.")
+                            ? Collections.singletonList("Shaped corner added.")
+                            : Collections.singletonList("Shaped corner snapped into orthogonal alignment.")
             );
             return ClaimEditResult.success(
                     session.withOpenPath(updatedDraft).withPreview(preview),
@@ -457,7 +459,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
         OrthogonalPolygonValidationResult validationResult = OrthogonalPolygon.validatePath(candidatePoints);
         if (!validationResult.isValid())
         {
-            ClaimEditPreview preview = previewFromValidation(draft, basePolygon, validationResult, List.of("This shaped claim would intersect itself or violate closure rules."));
+            ClaimEditPreview preview = previewFromValidation(draft, basePolygon, validationResult, Collections.singletonList("This shaped claim would intersect itself or violate closure rules."));
             ClaimEditFailureType failureType = validationResult.issues().stream()
                     .anyMatch(issue -> issue.type() == OrthogonalPolygonValidationIssueType.SELF_INTERSECTION)
                     ? ClaimEditFailureType.SELF_INTERSECTION
@@ -469,7 +471,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
         ClaimEditPreview preview = closedPreview(
                 updatedDraft,
                 validationResult.polygon(),
-                rawPoint.equals(point) ? List.of("Shaped path closed.") : List.of("Shaped path snapped closed.")
+                rawPoint.equals(point) ? Collections.singletonList("Shaped path closed.") : Collections.singletonList("Shaped path snapped closed.")
         );
         return ClaimEditResult.success(
                 session.withOpenPath(updatedDraft).withPreview(preview),
@@ -498,7 +500,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
                 int distance)
         {
             this.reconnectPoint = reconnectPoint;
-            this.candidatePoints = List.copyOf(candidatePoints);
+            this.candidatePoints = Collections.unmodifiableList(new ArrayList<>(candidatePoints));
             this.result = result;
             this.containsOriginal = containsOriginal;
             this.area = area;
@@ -546,7 +548,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
         OrthogonalEdge2i segment = new OrthogonalEdge2i(from, to);
         if (!segment.isOrthogonal())
         {
-            return List.of();
+            return Collections.emptyList();
         }
 
         List<OrthogonalPoint2i> candidates = new ArrayList<>();
@@ -564,7 +566,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
                 .comparingInt((OrthogonalPoint2i candidate) -> Math.abs(candidate.x() - from.x()) + Math.abs(candidate.z() - from.z()))
                 .thenComparingInt(OrthogonalPoint2i::x)
                 .thenComparingInt(OrthogonalPoint2i::z));
-        return List.copyOf(candidates);
+        return Collections.unmodifiableList(new ArrayList<>(candidates));
     }
 
     private @Nullable BoundaryMergeAttempt selectBestBoundaryMerge(
@@ -604,7 +606,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
             int distance = Math.abs(reconnectPoint.x() - lastPoint.x()) + Math.abs(reconnectPoint.z() - lastPoint.z());
             BoundaryMergeAttempt attempt = new BoundaryMergeAttempt(
                     reconnectPoint,
-                    List.copyOf(candidatePoints),
+                    Collections.unmodifiableList(new ArrayList<>(candidatePoints)),
                     mergeResult,
                     containsOriginal,
                     area,
@@ -772,7 +774,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
             @Nullable OrthogonalPolygon polygon,
             @NotNull List<String> messages)
     {
-        return new ClaimEditPreview(polygon, null, draft.points(), draft.snappedPreviewPoint(), List.of(), List.of(), messages);
+        return new ClaimEditPreview(polygon, null, draft.points(), draft.snappedPreviewPoint(), Collections.emptyList(), Collections.emptyList(), messages);
     }
 
     private @NotNull ClaimEditPreview closedPreview(
@@ -781,7 +783,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
             @NotNull List<String> messages
     )
     {
-        return new ClaimEditPreview(polygon, null, draft.points(), draft.snappedPreviewPoint(), List.of(), List.of(), messages);
+        return new ClaimEditPreview(polygon, null, draft.points(), draft.snappedPreviewPoint(), Collections.emptyList(), Collections.emptyList(), messages);
     }
 
     private @NotNull ClaimEditPreview previewFromValidation(
@@ -818,7 +820,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
         return new ClaimEditPreview(
                 validationResult.polygon(),
                 null,
-                List.of(),
+                Collections.emptyList(),
                 null,
                 conflictPoints,
                 validationResult.issues(),
@@ -1182,7 +1184,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
                         .thenComparingInt(edge -> edge.start().x())
                         .thenComparingInt(edge -> edge.end().x())
                         .thenComparingInt(edge -> edge.end().z()))
-                .orElseThrow();
+                .get();
 
         List<ContourVertex> traced = new ArrayList<>();
         traced.add(startEdge.start());
@@ -1545,7 +1547,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
                     null,
                     session,
                     session.preview(),
-                    List.of("Nodes can only be added while in shaped mode.")
+                    Collections.singletonList("Nodes can only be added while in shaped mode.")
             );
         }
 
@@ -1556,7 +1558,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
                     ClaimEditMessageKey.MUST_HOLD_MODIFICATION_TOOL_FOR_THAT,
                     session,
                     session.preview(),
-                    List.of("You must be holding a golden shovel to do that.")
+                    Collections.singletonList("You must be holding a golden shovel to do that.")
             );
         }
 
@@ -1568,7 +1570,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
                     null,
                     session,
                     session.preview(),
-                    List.of("No parent claim boundary is selected for node editing.")
+                    Collections.singletonList("No parent claim boundary is selected for node editing.")
             );
         }
 
@@ -1580,7 +1582,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
                     null,
                     session,
                     session.preview(),
-                    List.of("No node point was provided.")
+                    Collections.singletonList("No node point was provided.")
             );
         }
 
@@ -1594,7 +1596,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
                         null,
                         session,
                         session.preview(),
-                        List.of("That point is already a claim corner.")
+                        Collections.singletonList("That point is already a claim corner.")
                 );
             }
 
@@ -1610,7 +1612,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
                         null,
                         session,
                         session.preview(),
-                        List.of(exception.getMessage())
+                        Collections.singletonList(exception.getMessage())
                 );
             }
 
@@ -1621,11 +1623,11 @@ public final class ClaimEditorSkeleton implements ClaimEditor
             ClaimEditPreview preview = new ClaimEditPreview(
                     updatedPolygon,
                     selection,
-                    List.of(),
+                    Collections.emptyList(),
                     null,
-                    List.of(),
-                    List.of(),
-                    List.of("Boundary segment marker removed.")
+                    Collections.emptyList(),
+                    Collections.emptyList(),
+                    Collections.singletonList("Boundary segment marker removed.")
             );
             ClaimEditorSession updatedSession = session.withActiveSegment(selection).withPreview(preview);
             return ClaimEditResult.success(updatedSession, preview, preview.messages());
@@ -1639,7 +1641,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
                     null,
                     session,
                     session.preview(),
-                    List.of("That node point does not resolve to a single editable boundary segment.")
+                    Collections.singletonList("That node point does not resolve to a single editable boundary segment.")
             );
         }
 
@@ -1655,7 +1657,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
                     null,
                     session,
                     session.preview(),
-                    List.of(exception.getMessage())
+                    Collections.singletonList(exception.getMessage())
             );
         }
 
@@ -1664,11 +1666,11 @@ public final class ClaimEditorSkeleton implements ClaimEditor
         ClaimEditPreview preview = new ClaimEditPreview(
                 updatedPolygon,
                 selection,
-                List.of(),
+                Collections.emptyList(),
                 null,
-                List.of(),
-                List.of(),
-                List.of("Boundary segment marker added.")
+                Collections.emptyList(),
+                Collections.emptyList(),
+                Collections.singletonList("Boundary segment marker added.")
         );
         ClaimEditorSession updatedSession = session.withActiveSegment(selection).withPreview(preview);
         return ClaimEditResult.success(updatedSession, preview, preview.messages());
@@ -1683,7 +1685,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
                     null,
                     session,
                     session.preview(),
-                    List.of("There is no shaped path to cancel.")
+                    Collections.singletonList("There is no shaped path to cancel.")
             );
         }
 
@@ -1691,11 +1693,11 @@ public final class ClaimEditorSkeleton implements ClaimEditor
         ClaimEditPreview preview = new ClaimEditPreview(
                 existingPreview.polygon(),
                 existingPreview.highlightedSegment(),
-                List.of(),
+                Collections.emptyList(),
                 null,
-                List.of(),
-                List.of(),
-                List.of("Shaped path cancelled.")
+                Collections.emptyList(),
+                Collections.emptyList(),
+                Collections.singletonList("Shaped path cancelled.")
         );
         ClaimEditorSession updatedSession = session.withOpenPath(null).withPreview(preview);
         return ClaimEditResult.success(updatedSession, preview, preview.messages());
@@ -1789,13 +1791,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
                     : new SegmentSelection(activeSegment.claimId(), directEdgeIndex, null, null, null);
             return new SegmentExpansion(directResult, directSelection);
         }
-        OrthogonalPolygon sweep = OrthogonalPolygon.fromClosedPath(List.of(
-                edge.start(),
-                edge.end(),
-                movedEnd,
-                movedStart,
-                edge.start()
-        ));
+        OrthogonalPolygon sweep = OrthogonalPolygon.fromClosedPath(Arrays.asList(edge.start(), edge.end(), movedEnd, movedStart, edge.start()));
         debug("expandSegment sweep=%s", sweep.corners());
 
         OrthogonalPolygon updatedPolygon = signedAmount > 0
@@ -1938,11 +1934,7 @@ public final class ClaimEditorSkeleton implements ClaimEditor
         for (int i = 0; i < queue.size(); i++)
         {
             OrthogonalPoint2i current = queue.get(i);
-            for (OrthogonalPoint2i neighbor : List.of(
-                    new OrthogonalPoint2i(current.x() + 1, current.z()),
-                    new OrthogonalPoint2i(current.x() - 1, current.z()),
-                    new OrthogonalPoint2i(current.x(), current.z() + 1),
-                    new OrthogonalPoint2i(current.x(), current.z() - 1)))
+            for (OrthogonalPoint2i neighbor : Arrays.asList(new OrthogonalPoint2i(current.x() + 1, current.z()), new OrthogonalPoint2i(current.x() - 1, current.z()), new OrthogonalPoint2i(current.x(), current.z() + 1), new OrthogonalPoint2i(current.x(), current.z() - 1)))
             {
                 if (occupied.contains(neighbor) && visited.add(neighbor))
                 {

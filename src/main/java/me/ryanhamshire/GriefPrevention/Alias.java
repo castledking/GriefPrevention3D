@@ -18,6 +18,7 @@
 
 package me.ryanhamshire.GriefPrevention;
 
+import com.griefprevention.compat.Compat;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -795,7 +796,7 @@ public enum Alias {
     private static @NotNull String indent(@NotNull String text, int levels) {
         String[] lines = text.split("\n", -1);
         StringBuilder sb = new StringBuilder();
-        String baseIndent = "  ".repeat(levels);
+        String baseIndent = Compat.repeat("  ", levels);
 
         for (String line : lines) {
             if (line.trim().isEmpty()) {

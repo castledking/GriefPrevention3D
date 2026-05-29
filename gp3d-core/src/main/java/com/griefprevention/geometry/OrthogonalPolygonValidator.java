@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.Collections;
 
 final class OrthogonalPolygonValidator
 {
@@ -44,8 +45,8 @@ final class OrthogonalPolygonValidator
         }
 
         List<OrthogonalPoint2i> corners = closed
-                ? List.copyOf(normalizedPath.subList(0, normalizedPath.size() - 1))
-                : List.copyOf(normalizedPath);
+                ? Collections.unmodifiableList(new ArrayList<>(normalizedPath.subList(0, normalizedPath.size() - 1)))
+                : Collections.unmodifiableList(new ArrayList<>(normalizedPath));
 
         if (corners.size() < 4)
         {
@@ -84,7 +85,7 @@ final class OrthogonalPolygonValidator
             edges.add(new OrthogonalEdge2i(start, end));
         }
 
-        return List.copyOf(edges);
+        return Collections.unmodifiableList(new ArrayList<>(edges));
     }
 
     static @NotNull List<OrthogonalPoint2i> closePath(@NotNull List<OrthogonalPoint2i> corners)
@@ -96,7 +97,7 @@ final class OrthogonalPolygonValidator
             closed.add(corners.get(0));
         }
 
-        return List.copyOf(closed);
+        return Collections.unmodifiableList(new ArrayList<>(closed));
     }
 
     private static @NotNull List<OrthogonalPoint2i> normalizePath(@NotNull List<OrthogonalPoint2i> rawPath)
@@ -117,7 +118,7 @@ final class OrthogonalPolygonValidator
             }
         }
 
-        return List.copyOf(normalized);
+        return Collections.unmodifiableList(new ArrayList<>(normalized));
     }
 
     private static void detectDuplicateCorners(
@@ -178,7 +179,7 @@ final class OrthogonalPolygonValidator
             }
         }
 
-        return List.copyOf(edges);
+        return Collections.unmodifiableList(new ArrayList<>(edges));
     }
 
     private static void detectSelfIntersections(

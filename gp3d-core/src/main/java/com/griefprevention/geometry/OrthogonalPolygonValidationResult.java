@@ -4,6 +4,8 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
+import java.util.Collections;
+import java.util.ArrayList;
 
 /**
  * Validation output for a proposed orthogonal polygon path.
@@ -20,8 +22,8 @@ public final class OrthogonalPolygonValidationResult
             @Nullable OrthogonalPolygon polygon
     )
     {
-        this.normalizedPath = List.copyOf(normalizedPath);
-        this.issues = List.copyOf(issues);
+        this.normalizedPath = Collections.unmodifiableList(new ArrayList<>(normalizedPath));
+        this.issues = Collections.unmodifiableList(new ArrayList<>(issues));
         this.polygon = polygon;
     }
 

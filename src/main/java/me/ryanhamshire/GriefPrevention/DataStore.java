@@ -19,8 +19,10 @@
 package me.ryanhamshire.GriefPrevention;
 
 import com.google.common.io.Files;
+import com.griefprevention.compat.Compat;
 import com.griefprevention.claims.ClaimSnapshot;
 import com.griefprevention.claims.ClaimSnapshotIndex;
+import com.griefprevention.geometry.OrthogonalEdge2i;
 import com.griefprevention.geometry.OrthogonalPolygon;
 import com.griefprevention.visualization.BoundaryVisualization;
 import com.griefprevention.visualization.VisualizationType;
@@ -242,12 +244,12 @@ public abstract class DataStore {
                 String defaultWords = "nigger\nniggers\nniger\nnigga\nnigers\nniggas\n" +
                         "fag\nfags\nfaggot\nfaggots\nfeggit\nfeggits\nfaggit\nfaggits\n" +
                         "cunt\ncunts\nwhore\nwhores\nslut\nsluts\n";
-                java.nio.file.Files.writeString(bannedWordsFile.toPath(), defaultWords, StandardCharsets.UTF_8,
+                java.nio.file.Files.write(bannedWordsFile.toPath(), defaultWords.getBytes(StandardCharsets.UTF_8),
                         StandardOpenOption.CREATE, StandardOpenOption.APPEND);
             }
 
             @SuppressWarnings("null")
-            var bannedWords = Files.readLines(bannedWordsFile, StandardCharsets.UTF_8);
+            List<String> bannedWords = Files.readLines(bannedWordsFile, StandardCharsets.UTF_8);
             return bannedWords;
         } catch (Exception e) {
             GriefPrevention.AddLogEntry("Failed to read from the banned words data file: " + e);
@@ -702,7 +704,7 @@ public abstract class DataStore {
             return true;
         }
 
-        for (var edge : polygon.edges())
+        for (OrthogonalEdge2i edge : polygon.edges())
         {
             if (edge.length() < minimumEdgeLength)
             {
@@ -866,7 +868,7 @@ public abstract class DataStore {
      * @deprecated Releasing pets is no longer a core feature. Use
      *             {@link #deleteClaim(Claim)}.
      */
-    @Deprecated(forRemoval = true, since = "17.0.0")
+    @Deprecated
     synchronized public void deleteClaim(Claim claim, boolean releasePets) {
         this.deleteClaim(claim, true, false);
     }
@@ -2430,7 +2432,7 @@ public abstract class DataStore {
                 boolean hasUserColorCodes = this.messages[message.ordinal()].contains("$")
                         || this.messages[message.ordinal()].contains("&");
                 boolean hasUserNewline = this.messages[message.ordinal()].contains("\\n");
-                boolean isDisabledMessage = this.messages[message.ordinal()].isBlank();
+                boolean isDisabledMessage = Compat.isBlank(this.messages[message.ordinal()]);
 
                 // Apply default styling for specific messages if no user color codes
                 if (!hasUserColorCodes && !isDisabledMessage) {

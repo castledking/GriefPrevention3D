@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Level;
+import com.griefprevention.compat.Compat;
 
 /**
  * Represents the configurable command and subcommand aliases loaded from
@@ -89,7 +90,7 @@ public final class CommandAliasConfiguration {
         ConfigurationSection abandonOptions =
                 mergedConfig.getConfigurationSection("subcommands.claim.abandon.arguments.scope.options");
         if (abandonOptions != null && !abandonOptions.contains("toplevel")) {
-            mergedConfig.set("subcommands.claim.abandon.arguments.scope.options.toplevel", List.of("toplevel"));
+            mergedConfig.set("subcommands.claim.abandon.arguments.scope.options.toplevel", Collections.singletonList("toplevel"));
         }
 
         // Check global enabled toggle (defaults to true)
@@ -131,7 +132,7 @@ public final class CommandAliasConfiguration {
             for (String rootKey : subcommandSection.getKeys(false)) {
                 String normalizedRootKey = normalize(rootKey);
                 RootCommand root = commands.computeIfAbsent(normalizedRootKey,
-                        k -> new RootCommand(k, true, List.of(), null, null, false, null));
+                        k -> new RootCommand(k, true, Collections.emptyList(), null, null, false, null));
 
                 ConfigurationSection subcommands = subcommandSection.getConfigurationSection(rootKey);
                 if (subcommands == null)
@@ -303,11 +304,11 @@ public final class CommandAliasConfiguration {
     private static @NotNull List<String> readStringList(@NotNull ConfigurationSection section, @NotNull String path) {
         List<String> list = section.getStringList(path);
         if (list == null || list.isEmpty()) {
-            return List.of();
+            return Collections.emptyList();
         }
         List<String> filtered = new ArrayList<>();
         for (String entry : list) {
-            if (entry == null || entry.isBlank())
+            if (entry == null || Compat.isBlank(entry))
                 continue;
             filtered.add(entry.trim());
         }
@@ -316,7 +317,7 @@ public final class CommandAliasConfiguration {
 
     private static @NotNull ArgumentParseResult parseArguments(@Nullable ConfigurationSection argumentsSection) {
         if (argumentsSection == null) {
-            return new ArgumentParseResult(false, Map.of(), List.of());
+            return new ArgumentParseResult(false, Collections.emptyMap(), Collections.emptyList());
         }
 
         Map<String, String> argumentAliases = new HashMap<>();
@@ -331,12 +332,12 @@ public final class CommandAliasConfiguration {
 
             if (argumentSection == null) {
                 String value = argumentsSection.getString(argumentKey);
-                if (value != null && !value.isBlank()) {
+                if (value != null && !Compat.isBlank(value)) {
                     argumentType = value.trim().toLowerCase(Locale.ROOT);
                 }
             } else {
                 String type = argumentSection.getString("type");
-                if (type != null && !type.isBlank()) {
+                if (type != null && !Compat.isBlank(type)) {
                     argumentType = type.trim().toLowerCase(Locale.ROOT);
                 }
 
@@ -398,10 +399,10 @@ public final class CommandAliasConfiguration {
                 }
             }
 
-            arguments.add(new Subcommand.Argument(argumentName, argumentType, List.copyOf(suggestions)));
+            arguments.add(new Subcommand.Argument(argumentName, argumentType, Collections.unmodifiableList(new ArrayList<>(suggestions))));
         }
 
-        return new ArgumentParseResult(translateArguments, argumentAliases, List.copyOf(arguments));
+        return new ArgumentParseResult(translateArguments, argumentAliases, Collections.unmodifiableList(new ArrayList<>(arguments)));
     }
 
     public static final class RootCommand {
@@ -418,7 +419,7 @@ public final class CommandAliasConfiguration {
                 boolean useAsHelpCmd, String fallback) {
             this.key = key;
             this.enabled = enabled;
-            this.commands = commands == null ? List.of() : List.copyOf(commands);
+            this.commands = commands == null ? Collections.emptyList() : Collections.unmodifiableList(new ArrayList<>(commands));
             this.description = description;
             this.permission = permission;
             this.useAsHelpCmd = useAsHelpCmd;
@@ -486,14 +487,14 @@ public final class CommandAliasConfiguration {
                 List<Argument> arguments) {
             this.key = key;
             this.enabled = enabled;
-            this.commands = commands == null ? List.of() : List.copyOf(commands);
-            this.standalone = standalone == null ? List.of() : List.copyOf(standalone);
+            this.commands = commands == null ? Collections.emptyList() : Collections.unmodifiableList(new ArrayList<>(commands));
+            this.standalone = standalone == null ? Collections.emptyList() : Collections.unmodifiableList(new ArrayList<>(standalone));
             this.description = description;
             this.permission = permission;
             this.usage = usage;
             this.translateArguments = translateArguments;
-            this.argumentAliases = argumentAliases == null ? Map.of() : Map.copyOf(argumentAliases);
-            this.arguments = arguments == null ? List.of() : List.copyOf(arguments);
+            this.argumentAliases = argumentAliases == null ? Collections.emptyMap() : Collections.unmodifiableMap(new HashMap<>(argumentAliases));
+            this.arguments = arguments == null ? Collections.emptyList() : Collections.unmodifiableList(new ArrayList<>(arguments));
         }
 
         public @NotNull String getKey() {
@@ -572,7 +573,7 @@ public final class CommandAliasConfiguration {
                     boolean optional) {
                 this.name = name;
                 this.type = type;
-                this.suggestions = List.copyOf(suggestions);
+                this.suggestions = Collections.unmodifiableList(new ArrayList<>(suggestions));
                 this.optional = optional;
             }
 
@@ -603,8 +604,8 @@ public final class CommandAliasConfiguration {
                 @NotNull Map<String, String> argumentAliases,
                 @NotNull List<Subcommand.Argument> arguments) {
             this.translateArguments = translateArguments;
-            this.argumentAliases = Map.copyOf(argumentAliases);
-            this.arguments = List.copyOf(arguments);
+            this.argumentAliases = Collections.unmodifiableMap(new HashMap<>(argumentAliases));
+            this.arguments = Collections.unmodifiableList(new ArrayList<>(arguments));
         }
 
         boolean translateArguments() {

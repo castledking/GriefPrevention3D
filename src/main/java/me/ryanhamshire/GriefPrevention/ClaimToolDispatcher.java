@@ -75,6 +75,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
+import java.util.Arrays;
+import java.util.Collections;
 
 final class ClaimToolDispatcher
 {
@@ -1390,8 +1392,8 @@ final class ClaimToolDispatcher
         ClaimEditorSession session = ClaimEditorSession.idle(player.getUniqueId())
                 .withMode(com.griefprevention.claims.editor.ClaimEditorMode.SHAPED, ClaimEditSource.TOOL)
                 .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, claim.getID()))
-                .withPreview(new ClaimEditPreview(polygon, null, List.of(), null, List.of(), List.of(), List.of()))
-                .withOpenPath(new com.griefprevention.claims.editor.ShapedPathDraft(claim.getID(), List.of(anchor), null, false));
+                .withPreview(new ClaimEditPreview(polygon, null, Collections.emptyList(), null, Collections.emptyList(), Collections.emptyList(), Collections.emptyList()))
+                .withOpenPath(new com.griefprevention.claims.editor.ShapedPathDraft(claim.getID(), Collections.singletonList(anchor), null, false));
 
         ClaimEditResult first = claimEditor.apply(
                 session,
@@ -1403,7 +1405,7 @@ final class ClaimToolDispatcher
                         target,
                         null,
                         true,
-                        List.of()
+                        Collections.emptyList()
                 )
         );
         if (!first.success())
@@ -1421,7 +1423,7 @@ final class ClaimToolDispatcher
                         secondOutside,
                         null,
                         true,
-                        List.of()
+                        Collections.emptyList()
                 )
         );
         if (!second.success())
@@ -1439,7 +1441,7 @@ final class ClaimToolDispatcher
                         reconnectProbe,
                         null,
                         true,
-                        List.of()
+                        Collections.emptyList()
                 )
         );
         if (!merged.success() || merged.preview().polygon() == null)
@@ -1477,10 +1479,10 @@ final class ClaimToolDispatcher
         ClaimEditorSession session = ClaimEditorSession.idle(player.getUniqueId())
                 .withMode(com.griefprevention.claims.editor.ClaimEditorMode.SHAPED, ClaimEditSource.TOOL)
                 .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, claim.getID()))
-                .withPreview(new ClaimEditPreview(polygon, null, List.of(), null, List.of(), List.of(), List.of()))
+                .withPreview(new ClaimEditPreview(polygon, null, Collections.emptyList(), null, Collections.emptyList(), Collections.emptyList(), Collections.emptyList()))
                 .withOpenPath(new com.griefprevention.claims.editor.ShapedPathDraft(
                         claim.getID(),
-                        List.of(anchor, firstStep),
+                        Arrays.asList(anchor, firstStep),
                         null,
                         false));
 
@@ -1494,7 +1496,7 @@ final class ClaimToolDispatcher
                         target,
                         null,
                         true,
-                        List.of()
+                        Collections.emptyList()
                 )
         );
         if (!second.success())
@@ -1512,7 +1514,7 @@ final class ClaimToolDispatcher
                         reconnect,
                         null,
                         true,
-                        List.of()
+                        Collections.emptyList()
                 )
         );
         if (!merged.success() || merged.preview().polygon() == null)
@@ -2092,7 +2094,7 @@ final class ClaimToolDispatcher
                         point,
                         null,
                         true,
-                        List.of()
+                        Collections.emptyList()
                 )
         );
 
@@ -2166,7 +2168,7 @@ final class ClaimToolDispatcher
                                 targetPoint,
                                 null,
                                 true,
-                                List.of()
+                                Collections.emptyList()
                         )
                 );
                 applyClaimEditResult(player, playerData, result);
@@ -2219,7 +2221,7 @@ final class ClaimToolDispatcher
                                 adjustedPoint,
                                 null,
                                 true,
-                                List.of()
+                                Collections.emptyList()
                         )
                 );
                 applyClaimEditResult(player, playerData, result);
@@ -2245,7 +2247,7 @@ final class ClaimToolDispatcher
                             new OrthogonalPoint2i(clickedBlock.getX(), clickedBlock.getZ()),
                             null,
                             true,
-                            List.of()
+                            Collections.emptyList()
                     )
             );
             applyClaimEditResult(player, playerData, result);
@@ -2318,7 +2320,7 @@ final class ClaimToolDispatcher
                         adjustedPoint,
                         null,
                         true,
-                        List.of()
+                        Collections.emptyList()
                 )
         );
         applyClaimEditResult(player, playerData, result);
@@ -2368,7 +2370,7 @@ final class ClaimToolDispatcher
                         point,
                         null,
                         true,
-                        List.of()
+                        Collections.emptyList()
                 )
         );
         applyClaimEditResult(player, playerData, result);
@@ -2531,15 +2533,15 @@ final class ClaimToolDispatcher
                 : end;
 
         com.griefprevention.claims.editor.ShapedPathDraft draft =
-                new com.griefprevention.claims.editor.ShapedPathDraft(claim.getID(), List.of(anchor), null, false);
+                new com.griefprevention.claims.editor.ShapedPathDraft(claim.getID(), Collections.singletonList(anchor), null, false);
         ClaimEditPreview preview = new ClaimEditPreview(
                 polygon,
                 session.activeSegment(),
                 draft.points(),
                 null,
-                List.of(),
-                List.of(),
-                List.of("Segment point added.")
+                Collections.emptyList(),
+                Collections.emptyList(),
+                Collections.singletonList("Segment point added.")
         );
         return session.withOpenPath(draft).withPreview(preview);
     }
@@ -2613,7 +2615,7 @@ final class ClaimToolDispatcher
         return session.withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, claim.getID()))
                 .withOpenPath(null)
                 .withActiveSegment(null)
-                .withPreview(new ClaimEditPreview(polygon, null, List.of(), null, List.of(), List.of(), List.of()));
+                .withPreview(new ClaimEditPreview(polygon, null, Collections.emptyList(), null, Collections.emptyList(), Collections.emptyList(), Collections.emptyList()));
     }
 
     private void finalizeShapedClaimCreation(
@@ -2743,10 +2745,10 @@ final class ClaimToolDispatcher
         ClaimEditPreview preview = new ClaimEditPreview(
                 updateResult.claim.getBoundaryPolygon(),
                 result.session().activeSegment(),
-                List.of(),
+                Collections.emptyList(),
                 null,
-                List.of(),
-                List.of(),
+                Collections.emptyList(),
+                Collections.emptyList(),
                 result.messages()
         );
         playerData.lastClaim = updateResult.claim;

@@ -20,6 +20,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.notNull;
+import org.mockito.MockedStatic;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
@@ -27,6 +28,7 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import java.util.Collections;
 
 @SuppressWarnings("null")
 public class BlockEventHandlerTest
@@ -40,7 +42,7 @@ public class BlockEventHandlerTest
         doAnswer(invocation ->
         {
             Tag<?> tag = mock();
-            doReturn(Set.of()).when(tag).getValues();
+            doReturn(Collections.emptySet()).when(tag).getValues();
             return tag;
         }).when(server).getTag(notNull(), notNull(), notNull());
         Bukkit.setServer(server);
@@ -70,7 +72,7 @@ public class BlockEventHandlerTest
         Inventory inventory = mock(Inventory.class);
         org.bukkit.block.Hopper hopper = mock(org.bukkit.block.Hopper.class);
         InventoryPickupItemEvent event = mock(InventoryPickupItemEvent.class);
-        when(item.getMetadata("GP_ITEMOWNER")).thenReturn(List.of());
+        when(item.getMetadata("GP_ITEMOWNER")).thenReturn(Collections.emptyList());
         when(inventory.getHolder()).thenReturn(hopper);
         when(event.getItem()).thenReturn(item);
         when(event.getInventory()).thenReturn(inventory);
@@ -88,7 +90,7 @@ public class BlockEventHandlerTest
 
         Item item = mock(Item.class);
         when(item.getMetadata("GP_ITEMOWNER"))
-                .thenReturn(List.of(new FixedMetadataValue(mock(Plugin.class), PLAYER_UUID)));
+                .thenReturn(Collections.singletonList(new FixedMetadataValue(mock(Plugin.class), PLAYER_UUID)));
         Inventory inventory = mock(Inventory.class);
         org.bukkit.block.Hopper hopper = mock(org.bukkit.block.Hopper.class);
         when(inventory.getHolder()).thenReturn(hopper);
@@ -101,7 +103,7 @@ public class BlockEventHandlerTest
         Server server = mock(Server.class);
         when(server.getPlayer(PLAYER_UUID)).thenReturn(mock(Player.class));
 
-        try (var bukkit = mockStatic(Bukkit.class))
+        try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class))
         {
             bukkit.when(Bukkit::getServer).thenReturn(server);
 
@@ -120,7 +122,7 @@ public class BlockEventHandlerTest
 
         Item item = mock(Item.class);
         when(item.getMetadata("GP_ITEMOWNER"))
-                .thenReturn(List.of(new FixedMetadataValue(mock(Plugin.class), PLAYER_UUID)));
+                .thenReturn(Collections.singletonList(new FixedMetadataValue(mock(Plugin.class), PLAYER_UUID)));
         Inventory inventory = mock(Inventory.class);
         org.bukkit.block.Hopper hopper = mock(org.bukkit.block.Hopper.class);
         when(inventory.getHolder()).thenReturn(hopper);
@@ -131,7 +133,7 @@ public class BlockEventHandlerTest
         Server server = mock(Server.class);
         when(server.getPlayer(PLAYER_UUID)).thenReturn(null);
 
-        try (var bukkit = mockStatic(Bukkit.class))
+        try (MockedStatic<Bukkit> bukkit = mockStatic(Bukkit.class))
         {
             bukkit.when(Bukkit::getServer).thenReturn(server);
 

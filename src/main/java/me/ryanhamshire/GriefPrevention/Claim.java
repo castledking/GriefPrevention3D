@@ -53,6 +53,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
+import java.util.Collections;
 
 //represents a player claim
 //creating an instance doesn't make an effective claim
@@ -249,7 +250,7 @@ public class Claim
          this.doorsOpen = claim.doorsOpen;
          this.is3D = claim.is3D;
          this.expirationDate = claim.expirationDate;
-         this.shapedCorners = claim.shapedCorners == null ? null : List.copyOf(claim.shapedCorners);
+         this.shapedCorners = claim.shapedCorners == null ? null : Collections.unmodifiableList(new ArrayList<>(claim.shapedCorners));
          this.cachedBoundaryPolygon = null;
      }
  
@@ -276,7 +277,7 @@ public class Claim
 
      public @Nullable List<OrthogonalPoint2i> getShapedCorners()
      {
-         return this.shapedCorners == null ? null : List.copyOf(this.shapedCorners);
+         return this.shapedCorners == null ? null : Collections.unmodifiableList(new ArrayList<>(this.shapedCorners));
      }
 
      public void setShapedCorners(@Nullable List<OrthogonalPoint2i> shapedCorners)
@@ -295,7 +296,7 @@ public class Claim
          }
 
          OrthogonalPolygon polygon = OrthogonalPolygon.fromClosedPath(closedPath);
-         this.shapedCorners = List.copyOf(polygon.corners());
+         this.shapedCorners = Collections.unmodifiableList(new ArrayList<>(polygon.corners()));
          // Reuse the validated polygon we just built instead of re-validating on first access.
          this.cachedBoundaryPolygon = polygon;
      }
@@ -1265,14 +1266,14 @@ public class Claim
         return this.getSnapshot().overlaps(otherClaim.getSnapshot());
     }
 
-     @Deprecated(since = "17.0.0", forRemoval = true)
+     @Deprecated
      @Contract("_ -> null")
      public @Nullable String allowMoreEntities(boolean remove)
      {
          return null;
      }
 
-     @Deprecated(since = "17.0.0", forRemoval = true)
+     @Deprecated
      @Contract("-> null")
      public @Nullable String allowMoreActiveBlocks()
      {

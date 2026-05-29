@@ -7,6 +7,7 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
+import java.util.Collections;
 
 /**
  * Unified command handler for /aclaim with administrative subcommands
@@ -91,25 +92,25 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
             "adjustbonusclaimblocksall",
             "griefprevention.adjustclaimblocks",
             (sender, args) -> handleBlocks(sender, prependArg("bonus", prependArg("all", args))),
-            java.util.List.of("integer-negative")
+            java.util.Collections.singletonList("integer-negative")
         );
         registerLegacyStandaloneCommand(
             "acball",
             "griefprevention.adjustclaimblocks",
             (sender, args) -> handleBlocks(sender, prependArg("bonus", prependArg("all", args))),
-            java.util.List.of("integer-negative")
+            java.util.Collections.singletonList("integer-negative")
         );
         registerLegacyStandaloneCommand(
             "setaccruedclaimblocksall",
             "griefprevention.adjustclaimblocks",
             (sender, args) -> handleBlocks(sender, prependArg("accrued", prependArg("all", args))),
-            java.util.List.of("integer-negative")
+            java.util.Collections.singletonList("integer-negative")
         );
         registerLegacyStandaloneCommand(
             "scball",
             "griefprevention.adjustclaimblocks",
             (sender, args) -> handleBlocks(sender, prependArg("accrued", prependArg("all", args))),
-            java.util.List.of("integer-negative")
+            java.util.Collections.singletonList("integer-negative")
         );
         registerStandaloneCommand(Alias.AClaimDelete, createNoArgStandaloneTabExecutor(this::handleDelete));
         registerStandaloneCommand(Alias.AClaimTransfer, this::handleTransfer);

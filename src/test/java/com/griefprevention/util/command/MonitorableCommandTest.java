@@ -9,6 +9,8 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import java.util.Arrays;
+import java.util.Collections;
 
 class MonitorableCommandTest
 {
@@ -35,9 +37,9 @@ class MonitorableCommandTest
 
     private static List<Arguments> getArgumentData()
     {
-        return List.of(
-                Arguments.of("/cool command execution yeah", List.of("command", "execution", "yeah")),
-                Arguments.of("/single", List.of())
+        return Arrays.asList(
+            Arguments.of("/cool command execution yeah", Arrays.asList("command", "execution", "yeah")),
+            Arguments.of("/single", Collections.emptyList())
         );
     }
 
@@ -63,9 +65,9 @@ class MonitorableCommandTest
 
     private static List<Arguments> getCommandData()
     {
-        return List.of(
-                Arguments.of("/cool command execution yeah", List.of("/cool", "/cool command", "/cool command execution", "/cool command execution yeah")),
-                Arguments.of("/single", List.of("/single"))
+        return Arrays.asList(
+            Arguments.of("/cool command execution yeah", Arrays.asList("/cool", "/cool command", "/cool command execution", "/cool command execution yeah")),
+            Arguments.of("/single", Collections.singletonList("/single"))
         );
     }
 

@@ -157,7 +157,7 @@ class UnifiedCommandAliasBehaviorTest
     private static CommandAliasConfiguration loadAliases(Path tempDir, String yaml) throws Exception
     {
         Path file = tempDir.resolve("alias.yml");
-        Files.writeString(file, yaml);
+        Files.write(file, yaml.getBytes(java.nio.charset.StandardCharsets.UTF_8));
 
         GriefPrevention plugin = mock(GriefPrevention.class);
         when(plugin.getLogger()).thenReturn(mock(Logger.class));

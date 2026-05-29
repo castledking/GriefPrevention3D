@@ -6,6 +6,8 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.Collections;
+import java.util.ArrayList;
 
 /**
  * A source-agnostic request against the claim editor.
@@ -38,7 +40,7 @@ public final class ClaimEditIntent
         this.point = point;
         this.amount = amount;
         this.holdingModificationTool = holdingModificationTool;
-        this.selectedCells = List.copyOf(selectedCells);
+        this.selectedCells = Collections.unmodifiableList(new ArrayList<>(selectedCells));
     }
 
     public @NotNull ClaimEditIntentType type()
@@ -83,12 +85,12 @@ public final class ClaimEditIntent
 
     public static @NotNull ClaimEditIntent enterMode(@NotNull ClaimEditSource source, @NotNull ClaimEditorMode mode)
     {
-        return new ClaimEditIntent(ClaimEditIntentType.ENTER_MODE, source, mode, null, null, null, false, List.of());
+        return new ClaimEditIntent(ClaimEditIntentType.ENTER_MODE, source, mode, null, null, null, false, Collections.emptyList());
     }
 
     public static @NotNull ClaimEditIntent exitMode(@NotNull ClaimEditSource source)
     {
-        return new ClaimEditIntent(ClaimEditIntentType.EXIT_MODE, source, null, null, null, null, false, List.of());
+        return new ClaimEditIntent(ClaimEditIntentType.EXIT_MODE, source, null, null, null, null, false, Collections.emptyList());
     }
 
     @Override

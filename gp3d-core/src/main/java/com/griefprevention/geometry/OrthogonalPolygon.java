@@ -4,6 +4,8 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Arrays;
+import java.util.Collections;
 
 /**
  * An immutable closed orthogonal polygon in the X/Z plane.
@@ -19,7 +21,7 @@ public final class OrthogonalPolygon
 
     OrthogonalPolygon(@NotNull List<OrthogonalPoint2i> corners)
     {
-        this.corners = List.copyOf(corners);
+        this.corners = Collections.unmodifiableList(new ArrayList<>(corners));
         this.edges = OrthogonalPolygonValidator.buildEdges(this.corners);
 
         int minX = Integer.MAX_VALUE;
@@ -48,13 +50,7 @@ public final class OrthogonalPolygon
     @SuppressWarnings("null")
     public static @NotNull OrthogonalPolygon fromRectangle(int minX, int minZ, int maxX, int maxZ)
     {
-        return fromClosedPath(List.of(
-                new OrthogonalPoint2i(minX, minZ),
-                new OrthogonalPoint2i(maxX, minZ),
-                new OrthogonalPoint2i(maxX, maxZ),
-                new OrthogonalPoint2i(minX, maxZ),
-                new OrthogonalPoint2i(minX, minZ)
-        ));
+        return fromClosedPath(Arrays.asList(new OrthogonalPoint2i(minX, minZ), new OrthogonalPoint2i(maxX, minZ), new OrthogonalPoint2i(maxX, maxZ), new OrthogonalPoint2i(minX, maxZ), new OrthogonalPoint2i(minX, minZ)));
     }
 
     public static @NotNull OrthogonalPolygon fromClosedPath(@NotNull List<OrthogonalPoint2i> rawPath)
@@ -97,7 +93,7 @@ public final class OrthogonalPolygon
             }
         }
 
-        List<Integer> result = List.copyOf(matches);
+        List<Integer> result = Collections.unmodifiableList(new ArrayList<>(matches));
         return result;
     }
 
@@ -162,7 +158,7 @@ public final class OrthogonalPolygon
         OrthogonalPoint2i current = this.corners.get(cornerIndex);
         if (current.equals(point))
         {
-            return new OrthogonalPolygonValidationResult(this.closedPath(), List.of(), this);
+            return new OrthogonalPolygonValidationResult(this.closedPath(), Collections.emptyList(), this);
         }
 
         int previousIndex = Math.floorMod(cornerIndex - 1, this.corners.size());
@@ -204,7 +200,7 @@ public final class OrthogonalPolygon
 
         if (amount == 0)
         {
-            return new OrthogonalPolygonValidationResult(this.closedPath(), List.of(), this);
+            return new OrthogonalPolygonValidationResult(this.closedPath(), Collections.emptyList(), this);
         }
 
         OrthogonalEdge2i edge = this.edges.get(edgeIndex);
@@ -247,7 +243,7 @@ public final class OrthogonalPolygon
 
         if (amount == 0)
         {
-            return new OrthogonalPolygonValidationResult(this.closedPath(), List.of(), this);
+            return new OrthogonalPolygonValidationResult(this.closedPath(), Collections.emptyList(), this);
         }
 
         OrthogonalEdge2i referenceEdge = this.edges.get(startEdgeIndex);

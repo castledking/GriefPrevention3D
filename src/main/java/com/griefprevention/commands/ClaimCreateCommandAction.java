@@ -24,6 +24,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.UUID;
+import java.util.Collections;
 
 final class ClaimCreateCommandAction implements TabExecutor
 {
@@ -266,7 +267,7 @@ final class ClaimCreateCommandAction implements TabExecutor
             @NotNull String[] args)
     {
         if (args.length != 1)
-            return List.of();
+            return Collections.emptyList();
         return TabCompletions.integer(args, 3, false);
     }
 }

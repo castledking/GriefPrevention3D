@@ -18,6 +18,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import java.util.Collections;
 
 @SuppressWarnings("null")
 class ClaimPermissionTest
@@ -60,10 +61,10 @@ class ClaimPermissionTest
                 new Location(null, 0, 64, 0),
                 new Location(null, 9, 64, 9),
                 OWNER_ID,
-                List.of(),
-                List.of(),
-                List.of(),
-                List.of(MANAGER_ID.toString()),
+                Collections.emptyList(),
+                Collections.emptyList(),
+                Collections.emptyList(),
+                Collections.singletonList(MANAGER_ID.toString()),
                 1L);
 
         assertNull(claim.checkPermission(manager, ClaimPermission.Manage, null));

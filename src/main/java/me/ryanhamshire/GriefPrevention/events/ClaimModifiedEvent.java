@@ -17,7 +17,7 @@ import org.jetbrains.annotations.Nullable;
  *
  * @author Narimm on 5/08/2018.
  */
-@Deprecated(since = "16.18")
+    @Deprecated
 @Warning(value = true, reason = "ClaimModifiedEvent will be removed in favor of ClaimResizeEvent")
 public class ClaimModifiedEvent extends ClaimResizeEvent
 {
@@ -31,7 +31,7 @@ public class ClaimModifiedEvent extends ClaimResizeEvent
      * @param to the resulting {@code Claim}
      * @param modifier the {@link CommandSender} causing modification
      */
-    @Deprecated(since = "16.18")
+@Deprecated
     public ClaimModifiedEvent(@NotNull Claim from, @NotNull Claim to, @Nullable CommandSender modifier)
     {
         super(from, to, modifier);

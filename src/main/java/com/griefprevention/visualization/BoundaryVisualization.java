@@ -22,6 +22,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
+import java.util.Collections;
 
 /**
  * A representation of a system for displaying rectangular {@link Boundary Boundaries} to {@link Player Players}.
@@ -203,7 +204,7 @@ public abstract class BoundaryVisualization
             @NotNull VisualizationStyle style,
             int height) {
         @SuppressWarnings("null")
-        Set<Boundary> boundaries = Set.of(new Boundary(boundingBox, style));
+        Set<Boundary> boundaries = Collections.singleton(new Boundary(boundingBox, style));
         BoundaryVisualizationEvent event = new BoundaryVisualizationEvent(player,
                 boundaries,
                 height);
@@ -318,13 +319,13 @@ public abstract class BoundaryVisualization
      */
     private static Collection<Boundary> defineBoundaries(Claim claim, VisualizationType type)
     {
-        if (claim == null) return Set.of();
+        if (claim == null) return Collections.emptySet();
 
         // Special visualizations focus exclusively on the supplied claim.
         if (type == VisualizationType.CONFLICT_ZONE || type == VisualizationType.CONFLICT_ZONE_3D || type == VisualizationType.INITIALIZE_ZONE || type == VisualizationType.INITIALIZE_ZONE_3D)
         {
             @SuppressWarnings("null")
-            Set<Boundary> boundary = Set.of(new Boundary(claim, type));
+            Set<Boundary> boundary = Collections.singleton(new Boundary(claim, type));
             return boundary;
         }
 
@@ -375,7 +376,7 @@ public abstract class BoundaryVisualization
         {
             return defineBoundaries(claim, (VisualizationType) style);
         }
-        if (claim == null) return Set.of();
+        if (claim == null) return Collections.emptySet();
 
         Set<Boundary> boundaries = new HashSet<>();
         addClaimWithDescendants(boundaries, claim, style);

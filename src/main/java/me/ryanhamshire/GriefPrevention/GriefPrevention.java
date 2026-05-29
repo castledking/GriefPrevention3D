@@ -36,6 +36,7 @@ import com.griefprevention.claims.editor.ClaimEditorSession;
 import com.griefprevention.claims.editor.SegmentSelection;
 import com.griefprevention.commands.CommandAliasConfiguration;
 import com.griefprevention.commands.TabCompletions;
+import com.griefprevention.compat.Compat;
 import com.griefprevention.compat.WorldHeightCompatProvider;
 import com.griefprevention.visualization.VisualizationStyleRegistry;
 import me.ryanhamshire.GriefPrevention.compat.CompatUtil;
@@ -85,7 +86,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
-import java.io.FileReader;
+import java.io.InputStreamReader;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -112,6 +113,7 @@ import java.util.regex.Pattern;
 
 import me.ryanhamshire.GriefPrevention.util.SchedulerUtil;
 import me.ryanhamshire.GriefPrevention.util.TaskHandle;
+import java.util.Collections;
 
 public class GriefPrevention extends JavaPlugin {
     private static final @NotNull ClaimEditor claimEditor = new ClaimEditorSkeleton();
@@ -605,7 +607,7 @@ public class GriefPrevention extends JavaPlugin {
         // If the file doesn't exist, create it with defaults
         if (!aliasFile.exists()) {
             try {
-                Files.writeString(aliasFile.toPath(), defaultYaml, StandardCharsets.UTF_8);
+                Files.write(aliasFile.toPath(), defaultYaml.getBytes(StandardCharsets.UTF_8));
                 log.info("Created default alias.yml with built-in defaults.");
             } catch (IOException e) {
                 log.log(Level.SEVERE, "Failed to create default alias.yml. Using built-in defaults only.", e);
@@ -617,11 +619,11 @@ public class GriefPrevention extends JavaPlugin {
             // customizations
             try {
                 // Load the current file content
-                String currentYaml = Files.readString(aliasFile.toPath(), StandardCharsets.UTF_8);
+                String currentYaml = new String(Files.readAllBytes(aliasFile.toPath()), StandardCharsets.UTF_8);
 
                 // If the file is empty or contains only whitespace, write the default content
                 if (currentYaml.trim().isEmpty()) {
-                    Files.writeString(aliasFile.toPath(), defaultYaml, StandardCharsets.UTF_8);
+                    Files.write(aliasFile.toPath(), defaultYaml.getBytes(StandardCharsets.UTF_8));
                     log.info("Updated empty alias.yml with default configuration.");
                 }
             } catch (IOException e) {
@@ -651,7 +653,7 @@ public class GriefPrevention extends JavaPlugin {
 
             if (needsUpdate) {
                 // Write the default YAML directly to preserve indentation
-                Files.writeString(aliasFile.toPath(), defaultYaml, StandardCharsets.UTF_8);
+                Files.write(aliasFile.toPath(), defaultYaml.getBytes(StandardCharsets.UTF_8));
                 log.info("Updated alias.yml with latest default configuration while preserving customizations.");
             }
 
@@ -1314,7 +1316,7 @@ public class GriefPrevention extends JavaPlugin {
 
         // If properties file exists, use it - old config has already been migrated.
         if (databasePropsFile.exists() && databasePropsFile.isFile()) {
-            try (FileReader reader = new FileReader(databasePropsFile, StandardCharsets.UTF_8)) {
+            try (InputStreamReader reader = new InputStreamReader(new java.io.FileInputStream(databasePropsFile), StandardCharsets.UTF_8)) {
                 // Load properties from file.
                 databaseProps.load(reader);
 
@@ -1440,7 +1442,7 @@ public class GriefPrevention extends JavaPlugin {
                 java.util.List<String> commandNames = new java.util.ArrayList<>();
                 commandNames.add(shapedClaims.getName().toLowerCase(Locale.ROOT));
                 for (String alias : shapedClaims.getAliases()) {
-                    if (alias != null && !alias.isBlank()) {
+                    if (alias != null && !Compat.isBlank(alias)) {
                         commandNames.add(alias.toLowerCase(Locale.ROOT));
                     }
                 }
@@ -2943,6 +2945,10 @@ public class GriefPrevention extends JavaPlugin {
                 playerData.lastShovelLocation = null;
             }
 
+            // also reset claim selection and shaped editor state
+            playerData.claimSelectionActive = false;
+            playerData.setClaimEditorSession(null);
+
             // adjust claim blocks when abandoning a top level claim
             if (this.config_claims_abandonReturnRatio != 1.0D && claim.parent == null
                     && claim.ownerID.equals(playerData.playerID)) {
@@ -3329,7 +3335,7 @@ public class GriefPrevention extends JavaPlugin {
     private static @NotNull String getDefaultName(@Nullable UUID playerId) {
         String someone = instance.dataStore.getMessage(Messages.UnknownPlayerName);
 
-        if (someone == null || someone.isBlank()) {
+        if (someone == null || Compat.isBlank(someone)) {
             someone = "someone";
         }
 
@@ -3523,7 +3529,7 @@ public class GriefPrevention extends JavaPlugin {
         }
 
         String stripped = ChatColor.stripColor(message);
-        return stripped != null && !stripped.isBlank();
+        return stripped != null && !Compat.isBlank(stripped);
     }
 
     // sends a rate-limited error message to a player (max once per 10 seconds)
@@ -3604,7 +3610,7 @@ public class GriefPrevention extends JavaPlugin {
      * @deprecated use
      *             {@link ProtectionHelper#checkPermission(Player, Location, ClaimPermission, org.bukkit.event.Event)}
      */
-    @Deprecated(forRemoval = true, since = "17.0.0")
+    @Deprecated
     public @Nullable String allowBuild(Player player, Location location) {
         return this.allowBuild(player, location, location.getBlock().getType());
     }
@@ -3613,7 +3619,7 @@ public class GriefPrevention extends JavaPlugin {
      * @deprecated use
      *             {@link ProtectionHelper#checkPermission(Player, Location, ClaimPermission, org.bukkit.event.Event)}
      */
-    @Deprecated(forRemoval = true, since = "17.0.0")
+    @Deprecated
     public @Nullable String allowBuild(Player player, Location location, Material material) {
         if (!GriefPrevention.instance.claimsEnabledForWorld(location.getWorld()))
             return null;
@@ -3622,7 +3628,7 @@ public class GriefPrevention extends JavaPlugin {
         if (material.isItem()) {
             placed = new ItemStack(material);
         } else {
-            var blockType = material.asBlockType();
+            org.bukkit.block.BlockType blockType = material.asBlockType();
             if (blockType != null && blockType.hasItemType()) {
                 placed = blockType.getItemType().createItemStack();
             } else {
@@ -3640,7 +3646,7 @@ public class GriefPrevention extends JavaPlugin {
      * @deprecated use
      *             {@link ProtectionHelper#checkPermission(Player, Location, ClaimPermission, org.bukkit.event.Event)}
      */
-    @Deprecated(forRemoval = true, since = "17.0.0")
+    @Deprecated
     public @Nullable String allowBreak(Player player, Block block, Location location) {
         return this.allowBreak(player, block, location, new BlockBreakEvent(block, player));
     }
@@ -3649,7 +3655,7 @@ public class GriefPrevention extends JavaPlugin {
      * @deprecated use
      *             {@link ProtectionHelper#checkPermission(Player, Location, ClaimPermission, org.bukkit.event.Event)}
      */
-    @Deprecated(forRemoval = true, since = "17.0.0")
+    @Deprecated
     public @Nullable String allowBreak(Player player, Material material, Location location,
             BlockBreakEvent breakEvent) {
         return this.allowBreak(player, location.getBlock(), location, breakEvent);
@@ -3659,7 +3665,7 @@ public class GriefPrevention extends JavaPlugin {
      * @deprecated use
      *             {@link ProtectionHelper#checkPermission(Player, Location, ClaimPermission, org.bukkit.event.Event)}
      */
-    @Deprecated(forRemoval = true, since = "17.0.0")
+    @Deprecated
     public @Nullable String allowBreak(Player player, Block block, Location location, BlockBreakEvent breakEvent) {
         Supplier<String> result = ProtectionHelper.checkPermission(player, location, ClaimPermission.Build, breakEvent);
         return result == null ? null : result.get();
@@ -4482,6 +4488,10 @@ public class GriefPrevention extends JavaPlugin {
         GriefPrevention.sendMessage(player, TextMode.Success, Messages.SuccessfulAbandon, String.valueOf(0));
 
         playerData.setVisibleBoundaries(null);
+        playerData.claimResizing = null;
+        playerData.lastShovelLocation = null;
+        playerData.claimSelectionActive = false;
+        playerData.setClaimEditorSession(null);
         return true;
     }
 
@@ -4649,7 +4659,7 @@ public class GriefPrevention extends JavaPlugin {
                             null,
                             amount,
                             holdingModificationTool,
-                            List.of()
+                            Collections.emptyList()
                     )
             );
             if (!result.success()) {
@@ -4677,10 +4687,10 @@ public class GriefPrevention extends JavaPlugin {
             ClaimEditPreview preview = new ClaimEditPreview(
                     updateResult.claim.getBoundaryPolygon(),
                     result.session().activeSegment(),
-                    List.of(),
+                    Collections.emptyList(),
                     null,
-                    List.of(),
-                    List.of(),
+                    Collections.emptyList(),
+                    Collections.emptyList(),
                     result.messages()
             );
             playerData.lastClaim = updateResult.claim;
@@ -4796,11 +4806,11 @@ public class GriefPrevention extends JavaPlugin {
             ClaimEditPreview preview = new ClaimEditPreview(
                     claim.getBoundaryPolygon(),
                     selection,
-                    List.of(),
+                    Collections.emptyList(),
                     null,
-                    List.of(),
-                    List.of(),
-                    List.of()
+                    Collections.emptyList(),
+                    Collections.emptyList(),
+                    Collections.emptyList()
             );
             return session.withActiveSegment(selection).withPreview(preview);
         }
@@ -4836,7 +4846,7 @@ public class GriefPrevention extends JavaPlugin {
                 .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, claim.getID()))
                 .withOpenPath(null)
                 .withActiveSegment(null)
-                .withPreview(new ClaimEditPreview(polygon, null, List.of(), null, List.of(), List.of(), List.of()));
+                .withPreview(new ClaimEditPreview(polygon, null, Collections.emptyList(), null, Collections.emptyList(), Collections.emptyList(), Collections.emptyList()));
     }
 
     private @Nullable Integer resolveBoundarySegmentForPlayer(

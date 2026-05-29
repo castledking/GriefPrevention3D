@@ -22,6 +22,8 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.Arrays;
+import java.util.Collections;
 
 public class MonitoredCommands
 {
@@ -294,12 +296,12 @@ public class MonitoredCommands
 
         // No aliases.
         if (aliases == null) {
-            return Set.of(commandEntry.getKey().toLowerCase());
+            return Collections.singleton(commandEntry.getKey().toLowerCase());
         }
 
         // One alias in String form.
         if (aliases instanceof String) {
-            return Set.of(commandEntry.getKey().toLowerCase(), ((String) aliases).toLowerCase());
+            return Collections.unmodifiableSet(new HashSet<>(Arrays.asList(commandEntry.getKey().toLowerCase(), ((String) aliases).toLowerCase())));
         }
 
         // Zero or more aliases in List form.
@@ -311,7 +313,7 @@ public class MonitoredCommands
         }
 
         // Invalid alias declaration.
-        return Set.of(commandEntry.getKey().toLowerCase());
+        return Collections.singleton(commandEntry.getKey().toLowerCase());
     }
 
 }

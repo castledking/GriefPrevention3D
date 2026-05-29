@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
 import java.util.function.Predicate;
+import java.util.Collections;
 
 /**
  * A container for tab completion helper methods.
@@ -47,7 +48,7 @@ public final class TabCompletions
             char prefixChar = prefixChars[index];
             if (prefixChar < '0' || prefixChar > '9')
             {
-                return List.of();
+                return Collections.emptyList();
             }
         }
 

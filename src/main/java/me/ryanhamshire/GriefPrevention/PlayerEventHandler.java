@@ -31,6 +31,7 @@ import com.griefprevention.claims.editor.ClaimEditor;
 import com.griefprevention.claims.editor.ClaimEditorSession;
 import com.griefprevention.claims.editor.ClaimEditorSkeleton;
 import com.griefprevention.compat.BlockDataCompat;
+import com.griefprevention.compat.Compat;
 import com.griefprevention.compat.MaterialCompat;
 import com.griefprevention.compat.MaterialTagCompat;
 import me.ryanhamshire.GriefPrevention.compat.CompatUtil;
@@ -137,6 +138,8 @@ import java.util.regex.Pattern;
 import me.ryanhamshire.GriefPrevention.util.SchedulerUtil;
 
 import me.ryanhamshire.GriefPrevention.util.TaskHandle;
+import java.util.Arrays;
+import java.util.Collections;
 
 public class PlayerEventHandler implements Listener {
     private static final @NotNull ClaimEditor claimEditor = new ClaimEditorSkeleton();
@@ -196,11 +199,11 @@ public class PlayerEventHandler implements Listener {
         this.claimToolDispatcher = new ClaimToolDispatcher(plugin, this);
         // Initialize empty on load so never null just in case. Reload after plugins
         // enable.
-        this.bannedWordFinder = new WordFinder(List.of());
-        this.pvpBlockedCommands = new MonitoredCommands(List.of());
-        this.accessTrustCommands = new MonitoredCommands(List.of());
-        this.chatCommands = new MonitoredCommands(List.of());
-        this.whisperCommands = new MonitoredCommands(List.of());
+        this.bannedWordFinder = new WordFinder(Collections.emptyList());
+        this.pvpBlockedCommands = new MonitoredCommands(Collections.emptyList());
+        this.accessTrustCommands = new MonitoredCommands(Collections.emptyList());
+        this.chatCommands = new MonitoredCommands(Collections.emptyList());
+        this.whisperCommands = new MonitoredCommands(Collections.emptyList());
 
         spawnEggs = new HashSet<>();
         dyes = new HashSet<>();
@@ -667,7 +670,7 @@ public class PlayerEventHandler implements Listener {
 
     static void makeSocialLogEntry(String name, String message) {
         StringBuilder entryBuilder = new StringBuilder(name);
-        entryBuilder.append(" ".repeat(Math.max(0, longestNameLength - name.length())));
+        entryBuilder.append(Compat.repeat(" ", Math.max(0, longestNameLength - name.length())));
         entryBuilder.append(": ").append(message);
 
         longestNameLength = Math.max(longestNameLength, name.length());
@@ -3145,8 +3148,8 @@ public class PlayerEventHandler implements Listener {
         ClaimEditorSession session = ClaimEditorSession.idle(player.getUniqueId())
                 .withMode(com.griefprevention.claims.editor.ClaimEditorMode.SHAPED, ClaimEditSource.TOOL)
                 .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, claim.getID()))
-                .withPreview(new ClaimEditPreview(polygon, null, List.of(), null, List.of(), List.of(), List.of()))
-                .withOpenPath(new com.griefprevention.claims.editor.ShapedPathDraft(claim.getID(), List.of(anchor), null, false));
+                .withPreview(new ClaimEditPreview(polygon, null, Collections.emptyList(), null, Collections.emptyList(), Collections.emptyList(), Collections.emptyList()))
+                .withOpenPath(new com.griefprevention.claims.editor.ShapedPathDraft(claim.getID(), Collections.singletonList(anchor), null, false));
 
         ClaimEditResult first = claimEditor.apply(
                 session,
@@ -3158,7 +3161,7 @@ public class PlayerEventHandler implements Listener {
                         target,
                         null,
                         true,
-                        List.of()
+                        Collections.emptyList()
                 )
         );
         if (!first.success())
@@ -3176,7 +3179,7 @@ public class PlayerEventHandler implements Listener {
                         secondOutside,
                         null,
                         true,
-                        List.of()
+                        Collections.emptyList()
                 )
         );
         if (!second.success())
@@ -3194,7 +3197,7 @@ public class PlayerEventHandler implements Listener {
                         reconnectProbe,
                         null,
                         true,
-                        List.of()
+                        Collections.emptyList()
                 )
         );
         if (!merged.success() || merged.preview().polygon() == null)
@@ -3232,10 +3235,10 @@ public class PlayerEventHandler implements Listener {
         ClaimEditorSession session = ClaimEditorSession.idle(player.getUniqueId())
                 .withMode(com.griefprevention.claims.editor.ClaimEditorMode.SHAPED, ClaimEditSource.TOOL)
                 .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, claim.getID()))
-                .withPreview(new ClaimEditPreview(polygon, null, List.of(), null, List.of(), List.of(), List.of()))
+                .withPreview(new ClaimEditPreview(polygon, null, Collections.emptyList(), null, Collections.emptyList(), Collections.emptyList(), Collections.emptyList()))
                 .withOpenPath(new com.griefprevention.claims.editor.ShapedPathDraft(
                         claim.getID(),
-                        List.of(anchor, firstStep),
+                        Arrays.asList(anchor, firstStep),
                         null,
                         false));
 
@@ -3249,7 +3252,7 @@ public class PlayerEventHandler implements Listener {
                         target,
                         null,
                         true,
-                        List.of()
+                        Collections.emptyList()
                 )
         );
         if (!second.success())
@@ -3267,7 +3270,7 @@ public class PlayerEventHandler implements Listener {
                         reconnect,
                         null,
                         true,
-                        List.of()
+                        Collections.emptyList()
                 )
         );
         if (!merged.success() || merged.preview().polygon() == null)
@@ -3831,7 +3834,7 @@ public class PlayerEventHandler implements Listener {
                         point,
                         null,
                         true,
-                        List.of()
+                        Collections.emptyList()
                 )
         );
 
@@ -3905,7 +3908,7 @@ public class PlayerEventHandler implements Listener {
                                 targetPoint,
                                 null,
                                 true,
-                                List.of()
+                                Collections.emptyList()
                         )
                 );
                 applyClaimEditResult(player, playerData, result);
@@ -3957,7 +3960,7 @@ public class PlayerEventHandler implements Listener {
                                 adjustedPoint,
                                 null,
                                 true,
-                                List.of()
+                                Collections.emptyList()
                         )
                 );
                 applyClaimEditResult(player, playerData, result);
@@ -3983,7 +3986,7 @@ public class PlayerEventHandler implements Listener {
                             new OrthogonalPoint2i(clickedBlock.getX(), clickedBlock.getZ()),
                             null,
                             true,
-                            List.of()
+                            Collections.emptyList()
                     )
             );
             applyClaimEditResult(player, playerData, result);
@@ -4056,7 +4059,7 @@ public class PlayerEventHandler implements Listener {
                         adjustedPoint,
                         null,
                         true,
-                        List.of()
+                        Collections.emptyList()
                 )
         );
         applyClaimEditResult(player, playerData, result);
@@ -4106,7 +4109,7 @@ public class PlayerEventHandler implements Listener {
                         point,
                         null,
                         true,
-                        List.of()
+                        Collections.emptyList()
                 )
         );
         applyClaimEditResult(player, playerData, result);
@@ -4269,15 +4272,15 @@ public class PlayerEventHandler implements Listener {
                 : end;
 
         com.griefprevention.claims.editor.ShapedPathDraft draft =
-                new com.griefprevention.claims.editor.ShapedPathDraft(claim.getID(), List.of(anchor), null, false);
+                new com.griefprevention.claims.editor.ShapedPathDraft(claim.getID(), Collections.singletonList(anchor), null, false);
         ClaimEditPreview preview = new ClaimEditPreview(
                 polygon,
                 session.activeSegment(),
                 draft.points(),
                 null,
-                List.of(),
-                List.of(),
-                List.of("Segment point added.")
+                Collections.emptyList(),
+                Collections.emptyList(),
+                Collections.singletonList("Segment point added.")
         );
         return session.withOpenPath(draft).withPreview(preview);
     }
@@ -4351,7 +4354,7 @@ public class PlayerEventHandler implements Listener {
         return session.withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, claim.getID()))
                 .withOpenPath(null)
                 .withActiveSegment(null)
-                .withPreview(new ClaimEditPreview(polygon, null, List.of(), null, List.of(), List.of(), List.of()));
+                .withPreview(new ClaimEditPreview(polygon, null, Collections.emptyList(), null, Collections.emptyList(), Collections.emptyList(), Collections.emptyList()));
     }
 
     private void finalizeShapedClaimCreation(
@@ -4481,10 +4484,10 @@ public class PlayerEventHandler implements Listener {
         ClaimEditPreview preview = new ClaimEditPreview(
                 updateResult.claim.getBoundaryPolygon(),
                 result.session().activeSegment(),
-                List.of(),
+                Collections.emptyList(),
                 null,
-                List.of(),
-                List.of(),
+                Collections.emptyList(),
+                Collections.emptyList(),
                 result.messages()
         );
         playerData.lastClaim = updateResult.claim;

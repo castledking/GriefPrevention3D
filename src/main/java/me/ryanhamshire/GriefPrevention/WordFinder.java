@@ -1,5 +1,6 @@
 package me.ryanhamshire.GriefPrevention;
 
+import com.griefprevention.compat.Compat;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -65,7 +66,7 @@ class WordFinder
             // Create replacement with asterisks for the word, keeping the boundaries
             String replacement = match.replaceAll(
                 "\\Q" + word + "\\E", 
-                "*".repeat(word.length())
+                Compat.repeat("*", word.length())
             );
             
             matcher.appendReplacement(result, replacement);
