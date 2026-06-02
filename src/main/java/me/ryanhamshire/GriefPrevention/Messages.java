@@ -288,7 +288,14 @@ public enum Messages
     InternalPistonBoundaryViolation("&6Warning: A piston tried to push a block outside your claim @ x:{0} y:{1} z:{2}!", "0: x coordinate; 1: y coordinate; 2: z coordinate"),
     ExternalLiquidBoundaryViolation("&6Warning: Liquid tried to flow into your claim @ x:{0} y:{1} z:{2}!", "0: x coordinate; 1: y coordinate; 2: z coordinate"),
     InternalLiquidBoundaryViolation("&6Warning: Liquid tried to flow out of your claim @ x:{0} y:{1} z:{2}!", "0: x coordinate; 1: y coordinate; 2: z coordinate"),
-    BoundaryViolationBurstSummary("&6Warning: {0} {1} violations near your claim @ x:{2} y:{3} z:{4}!", "0: count; 1: type (piston/liquid); 2: x coordinate; 3: y coordinate; 4: z coordinate");
+    BoundaryViolationBurstSummary("&6Warning: {0} {1} violations near your claim @ x:{2} y:{3} z:{4}!", "0: count; 1: type (piston/liquid); 2: x coordinate; 3: y coordinate; 4: z coordinate"),
+    PlaceholderTrustLevelUnclaimed("Unclaimed", "Returned by %gp3d_trust_level% when the player is not standing in a claim."),
+    PlaceholderTrustLevelOwner("Owner", "Returned by %gp3d_trust_level% when the player owns the claim."),
+    PlaceholderTrustLevelManager("Manager", "Returned by %gp3d_trust_level% when the player has permission trust in the claim."),
+    PlaceholderTrustLevelBuilder("Builder", "Returned by %gp3d_trust_level% when the player has build trust in the claim."),
+    PlaceholderTrustLevelAccess("Access", "Returned by %gp3d_trust_level% when the player has access trust in the claim."),
+    PlaceholderTrustLevelContainer("Container", "Returned by %gp3d_trust_level% when the player has container trust in the claim."),
+    PlaceholderTrustLevelUntrusted("Untrusted", "Returned by %gp3d_trust_level% when the player is standing in a claim but has no trust there.");
 
     final @NotNull String defaultValue;
     final @Nullable String notes;

@@ -27,6 +27,8 @@ class FabricDataFolderTest
                 .contains("GriefPrevention:"));
         assertTrue(Files.readString(dataFolder.resolve("messages.yml"), StandardCharsets.UTF_8)
                 .contains("Messages:"));
+        assertTrue(Files.readString(dataFolder.resolve("messages.yml"), StandardCharsets.UTF_8)
+                .contains("PlaceholderTrustLevelUntrusted: \"Untrusted\""));
     }
 
     @Test

@@ -60,6 +60,13 @@ final class FabricDataFolder
               NoBuildPermission: "You don't have {0}'s permission to build here."
               NoContainersPermission: "You don't have {0}'s permission to use that."
               OwnerNameForAdminClaims: "an administrator"
+              PlaceholderTrustLevelUnclaimed: "Unclaimed"
+              PlaceholderTrustLevelOwner: "Owner"
+              PlaceholderTrustLevelManager: "Manager"
+              PlaceholderTrustLevelBuilder: "Builder"
+              PlaceholderTrustLevelAccess: "Access"
+              PlaceholderTrustLevelContainer: "Container"
+              PlaceholderTrustLevelUntrusted: "Untrusted"
             """;
 
     private FabricDataFolder()

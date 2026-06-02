@@ -2,7 +2,9 @@ package me.ryanhamshire.GriefPrevention.integration;
 
 import me.clip.placeholderapi.expansion.PlaceholderExpansion;
 import me.ryanhamshire.GriefPrevention.Claim;
+import me.ryanhamshire.GriefPrevention.ClaimPermission;
 import me.ryanhamshire.GriefPrevention.GriefPrevention;
+import me.ryanhamshire.GriefPrevention.Messages;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
@@ -60,9 +62,50 @@ public class PlaceholderAPIExpansion extends PlaceholderExpansion
                 return claim != null && claim.parent != null ? "true" : "false";
             case "in_3d_subdivision":
                 return claim != null && claim.parent != null && claim.is3D() ? "true" : "false";
+            case "is_trusted":
+                return claim != null && claim.checkPermission(player, ClaimPermission.Access, null) == null
+                        ? "true"
+                        : "false";
+            case "trust_level":
+                return getTrustLevel(player, claim);
             default:
                 return "";
         }
+    }
+
+    private String getTrustLevel(Player player, Claim claim)
+    {
+        if (claim == null)
+        {
+            return plugin.dataStore.getMessage(Messages.PlaceholderTrustLevelUnclaimed);
+        }
+
+        if (player.getUniqueId().equals(claim.getOwnerID()))
+        {
+            return plugin.dataStore.getMessage(Messages.PlaceholderTrustLevelOwner);
+        }
+
+        if (claim.checkPermission(player, ClaimPermission.Manage, null) == null)
+        {
+            return plugin.dataStore.getMessage(Messages.PlaceholderTrustLevelManager);
+        }
+
+        if (claim.checkPermission(player, ClaimPermission.Build, null) == null)
+        {
+            return plugin.dataStore.getMessage(Messages.PlaceholderTrustLevelBuilder);
+        }
+
+        if (claim.checkPermission(player, ClaimPermission.Container, null) == null)
+        {
+            return plugin.dataStore.getMessage(Messages.PlaceholderTrustLevelContainer);
+        }
+
+        if (claim.checkPermission(player, ClaimPermission.Access, null) == null)
+        {
+            return plugin.dataStore.getMessage(Messages.PlaceholderTrustLevelAccess);
+        }
+
+        return plugin.dataStore.getMessage(Messages.PlaceholderTrustLevelUntrusted);
     }
 
     private Claim findInnermostClaim(Claim claim, Location location)
