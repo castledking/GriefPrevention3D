@@ -93,11 +93,6 @@ wiki/
 .release/old/
 .modrinth/
 
-# SpigotMC release automation
-.release/node_modules/
-.release/.spigot-cookies.json
-.release/.screenshots/
-
 # Track latest release
 !.release/latest/
 

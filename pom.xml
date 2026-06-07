@@ -8,7 +8,7 @@
 
     <groupId>com.griefprevention</groupId>
     <artifactId>GriefPrevention3D</artifactId>
-    <version>18.0.7</version>
+    <version>18.0.8</version>
 
     <name>GriefPrevention3D</name>
     <description>The self-service anti-griefing plugin for Minecraft servers — now with full 3D subdivisions</description>
@@ -75,6 +75,26 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.14.0</version>
+            </plugin>
+            <!-- Include gp3d-core sources (mirrors Gradle's multi-module setup) -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.6.0</version>
+                <executions>
+                    <execution>
+                        <id>add-core-source</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>gp3d-core/src/main/java</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
             <!-- Append git commit hash to version -->
             <plugin>

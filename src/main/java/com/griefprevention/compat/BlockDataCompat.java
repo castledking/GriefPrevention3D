@@ -1,5 +1,7 @@
 package com.griefprevention.compat;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -12,9 +14,6 @@ import org.bukkit.material.MaterialData;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
-
 public final class BlockDataCompat {
 
     private static final String BLOCK_DATA_CLASS = "org.bukkit.block.data.BlockData";
@@ -25,8 +24,7 @@ public final class BlockDataCompat {
     private static final String WATERLOGGED_CLASS = "org.bukkit.block.data.Waterlogged";
     private static final String WALL_SIGN_CLASS = "org.bukkit.block.data.type.WallSign";
 
-    private BlockDataCompat() {
-    }
+    private BlockDataCompat() {}
 
     public static boolean isModernChest(@NotNull Block block) {
         Object blockData = getBlockData(block);
@@ -39,8 +37,14 @@ public final class BlockDataCompat {
         Object relativeData = getBlockData(relative);
         Class<?> chestClass = getClass(CHEST_CLASS);
         Class<?> chestTypeClass = getClass(CHEST_TYPE_CLASS);
-        if (blockData == null || relativeData == null || chestClass == null || chestTypeClass == null
-                || !chestClass.isInstance(blockData) || !chestClass.isInstance(relativeData)) {
+        if (
+            blockData == null ||
+            relativeData == null ||
+            chestClass == null ||
+            chestTypeClass == null ||
+            !chestClass.isInstance(blockData) ||
+            !chestClass.isInstance(relativeData)
+        ) {
             return false;
         }
 
@@ -55,6 +59,23 @@ public final class BlockDataCompat {
             return true;
         } catch (ReflectiveOperationException | RuntimeException | LinkageError exception) {
             return false;
+        }
+    }
+
+    public static boolean isChestTypeSingle(@NotNull Block block) {
+        Object blockData = getBlockData(block);
+        Class<?> chestClass = getClass(CHEST_CLASS);
+        Class<?> chestTypeClass = getClass(CHEST_TYPE_CLASS);
+        if (blockData == null || chestClass == null || chestTypeClass == null || !chestClass.isInstance(blockData)) {
+            return true;
+        }
+
+        try {
+            Object type = chestClass.getMethod("getType").invoke(blockData);
+            Object single = enumValue(chestTypeClass, "SINGLE");
+            return single.equals(type);
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError exception) {
+            return true;
         }
     }
 
@@ -100,19 +121,28 @@ public final class BlockDataCompat {
     }
 
     public static @Nullable EntityChangeBlockEvent createLitChangeBlockEvent(
-            @NotNull Entity entity,
-            @NotNull Block block) {
+        @NotNull Entity entity,
+        @NotNull Block block
+    ) {
         Object blockData = getBlockData(block);
         Class<?> lightableClass = getClass(LIGHTABLE_CLASS);
         Class<?> blockDataClass = getClass(BLOCK_DATA_CLASS);
-        if (blockData == null || lightableClass == null || blockDataClass == null || !lightableClass.isInstance(blockData)) {
+        if (
+            blockData == null ||
+            lightableClass == null ||
+            blockDataClass == null ||
+            !lightableClass.isInstance(blockData)
+        ) {
             return null;
         }
 
         try {
             lightableClass.getMethod("setLit", boolean.class).invoke(blockData, true);
-            Constructor<EntityChangeBlockEvent> constructor = EntityChangeBlockEvent.class
-                    .getConstructor(Entity.class, Block.class, blockDataClass);
+            Constructor<EntityChangeBlockEvent> constructor = EntityChangeBlockEvent.class.getConstructor(
+                Entity.class,
+                Block.class,
+                blockDataClass
+            );
             return constructor.newInstance(entity, block, blockData);
         } catch (ReflectiveOperationException | RuntimeException | LinkageError exception) {
             return null;
@@ -209,18 +239,18 @@ public final class BlockDataCompat {
     }
 
     private static void setBlockData(@NotNull Block block, @NotNull Object blockData)
-            throws ReflectiveOperationException {
+        throws ReflectiveOperationException {
         Class<?> blockDataClass = Class.forName(BLOCK_DATA_CLASS, false, BlockDataCompat.class.getClassLoader());
         Block.class.getMethod("setBlockData", blockDataClass).invoke(block, blockData);
     }
 
     private static void sendBlockChange(@NotNull Player player, @NotNull Location location, @NotNull Object blockData)
-            throws ReflectiveOperationException {
+        throws ReflectiveOperationException {
         Class<?> blockDataClass = Class.forName(BLOCK_DATA_CLASS, false, BlockDataCompat.class.getClassLoader());
         Player.class.getMethod("sendBlockChange", Location.class, blockDataClass).invoke(player, location, blockData);
     }
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
+    @SuppressWarnings({ "unchecked", "rawtypes" })
     private static @NotNull Object enumValue(@NotNull Class<?> enumClass, @NotNull String name) {
         return Enum.valueOf((Class<? extends Enum>) enumClass.asSubclass(Enum.class), name);
     }
