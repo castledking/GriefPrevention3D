@@ -81,6 +81,9 @@ build/
 # VS Code
 .vscode/
 
+# zed
+.zed/
+
 # Java Pack
 java-pack.manifest.json
 redhat-java.vsix
@@ -99,3 +102,4 @@ wiki/
 # Untrack legacy compat work
 .gradle/
 build/
+bin/

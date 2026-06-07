@@ -683,9 +683,6 @@ public class BlockEventHandler implements Listener {
     };
 
     private void denyConnectingDoubleChestsAcrossClaimBoundary(Claim claim, Block block, Player player) {
-        UUID claimOwner = null;
-        if (claim != null) claimOwner = claim.getOwnerID();
-
         // Check for double chests placed just outside the claim boundary
         if (BlockDataCompat.isModernChest(block)) {
             for (BlockFace face : HORIZONTAL_DIRECTIONS) {
@@ -693,11 +690,11 @@ public class BlockEventHandler implements Listener {
                 if (!BlockDataCompat.isModernChest(relative)) continue;
 
                 Claim relativeClaim = this.dataStore.getClaimAt(relative.getLocation(), true, claim);
-                UUID relativeClaimOwner = relativeClaim == null ? null : relativeClaim.getOwnerID();
 
-                // Chests outside claims should connect (both null)
-                // and chests inside the same claim should connect (equal)
-                if (Objects.equals(claimOwner, relativeClaimOwner)) break;
+                // Chests outside claims should connect, and chests in claims owned by the same owner should connect.
+                // Important: wilderness and admin claims must not be treated as the same
+                // just because both may have a null owner ID.
+                if (sameClaimOwner(claim, relativeClaim)) break;
 
                 // If the placed chest didn't actually become part of a double chest,
                 // don't modify the neighboring chest (avoids splitting a claimed double chest
@@ -713,6 +710,14 @@ public class BlockEventHandler implements Listener {
                 break;
             }
         }
+    }
+
+    private boolean sameClaimOwner(Claim first, Claim second) {
+        // Important: wilderness and admin claims must not be treated as the same
+        // just because both may have a null owner ID.
+        if (first == null || second == null) return first == second;
+
+        return Objects.equals(first.getOwnerID(), second.getOwnerID());
     }
 
     // Prevent pistons pushing blocks into or out of claims.
