@@ -696,10 +696,9 @@ public class BlockEventHandler implements Listener {
                 // just because both may have a null owner ID.
                 if (sameClaimOwner(claim, relativeClaim)) break;
 
-                // If the placed chest didn't actually become part of a double chest,
-                // don't modify the neighboring chest (avoids splitting a claimed double chest
-                // when placing a single chest adjacent to it outside the claim).
-                if (BlockDataCompat.isChestTypeSingle(block)) break;
+                // Ignore existing double chests; only adjacent single chests are handled here.
+                // This preserves valid double chests fully inside a claim.
+                if (!BlockDataCompat.isChestTypeSingle(relative)) continue;
 
                 // Change both chests to singular chests
                 BlockDataCompat.setChestType(block, "SINGLE");
