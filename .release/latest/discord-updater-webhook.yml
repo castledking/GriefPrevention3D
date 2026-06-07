@@ -12,13 +12,13 @@ webhook:
 message:
   # Username override for the webhook
   username: "GriefPrevention 3D Subdivisions"
-  
+
   # Avatar URL for the webhook
   avatar_url: "https://www.spigotmc.org/data/resource_icons/127/127137.jpg?1769636037"
-  
+
   # Content message (not in the embed itself - use @here, @everyone, etc.)
   content: "<@&1400394882727673906>"
-  
+
   # File attachments (optional - JAR file will be attached separately)
   attachments: []
 
@@ -29,32 +29,32 @@ embed:
     name: "Download on Modrinth"
     url: "https://modrinth.com/plugin/griefprevention-3d-subdivisions#download"
     icon_url: "https://castled.codes/assets/modrinth.png"
-  
+
   # Embed body (pulled from RELEASE-v*.md)
   # title: First line of release doc (e.g., "# GriefPrevention3D v17.4.6")
   # description: 2nd line and up of release doc
   url: https://github.com/castledking/GriefPrevention3D/
-  
+
   # Embed color (decimal integer, not hex)
   # Example: 0x58A6FF = 5814783
   color: 1474606
-  
+
   # Thumbnail image (small image in top-right corner)
   thumbnail:
     url: "https://i.imgur.com/qKjksHM.png"
-  
+
   # Main image (large image in embed body)
   image:
-    url: ""  # Leave empty to not include a main image
-  
+    url: "" # Leave empty to not include a main image
+
   # Footer section
   footer:
     text: "Released via GitHub Actions"
     icon_url: ""
-  
+
   # Timestamp (auto-generated as release time)
   timestamp: true
-  
+
   # Fields (key-value pairs displayed in the embed)
   fields: []
 
@@ -64,4 +64,4 @@ embed:
 edit:
   # Message ID of the previously posted Discord message
   # Leave empty to post a new message
-  message_id: ""
+  message_id: "1513312233038417940"
