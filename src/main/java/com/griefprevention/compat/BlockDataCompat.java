@@ -98,6 +98,50 @@ public final class BlockDataCompat {
         }
     }
 
+    public static @Nullable String getChestTypeName(@NotNull Block block) {
+        Object blockData = getBlockData(block);
+        Class<?> chestClass = getClass(CHEST_CLASS);
+        Class<?> chestTypeClass = getClass(CHEST_TYPE_CLASS);
+        if (blockData == null || chestClass == null || chestTypeClass == null || !chestClass.isInstance(blockData)) {
+            return null;
+        }
+        try {
+            Object type = chestClass.getMethod("getType").invoke(blockData);
+            return type instanceof Enum ? ((Enum<?>) type).name() : null;
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError exception) {
+            return null;
+        }
+    }
+
+    public static @Nullable BlockFace getChestFacing(@NotNull Block block) {
+        Object blockData = getBlockData(block);
+        Class<?> chestClass = getClass(CHEST_CLASS);
+        if (blockData == null || chestClass == null || !chestClass.isInstance(blockData)) {
+            return null;
+        }
+        try {
+            Object facing = chestClass.getMethod("getFacing").invoke(blockData);
+            return facing instanceof BlockFace ? (BlockFace) facing : null;
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError exception) {
+            return null;
+        }
+    }
+
+    public static boolean setChestFacing(@NotNull Block block, @NotNull BlockFace facing) {
+        Object blockData = getBlockData(block);
+        Class<?> chestClass = getClass(CHEST_CLASS);
+        if (blockData == null || chestClass == null || !chestClass.isInstance(blockData)) {
+            return false;
+        }
+        try {
+            chestClass.getMethod("setFacing", BlockFace.class).invoke(blockData, facing);
+            setBlockData(block, blockData);
+            return true;
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError exception) {
+            return false;
+        }
+    }
+
     public static @Nullable BlockFace getDispenserFacing(@NotNull Block block) {
         Object blockData = getBlockData(block);
         Class<?> dispenserClass = getClass(DISPENSER_CLASS);

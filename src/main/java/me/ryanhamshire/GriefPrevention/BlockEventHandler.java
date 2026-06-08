@@ -683,39 +683,126 @@ public class BlockEventHandler implements Listener {
     };
 
     private void denyConnectingDoubleChestsAcrossClaimBoundary(Claim claim, Block block, Player player) {
-        // Check for double chests placed just outside the claim boundary
-        if (BlockDataCompat.isModernChest(block)) {
-            for (BlockFace face : HORIZONTAL_DIRECTIONS) {
-                Block relative = block.getRelative(face);
-                if (!BlockDataCompat.isModernChest(relative)) continue;
+        if (!BlockDataCompat.isModernChest(block)) return;
 
-                Claim relativeClaim = this.dataStore.getClaimAt(relative.getLocation(), true, claim);
+        String connectedType = BlockDataCompat.getChestTypeName(block);
+        if (connectedType == null) return;
 
-                // Chests outside claims should connect, and chests in claims owned by the same owner should connect.
-                // Important: wilderness and admin claims must not be treated as the same
-                // just because both may have a null owner ID.
-                if (sameClaimOwner(claim, relativeClaim)) break;
+        BlockFace connectedFace = getConnectedFace(connectedType, BlockDataCompat.getChestFacing(block));
+        boolean connectedToDeniedSide = false;
 
-                // Ignore existing double chests; only adjacent single chests are handled here.
-                // This preserves valid double chests fully inside a claim.
-                if (!BlockDataCompat.isChestTypeSingle(relative)) continue;
-
-                // Change both chests to singular chests
-                BlockDataCompat.setChestType(block, "SINGLE");
-                BlockDataCompat.setChestType(relative, "SINGLE");
-
-                // Resend relative chest block to prevent visual bug
-                player.sendBlockChange(relative.getLocation(), relative.getBlockData());
-                break;
+        if (connectedFace != null) {
+            Block connectedBlock = block.getRelative(connectedFace);
+            if (BlockDataCompat.isModernChest(connectedBlock) && block.getType() == connectedBlock.getType()) {
+                Claim connectedClaim = this.dataStore.getClaimAt(connectedBlock.getLocation(), true, claim);
+                if (sameClaimOwner(claim, connectedClaim)) return;
+                connectedToDeniedSide = true;
             }
+        }
+
+        BlockFace allowedFace = findSingleChestConnectionFace(claim, block, connectedFace, true);
+        BlockFace deniedFace = findSingleChestConnectionFace(claim, block, connectedFace, false);
+
+        if (!connectedToDeniedSide && deniedFace == null) return;
+
+        if (allowedFace != null) {
+            if (connectedToDeniedSide) {
+                Block oldConnectedBlock = block.getRelative(connectedFace);
+                if (BlockDataCompat.isModernChest(oldConnectedBlock) && block.getType() == oldConnectedBlock.getType()) {
+                    BlockDataCompat.setChestType(oldConnectedBlock, "SINGLE");
+                    player.sendBlockChange(oldConnectedBlock.getLocation(), oldConnectedBlock.getBlockData());
+                }
+            }
+            Block allowedBlock = block.getRelative(allowedFace);
+            if (BlockDataCompat.isModernChest(allowedBlock)) {
+                connectDoubleChest(block, allowedBlock, allowedFace, player);
+            }
+            return;
+        }
+
+        if (connectedToDeniedSide) {
+            Block connectedBlock = block.getRelative(connectedFace);
+            if (!BlockDataCompat.isModernChest(connectedBlock) || block.getType() != connectedBlock.getType()) return;
+
+            BlockDataCompat.setChestType(block, "SINGLE");
+            BlockDataCompat.setChestType(connectedBlock, "SINGLE");
+            player.sendBlockChange(connectedBlock.getLocation(), connectedBlock.getBlockData());
         }
     }
 
-    private boolean sameClaimOwner(Claim first, Claim second) {
-        // Important: wilderness and admin claims must not be treated as the same
-        // just because both may have a null owner ID.
-        if (first == null || second == null) return first == second;
+    private @Nullable BlockFace findSingleChestConnectionFace(Claim claim, Block block,
+                                                              @Nullable BlockFace ignoredFace, boolean allowed) {
+        for (BlockFace face : HORIZONTAL_DIRECTIONS) {
+            if (face == ignoredFace) continue;
+            if (!isValidChestConnectionFace(block, face)) continue;
 
+            Block relative = block.getRelative(face);
+            if (!BlockDataCompat.isModernChest(relative)) continue;
+            if (block.getType() != relative.getType()) continue;
+            if (!BlockDataCompat.isChestTypeSingle(relative)) continue;
+
+            Claim relativeClaim = this.dataStore.getClaimAt(relative.getLocation(), true, claim);
+            boolean sameOwner = sameClaimOwner(claim, relativeClaim);
+
+            if (sameOwner == allowed) return face;
+        }
+        return null;
+    }
+
+    private boolean isValidChestConnectionFace(Block block, BlockFace face) {
+        BlockFace facing = BlockDataCompat.getChestFacing(block);
+        if (facing == null) return false;
+        return face == rotateClockwise(facing) || face == rotateCounterClockwise(facing);
+    }
+
+    private void connectDoubleChest(Block placedBlock, Block relativeBlock, BlockFace relativeFace, Player player) {
+        BlockFace facing = BlockDataCompat.getChestFacing(placedBlock);
+        if (facing == null) return;
+
+        String placedType = getChestTypeForConnection(facing, relativeFace);
+        String relativeType = getChestTypeForConnection(facing, relativeFace.getOppositeFace());
+
+        if ("SINGLE".equals(placedType) || "SINGLE".equals(relativeType)) return;
+
+        BlockDataCompat.setChestType(placedBlock, placedType);
+
+        BlockDataCompat.setChestFacing(relativeBlock, facing);
+        BlockDataCompat.setChestType(relativeBlock, relativeType);
+
+        player.sendBlockChange(relativeBlock.getLocation(), relativeBlock.getBlockData());
+    }
+
+    private @Nullable BlockFace getConnectedFace(String type, @Nullable BlockFace facing) {
+        if (facing == null) return null;
+        if ("LEFT".equals(type)) return rotateClockwise(facing);
+        if ("RIGHT".equals(type)) return rotateCounterClockwise(facing);
+        return null;
+    }
+
+    private String getChestTypeForConnection(BlockFace facing, BlockFace connectedFace) {
+        if (connectedFace == rotateClockwise(facing)) return "LEFT";
+        if (connectedFace == rotateCounterClockwise(facing)) return "RIGHT";
+        return "SINGLE";
+    }
+
+    private static BlockFace rotateClockwise(BlockFace face) {
+        if (face == BlockFace.NORTH) return BlockFace.EAST;
+        if (face == BlockFace.EAST) return BlockFace.SOUTH;
+        if (face == BlockFace.SOUTH) return BlockFace.WEST;
+        if (face == BlockFace.WEST) return BlockFace.NORTH;
+        return face;
+    }
+
+    private static BlockFace rotateCounterClockwise(BlockFace face) {
+        if (face == BlockFace.NORTH) return BlockFace.WEST;
+        if (face == BlockFace.WEST) return BlockFace.SOUTH;
+        if (face == BlockFace.SOUTH) return BlockFace.EAST;
+        if (face == BlockFace.EAST) return BlockFace.NORTH;
+        return face;
+    }
+
+    private boolean sameClaimOwner(Claim first, Claim second) {
+        if (first == null || second == null) return first == second;
         return Objects.equals(first.getOwnerID(), second.getOwnerID());
     }
 
