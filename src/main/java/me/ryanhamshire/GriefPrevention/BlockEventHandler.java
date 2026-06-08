@@ -713,8 +713,13 @@ public class BlockEventHandler implements Listener {
                     player.sendBlockChange(oldConnectedBlock.getLocation(), oldConnectedBlock.getBlockData());
                 }
             }
+
+            BlockDataCompat.setChestType(block, "SINGLE");
+
             Block allowedBlock = block.getRelative(allowedFace);
-            if (BlockDataCompat.isModernChest(allowedBlock)) {
+            if (BlockDataCompat.isModernChest(allowedBlock) &&
+                block.getType() == allowedBlock.getType() &&
+                canNaturallyConnectChests(block, allowedBlock, allowedFace)) {
                 connectDoubleChest(block, allowedBlock, allowedFace, player);
             }
             return;
@@ -740,6 +745,7 @@ public class BlockEventHandler implements Listener {
             if (!BlockDataCompat.isModernChest(relative)) continue;
             if (block.getType() != relative.getType()) continue;
             if (!BlockDataCompat.isChestTypeSingle(relative)) continue;
+            if (!canNaturallyConnectChests(block, relative, face)) continue;
 
             Claim relativeClaim = this.dataStore.getClaimAt(relative.getLocation(), true, claim);
             boolean sameOwner = sameClaimOwner(claim, relativeClaim);
@@ -755,9 +761,22 @@ public class BlockEventHandler implements Listener {
         return face == rotateClockwise(facing) || face == rotateCounterClockwise(facing);
     }
 
+    private boolean canNaturallyConnectChests(Block placedBlock, Block relativeBlock, BlockFace relativeFace) {
+        BlockFace placedFacing = BlockDataCompat.getChestFacing(placedBlock);
+        BlockFace relativeFacing = BlockDataCompat.getChestFacing(relativeBlock);
+        if (placedFacing == null || relativeFacing == null) return false;
+        if (placedFacing != relativeFacing) return false;
+        return isValidChestConnectionFace(placedBlock, relativeFace) &&
+               isValidChestConnectionFace(relativeBlock, relativeFace.getOppositeFace());
+    }
+
     private void connectDoubleChest(Block placedBlock, Block relativeBlock, BlockFace relativeFace, Player player) {
         BlockFace facing = BlockDataCompat.getChestFacing(placedBlock);
-        if (facing == null) return;
+        BlockFace relativeFacing = BlockDataCompat.getChestFacing(relativeBlock);
+        if (facing == null || relativeFacing == null) return;
+
+        if (facing != relativeFacing) return;
+        if (!canNaturallyConnectChests(placedBlock, relativeBlock, relativeFace)) return;
 
         String placedType = getChestTypeForConnection(facing, relativeFace);
         String relativeType = getChestTypeForConnection(facing, relativeFace.getOppositeFace());
@@ -765,8 +784,6 @@ public class BlockEventHandler implements Listener {
         if ("SINGLE".equals(placedType) || "SINGLE".equals(relativeType)) return;
 
         BlockDataCompat.setChestType(placedBlock, placedType);
-
-        BlockDataCompat.setChestFacing(relativeBlock, facing);
         BlockDataCompat.setChestType(relativeBlock, relativeType);
 
         player.sendBlockChange(relativeBlock.getLocation(), relativeBlock.getBlockData());
