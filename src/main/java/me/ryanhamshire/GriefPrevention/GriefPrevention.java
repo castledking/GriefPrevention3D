@@ -4303,9 +4303,8 @@ public class GriefPrevention extends JavaPlugin {
 
         // If in a main claim (no parent), toggle the flag for future subdivisions
         if (claim.parent == null) {
-            // If admin claim, fail if this user is not an admin
-            // If not an admin claim, fail if this user is not the owner
-            if (!playerData.ignoreClaims && (claim.isAdminClaim() ? !player.hasPermission("griefprevention.adminclaims") : !player.getUniqueId().equals(claim.ownerID))) {
+            Supplier<String> noManageReason = claim.checkPermission(player, ClaimPermission.Manage, null);
+            if (!playerData.ignoreClaims && (claim.isAdminClaim() ? !player.hasPermission("griefprevention.adminclaims") : noManageReason != null)) {
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.OnlyOwnersModifyClaims, claim.getOwnerName());
                 return true;
             }
