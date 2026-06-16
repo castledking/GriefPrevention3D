@@ -2,6 +2,7 @@ import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 
 plugins {
     java
+    `maven-publish`
 }
 
 group = "com.griefprevention"
@@ -318,5 +319,16 @@ sourceSets {
     named("compatModern") {
         compileClasspath += paperApi
         runtimeClasspath += paperApi
+    }
+}
+
+publishing {
+    publications {
+        create<MavenPublication>("maven") {
+            artifact(tasks.named<Jar>("jar").flatMap { it.archiveFile })
+            groupId = project.group.toString()
+            artifactId = project.name
+            version = project.version.toString()
+        }
     }
 }
