@@ -2,4 +2,4 @@ before_install:
   - sdk install java 25-open
   - sdk use java 25-open
 install:
-  - ./gradlew jar -x test -x check -x checkAddonCompatibility -x checkLegacyCompatibility
+  - ./gradlew :gp3d-core:jar :jar --configure-on-demand -x test -x check -x checkAddonCompatibility -x checkLegacyCompatibility
