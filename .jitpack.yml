@@ -2,4 +2,4 @@ before_install:
   - sdk install java 25-open
   - sdk use java 25-open
 build:
-  - mvn install -DskipTests
+  - ./gradlew jar -x test -x check
