@@ -34,7 +34,7 @@ public class LegacyRightClickAirHandler implements Listener {
         // DISABLED - Netty injection interferes with player operations on 1.8.8
         // Using Bukkit event approach instead
         available = false;
-        GriefPrevention.AddLogEntry("LegacyRightClickAirHandler disabled - using Bukkit event approach instead");
+        GriefPrevention.AddLogEntry("[GP Debug] LegacyRightClickAirHandler disabled - using Bukkit event approach instead");
     }
 
     public static boolean isAvailable() {

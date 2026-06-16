@@ -1,5 +1,6 @@
 package com.griefprevention.platform;
 
+import org.bukkit.Bukkit;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -20,7 +21,11 @@ public final class PlatformDetection
         /** Paper and Paper forks (Purpur, Pufferfish, etc.) */
         PAPER,
         /** Spigot and Spigot-based servers without Paper API */
-        SPIGOT
+        SPIGOT,
+        /** Purpur (Paper fork) */
+        PURPUR,
+        /** Folia */
+        FOLIA
     }
 
     private static Platform detectedPlatform = null;
@@ -51,7 +56,43 @@ public final class PlatformDetection
         {
             return Platform.PAPER;
         }
+        if (classExists("net.pl3x.purpur.PurpurConfig") || classExists("org.purpurmc.purpur.PurpurConfig")) {
+            return Platform.PURPUR;
+        }
+        if (classExists("io.papermc.folia.FoliaConfig") || classExists("io.folia.Folia")) {
+            return Platform.FOLIA;
+        }
         return Platform.SPIGOT;
+    }
+
+    /**
+     * Returns a concise server implementation + Minecraft version string, e.g. "Paper 1.21.11".
+     */
+    public static @NotNull String getServerVersion()
+    {
+        String mcVersion = Bukkit.getBukkitVersion();
+
+        // Try to extract the numeric minecraft version like 1.21.11 or 1.8.8
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(\\d+\\.\\d+(?:\\.\\d+)?)").matcher(mcVersion);
+        String version = m.find() ? m.group(1) : mcVersion;
+
+        Platform platform = getPlatform();
+        String name;
+        switch (platform) {
+            case PAPER:
+                name = "Paper";
+                break;
+            case PURPUR:
+                name = "Purpur";
+                break;
+            case FOLIA:
+                name = "Folia";
+                break;
+            default:
+                name = "Spigot";
+                break;
+        }
+        return name + " " + version;
     }
 
     /**

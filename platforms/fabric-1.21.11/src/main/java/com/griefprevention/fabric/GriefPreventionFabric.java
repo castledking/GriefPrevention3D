@@ -1,5 +1,6 @@
 package com.griefprevention.fabric;
 
+import com.griefprevention.claims.ClaimRepository;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
 import org.slf4j.Logger;
@@ -12,6 +13,8 @@ public final class GriefPreventionFabric implements ModInitializer
     public static final String MOD_ID = "griefprevention3d";
     private static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
+    private static ClaimRepository claimRepository;
+
     @Override
     public void onInitialize()
     {
@@ -20,11 +23,17 @@ public final class GriefPreventionFabric implements ModInitializer
                 .resolve("GriefPreventionData");
         FabricDataFolder.ensureDefaults(dataFolder, LOGGER);
         FabricClaimRepository claims = new FabricClaimRepository(dataFolder, LOGGER);
+        claimRepository = claims;
         FabricFakeBlockVisualization visualization = new FabricFakeBlockVisualization();
         visualization.register();
         new FabricClaimToolHooks(claims, visualization).register();
         new FabricProtectionHooks(claims).register();
         FabricCommands.register(claims);
         LOGGER.info("GriefPrevention3D Fabric adapter loaded with native protection hooks.");
+    }
+
+    public static ClaimRepository getClaimRepository()
+    {
+        return claimRepository;
     }
 }

@@ -296,6 +296,10 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
         }
 
         if ("admin3d".equalsIgnoreCase(args[0])) {
+            if (!plugin.config_claims_allow3DAdminClaims) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.AdminClaims3DDisabled);
+                return true;
+            }
             if (!player.hasPermission("griefprevention.adminclaims")) {
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
                 return true;

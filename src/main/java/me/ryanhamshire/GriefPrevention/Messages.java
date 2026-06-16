@@ -50,6 +50,8 @@ public enum Messages
     BasicClaimsMode("Returned to basic claim creation mode."),
     ShapedClaimsMode("Shaped claim mode. Right-click to place corners in unclaimed land or to start and extend shaped edits from claim boundaries. Boundary clicks create segment markers as needed. Use /basicclaims to exit."),
     ShapedClaimsDisabled("Shaped claims are disabled on this server."),
+    Subdivisions3DDisabled("3D subdivisions are disabled on this server."),
+    AdminClaims3DDisabled("3D admin claims are disabled on this server."),
     SubdivisionMode("Subdivision mode.  Use your shovel to create subdivisions in your existing claims.  Use /basicclaims to exit."),
     SubdivisionMode3D("3D Subdivision mode.  Use your shovel to create 3D subdivisions in your existing claims.  Use /basicclaims to exit."),
     SubdivisionVideo2("Click for Subdivision Help: {0}", "0:video URL"),
@@ -295,7 +297,8 @@ public enum Messages
     PlaceholderTrustLevelBuilder("Builder", "Returned by %gp3d_trust_level% when the player has build trust in the claim."),
     PlaceholderTrustLevelAccess("Access", "Returned by %gp3d_trust_level% when the player has access trust in the claim."),
     PlaceholderTrustLevelContainer("Container", "Returned by %gp3d_trust_level% when the player has container trust in the claim."),
-    PlaceholderTrustLevelUntrusted("Untrusted", "Returned by %gp3d_trust_level% when the player is standing in a claim but has no trust there.");
+    PlaceholderTrustLevelUntrusted("Untrusted", "Returned by %gp3d_trust_level% when the player is standing in a claim but has no trust there."),
+    MessagesLoaded("Messages loaded: {0}", "0: number of messages loaded");
 
     final @NotNull String defaultValue;
     final @Nullable String notes;

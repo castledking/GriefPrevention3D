@@ -99,6 +99,11 @@ public abstract class DataStore {
     final static String playerDataFolderPath = dataLayerFolderPath + File.separator + "PlayerData";
     final static String configFilePath = dataLayerFolderPath + File.separator + "config.yml";
     final static String messagesFilePath = dataLayerFolderPath + File.separator + "messages.yml";
+    // locale files live alongside config.yml in the data folder
+    public static final String languageFolderPath = dataLayerFolderPath;
+
+    private static final String[] BUNDLED_LOCALE_FILES = {"messages_en.yml", "messages_es.yml", "messages_pt_BR.yml"};
+
     final static String softMuteFilePath = dataLayerFolderPath + File.separator + "softMute.txt";
     final static String bannedWordsFilePath = dataLayerFolderPath + File.separator + "bannedWords.txt";
 
@@ -140,7 +145,6 @@ public abstract class DataStore {
 
     // initialization!
     void initialize() throws Exception {
-        GriefPrevention.AddLogEntry(this.claims.size() + " total claims loaded.");
 
         // RoboMWM: ensure the nextClaimID is greater than any other claim ID. If not,
         // data corruption occurred (out of storage space, usually).
@@ -160,9 +164,11 @@ public abstract class DataStore {
             playerDataFolder.mkdirs();
         }
 
+        // ensure Lang folder exists and extract locale files from JAR
+        this.extractLocaleFiles();
+
         // load up all the messages from messages.yml
         this.loadMessages();
-        GriefPrevention.AddLogEntry("Customizable messages loaded.");
 
         // if converting up from an earlier schema version, write all claims back to
         // storage using the latest format
@@ -193,6 +199,28 @@ public abstract class DataStore {
         this.setSchemaVersion(latestSchemaVersion);
         this.rebuildClaimSnapshotIndex();
 
+    }
+
+    // Extracts bundled locale YAML files from JAR to GriefPreventionData/Lang/ as reference copies
+    private void extractLocaleFiles() {
+        File langFolder = new File(dataLayerFolderPath + File.separator + "Lang");
+        if (!langFolder.exists()) {
+            langFolder.mkdirs();
+        }
+
+        for (String fileName : BUNDLED_LOCALE_FILES) {
+            File targetFile = new File(langFolder, fileName);
+            if (!targetFile.exists()) {
+                try (java.io.InputStream in = GriefPrevention.instance.getResource(fileName)) {
+                    if (in != null) {
+                        java.nio.file.Files.copy(in, targetFile.toPath());
+                    }
+                } catch (IOException e) {
+                    GriefPrevention.AddLogEntry("Failed to extract " + fileName + ": " + e.getMessage(),
+                            CustomLogEntryTypes.Debug, false);
+                }
+            }
+        }
     }
 
     private void loadSoftMutes() {
@@ -2408,9 +2436,135 @@ public abstract class DataStore {
         Messages[] messageIDs = Messages.values();
         this.messages = new String[messageIDs.length];
 
-        // load the config file
+        // Refresh bundled locale files in Lang/ folder
+        this.extractLocaleFiles();
+
+        // Determine which messages file to load
+        // Priority: 1. messages_{locale}.yml (respects config), 2. messages.yml (legacy), 3. auto-detect any messages_*.yml, 4. extract from JAR
+        String locale = "en";
+        if (GriefPrevention.instance != null && GriefPrevention.instance.config_locale != null) {
+            locale = GriefPrevention.instance.config_locale;
+        }
+        String originalLocale = locale;
+
         File messagesFile = new File(messagesFilePath);
-        FileConfiguration config = YamlConfiguration.loadConfiguration(messagesFile);
+        File dataFolder = new File(languageFolderPath);
+        File localeFile = new File(dataFolder, "messages_" + locale + ".yml");
+
+        File activeFile;
+        String source;
+
+        if (localeFile.exists()) {
+            // Locale-specific file matches config — respect user's locale setting
+            activeFile = localeFile;
+            source = "messages_" + locale + ".yml";
+        } else if (messagesFile.exists()) {
+            // Legacy fallback
+            activeFile = messagesFile;
+            source = "messages.yml";
+        } else {
+            // Config locale file not found — scan for any available messages_*.yml
+            File detectedFile = null;
+            String detectedLocale = null;
+            if (dataFolder.exists() && dataFolder.isDirectory()) {
+                File[] langFiles = dataFolder.listFiles((dir, name) ->
+                        name.startsWith("messages_") && name.endsWith(".yml"));
+                if (langFiles != null && langFiles.length > 0) {
+                    java.util.Arrays.sort(langFiles);
+                    for (File f : langFiles) {
+                        String name = f.getName();
+                        String code = name.substring("messages_".length(), name.length() - ".yml".length());
+                        if (!code.isEmpty()) {
+                            detectedFile = f;
+                            detectedLocale = code;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (detectedFile != null) {
+                activeFile = detectedFile;
+                source = detectedFile.getName();
+                locale = detectedLocale;
+                if (GriefPrevention.instance != null) {
+                    GriefPrevention.instance.config_locale = locale;
+                }
+                GriefPrevention.AddLogEntry("Locale '" + originalLocale + "' didn't match provided " + source + ". Auto-switched to '" + detectedLocale + "'",
+                        CustomLogEntryTypes.Debug, false);
+            } else {
+                // No locale files found — extract from JAR matching config locale
+                if (!dataFolder.exists()) {
+                    dataFolder.mkdirs();
+                }
+                activeFile = null;
+                source = null;
+                File targetFile = new File(dataFolder, "messages_" + locale + ".yml");
+                try (java.io.InputStream in = GriefPrevention.instance.getResource("messages_" + locale + ".yml")) {
+                    if (in != null) {
+                        java.nio.file.Files.copy(in, targetFile.toPath());
+                        activeFile = targetFile;
+                        source = "messages_" + locale + ".yml";
+                        GriefPrevention.AddLogEntry("Extracted " + source + " to " + languageFolderPath,
+                                CustomLogEntryTypes.Debug, false);
+                    } else {
+                        // Requested locale not in JAR, try English
+                        File enTarget = new File(dataFolder, "messages_en.yml");
+                        try (java.io.InputStream enIn = GriefPrevention.instance.getResource("messages_en.yml")) {
+                            if (enIn != null) {
+                                java.nio.file.Files.copy(enIn, enTarget.toPath());
+                                activeFile = enTarget;
+                                source = "messages_en.yml";
+                                locale = "en";
+                                if (GriefPrevention.instance != null) {
+                                    GriefPrevention.instance.config_locale = locale;
+                                }
+                                GriefPrevention.AddLogEntry("Extracted messages_en.yml to " + languageFolderPath,
+                                        CustomLogEntryTypes.Debug, false);
+                            }
+                        }
+                    }
+                } catch (IOException e) {
+                    GriefPrevention.AddLogEntry("Failed to extract messages_" + locale + ".yml: " + e.getMessage(),
+                            CustomLogEntryTypes.Debug, false);
+                }
+            }
+        }
+
+        FileConfiguration config;
+        if (activeFile != null) {
+            config = YamlConfiguration.loadConfiguration(activeFile);
+
+            // Merge missing keys from JAR bundled version
+            try (java.io.InputStream bundledIn = GriefPrevention.instance.getResource(source)) {
+                if (bundledIn != null) {
+                    java.io.BufferedReader reader = new java.io.BufferedReader(
+                            new java.io.InputStreamReader(bundledIn, StandardCharsets.UTF_8));
+                    FileConfiguration bundledConfig = YamlConfiguration.loadConfiguration(reader);
+                    boolean merged = false;
+                    for (String key : bundledConfig.getKeys(true)) {
+                        if (!config.contains(key)) {
+                            config.set(key, bundledConfig.get(key));
+                            merged = true;
+                        }
+                    }
+                    if (merged) {
+                        try {
+                            config.save(activeFile);
+                            GriefPrevention.AddLogEntry("Merged missing keys from bundled " + source,
+                                    CustomLogEntryTypes.Debug, false);
+                        } catch (IOException e) {
+                            GriefPrevention.AddLogEntry("Failed to save merged " + source + ": " + e.getMessage(),
+                                    CustomLogEntryTypes.Debug, false);
+                        }
+                    }
+                }
+            } catch (IOException e) {
+                // Bundled file not available, skip merge
+            }
+        } else {
+            config = new YamlConfiguration();
+        }
 
         // for each message ID
         for (Messages message : messageIDs) {
@@ -2423,7 +2577,6 @@ public abstract class DataStore {
             else {
                 this.messages[message.ordinal()] = config.getString(messagePath, message.defaultValue);
             }
-            config.set(messagePath, this.messages[message.ordinal()]);
 
             // Apply automatic styling to specific messages if no user color codes are
             // present
@@ -2468,11 +2621,8 @@ public abstract class DataStore {
                     }
                 }
 
-                // Support both $ and & prefixes so users can paste codes from common
-                // generators.
-                this.messages[message.ordinal()] = this.messages[message.ordinal()]
-                        .replace('$', (char) 0x00A7)
-                        .replace('&', (char) 0x00A7);
+                // Convert $, & prefix codes and hex codes to Minecraft legacy format
+                this.messages[message.ordinal()] = TextColor.translate(this.messages[message.ordinal()]);
 
                 // Support \n for newlines
                 this.messages[message.ordinal()] = this.messages[message.ordinal()]
@@ -2495,21 +2645,23 @@ public abstract class DataStore {
             }
         }
 
-        // save any changes
-        try {
+        // Only save back to messages.yml if we loaded from it (legacy/migration)
+        if (messagesFile.exists()) {
             try {
-                config.options().setHeader(Arrays.asList(
-                        "Use a YAML editor like NotepadPlusPlus to edit this file.",
-                        "After editing, back up your changes before reloading the server in case you made a syntax error.",
-                        "Use dollar signs ($) for formatting codes, which are documented here: http://minecraft.wiki/Formatting_codes#Color_codes",
-                        "Use \\n to create newlines in messages."));
-            } catch (NoSuchMethodError e) {
-                // setHeader not available in older Bukkit versions, ignore
+                try {
+                    config.options().setHeader(Arrays.asList(
+                            "Use a YAML editor like NotepadPlusPlus to edit this file.",
+                            "After editing, back up your changes before reloading the server in case you made a syntax error.",
+                            "Use dollar signs ($) for formatting codes, which are documented here: http://minecraft.wiki/Formatting_codes#Color_codes",
+                            "Use \\n to create newlines in messages."));
+                } catch (NoSuchMethodError e) {
+                    // setHeader not available in older Bukkit versions, ignore
+                }
+                config.save(DataStore.messagesFilePath);
+            } catch (IOException exception) {
+                Bukkit.getLogger()
+                        .info("Unable to write to the configuration file at \"" + DataStore.messagesFilePath + "\"");
             }
-            config.save(DataStore.messagesFilePath);
-        } catch (IOException exception) {
-            Bukkit.getLogger()
-                    .info("Unable to write to the configuration file at \"" + DataStore.messagesFilePath + "\"");
         }
     }
 

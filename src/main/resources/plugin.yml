@@ -303,6 +303,8 @@ permissions:
       griefprevention.seeclaimsize: true
       griefprevention.restorenature: true
       griefprevention.restorenatureaggressive: true
+      griefprevention.checkclaimexpiry: true
+      griefprevention.dontexpire: true
   griefprevention.extendclaim.toolbypass:
     description: Allows a player to extend a claim without a modification tool.
     default: op
@@ -396,6 +398,9 @@ permissions:
   griefprevention.checkclaimexpiry:
     description: Allows checking claim expiration information.
     default: false
+  griefprevention.dontexpire:
+    description: Prevents a player's claims from expiring.
+    default: op
   griefprevention.seeinactivity:
     description: Players with this permission can see how long a claim owner has been offline.
     default: op

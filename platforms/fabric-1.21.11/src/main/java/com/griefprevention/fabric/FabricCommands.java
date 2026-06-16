@@ -110,7 +110,8 @@ final class FabricCommands
                     source.getLevel(),
                     player.blockPosition(),
                     player.getUUID(),
-                    radius
+                    radius,
+                    player
             );
             if (!result.created())
             {
@@ -160,7 +161,7 @@ final class FabricCommands
         ServerPlayer player = source.getPlayerOrException();
         try
         {
-            ClaimSnapshot deleted = claims.deleteClaimAt(source.getLevel(), player.blockPosition());
+            ClaimSnapshot deleted = claims.deleteClaimAt(source.getLevel(), player.blockPosition(), player);
             if (deleted == null)
             {
                 source.sendFailure(Component.literal("No GriefPrevention3D Fabric claim found at your location."));

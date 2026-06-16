@@ -1,27 +1,31 @@
 package com.griefprevention.fabric;
 
+import com.griefprevention.claims.ClaimBounds;
+import com.griefprevention.claims.ClaimRepository;
 import com.griefprevention.claims.ClaimSnapshot;
 import com.griefprevention.claims.ClaimSnapshotIndex;
-import com.griefprevention.claims.ClaimBounds;
 import com.griefprevention.claims.ClaimTrustLevel;
 import com.griefprevention.claims.ClaimTrustSnapshot;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-final class FabricClaimRepository
+public final class FabricClaimRepository implements ClaimRepository
 {
     private final ClaimSnapshotIndex claimIndex = new ClaimSnapshotIndex();
     private final Map<Long, ClaimTrustSnapshot> trustByClaimId = new LinkedHashMap<>();
@@ -66,21 +70,24 @@ final class FabricClaimRepository
             @NotNull ServerLevel level,
             @NotNull BlockPos center,
             @NotNull UUID ownerId,
-            int radius)
+            int radius,
+            @Nullable ServerPlayer player)
             throws IOException
     {
         return createClaim(
                 level,
                 new BlockPos(center.getX() - radius, center.getY(), center.getZ() - radius),
                 new BlockPos(center.getX() + radius, center.getY(), center.getZ() + radius),
-                ownerId);
+                ownerId,
+                player);
     }
 
     synchronized @NotNull CreateClaimResult createClaim(
             @NotNull ServerLevel level,
             @NotNull BlockPos firstCorner,
             @NotNull BlockPos secondCorner,
-            @NotNull UUID ownerId)
+            @NotNull UUID ownerId,
+            @Nullable ServerPlayer player)
             throws IOException
     {
         ClaimBounds bounds = ClaimBounds.rectangle(
@@ -124,12 +131,14 @@ final class FabricClaimRepository
             this.nextClaimId = previousNextClaimId;
             throw e;
         }
+        ClaimCreatedCallback.EVENT.invoker().onClaimCreated(snapshot, player);
         return CreateClaimResult.created(snapshot);
     }
 
     synchronized @NotNull UpdateClaimResult updateClaimBounds(
             long claimId,
-            @NotNull ClaimBounds bounds)
+            @NotNull ClaimBounds bounds,
+            @Nullable ServerPlayer player)
             throws IOException
     {
         ClaimSnapshot existing = null;
@@ -179,10 +188,11 @@ final class FabricClaimRepository
         }
 
         replaceAndSave(snapshots, mutableTrust());
+        ClaimModifiedCallback.EVENT.invoker().onClaimModified(existing, updated, player);
         return UpdateClaimResult.updated(updated);
     }
 
-    synchronized @Nullable ClaimSnapshot deleteClaimAt(@NotNull ServerLevel level, @NotNull BlockPos pos)
+    synchronized @Nullable ClaimSnapshot deleteClaimAt(@NotNull ServerLevel level, @NotNull BlockPos pos, @Nullable ServerPlayer player)
             throws IOException
     {
         ClaimSnapshot claim = findClaimAt(level, pos);
@@ -196,6 +206,7 @@ final class FabricClaimRepository
         Map<Long, ClaimTrustSnapshot> trust = mutableTrust();
         trust.remove(claim.id());
         replaceAndSave(snapshots, trust);
+        ClaimDeletedCallback.EVENT.invoker().onClaimDeleted(claim, player);
         return claim;
     }
 
@@ -342,6 +353,51 @@ final class FabricClaimRepository
         denies.remove(normalizedIdentifier + ClaimTrustLevel.BUILD.denySuffix());
         denies.remove(normalizedIdentifier + ClaimTrustLevel.CONTAINER.denySuffix());
         denies.remove(normalizedIdentifier + ClaimTrustLevel.ACCESS.denySuffix());
+    }
+
+    // ClaimRepository interface methods
+
+    @Override
+    public @NotNull Collection<ClaimSnapshot> getClaims()
+    {
+        return this.claimIndex.snapshots();
+    }
+
+    @Override
+    public @NotNull Collection<ClaimSnapshot> getClaims(@NotNull UUID owner)
+    {
+        List<ClaimSnapshot> result = new ArrayList<>();
+        for (ClaimSnapshot snapshot : this.claimIndex.snapshots())
+        {
+            if (owner.equals(snapshot.ownerId()))
+            {
+                result.add(snapshot);
+            }
+        }
+        return result;
+    }
+
+    @Override
+    public @NotNull Optional<ClaimSnapshot> getClaim(long id)
+    {
+        return Optional.ofNullable(this.claimIndex.get(id));
+    }
+
+    @Override
+    public @NotNull Optional<ClaimSnapshot> findClaimAt(
+            @NotNull String worldKey,
+            int x, int y, int z,
+            boolean ignoreHeight,
+            boolean ignoreSubclaims)
+    {
+        ClaimSnapshot result = this.claimIndex.findAt(worldKey, x, y, z, ignoreHeight, ignoreSubclaims);
+        return Optional.ofNullable(result);
+    }
+
+    @Override
+    public @NotNull Collection<ClaimSnapshot> candidates(@NotNull String worldKey, @NotNull ClaimBounds bounds)
+    {
+        return this.claimIndex.candidates(worldKey, bounds);
     }
 
     static final class CreateClaimResult

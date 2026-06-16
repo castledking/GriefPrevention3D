@@ -174,7 +174,8 @@ final class FabricClaimToolHooks
                     level,
                     session.firstCorner,
                     clicked,
-                    player.getUUID());
+                    player.getUUID(),
+                    player);
             if (!result.created())
             {
                 this.visualization.visualizeConflictBounds(player, level, bounds, clicked);
@@ -239,7 +240,7 @@ final class FabricClaimToolHooks
 
         try
         {
-            FabricClaimRepository.UpdateClaimResult result = this.claims.updateClaimBounds(session.claimId, bounds);
+            FabricClaimRepository.UpdateClaimResult result = this.claims.updateClaimBounds(session.claimId, bounds, player);
             if (result.isMissing())
             {
                 this.sessions.remove(player.getUUID());

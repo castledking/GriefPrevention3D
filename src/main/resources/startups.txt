@@ -1,0 +1,180 @@
+en1[
+&#008686 ▄▄▄▄▄▄▄▄▄▄ ▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄ ▄▄▄▄▄▄▄▄▄▄ 
+&#008686█&#ffffff▄████████&#008686█ █&#ffffff████████▄&#008686█ █&#ffffff█████████&#008686█ █&#ffffff████████▄&#008686█
+&#008686█&#d6f0ef▓▓▓&#008686█▀█&#d6f0ef▓▓▓&#008686█ █&#d6f0ef▓▓▓▓▓▓▓▓▓&#008686█ █&#d6f0ef▓▓▓▓▓▓▓▓▓&#008686█ █&#d6f0ef▓▓▓▓▓▓▓▓▓&#008686█
+&#008686█&#52c1c3▒▒▒&#008686█▄█████ █&#52c1c3▒▒▒&#008686█▀█&#52c1c3▒▒▒&#008686█ █&#52c1c3▒▒▒&#008686█▀█&#52c1c3▒▒▒&#008686█ █&#52c1c3▒▒▒&#008686█▀█&#52c1c3▒▒▒&#008686█
+&#008686█&#aab5c0░░░&#008686█&#aab5c0░░░░░&#008686█ █&#aab5c0░░░&#008686█▄█&#aab5c0░░░&#008686█ ▀▀▀▀█▄█&#aab5c0░░░&#008686█ █&#aab5c0░░░&#008686█ █&#aab5c0░░░&#008686█
+&#008686█&#97c2c5░░░&#008686█▀█&#97c2c5░░░&#008686█ █&#97c2c5░░░░░░░░░&#008686█ ▄▄▄▄█&#97c2c5░░░░░&#008686█ █&#97c2c5░░░&#008686█ █&#97c2c5░░░&#008686█
+&#008686█&#60f2ef▒▒▒&#008686█▄█&#60f2ef▒▒▒&#008686█ █&#60f2ef▒▒▒▒▒▒▒▒&#008686▄█ █&#60f2ef▒▒▒&#008686███&#60f2ef▒▒▒&#008686█ █&#60f2ef▒▒▒&#008686█▄█&#60f2ef▒▒▒&#008686█
+&#008686█&#55ffff▓▓▓▓▓▓▓▓▓&#008686█ █&#55ffff▓▓▓&#008686█▀▀▀▀▀  █&#55ffff▓▓▓▓▓▓▓▓▓&#008686█ █&#55ffff▓▓▓▓▓▓▓▓▓&#008686█
+&#008686█&#2ddafd█████████&#008686█ █&#2ddafd███&#008686█       █&#2ddafd█████████&#008686█ █&#2ddafd█████████&#008686█
+&#008686▀▀▀▀▀▀▀▀▀▀▀ ▀▀▀▀▀       ▀▀▀▀▀▀▀▀▀▀▀ ▀▀▀▀▀▀▀▀▀▀&#aaaaaa(&#ffd700v${version}&#aaaaaa)
+
+&#AAAAAAby castledking, RoboMWM and BigScary
+
+&#FFD700The self-service anti-griefing plugin for Minecraft servers
+&#55FFFF — now with full 3D subdivisions
+
+&#FFFFFFStartup details:
+
+${details}
+
+&#AAAAAABoot finished in: &#55FF55${startup.time}
+]
+en2[
+&#17C3BB ▄████  ▄▄▄▄  ▄▄ ▄▄▄▄▄ ▄▄▄▄▄ 
+&#17C3BB██  ▄▄▄ ██▄█▄ ██ ██▄▄  ██▄▄  
+&#17C3BB ▀███▀  ██ ██ ██ ██▄▄▄ ██    
+
+&#0FBCB6█████▄ ▄▄▄▄  ▄▄▄▄▄ ▄▄ ▄▄ ▄▄▄▄▄ ▄▄  ▄▄ ▄▄▄▄▄▄ ▄▄  ▄▄▄  ▄▄  ▄▄    &#FF6700████▄ ████▄ 
+&#0FBCB6██▄▄█▀ ██▄█▄ ██▄▄  ██▄██ ██▄▄  ███▄██   ██   ██ ██▀██ ███▄██    &#FF6700 ▄▄██ ██  ██ 
+&#0FBCB6██     ██ ██ ██▄▄▄  ▀█▀  ██▄▄▄ ██ ▀██   ██   ██ ▀███▀ ██ ▀██    &#FF6700▄▄▄█▀ ████▀&#aaaaaa(&#ffd700v${version}&#aaaaaa)
+
+&#AAAAAAby castledking, RoboMWM and BigScary
+
+&#FFD700The self-service anti-griefing plugin for Minecraft servers
+&#55FFFF — now with full 3D subdivisions
+
+&#FFFFFFStartup details:
+
+${details}
+
+&#AAAAAABoot finished in: &#55FF55${startup.time}
+]
+en3[
+&#98C84A  ___     _      __ ___                     _   _          &#00A2FF_______  
+&#98C84A / __|_ _(_)___ / _| _ \_ _ _____ _____ _ _| |_(_)___ _ _ &#00A2FF|__ /   \ 
+&#98C84A| (_ | '_| / -_)  _|  _/ '_/ -_) V / -_) ' \  _| / _ \ ' \ &#00A2FF|_ \ |) |
+&#98C84A \___|_| |_\___|_| |_| |_| \___|\_/\___|_||_\__|_\___/_||_&#00A2FF|___/___/&#aaaaaa(&#ffd700v${version}&#aaaaaa)
+
+&#AAAAAAby castledking, RoboMWM and BigScary
+
+&#FFD700The self-service anti-griefing plugin for Minecraft servers
+&#55FFFF — now with full 3D subdivisions
+
+&#FFFFFFStartup details:
+
+${details}
+
+&#AAAAAABoot finished in: &#55FF55${startup.time}
+]
+es1[
+&#008686 ▄▄▄▄▄▄▄▄▄▄ ▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄ ▄▄▄▄▄▄▄▄▄▄ 
+&#008686█&#ffffff▄████████&#008686█ █&#ffffff████████▄&#008686█ █&#ffffff█████████&#008686█ █&#ffffff████████▄&#008686█
+&#008686█&#d6f0ef▓▓▓&#008686█▀█&#d6f0ef▓▓▓&#008686█ █&#d6f0ef▓▓▓▓▓▓▓▓▓&#008686█ █&#d6f0ef▓▓▓▓▓▓▓▓▓&#008686█ █&#d6f0ef▓▓▓▓▓▓▓▓▓&#008686█
+&#008686█&#52c1c3▒▒▒&#008686█▄█████ █&#52c1c3▒▒▒&#008686█▀█&#52c1c3▒▒▒&#008686█ █&#52c1c3▒▒▒&#008686█▀█&#52c1c3▒▒▒&#008686█ █&#52c1c3▒▒▒&#008686█▀█&#52c1c3▒▒▒&#008686█
+&#008686█&#aab5c0░░░&#008686█&#aab5c0░░░░░&#008686█ █&#aab5c0░░░&#008686█▄█&#aab5c0░░░&#008686█ ▀▀▀▀█▄█&#aab5c0░░░&#008686█ █&#aab5c0░░░&#008686█ █&#aab5c0░░░&#008686█
+&#008686█&#97c2c5░░░&#008686█▀█&#97c2c5░░░&#008686█ █&#97c2c5░░░░░░░░░&#008686█ ▄▄▄▄█&#97c2c5░░░░░&#008686█ █&#97c2c5░░░&#008686█ █&#97c2c5░░░&#008686█
+&#008686█&#60f2ef▒▒▒&#008686█▄█&#60f2ef▒▒▒&#008686█ █&#60f2ef▒▒▒▒▒▒▒▒&#008686▄█ █&#60f2ef▒▒▒&#008686███&#60f2ef▒▒▒&#008686█ █&#60f2ef▒▒▒&#008686█▄█&#60f2ef▒▒▒&#008686█
+&#008686█&#55ffff▓▓▓▓▓▓▓▓▓&#008686█ █&#55ffff▓▓▓&#008686█▀▀▀▀▀  █&#55ffff▓▓▓▓▓▓▓▓▓&#008686█ █&#55ffff▓▓▓▓▓▓▓▓▓&#008686█
+&#008686█&#2ddafd█████████&#008686█ █&#2ddafd███&#008686█       █&#2ddafd█████████&#008686█ █&#2ddafd█████████&#008686█
+&#008686▀▀▀▀▀▀▀▀▀▀▀ ▀▀▀▀▀       ▀▀▀▀▀▀▀▀▀▀▀ ▀▀▀▀▀▀▀▀▀▀&#aaaaaa(&#ffd700v${version}&#aaaaaa)
+
+&#AAAAAApor castledking, RoboMWM y BigScary
+
+&#FFD700El plugin de protección contra griefing de autoservicio para servidores de Minecraft
+&#55FFFF — ahora con subdivisiones 3D completas
+
+&#FFFFFFDetalles de inicio:
+
+${details}
+
+&#AAAAAAInicio completado en: &#55FF55${startup.time}
+]
+es2[
+&#17C3BB ▄████  ▄▄▄▄  ▄▄ ▄▄▄▄▄ ▄▄▄▄▄ 
+&#17C3BB██  ▄▄▄ ██▄█▄ ██ ██▄▄  ██▄▄  
+&#17C3BB ▀███▀  ██ ██ ██ ██▄▄▄ ██    
+
+&#0FBCB6█████▄ ▄▄▄▄  ▄▄▄▄▄ ▄▄ ▄▄ ▄▄▄▄▄ ▄▄  ▄▄ ▄▄▄▄▄▄ ▄▄  ▄▄▄  ▄▄  ▄▄    &#FF6700████▄ ████▄ 
+&#0FBCB6██▄▄█▀ ██▄█▄ ██▄▄  ██▄██ ██▄▄  ███▄██   ██   ██ ██▀██ ███▄██    &#FF6700 ▄▄██ ██  ██ 
+&#0FBCB6██     ██ ██ ██▄▄▄  ▀█▀  ██▄▄▄ ██ ▀██   ██   ██ ▀███▀ ██ ▀██    &#FF6700▄▄▄█▀ ████▀&#aaaaaa(&#ffd700v${version}&#aaaaaa)
+
+&#AAAAAApor castledking, RoboMWM y BigScary
+
+&#FFD700El plugin de protección contra griefing de autoservicio para servidores de Minecraft
+&#55FFFF — ahora con subdivisiones 3D completas
+
+&#FFFFFFDetalles de inicio:
+
+${details}
+
+&#AAAAAAInicio completado en: &#55FF55${startup.time}
+]
+es3[
+&#98C84A  ___     _      __ ___                     _   _          &#00A2FF_______  
+&#98C84A / __|_ _(_)___ / _| _ \_ _ _____ _____ _ _| |_(_)___ _ _ &#00A2FF|__ /   \ 
+&#98C84A| (_ | '_| / -_)  _|  _/ '_/ -_) V / -_) ' \  _| / _ \ ' \ &#00A2FF|_ \ |) |
+&#98C84A \___|_| |_\___|_| |_| |_| \___|\_/\___|_||_\__|_\___/_||_&#00A2FF|___/___/&#aaaaaa(&#ffd700v${version}&#aaaaaa)
+
+&#AAAAAApor castledking, RoboMWM y BigScary
+
+&#FFD700El plugin de protección contra griefing de autoservicio para servidores de Minecraft
+&#55FFFF — ahora con subdivisiones 3D completas
+
+&#FFFFFFDetalles de inicio:
+
+${details}
+
+&#AAAAAAInicio completado en: &#55FF55${startup.time}
+]
+pt1[
+&#008686 ▄▄▄▄▄▄▄▄▄▄ ▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄ ▄▄▄▄▄▄▄▄▄▄ 
+&#008686█&#ffffff▄████████&#008686█ █&#ffffff████████▄&#008686█ █&#ffffff█████████&#008686█ █&#ffffff████████▄&#008686█
+&#008686█&#d6f0ef▓▓▓&#008686█▀█&#d6f0ef▓▓▓&#008686█ █&#d6f0ef▓▓▓▓▓▓▓▓▓&#008686█ █&#d6f0ef▓▓▓▓▓▓▓▓▓&#008686█ █&#d6f0ef▓▓▓▓▓▓▓▓▓&#008686█
+&#008686█&#52c1c3▒▒▒&#008686█▄█████ █&#52c1c3▒▒▒&#008686█▀█&#52c1c3▒▒▒&#008686█ █&#52c1c3▒▒▒&#008686█▀█&#52c1c3▒▒▒&#008686█ █&#52c1c3▒▒▒&#008686█▀█&#52c1c3▒▒▒&#008686█
+&#008686█&#aab5c0░░░&#008686█&#aab5c0░░░░░&#008686█ █&#aab5c0░░░&#008686█▄█&#aab5c0░░░&#008686█ ▀▀▀▀█▄█&#aab5c0░░░&#008686█ █&#aab5c0░░░&#008686█ █&#aab5c0░░░&#008686█
+&#008686█&#97c2c5░░░&#008686█▀█&#97c2c5░░░&#008686█ █&#97c2c5░░░░░░░░░&#008686█ ▄▄▄▄█&#97c2c5░░░░░&#008686█ █&#97c2c5░░░&#008686█ █&#97c2c5░░░&#008686█
+&#008686█&#60f2ef▒▒▒&#008686█▄█&#60f2ef▒▒▒&#008686█ █&#60f2ef▒▒▒▒▒▒▒▒&#008686▄█ █&#60f2ef▒▒▒&#008686███&#60f2ef▒▒▒&#008686█ █&#60f2ef▒▒▒&#008686█▄█&#60f2ef▒▒▒&#008686█
+&#008686█&#55ffff▓▓▓▓▓▓▓▓▓&#008686█ █&#55ffff▓▓▓&#008686█▀▀▀▀▀  █&#55ffff▓▓▓▓▓▓▓▓▓&#008686█ █&#55ffff▓▓▓▓▓▓▓▓▓&#008686█
+&#008686█&#2ddafd█████████&#008686█ █&#2ddafd███&#008686█       █&#2ddafd█████████&#008686█ █&#2ddafd█████████&#008686█
+&#008686▀▀▀▀▀▀▀▀▀▀▀ ▀▀▀▀▀       ▀▀▀▀▀▀▀▀▀▀▀ ▀▀▀▀▀▀▀▀▀▀&#aaaaaa(&#ffd700v${version}&#aaaaaa)
+
+&#AAAAAApor castledking, RoboMWM e BigScary
+
+&#FFD700O plugin de proteção contra griefing de autoatendimento para servidores de Minecraft
+&#55FFFF — agora com subdivisões 3D completas
+
+&#FFFFFFDetalhes da inicialização:
+
+${details}
+
+&#AAAAAAInicialização concluída em: &#55FF55${startup.time}
+]
+pt2[
+&#17C3BB ▄████  ▄▄▄▄  ▄▄ ▄▄▄▄▄ ▄▄▄▄▄ 
+&#17C3BB██  ▄▄▄ ██▄█▄ ██ ██▄▄  ██▄▄  
+&#17C3BB ▀███▀  ██ ██ ██ ██▄▄▄ ██    
+
+&#0FBCB6█████▄ ▄▄▄▄  ▄▄▄▄▄ ▄▄ ▄▄ ▄▄▄▄▄ ▄▄  ▄▄ ▄▄▄▄▄▄ ▄▄  ▄▄▄  ▄▄  ▄▄    &#FF6700████▄ ████▄ 
+&#0FBCB6██▄▄█▀ ██▄█▄ ██▄▄  ██▄██ ██▄▄  ███▄██   ██   ██ ██▀██ ███▄██    &#FF6700 ▄▄██ ██  ██ 
+&#0FBCB6██     ██ ██ ██▄▄▄  ▀█▀  ██▄▄▄ ██ ▀██   ██   ██ ▀███▀ ██ ▀██    &#FF6700▄▄▄█▀ ████▀&#aaaaaa(&#ffd700v${version}&#aaaaaa)
+
+&#AAAAAApor castledking, RoboMWM e BigScary
+
+&#FFD700O plugin de proteção contra griefing de autoatendimento para servidores de Minecraft
+&#55FFFF — agora com subdivisões 3D completas
+
+&#FFFFFFDetalhes da inicialização:
+
+${details}
+
+&#AAAAAAInicialização concluída em: &#55FF55${startup.time}
+]
+pt3[
+&#98C84A  ___     _      __ ___                     _   _          &#00A2FF_______  
+&#98C84A / __|_ _(_)___ / _| _ \_ _ _____ _____ _ _| |_(_)___ _ _ &#00A2FF|__ /   \ 
+&#98C84A| (_ | '_| / -_)  _|  _/ '_/ -_) V / -_) ' \  _| / _ \ ' \ &#00A2FF|_ \ |) |
+&#98C84A \___|_| |_\___|_| |_| |_| \___|\_/\___|_||_\__|_\___/_||_&#00A2FF|___/___/&#aaaaaa(&#ffd700v${version}&#aaaaaa) 
+
+&#AAAAAApor castledking, RoboMWM e BigScary
+
+&#FFD700O plugin de proteção contra griefing de autoatendimento para servidores de Minecraft
+&#55FFFF — agora com subdivisões 3D completas
+
+&#FFFFFFDetalhes da inicialização:
+
+${details}
+
+&#AAAAAAInicialização concluída em: &#55FF55${startup.time}
+]

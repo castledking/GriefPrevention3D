@@ -1,0 +1,291 @@
+# ============================================================
+# GriefPrevention - Mensajes en español
+# ============================================================
+# Para cambiar el idioma, copia el archivo messages_XX.yml deseado
+# desde la carpeta Lang/ a GriefPreventionData/ y renómbralo:
+#   plugins/GriefPreventionData/messages.yml
+#
+# El plugin carga los mensajes en este orden:
+#   1. messages.yml (tu archivo personalizado o de idioma)
+#   2. messages_{locale}.yml (según GriefPrevention.Locale en config)
+#   3. messages_en.yml (respaldo)
+#
+# Formato: usa $ o & para códigos de color.
+# Saltos de línea: usa \n en los mensajes.
+# ============================================================
+
+Messages:
+  RespectingClaims: Ahora respetando terrenos protegidos.
+  IgnoringClaims: Ahora ignorando terrenos protegidos.
+  NoCreativeUnClaim: No puedes quitar la protección de este terreno. Solo puedes ampliar este terreno protegido o crear terrenos protegidos adicionales.
+  SuccessfulAbandon: Terrenos protegidos abandonados. Ahora tienes {0} bloques de protección disponibles.
+  TransferClaimPermission: Ese comando requiere el permiso para terrenos administrativos.
+  TransferClaimMissing: No hay ningún terreno protegido aquí. Colócate dentro del terreno administrativo que quieres transferir.
+  TransferClaimAdminOnly: Solo los terrenos administrativos pueden transferirse a un jugador.
+  PlayerNotFound2: Ningún jugador con ese nombre ha iniciado sesión recientemente.
+  TransferTopLevel: Solo se pueden transferir terrenos protegidos principales, no subdivisiones. Colócate fuera de la subdivisión e inténtalo de nuevo.
+  TransferSuccess: Terreno protegido transferido.
+  ConvertClaimMissing: No hay ningun terreno aqui. Colocate dentro del terreno que quieres convertir.
+  ConvertClaimAlreadyAdmin: Este terreno ya es un terreno administrativo.
+  ConvertClaimAlreadyBasic: Este terreno ya es un terreno basico.
+  ConvertClaimAdminSuccess: Terreno convertido a terreno administrativo.
+  ConvertClaimBasicSuccess: Terreno administrativo convertido a un terreno basico que posees.
+  TrustListNoClaim: Colócate dentro del terreno protegido que quieres consultar.
+  ClearPermsOwnerOnly: Solo el propietario del terreno protegido puede borrar todos los permisos.
+  UntrustIndividualAllClaims: Se revocó el acceso de {0} a TODOS tus terrenos protegidos. Para establecer permisos en un solo terreno protegido, colócate dentro de él.
+  UntrustEveryoneAllClaims: Se borraron los permisos en TODOS tus terrenos protegidos. Para establecer permisos en un solo terreno protegido, colócate dentro de él.
+  NoPermissionTrust: No tienes el permiso de {0} para administrar permisos aquí.
+  ClearPermissionsOneClaim: Se borraron los permisos de este terreno protegido. Para establecer permisos en TODOS tus terrenos protegidos, colócate fuera de ellos.
+  UntrustIndividualSingleClaim: Se revocó el acceso de {0} a este terreno protegido. Para establecer permisos en TODOS tus terrenos protegidos, colócate fuera de ellos.
+  AdminClaimsMode: Modo de terrenos administrativos activo. Cualquier terreno protegido creado será gratuito y editable por otros administradores.
+  _3DAdminClaimsMode: Modo de terrenos administrativos 3D activo. Cualquier terreno creado sera gratuito, con limite de altura, y editable por otros administradores.
+  BasicClaimsMode: Se volvió al modo básico de creación de terrenos protegidos.
+  ShapedClaimsMode: Modo de terreno con forma. Haz clic derecho para colocar esquinas en tierra sin proteger o para iniciar y extender ediciones con forma desde los bordes de terrenos. Los clics en bordes crean marcadores de segmentos segun sea necesario. Usa /basicclaims para salir.
+  ShapedClaimsDisabled: Los terrenos con forma estan desactivados en este servidor.
+  SubdivisionMode: Modo de subdivisión. Usa tu pala para crear subdivisiones dentro de tus terrenos protegidos existentes. Usa /basicclaims para salir.
+  SubdivisionMode3D: Modo de subdivision 3D. Usa tu pala para crear subdivisiones 3D en tus terrenos existentes. Usa /basicclaims para salir.
+  SubdivisionVideo2: "'Haz clic para obtener ayuda sobre subdivisiones: {0}'"
+  DeleteClaimMissing: No hay ningún terreno protegido aquí.
+  DeletionSubdivisionWarning: Este terreno protegido incluye subdivisiones. Si estás seguro de que quieres eliminarlo, usa /deleteclaim otra vez.
+  DeleteSuccess: Terreno protegido eliminado.
+  CantDeleteAdminClaim: No tienes permiso para eliminar terrenos administrativos.
+  NoAdminClaimsPermission: No tienes permiso para administrar terrenos administrativos.
+  DeleteAllSuccess: Se eliminaron todos los terrenos protegidos de {0}.
+  NoDeletePermission: No tienes permiso para eliminar terrenos protegidos.
+  AllAdminDeleted: Se eliminaron todos los terrenos administrativos.
+  AdjustBlocksSuccess: "'Se ajustaron los bloques de protección adicionales de {0} en {1}. Nuevo total de bloques adicionales: {2}.'"
+  AdjustBlocksAllSuccess: Se ajustaron los bloques de protección adicionales de todos los jugadores en línea en {0}.
+  NotTrappedHere: Puedes construir aquí. Puedes salir por tu cuenta.
+  RescuePending: Si permaneces quieto durante 10 segundos, serás teletransportado fuera. Espera, por favor.
+  AbandonClaimMissing: Colócate dentro del terreno protegido que quieres eliminar, o considera usar /abandonallclaims.
+  NotYourClaim: Este terreno protegido no es tuyo.
+  DeleteTopLevelClaim: Para eliminar una subdivisión, colócate dentro de ella. De lo contrario, usa /abandontoplevelclaim para eliminar este terreno protegido y todas sus subdivisiones.
+  AbandonSuccess: Terreno protegido abandonado. Ahora tienes {0} bloques de protección disponibles.
+  ConfirmAbandonAllClaims: ¿Estás seguro de que quieres abandonar TODOS tus terrenos protegidos? Confirma con /abandonallclaims confirm
+  GrantPermissionNoClaim: Colócate dentro del terreno protegido donde quieres conceder el permiso.
+  GrantPermissionConfirmation: Permiso concedido a {0} para {1} {2}.
+  ManageUniversalPermissionsInstruction: Para administrar permisos de TODOS tus terrenos protegidos, colócate fuera de ellos.
+  ManageOneClaimPermissionsInstruction: Para administrar permisos de un terreno protegido específico, colócate dentro de él.
+  CollectivePublic: todo el mundo
+  BuildPermission: construir
+  ContainersPermission: acceder a contenedores y animales
+  AccessPermission: usar botones y palancas
+  PermissionsPermission: administrar permisos
+  LocationCurrentClaim: en este terreno protegido
+  LocationAllClaims: en todos tus terrenos protegidos
+  PvPImmunityStart: Estás protegido contra ataques de otros jugadores mientras tu inventario esté vacío.
+  DonateItemsInstruction: Para donar los objetos que tienes en la mano, haz clic izquierdo otra vez en el cofre.
+  ChestFull: Este cofre está lleno.
+  DonationSuccess: ¡Objeto(s) transferido(s) al cofre!
+  PlayerTooCloseForFire2: No puedes encender fuego tan cerca de otro jugador.
+  TooDeepToClaim: Este cofre no puede protegerse porque está demasiado profundo bajo tierra. Considera moverlo.
+  ChestClaimConfirmation: Este cofre está protegido.
+  AutomaticClaimNotification: Este cofre y los bloques cercanos están protegidos contra destrucción y robo.
+  AutomaticClaimOtherClaimTooClose: "'No se puede crear un terreno protegido para tu cofre: ¡hay otro terreno protegido demasiado cerca!'"
+  UnprotectedChestWarning: Este cofre NO está protegido. Considera usar una pala de oro para ampliar un terreno protegido existente o crear uno nuevo.
+  ThatPlayerPvPImmune: No puedes herir a jugadores indefensos.
+  CantFightWhileImmune: No puedes pelear con alguien mientras estás protegido contra PvP.
+  NoDamageClaimedEntity: Eso pertenece a {0}.
+  ShovelBasicClaimMode: La pala volvió al modo básico de terrenos protegidos.
+  RemainingBlocks: Puedes proteger hasta {0} bloques más.
+  CreativeBasicsVideo2: "'Haz clic para obtener ayuda sobre protección de terrenos: {0}'"
+  SurvivalBasicsVideo2: "'Haz clic para obtener ayuda sobre protección de terrenos: {0}'"
+  TrappedChatKeyword: atrapado;atascado
+  TrappedInstructions: ¿Estás atrapado en el terreno protegido de alguien? Prueba el comando /trapped.
+  PvPNoDrop: No puedes soltar objetos mientras estás en combate PvP.
+  PvPNoContainers: No puedes acceder a contenedores durante combate PvP.
+  PvPImmunityEnd: Ahora puedes pelear con otros jugadores.
+  NoBedPermission: "'{0} no te ha dado permiso para dormir aquí.'"
+  NoWildernessBuckets: Solo puedes vaciar cubos dentro de tus terrenos protegidos o bajo tierra.
+  NoLavaNearOtherPlayer: No puedes colocar lava tan cerca de {0}.
+  TooFarAway: Eso está demasiado lejos.
+  BlockNotClaimed: Nadie ha protegido este bloque.
+  BlockClaimed: Este bloque fue protegido por {0}.
+  NoCreateClaimPermission: No tienes permiso para proteger terrenos.
+  ResizeClaimTooNarrow: Este nuevo tamaño sería demasiado pequeño. Los terrenos protegidos deben tener al menos {0} bloques de ancho.
+  ResizeNeedMoreBlocks: No tienes suficientes bloques para este tamaño. Necesitas {0} más.
+  ClaimResizeSuccess: Terreno protegido redimensionado. Quedan {0} bloques de protección disponibles.
+  ResizeFailOverlap: No puedes redimensionar aquí porque se superpondría con otro terreno protegido cercano.
+  ResizeStart: Redimensionando terreno protegido. Usa tu pala nuevamente en la nueva ubicación de esta esquina.
+  ClaimSelected: "'Terreno seleccionado. Usa tu pala nuevamente para establecer la otra esquina y redimensionar.\\\\nNota: Ahora puedes ejecutar /claim abandon mientras este terreno esta seleccionado.'"
+  ClaimSelectedTopLevel: "'Terreno seleccionado. Usa tu pala nuevamente para establecer la otra esquina y redimensionar.\\\\nNota: Ahora puedes ejecutar /claim abandon toplevel mientras este terreno esta seleccionado.'"
+  SubdivisionSelected: Subdivision seleccionada. Puedes administrar permisos para esta area especifica.\nPuedes ejecutar comandos como:\n- /trust, /untrust\n- /containertrust, /accesstrust\n- /abandonclaim\no puedes hacer clic derecho nuevamente para redimensionar.
+  ResizeFailOverlapSubdivision: No puedes crear una subdivisión aquí porque se superpondría con otra subdivisión. Considera usar /abandonclaim para eliminarla, o usa tu pala en una esquina para redimensionarla.
+  SubdivisionStart: ¡Esquina de subdivisión establecida! Usa tu pala en la ubicación de la esquina opuesta de esta nueva subdivisión.
+  CreateSubdivisionOverlap: El área seleccionada se superpone con otra subdivisión.
+  InnerSubdivisionTooClose: Esta subdivision debe mantenerse al menos un bloque dentro de su padre por todos los lados.
+  SubdivisionSuccess: ¡Subdivisión creada! Usa /trust para compartirla con amigos.
+  CreateClaimFailOverlap: No puedes crear un terreno protegido aquí porque se superpondría con otro de tus terrenos protegidos. Usa /abandonclaim para eliminarlo, o usa tu pala en una esquina para redimensionarlo.
+  CreateClaimFailOverlapOtherPlayer: No puedes crear un terreno protegido aquí porque se superpondría con el terreno protegido de {0}.
+  ClaimsDisabledWorld: La protección de terrenos está desactivada en este mundo.
+  ClaimStart: ¡Esquina del terreno protegido establecida! Usa la pala otra vez en la esquina opuesta para proteger un área rectangular. Para cancelar, guarda la pala.
+  NewClaimTooNarrow: Este terreno protegido sería demasiado pequeño. Cualquier terreno protegido debe tener al menos {0} bloques de ancho.
+  ResizeClaimInsufficientArea: Este terreno protegido sería demasiado pequeño. Cualquier terreno protegido debe usar al menos {0} bloques de protección en total.
+  CreateClaimInsufficientBlocks: No tienes suficientes bloques para proteger toda esa área. Necesitas {0} bloques más.
+  AbandonClaimAdvertisement: Para eliminar otro terreno protegido y liberar algunos bloques, usa /abandonclaim.
+  CreateClaimFailOverlapShort: El área seleccionada se superpone con un terreno protegido existente.
+  CreateClaimSuccess: ¡Terreno protegido creado! Usa /trust para compartirlo con amigos.
+  RescueAbortedMoved: ¡Te moviste! Rescate cancelado.
+  OnlyOwnersModifyClaims: Solo {0} puede modificar este terreno protegido.
+  NoBuildPvP: No puedes construir en terrenos protegidos durante combate PvP.
+  NoBuildPermission: No tienes el permiso de {0} para construir aquí.
+  NoAccessPermission: No tienes el permiso de {0} para usar eso.
+  NoContainersPermission: No tienes el permiso de {0} para usar eso.
+  OwnerNameForAdminClaims: un administrador
+  UnknownPlayerName: alguien
+  ClaimTooSmallForEntities: Este terreno protegido no es lo suficientemente grande para eso. Intenta ampliarlo.
+  TooManyEntitiesInClaim: Este terreno protegido ya tiene demasiadas entidades. Intenta ampliarlo o retirar algunos animales, monstruos, cuadros o vagonetas.
+  YouHaveNoClaims: No tienes ningún terreno protegido.
+  AutoBanNotify: Baneado automáticamente {0}({1}). Consulta los registros para más detalles.
+  AdjustGroupBlocksSuccess: "'Se ajustaron los bloques de protección adicionales para jugadores con el permiso {0} en {1}. Nuevo total: {2}.'"
+  InvalidPermissionID: Especifica un nombre de jugador o un permiso entre [corchetes].
+  HowToClaimRegex: (^|.*\W)(como|cómo)\W.*\W(claim|proteger|bloquear|terreno)(\W.*|$)
+  NoBuildOutsideClaims: No puedes construir aquí a menos que primero protejas un terreno.
+  PlayerOfflineTime: "'\\\\ \\\\ Último inicio de sesión: hace {0} días.'"
+  BuildingOutsideClaims: Otros jugadores también pueden construir aquí. ¡Considera crear un terreno protegido para proteger tu trabajo!
+  TrappedWontWorkHere: Lo sentimos, no se pudo encontrar una ubicación segura para teletransportarte. Contacta a un administrador.
+  CommandBannedInPvP: No puedes usar ese comando mientras estás en combate PvP.
+  NoTeleportPvPCombat: No puedes teletransportarte mientras peleas con otro jugador.
+  NoTNTDamageAboveSeaLevel: "'Advertencia: la TNT no destruirá bloques por encima del nivel del mar.'"
+  NoTNTDamageClaims: "'Advertencia: la TNT no destruirá bloques protegidos.'"
+  IgnoreClaimsAdvertisement: Para anular esto, usa /ignoreclaims.
+  NoPermissionForCommand: No tienes permiso para hacer eso.
+  ClaimsListNoPermission: No tienes permiso para obtener información sobre los terrenos protegidos de otro jugador.
+  ExplosivesDisabled: Este terreno protegido ahora está protegido contra explosiones. Usa /claimexplosions otra vez para desactivarlo.
+  ExplosivesEnabled: Este terreno protegido ahora es vulnerable a explosiones. Usa /claimexplosions otra vez para reactivar las protecciones.
+  WitherExplosionsDisabled: Este terreno ahora esta protegido contra explosiones de wither. Usa /witherexplosions nuevamente para desactivar las protecciones.
+  WitherExplosionsEnabled: Este terreno ahora es vulnerable a explosiones de wither. Usa /witherexplosions nuevamente para reactivar las protecciones.
+  ClaimExplosivesAdvertisement: Para permitir que los explosivos destruyan bloques en este terreno protegido, usa /claimexplosions.
+  PlayerInPvPSafeZone: Ese jugador está en una zona segura de PvP.
+  NoPistonsOutsideClaims: "'Advertencia: los pistones no moverán bloques fuera de terrenos protegidos.'"
+  SoftMuted: Se aplicó silencio discreto a {0}.
+  UnSoftMuted: Se quitó el silencio discreto a {0}.
+  DropUnlockAdvertisement: Otros jugadores no pueden recoger tus objetos soltados a menos que uses /unlockdrops primero.
+  PickupBlockedExplanation: No puedes recoger esto a menos que {0} use /unlockdrops.
+  DropUnlockConfirmation: Tus objetos soltados fueron desbloqueados. Otros jugadores ahora pueden recogerlos (hasta que mueras otra vez).
+  DropLockConfirmation: Tus objetos soltados fueron bloqueados. Otros jugadores ya no pueden recogerlos.
+  DropUnlockOthersConfirmation: Se desbloquearon los objetos soltados de {0}.
+  AdvertiseACandACB: Puedes usar /acb para darte más bloques de protección, o /adminclaims para crear un terreno administrativo gratuito.
+  AdvertiseAdminClaims: Podrías crear un terreno administrativo usando /adminclaims, que compartirías con otros administradores.
+  AdvertiseACB: Puedes usar /acb para darte más bloques de protección.
+  NotYourPet: Eso pertenece a {0}.
+  PetGiveawayConfirmation: Mascota transferida.
+  PetTransferCancellation: Regalo de mascota cancelado.
+  ReadyToTransferPet: Listo para transferir. Haz clic derecho en la mascota que quieres dar, o cancela con /givepet cancel.
+  AvoidGriefClaimLand: ¡Evita el griefing! Si proteges tu terreno, estarás protegido contra griefing.
+  BecomeMayor: ¡Subdivide tu terreno protegido y conviértete en alcalde!
+  ClaimCreationFailedOverClaimCountLimit: Alcanzaste tu límite de terrenos protegidos. Usa /abandonclaim para eliminar uno antes de crear otro.
+  CreateClaimFailOverlapRegion: No puedes proteger todo esto porque no tienes permitido construir aquí.
+  ResizeFailOverlapRegion: No tienes permiso para construir allí, así que no puedes proteger esa área.
+  ResizeFailSubdivision: "'No se puede redimensionar el terreno: Los nuevos limites excluirian una subdivision existente. Por favor elimina o mueve la subdivision primero.'"
+  ResizeFailSubdivisionExceedsParent: "'No se pudo redimensionar: La subdivision no se mantuvo dentro de los limites del padre por todos los lados, causando un conflicto en el terreno principal.'"
+  ShapedClaimInteriorClick: No puedes iniciar un terreno con forma aqui. Puedes iniciar un nuevo terreno con forma o crear segmentos en el borde de tu terreno actual y extenderlos.
+  ShowNearbyClaims: Se encontraron {0} terrenos protegidos.
+  NoChatUntilMove: Lo sentimos, pero tienes que moverte un poco más antes de poder chatear. Recibimos muchos bots de spam aquí. :)
+  SetClaimBlocksSuccess: Bloques de protección acumulados actualizados.
+  IgnoreConfirmation: Ahora estás ignorando los mensajes de chat de ese jugador.
+  UnIgnoreConfirmation: Ya no estás ignorando los mensajes de chat de ese jugador.
+  NotIgnoringPlayer: No estás ignorando a ese jugador.
+  SeparateConfirmation: Esos jugadores ahora se ignorarán mutuamente en el chat.
+  UnSeparateConfirmation: Esos jugadores ya no se ignorarán mutuamente en el chat.
+  NotIgnoringAnyone: No estás ignorando a nadie.
+  TrustListHeader: "Permisos explícitos aquí:"
+  Manage: Administrar
+  Build: Construir
+  Containers: Contenedores
+  Access: Acceso
+  HasSubclaimRestriction: Esta subdivisión no hereda los permisos del terreno principal
+  StartBlockMath: "'{0} bloques por tiempo de juego + {1} adicionales = {2} en total.'"
+  ClaimsListHeader: "Terrenos protegidos:"
+  ContinueBlockMath: \ (-{0} bloques)
+  EndBlockMath: \ = quedan {0} bloques para gastar
+  ClaimExpiryHeader: "Expiracion de terreno para {0}:"
+  ClaimExpiryLocation: "'Ubicacion: {0}'"
+  ClaimExpiryOwnerStatus: "'Propietario: {0} ({1})'"
+  ClaimExpiryOwnerOnline: conectado
+  ClaimExpiryOwnerOffline: desconectado
+  ClaimExpiryLastActive: "'Ultima conexion: hace {0}'"
+  ClaimExpiryLastActiveUnknown: "'Ultima conexion: desconocida'"
+  ClaimExpiryClaimModified: "'Ultima modificacion: {0}'"
+  ClaimExpiryExpiresIn: "'Expira en: {0}'"
+  ClaimExpiryExpired: Expirado hace {0}
+  ClaimExpiryExempt: "'Este terreno esta exento de expiracion: {0}'"
+  ClaimExpiryNeverExpires: Este terreno nunca expirara.
+  ClaimExpiryChestClaim: "'Expiracion de terreno de cofre: {0}'"
+  ClaimExpiryNoClaim: No estas dentro de un terreno protegido.
+  ClaimExpiryPlayerHeading: "Expiracion de terreno para {0}:"
+  ClaimExpiryPlayerNoClaims: "'{0} no tiene terrenos protegidos.'"
+  ClaimExpiryPlayerNotFound: No se encontro al jugador {0}.
+  ClaimExpiryUnknown: desconocido
+  ClaimExpiryUsage: /checkclaimexpiry [jugador]
+  ClaimExpiryListEntry: "'- {0}: {1}'"
+  NoClaimDuringPvP: No puedes proteger terrenos durante combate PvP.
+  UntrustAllOwnerOnly: Solo el propietario del terreno protegido puede borrar todos sus permisos.
+  ManagersDontUntrustManagers: Solo el propietario del terreno protegido puede degradar a un administrador.
+  PlayerNotIgnorable: No puedes ignorar a ese jugador.
+  NoEnoughBlocksForChestClaim: Como no tienes bloques de protección disponibles, no se creó automáticamente ningún terreno protegido para ti. Puedes usar /claimslist para revisar tu total de bloques de protección disponibles.
+  MustHoldModificationToolForThat: Debes tener una pala de oro en la mano para hacer eso.
+  StandInClaimToResize: Colócate dentro del terreno protegido que quieres redimensionar.
+  ClaimsExtendToSky: Los terrenos protegidos siempre se extienden hasta la altura máxima de construcción.
+  ClaimsAutoExtendDownward: Los terrenos protegidos se extienden automáticamente más profundo bajo tierra cuando colocas bloques debajo de ellos.
+  MinimumRadius: El radio mínimo es {0}.
+  RadiusRequiresGoldenShovel: Debes tener una pala de oro en la mano al especificar un radio.
+  ClaimTooSmallForActiveBlocks: Este terreno protegido no es lo suficientemente grande para admitir bloques activos (tolvas, generadores, balizas...). Amplía el terreno protegido primero.
+  TooManyActiveBlocksInClaim: Este terreno protegido alcanzó su límite de bloques activos (tolvas, generadores, balizas...). Amplíalo o elimina otros bloques activos primero.
+  BookAuthor: BigScary
+  BookTitle: Cómo proteger terreno
+  BookLink: "'Haz clic: {0}'"
+  BookIntro: ¡Protege terreno para cuidar tus cosas! Haz clic en el enlace de arriba para aprender a proteger terrenos en 3 minutos o menos. :)
+  BookTools: Nuestras herramientas de protección son {0} y {1}.
+  BookDisabledChestClaims: \ \ En este servidor, colocar un cofre NO protegerá terreno automáticamente.
+  BookUsefulCommands: "Comandos útiles:"
+  NoProfanity: Modera tu lenguaje, por favor.
+  IsIgnoringYou: Ese jugador te está ignorando.
+  ConsoleOnlyCommand: Ese comando solo puede ejecutarse desde la consola del servidor.
+  WorldNotFound: Mundo no encontrado.
+  TooMuchIpOverlap: Lo sentimos, hay demasiados jugadores conectados con tu dirección IP.
+  StandInSubclaim: Debes estar dentro de una subdivisión para restringirla
+  SubclaimRestricted: Los permisos de esta subdivisión ya no heredarán los permisos del terreno principal
+  SubclaimUnrestricted: Los permisos de esta subdivisión ahora heredarán los permisos del terreno principal
+  MainClaimSubdivisionInheritDisabled: Todas las subdivisiones en este terreno NO heredaran permisos.
+  MainClaimSubdivisionInheritEnabled: Todas las subdivisiones en este terreno heredaran permisos.
+  NetherPortalTrapDetectionMessage: Parece que podrías estar atascado dentro de un portal del Nether. ¡Te rescataremos en unos segundos si ese es el caso!
+  ClaimHelpHeader: "Comandos /claim disponibles:"
+  ClaimHelpLegend: <> - Requerido, [] - Opcional.
+  ClaimHelpEntry: "'&e/{0}&7 - &f{1}'"
+  ClaimHelpPagination: Escribe /claim help {0} para la siguiente pagina.
+  AClaimHelpHeader: "Comandos /aclaim disponibles:"
+  AClaimHelpLegend: <> - Requerido, [] - Opcional.
+  AClaimHelpEntry: "'&e/{0}&7 - &f{1}'"
+  AClaimHelpPagination: Escribe /aclaim help {0} para la siguiente pagina.
+  CommandNotFound: "'Subcomando desconocido: {0}'"
+  CommandNotImplementedYet: Este comando aun no esta implementado.
+  CommandInvalidMode: "'Modo invalido. Opciones validas: basic, 2d, 3d, shaped'"
+  RestoreNatureActivate: Listo para restaurar la naturaleza. Haz clic derecho en un bloque para restaurar un area. Usa /basicclaims para salir.
+  RestoreNatureAggressiveActivate: Modo de restauracion agresiva activado. Haz clic derecho en un bloque para restaurar un area. Usa /basicclaims para salir.
+  FillModeActive: Modo relleno activado con radio {0}. Haz clic derecho en un bloque para rellenar un area. Usa /basicclaims para salir.
+  EconomyDisabled: Las funciones de economia estan desactivadas en este servidor.
+  EconomyBuyBlocksConfirmation: Compraste {0} bloques de proteccion por {1}. Ahora tienes {2} bloques de proteccion.
+  EconomySellBlocksConfirmation: Vendiste {0} bloques de proteccion por {1}. Ahora tienes {2} bloques de proteccion.
+  EconomyNotEnoughMoney: "'No tienes suficiente dinero. Costo: {0}, Tu saldo: {1}'"
+  EconomyNotEnoughBlocks: "'No tienes suficientes bloques de proteccion para vender. Solicitados: {0}, Disponibles: {1}'"
+  EconomyBuyBlocksUsage: "'Uso: /buyclaimblocks <cantidad>'"
+  EconomySellBlocksUsage: "'Uso: /sellclaimblocks <cantidad>'"
+  EconomyInvalidAmount: Por favor especifica un numero valido y positivo de bloques.
+  EconomyPurchaseCancelled: Compra cancelada.
+  EconomyNoVault: El soporte de economia requiere que el plugin Vault este instalado.
+  CommandRequiresPlayer: Este comando solo puede ser usado por jugadores.
+  PistonExploded: El piston en {0} exploto porque no pudo entrar al terreno en {1}
+  ExternalPistonBoundaryViolation: "'&6Advertencia: Un piston intento empujar un bloque hacia tu terreno en x:{0} y:{1} z:{2}!'"
+  InternalPistonBoundaryViolation: "'&6Advertencia: Un piston intento empujar un bloque fuera de tu terreno en x:{0} y:{1} z:{2}!'"
+  ExternalLiquidBoundaryViolation: "'&6Advertencia: El liquido intento fluir hacia tu terreno en x:{0} y:{1} z:{2}!'"
+  InternalLiquidBoundaryViolation: "'&6Advertencia: El liquido intento fluir fuera de tu terreno en x:{0} y:{1} z:{2}!'"
+  BoundaryViolationBurstSummary: "'&6Advertencia: {0} {1} violaciones cerca de tu terreno en x:{2} y:{3} z:{4}!'"
+  PlaceholderTrustLevelUnclaimed: Sin proteger
+  PlaceholderTrustLevelOwner: Propietario
+  PlaceholderTrustLevelManager: Administrador
+  PlaceholderTrustLevelBuilder: Constructor
+  PlaceholderTrustLevelAccess: Acceso
+  PlaceholderTrustLevelContainer: Contenedores
+  PlaceholderTrustLevelUntrusted: Sin confianza
+  MessagesLoaded: "Mensajes cargados: &a{0}"

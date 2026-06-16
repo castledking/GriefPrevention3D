@@ -114,6 +114,7 @@ import java.util.regex.Pattern;
 import me.ryanhamshire.GriefPrevention.util.SchedulerUtil;
 import me.ryanhamshire.GriefPrevention.util.TaskHandle;
 import java.util.Collections;
+import com.griefprevention.platform.PlatformDetection;
 
 public class GriefPrevention extends JavaPlugin {
     private static final @NotNull ClaimEditor claimEditor = new ClaimEditorSkeleton();
@@ -130,6 +131,7 @@ public class GriefPrevention extends JavaPlugin {
 
     // this handles data storage, like player and region data
     public DataStore dataStore;
+    long startupStartTime;
 
     // Event handlers with common functionality
     EntityEventHandler entityEventHandler;
@@ -213,6 +215,8 @@ public class GriefPrevention extends JavaPlugin {
     public boolean config_claims_allowNestedSubClaims; // whether nested subdivisions may be created inside other
                                                        // subdivisions
     public boolean config_claims_allowShapedClaims; // whether shaped claim creation and editing tools are enabled
+    public boolean config_claims_allow3DSubdivisions; // whether 3D height-limited subdivisions are enabled
+    public boolean config_claims_allow3DAdminClaims; // whether 3D height-limited admin claims are enabled
     public boolean config_claims_useClaimSelectSessions; // whether selected resize corners become command targets
     public boolean config_claims_useClaimSelectedMessages; // whether selected-claim command help replaces ResizeStart
     public boolean config_claims_legacySubdivisionFormat; // whether to use original GP subdivision format (separate files)
@@ -337,6 +341,7 @@ public class GriefPrevention extends JavaPlugin {
     public boolean config_logs_adminEnabled;
     public boolean config_logs_debugEnabled;
     public boolean config_logs_mutedChatEnabled;
+    public String config_locale;
 
     // ban management plugin interop settings
     public boolean config_ban_useCommand;
@@ -406,13 +411,12 @@ public class GriefPrevention extends JavaPlugin {
     public void onEnable() {
         instance = this;
         log = instance.getLogger();
+        this.startupStartTime = System.currentTimeMillis();
 
         this.loadConfig();
         this.loadCommandAliases();
 
         this.customLogger = new CustomLogger();
-
-        AddLogEntry("Finished loading configuration.");
 
         // when datastore initializes, it loads player and claim data, and posts some stats to the log
         String dbUrl = this.getConfig().getString("database.url", "");
@@ -469,7 +473,7 @@ public class GriefPrevention extends JavaPlugin {
         }
 
         String dataMode = (this.dataStore instanceof FlatFileDataStore) ? "(File Mode)" : "(Database Mode)";
-        AddLogEntry("Finished loading data " + dataMode + ".");
+        AddLogEntry("[GP Debug] Finished loading data " + dataMode + ".");
 
         // unless claim block accrual is disabled, start the recurring per 10 minute
         // event to give claim blocks to online players
@@ -509,14 +513,14 @@ public class GriefPrevention extends JavaPlugin {
         new KnockbackProtectionListener(this.dataStore, this).register(this);
 
         // Register knockback handler - use Paper's event if available, otherwise use Spigot's (wind charge protection)
-        if (isClassPresent("io.papermc.paper.event.entity.EntityPushedByEntityAttackEvent")) {
+            if (isClassPresent("io.papermc.paper.event.entity.EntityPushedByEntityAttackEvent")) {
             pluginManager.registerEvents(new PaperKnockbackHandler(this.dataStore, this), this);
-            AddLogEntry("Using Paper knockback handler for wind charge protection.");
+            AddLogEntry("[GP Debug] Using Paper knockback handler for wind charge protection.");
         } else if (isClassPresent("org.bukkit.event.entity.EntityKnockbackByEntityEvent")) {
             pluginManager.registerEvents(new SpigotKnockbackHandler(this.dataStore, this), this);
-            AddLogEntry("Using Spigot knockback handler for wind charge protection.");
+            AddLogEntry("[GP Debug] Using Spigot knockback handler for wind charge protection.");
         } else {
-            AddLogEntry("No knockback handler available on this server (legacy API). Wind-charge protection disabled.");
+            AddLogEntry("[GP Debug] No knockback handler available on this server (legacy API). Wind-charge protection disabled.");
         }
 
         // special interaction-related events
@@ -581,7 +585,7 @@ public class GriefPrevention extends JavaPlugin {
 
         setUpCommands();
 
-        AddLogEntry("Boot finished.");
+        displayEnabledHeader();
     }
 
     private boolean isClassPresent(String className) {
@@ -656,8 +660,6 @@ public class GriefPrevention extends JavaPlugin {
                 Files.write(aliasFile.toPath(), defaultYaml.getBytes(StandardCharsets.UTF_8));
                 log.info("Updated alias.yml with latest default configuration while preserving customizations.");
             }
-
-            AddLogEntry("Loaded command aliases from alias.yml");
         } catch (Exception e) {
             log.log(Level.SEVERE, "Failed to load alias.yml. Falling back to defaults.", e);
             this.commandAliases = CommandAliasConfiguration.empty();
@@ -716,10 +718,18 @@ public class GriefPrevention extends JavaPlugin {
     private void loadConfig() {
         // load the config if it exists
         FileConfiguration config = YamlConfiguration.loadConfiguration(new File(DataStore.configFilePath));
+        // locale for message localization
+        this.config_locale = config.getString("GriefPrevention.Locale", "en");
+
         FileConfiguration outConfig = new YamlConfiguration();
         try {
             outConfig.options().setHeader(Arrays.asList(
-                    "Default values are perfect for most servers.  If you want to customize and have a question, look for the answer here first: http://dev.bukkit.org/bukkit-plugins/grief-prevention/pages/setup-and-configuration/"));
+                    "Default values are perfect for most servers.  If you want to customize and have a question, look for the answer here first: http://dev.bukkit.org/bukkit-plugins/grief-prevention/pages/setup-and-configuration/",
+                    "",
+                    "Locale settings:",
+                    "  GriefPrevention.Locale: Set to 'es' for Spanish, 'pt_BR' for Brazilian Portuguese, or 'en' for English.",
+                    "  To use localized messages, copy messages_XX.yml from the Lang/ folder to GriefPreventionData/ and rename it to messages.yml.",
+                    "  If no messages.yml exists, the plugin will use messages_XX.yml from Lang/ based on this locale setting."));
         } catch (NoSuchMethodError e) {
             // setHeader(List) doesn't exist in older Bukkit versions (1.8.8), ignore
         }
@@ -925,6 +935,8 @@ public class GriefPrevention extends JavaPlugin {
         this.config_claims_allowTrappedInAdminClaims = config.getBoolean("GriefPrevention.Claims.AllowTrappedInAdminClaims", false);
         this.config_claims_allowNestedSubClaims = config.getBoolean("GriefPrevention.Claims.AllowNestedSubClaims", false);
         this.config_claims_allowShapedClaims = config.getBoolean("GriefPrevention.Claims.AllowShapedClaims", false);
+        this.config_claims_allow3DSubdivisions = config.getBoolean("GriefPrevention.Claims.Allow3DSubdivisions", true);
+        this.config_claims_allow3DAdminClaims = config.getBoolean("GriefPrevention.Claims.Allow3DAdminClaims", true);
         this.config_claims_useClaimSelectSessions = config.getBoolean("GriefPrevention.Claims.UseClaimSelectSessions", true);
         this.config_claims_useClaimSelectedMessages = config.getBoolean("GriefPrevention.Claims.UseClaimSelectedMessages", false);
         this.config_claims_legacySubdivisionFormat = config.getBoolean("GriefPrevention.Claims.LegacySubdivisionFormat", false);
@@ -1271,6 +1283,7 @@ public class GriefPrevention extends JavaPlugin {
         outConfig.set("GriefPrevention.Abridged Logs.Included Entry Types.Debug", this.config_logs_debugEnabled);
         outConfig.set("GriefPrevention.Abridged Logs.Included Entry Types.Muted Chat Messages",
                 this.config_logs_mutedChatEnabled);
+        outConfig.set("GriefPrevention.Locale", this.config_locale);
         outConfig.set("GriefPrevention.ConfigVersion", 1);
 
         try {
@@ -1361,6 +1374,7 @@ public class GriefPrevention extends JavaPlugin {
         new com.griefprevention.commands.UnifiedClaimCommand(this);
         new com.griefprevention.commands.UnifiedAdminClaimCommand(this);
         syncShapedCommandRegistration();
+        sync3DCommandRegistration();
 
         // Add tab completion for old trust commands
         TrustTabCompleter trustTabCompleter = new TrustTabCompleter();
@@ -1453,6 +1467,73 @@ public class GriefPrevention extends JavaPlugin {
             }
         } catch (Exception e) {
             this.getLogger().warning("Failed to sync shaped claim commands: " + e.getMessage());
+        }
+    }
+
+    private void sync3DCommandRegistration() {
+        try {
+            CommandMap commandMap = obtainCommandMap();
+            if (commandMap == null) {
+                return;
+            }
+
+            String prefix = this.getName().toLowerCase(Locale.ROOT);
+            java.util.Map<String, org.bukkit.command.Command> knownCommands = findKnownCommandsMap(commandMap);
+            if (knownCommands == null) {
+                return;
+            }
+
+            // 3D Subdivisions
+            org.bukkit.command.PluginCommand subdivide3D = this.getCommand("3dsubdivideclaims");
+            if (subdivide3D != null) {
+                if (this.config_claims_allow3DSubdivisions) {
+                    commandMap.register(prefix, subdivide3D);
+                } else {
+                    removeCommandFromMap(knownCommands, prefix, subdivide3D);
+                }
+            }
+
+            // 3D Admin Claims
+            org.bukkit.command.PluginCommand admin3D = this.getCommand("3dadminclaims");
+            if (admin3D != null) {
+                if (this.config_claims_allow3DAdminClaims) {
+                    commandMap.register(prefix, admin3D);
+                } else {
+                    removeCommandFromMap(knownCommands, prefix, admin3D);
+                }
+            }
+        } catch (Exception e) {
+            this.getLogger().warning("Failed to sync 3D claim commands: " + e.getMessage());
+        }
+    }
+
+    private void removeCommandFromMap(java.util.Map<String, org.bukkit.command.Command> knownCommands,
+            String prefix, org.bukkit.command.PluginCommand command) {
+        java.util.List<String> commandNames = new java.util.ArrayList<>();
+        commandNames.add(command.getName().toLowerCase(Locale.ROOT));
+        for (String alias : command.getAliases()) {
+            if (alias != null && !Compat.isBlank(alias)) {
+                commandNames.add(alias.toLowerCase(Locale.ROOT));
+            }
+        }
+        for (String name : commandNames) {
+            knownCommands.remove(name);
+            knownCommands.remove(prefix + ":" + name);
+        }
+    }
+
+    private void displayEnabledHeader() {
+        try {
+            StartupHeader startupHeader = new StartupHeader(this);
+            String message = startupHeader.getRandomHeader();
+            if (message == null) return;
+
+            org.bukkit.command.CommandSender console = Bukkit.getConsoleSender();
+            for (String line : message.split("\n")) {
+                console.sendMessage(line);
+            }
+        } catch (Exception e) {
+            this.getLogger().warning("Failed to display enabled header: " + e.getMessage());
         }
     }
 
@@ -2010,6 +2091,10 @@ public class GriefPrevention extends JavaPlugin {
 
         // 3dadminclaims (both singular and plural)
         else if ((cmd.getName().equalsIgnoreCase("3dadminclaims") || cmd.getName().equalsIgnoreCase("3dadminclaim")) && player != null) {
+            if (!this.config_claims_allow3DAdminClaims) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.AdminClaims3DDisabled);
+                return true;
+            }
             if (!player.hasPermission("griefprevention.adminclaims")) {
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
                 return true;
@@ -2076,6 +2161,10 @@ public class GriefPrevention extends JavaPlugin {
 
         // 3dsubdivideclaims
         else if (cmd.getName().equalsIgnoreCase("3dsubdivideclaims") && player != null) {
+            if (!this.config_claims_allow3DSubdivisions) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.Subdivisions3DDisabled);
+                return true;
+            }
             if (!player.hasPermission("griefprevention.3dsubdivideclaims")) {
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
                 return true;
@@ -4268,6 +4357,10 @@ public class GriefPrevention extends JavaPlugin {
                         DataStore.SUBDIVISION_VIDEO_URL);
                 break;
             case "3d":
+                if (!this.config_claims_allow3DSubdivisions) {
+                    GriefPrevention.sendMessage(player, TextMode.Err, Messages.Subdivisions3DDisabled);
+                    return true;
+                }
                 if (!player.hasPermission("griefprevention.3dsubdivideclaims") ||
                     !player.hasPermission("griefprevention.claims")) {
                     GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
