@@ -1,5 +1,5 @@
 before_install:
   - sdk install java 25-open
   - sdk use java 25-open
-build:
-  - ./gradlew jar -x test -x check
+install:
+  - ./gradlew jar -x test -x check -x checkAddonCompatibility -x checkLegacyCompatibility
