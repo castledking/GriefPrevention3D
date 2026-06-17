@@ -1,19 +1,11 @@
-package me.thiagorigonatti.griefprevention.util;
-
-import me.ryanhamshire.GriefPrevention.DataStore;
-import me.ryanhamshire.GriefPrevention.GriefPrevention;
-import me.ryanhamshire.GriefPrevention.Messages;
-import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+package me.ryanhamshire.GriefPrevention;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.List;
-import java.util.Properties;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 public final class MessageLocalization {
 
@@ -34,13 +26,18 @@ public final class MessageLocalization {
             try {
                 Files.createDirectories(languageFolder);
             } catch (IOException e) {
-                GriefPrevention.instance.getLogger().severe("Unable to create language folder at \"" + languageFolder + "\": " + e.getMessage());
+                GriefPrevention.instance
+                    .getLogger()
+                    .severe("Unable to create language folder at \"" + languageFolder + "\": " + e.getMessage());
                 return;
             }
         }
     }
 
-    public static @NotNull String applyConfiguredLocaleToMessages(@Nullable String locale, @NotNull Messages[] messages) {
+    public static @NotNull String applyConfiguredLocaleToMessages(
+        @Nullable String locale,
+        @NotNull Messages[] messages
+    ) {
         ensureLanguageFiles();
         String normalized = normalizeLocale(locale);
 
