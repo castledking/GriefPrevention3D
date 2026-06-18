@@ -38,8 +38,6 @@ import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -102,8 +100,6 @@ public abstract class DataStore {
     // locale files live alongside config.yml in the data folder
     public static final String languageFolderPath = dataLayerFolderPath;
 
-    private static final String[] BUNDLED_LOCALE_FILES = {"messages_en.yml", "messages_es.yml", "messages_pt_BR.yml"};
-
     final static String softMuteFilePath = dataLayerFolderPath + File.separator + "softMute.txt";
     final static String bannedWordsFilePath = dataLayerFolderPath + File.separator + "bannedWords.txt";
 
@@ -164,9 +160,6 @@ public abstract class DataStore {
             playerDataFolder.mkdirs();
         }
 
-        // ensure Lang folder exists and extract locale files from JAR
-        this.extractLocaleFiles();
-
         // load up all the messages from messages.yml
         this.loadMessages();
 
@@ -202,27 +195,6 @@ public abstract class DataStore {
     }
 
     // Extracts bundled locale YAML files from JAR to GriefPreventionData/Lang/ as reference copies
-    private void extractLocaleFiles() {
-        File langFolder = new File(dataLayerFolderPath + File.separator + "Lang");
-        if (!langFolder.exists()) {
-            langFolder.mkdirs();
-        }
-
-        for (String fileName : BUNDLED_LOCALE_FILES) {
-            File targetFile = new File(langFolder, fileName);
-            if (!targetFile.exists()) {
-                try (java.io.InputStream in = GriefPrevention.instance.getResource(fileName)) {
-                    if (in != null) {
-                        java.nio.file.Files.copy(in, targetFile.toPath());
-                    }
-                } catch (IOException e) {
-                    GriefPrevention.AddLogEntry("Failed to extract " + fileName + ": " + e.getMessage(),
-                            CustomLogEntryTypes.Debug, false);
-                }
-            }
-        }
-    }
-
     private void loadSoftMutes() {
         File softMuteFile = new File(softMuteFilePath);
         if (softMuteFile.exists()) {
@@ -2432,237 +2404,10 @@ public abstract class DataStore {
         }
     }
 
-    protected void loadMessages() {
-        Messages[] messageIDs = Messages.values();
-        this.messages = new String[messageIDs.length];
-
-        // Refresh bundled locale files in Lang/ folder
-        this.extractLocaleFiles();
-
-        // Determine which messages file to load
-        // Priority: 1. messages_{locale}.yml (respects config), 2. messages.yml (legacy), 3. auto-detect any messages_*.yml, 4. extract from JAR
-        String locale = "en";
-        if (GriefPrevention.instance != null && GriefPrevention.instance.config_locale != null) {
-            locale = GriefPrevention.instance.config_locale;
-        }
-        String originalLocale = locale;
-
-        File messagesFile = new File(messagesFilePath);
-        File dataFolder = new File(languageFolderPath);
-        File localeFile = new File(dataFolder, "messages_" + locale + ".yml");
-
-        File activeFile;
-        String source;
-
-        if (localeFile.exists()) {
-            // Locale-specific file matches config — respect user's locale setting
-            activeFile = localeFile;
-            source = "messages_" + locale + ".yml";
-        } else if (messagesFile.exists()) {
-            // Legacy fallback
-            activeFile = messagesFile;
-            source = "messages.yml";
-        } else {
-            // Config locale file not found — scan for any available messages_*.yml
-            File detectedFile = null;
-            String detectedLocale = null;
-            if (dataFolder.exists() && dataFolder.isDirectory()) {
-                File[] langFiles = dataFolder.listFiles((dir, name) ->
-                        name.startsWith("messages_") && name.endsWith(".yml"));
-                if (langFiles != null && langFiles.length > 0) {
-                    java.util.Arrays.sort(langFiles);
-                    for (File f : langFiles) {
-                        String name = f.getName();
-                        String code = name.substring("messages_".length(), name.length() - ".yml".length());
-                        if (!code.isEmpty()) {
-                            detectedFile = f;
-                            detectedLocale = code;
-                            break;
-                        }
-                    }
-                }
-            }
-
-            if (detectedFile != null) {
-                activeFile = detectedFile;
-                source = detectedFile.getName();
-                locale = detectedLocale;
-                if (GriefPrevention.instance != null) {
-                    GriefPrevention.instance.config_locale = locale;
-                }
-                GriefPrevention.AddLogEntry("Locale '" + originalLocale + "' didn't match provided " + source + ". Auto-switched to '" + detectedLocale + "'",
-                        CustomLogEntryTypes.Debug, false);
-            } else {
-                // No locale files found — extract from JAR matching config locale
-                if (!dataFolder.exists()) {
-                    dataFolder.mkdirs();
-                }
-                activeFile = null;
-                source = null;
-                File targetFile = new File(dataFolder, "messages_" + locale + ".yml");
-                try (java.io.InputStream in = GriefPrevention.instance.getResource("messages_" + locale + ".yml")) {
-                    if (in != null) {
-                        java.nio.file.Files.copy(in, targetFile.toPath());
-                        activeFile = targetFile;
-                        source = "messages_" + locale + ".yml";
-                        GriefPrevention.AddLogEntry("Extracted " + source + " to " + languageFolderPath,
-                                CustomLogEntryTypes.Debug, false);
-                    } else {
-                        // Requested locale not in JAR, try English
-                        File enTarget = new File(dataFolder, "messages_en.yml");
-                        try (java.io.InputStream enIn = GriefPrevention.instance.getResource("messages_en.yml")) {
-                            if (enIn != null) {
-                                java.nio.file.Files.copy(enIn, enTarget.toPath());
-                                activeFile = enTarget;
-                                source = "messages_en.yml";
-                                locale = "en";
-                                if (GriefPrevention.instance != null) {
-                                    GriefPrevention.instance.config_locale = locale;
-                                }
-                                GriefPrevention.AddLogEntry("Extracted messages_en.yml to " + languageFolderPath,
-                                        CustomLogEntryTypes.Debug, false);
-                            }
-                        }
-                    }
-                } catch (IOException e) {
-                    GriefPrevention.AddLogEntry("Failed to extract messages_" + locale + ".yml: " + e.getMessage(),
-                            CustomLogEntryTypes.Debug, false);
-                }
-            }
-        }
-
-        FileConfiguration config;
-        if (activeFile != null) {
-            config = YamlConfiguration.loadConfiguration(activeFile);
-
-            // Merge missing keys from JAR bundled version
-            try (java.io.InputStream bundledIn = GriefPrevention.instance.getResource(source)) {
-                if (bundledIn != null) {
-                    java.io.BufferedReader reader = new java.io.BufferedReader(
-                            new java.io.InputStreamReader(bundledIn, StandardCharsets.UTF_8));
-                    FileConfiguration bundledConfig = YamlConfiguration.loadConfiguration(reader);
-                    boolean merged = false;
-                    for (String key : bundledConfig.getKeys(true)) {
-                        if (!config.contains(key)) {
-                            config.set(key, bundledConfig.get(key));
-                            merged = true;
-                        }
-                    }
-                    if (merged) {
-                        try {
-                            config.save(activeFile);
-                            GriefPrevention.AddLogEntry("Merged missing keys from bundled " + source,
-                                    CustomLogEntryTypes.Debug, false);
-                        } catch (IOException e) {
-                            GriefPrevention.AddLogEntry("Failed to save merged " + source + ": " + e.getMessage(),
-                                    CustomLogEntryTypes.Debug, false);
-                        }
-                    }
-                }
-            } catch (IOException e) {
-                // Bundled file not available, skip merge
-            }
-        } else {
-            config = new YamlConfiguration();
-        }
-
-        // for each message ID
-        for (Messages message : messageIDs) {
-            String messagePath = "Messages." + message.name();
-            // If available, migrate legacy path.
-            if (config.isString(messagePath + ".Text")) {
-                this.messages[message.ordinal()] = config.getString(messagePath + ".Text", message.defaultValue);
-            }
-            // Otherwise prefer current value if available.
-            else {
-                this.messages[message.ordinal()] = config.getString(messagePath, message.defaultValue);
-            }
-
-            // Apply automatic styling to specific messages if no user color codes are
-            // present
-            if (message != Messages.HowToClaimRegex) {
-                // Check if the message contains user-added color codes
-                boolean hasUserColorCodes = this.messages[message.ordinal()].contains("$")
-                        || this.messages[message.ordinal()].contains("&");
-                boolean hasUserNewline = this.messages[message.ordinal()].contains("\\n");
-                boolean isDisabledMessage = Compat.isBlank(this.messages[message.ordinal()]);
-
-                // Apply default styling for specific messages if no user color codes
-                if (!hasUserColorCodes && !isDisabledMessage) {
-                    switch (message) {
-                        case ClaimHelpHeader:
-                        case AClaimHelpHeader:
-                            this.messages[message.ordinal()] = "&b&l" + this.messages[message.ordinal()];
-                            break;
-                        case ClaimHelpLegend:
-                        case AClaimHelpLegend:
-                            // Prepend newline if user didn't add one
-                            if (!hasUserNewline) {
-                                this.messages[message.ordinal()] = "\\n" + this.messages[message.ordinal()];
-                            }
-                            // Apply default colors by replacing content
-                            this.messages[message.ordinal()] = this.messages[message.ordinal()]
-                                    .replace("<>", "&c<>")
-                                    .replace("[]", "&a[]")
-                                    .replace("-", "&7-");
-                            break;
-                        case ClaimHelpPagination:
-                        case AClaimHelpPagination:
-                            // Prepend newline if user didn't add one
-                            if (!hasUserNewline) {
-                                this.messages[message.ordinal()] = "\\n" + this.messages[message.ordinal()];
-                            }
-                            // Apply default color
-                            this.messages[message.ordinal()] = "&7" + this.messages[message.ordinal()];
-                            break;
-                        default:
-                            // No special styling for most messages
-                            break;
-                    }
-                }
-
-                // Convert $, & prefix codes and hex codes to Minecraft legacy format
-                this.messages[message.ordinal()] = TextColor.translate(this.messages[message.ordinal()]);
-
-                // Support \n for newlines
-                this.messages[message.ordinal()] = this.messages[message.ordinal()]
-                        .replace("\\n", "\n");
-            }
-
-            if (message.notes != null) {
-                // Import old non-comment notes.
-                String notesString = config.getString(messagePath + ".Notes", message.notes);
-                // Import existing comment notes (try-catch for 1.8.8 compatibility)
-                try {
-                    List<String> notes = config.getComments(messagePath);
-                    if (notes.isEmpty()) {
-                        notes = Arrays.asList(notesString);
-                    }
-                    config.setComments(messagePath, notes);
-                } catch (NoSuchMethodError e) {
-                    // getComments/setComments not available in older Bukkit versions, ignore
-                }
-            }
-        }
-
-        // Only save back to messages.yml if we loaded from it (legacy/migration)
-        if (messagesFile.exists()) {
-            try {
-                try {
-                    config.options().setHeader(Arrays.asList(
-                            "Use a YAML editor like NotepadPlusPlus to edit this file.",
-                            "After editing, back up your changes before reloading the server in case you made a syntax error.",
-                            "Use dollar signs ($) for formatting codes, which are documented here: http://minecraft.wiki/Formatting_codes#Color_codes",
-                            "Use \\n to create newlines in messages."));
-                } catch (NoSuchMethodError e) {
-                    // setHeader not available in older Bukkit versions, ignore
-                }
-                config.save(DataStore.messagesFilePath);
-            } catch (IOException exception) {
-                Bukkit.getLogger()
-                        .info("Unable to write to the configuration file at \"" + DataStore.messagesFilePath + "\"");
-            }
-        }
+    protected void loadMessages()
+    {
+        this.messages = new String[Messages.values().length];
+        MessageLocalization.loadMessages(this.messages);
     }
 
     synchronized public String getMessage(Messages messageID, String... args) {

@@ -18,7 +18,9 @@ public final class PlatformDetection
      */
     public enum Platform
     {
-        /** Paper and Paper forks (Purpur, Pufferfish, etc.) */
+        /** Canvas (Paper fork) */
+        CANVAS,
+        /** Paper (and generic Paper forks like Pufferfish) */
         PAPER,
         /** Spigot and Spigot-based servers without Paper API */
         SPIGOT,
@@ -51,6 +53,25 @@ public final class PlatformDetection
 
     private static @NotNull Platform detectPlatform()
     {
+        try
+        {
+            String serverName = Bukkit.getName();
+
+            // Canvas (Paper fork — check by Bukkit name before Paper class check)
+            if ("Canvas".equalsIgnoreCase(serverName))
+            {
+                return Platform.CANVAS;
+            }
+        }
+        catch (NullPointerException ignored)
+        {
+            // Bukkit not initialized (e.g. in test environment) — fall through to class-based checks
+        }
+        catch (NoSuchMethodError ignored)
+        {
+            // Very old server versions may not have Bukkit.getName()
+        }
+
         if (classExists("com.destroystokyo.paper.PaperConfig")
                 || classExists("io.papermc.paper.configuration.Configuration"))
         {
@@ -76,21 +97,21 @@ public final class PlatformDetection
         java.util.regex.Matcher m = java.util.regex.Pattern.compile("(\\d+\\.\\d+(?:\\.\\d+)?)").matcher(mcVersion);
         String version = m.find() ? m.group(1) : mcVersion;
 
-        Platform platform = getPlatform();
         String name;
-        switch (platform) {
-            case PAPER:
-                name = "Paper";
-                break;
-            case PURPUR:
-                name = "Purpur";
-                break;
-            case FOLIA:
-                name = "Folia";
-                break;
-            default:
+        try
+        {
+            name = Bukkit.getName();
+            // Spigot returns "CraftBukkit" — normalize to "Spigot"
+            if ("CraftBukkit".equals(name))
+            {
                 name = "Spigot";
-                break;
+            }
+        }
+        catch (NullPointerException | NoSuchMethodError ignored)
+        {
+            // Bukkit not initialized (e.g. test environment) — fall back to platform enum
+            name = getPlatform().name();
+            name = name.substring(0, 1).toUpperCase() + name.substring(1).toLowerCase();
         }
         return name + " " + version;
     }

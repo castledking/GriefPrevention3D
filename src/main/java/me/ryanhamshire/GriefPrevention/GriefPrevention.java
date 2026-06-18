@@ -526,6 +526,11 @@ public class GriefPrevention extends JavaPlugin {
         // special interaction-related events
         pluginManager.registerEvents(new InteractionProtectionHandler(), this);
 
+        // sulfur cube punch protection (Minecraft 26.2+)
+        // PlayerAnimationEvent exists on all Bukkit versions; the handler is a no-op on pre-26.2 servers
+        // because no entity will match the "SULFUR_CUBE" type name.
+        pluginManager.registerEvents(new SulfurCubeHandler(this, this.dataStore), this);
+
         // Conditionally register modern event handlers (only if the event classes exist at runtime).
         // Note: use lambdas (not method references) so the target handler class is loaded lazily,
         // inside the registerIfClassPresent try/catch, on servers that lack the modern event API.

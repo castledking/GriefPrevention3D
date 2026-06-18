@@ -1491,6 +1491,22 @@ public class PlayerEventHandler implements Listener {
             }
         }
 
+        // sulfur cube (Minecraft 26.2+) - apply container rules for block insert/swap/retrieve
+        if (instance.config_claims_preventTheft && entity.getType().name().equals("SULFUR_CUBE"))
+        {
+            Claim claim = this.dataStore.getClaimAt(entity.getLocation(), false, null);
+            if (claim != null)
+            {
+                final Supplier<String> noContainersReason = claim.checkPermission(player, ClaimPermission.Container, event);
+                if (noContainersReason != null)
+                {
+                    GriefPrevention.sendRateLimitedErrorMessage(player, noContainersReason.get());
+                    event.setCancelled(true);
+                    return;
+                }
+            }
+        }
+
         // if the entity is an animal or copper golem, apply container rules
         if ((instance.config_claims_preventTheft && (entity instanceof Animals || entity instanceof Fish
                 || entity instanceof CopperGolem))
