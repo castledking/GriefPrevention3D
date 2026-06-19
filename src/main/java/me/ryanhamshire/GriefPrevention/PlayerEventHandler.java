@@ -1959,8 +1959,12 @@ public class PlayerEventHandler implements Listener {
 
                     // Delay the error message to check if another plugin opened an inventory
                     SchedulerUtil.runLaterEntity(instance, player, () -> {
-                        if (player.getOpenInventory().getTopInventory().getType() != InventoryType.CRAFTING)
-                            return;
+                        try {
+                            if (player.getOpenInventory().getTopInventory().getType() != InventoryType.CRAFTING)
+                                return;
+                        } catch (IncompatibleClassChangeError ignored) {
+                            // Pre-1.16: InventoryView is a class, not interface
+                        }
                         GriefPrevention.sendRateLimitedErrorMessage(player, noContainersReason.get());
                     }, 1L); // Check 1 tick later
 
@@ -2207,6 +2211,10 @@ public class PlayerEventHandler implements Listener {
             // if he's resizing a claim and that claim hasn't been deleted since he started
             // resizing it
             if (playerData.claimResizing != null && playerData.claimResizing.inDataStore) {
+                if (playerData.lastShovelLocation == null) {
+                    startClaimResizeSelection(player, playerData, playerData.claimResizing, clickedBlock);
+                    return;
+                }
                 if (clickedBlock.getLocation().equals(playerData.lastShovelLocation))
                     return;
 
@@ -2304,9 +2312,13 @@ public class PlayerEventHandler implements Listener {
 
             // If this click is exactly at a shared corner, promote to the outermost parent
             // sharing that corner.
+            // Don't promote single-block claims (1x1x1) where every block is a corner.
             if (claim != null) {
                 Claim promoted = claim;
-                while (promoted.parent != null && isCornerMatch(promoted, clickedBlock)) {
+                while (promoted.parent != null
+                        && (promoted.getLesserBoundaryCorner().getBlockX() != promoted.getGreaterBoundaryCorner().getBlockX()
+                        || promoted.getLesserBoundaryCorner().getBlockZ() != promoted.getGreaterBoundaryCorner().getBlockZ())
+                        && isCornerMatch(promoted, clickedBlock)) {
                     Claim parent = promoted.parent;
                     if (!isCornerMatch(parent, clickedBlock)) {
                         break;
@@ -2611,7 +2623,6 @@ public class PlayerEventHandler implements Listener {
                                         : VisualizationType.SUBDIVISION;
                                 BoundaryVisualization.visualizeClaim(player, subdivisionResult.claim, subdivisionViz,
                                         clickedBlock);
-                                playerData.lastShovelLocation = null;
                                 playerData.claimSubdividing = null;
                             }
                         }
@@ -3646,6 +3657,9 @@ public class PlayerEventHandler implements Listener {
             @NotNull Block clickedBlock)
     {
         if (playerData.claimResizing != null && playerData.claimResizing.inDataStore) {
+            if (playerData.lastShovelLocation == null) {
+                return true;
+            }
             if (clickedBlock.getLocation().equals(playerData.lastShovelLocation)) {
                 return true;
             }
@@ -3673,7 +3687,10 @@ public class PlayerEventHandler implements Listener {
                 newz2 = clickedBlock.getZ();
             }
 
+            // Y resizing behavior
             if (playerData.claimResizing.is3D()) {
+                // For 3D subclaims, allow vertical resizing when the initial corner was at minY
+                // or maxY
                 int currentMinY = playerData.claimResizing.getLesserBoundaryCorner().getBlockY();
                 int currentMaxY = playerData.claimResizing.getGreaterBoundaryCorner().getBlockY();
                 int startY = playerData.lastShovelLocation.getBlockY();
@@ -3757,7 +3774,10 @@ public class PlayerEventHandler implements Listener {
             @NotNull Block clickedBlock)
     {
         Claim selection = claim;
-        while (selection.parent != null) {
+        // Don't promote single-block claims (1x1x1) where every block is a corner.
+        while (selection.parent != null
+                && (selection.getLesserBoundaryCorner().getBlockX() != selection.getGreaterBoundaryCorner().getBlockX()
+                || selection.getLesserBoundaryCorner().getBlockZ() != selection.getGreaterBoundaryCorner().getBlockZ())) {
             Claim parent = selection.parent;
             boolean parentContains = parent.contains(clickedBlock.getLocation(), true, false);
             if (parentContains && isCornerMatch(parent, clickedBlock)) {

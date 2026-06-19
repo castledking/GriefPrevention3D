@@ -1668,7 +1668,7 @@ public class GriefPrevention extends JavaPlugin {
         // transferclaim <player>
         else if (cmd.getName().equalsIgnoreCase("transferclaim") && player != null) {
             // which claim is the user in?
-            Claim claim = this.dataStore.getClaimAt(player.getLocation(), false, null);
+            Claim claim = getSelectedOrCurrentClaim(player, false);
             if (claim == null) {
                 GriefPrevention.sendMessage(player, TextMode.Instr, Messages.TransferClaimMissing);
                 return true;
@@ -2242,7 +2242,7 @@ public class GriefPrevention extends JavaPlugin {
 
             // If no arguments and sender is a player, check the claim they're standing in
             if (args.length == 0 && player != null) {
-                Claim claim = this.dataStore.getClaimAt(player.getLocation(), false, null);
+                Claim claim = getSelectedOrCurrentClaim(player, false);
                 if (claim == null) {
                     GriefPrevention.sendMessage(player, TextMode.Err, Messages.ClaimExpiryNoClaim);
                     return true;
@@ -4392,7 +4392,7 @@ public class GriefPrevention extends JavaPlugin {
         Player player = (Player) sender;
 
         PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
-        Claim claim = this.dataStore.getClaimAt(player.getLocation(), true, playerData.lastClaim);
+        Claim claim = getSelectedOrCurrentClaim(player, playerData, true);
 
         if (claim == null) {
             GriefPrevention.sendMessage(player, TextMode.Err, Messages.StandInSubclaim);

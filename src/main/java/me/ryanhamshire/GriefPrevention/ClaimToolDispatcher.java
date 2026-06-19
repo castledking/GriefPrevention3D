@@ -406,6 +406,10 @@ final class ClaimToolDispatcher
         // if he's resizing a claim and that claim hasn't been deleted since he started
         // resizing it
         if (playerData.claimResizing != null && playerData.claimResizing.inDataStore) {
+            if (playerData.lastShovelLocation == null) {
+                startClaimResizeSelection(player, playerData, playerData.claimResizing, clickedBlock);
+                return true;
+            }
             if (clickedBlock.getLocation().equals(playerData.lastShovelLocation))
                 return true;
 
@@ -815,7 +819,6 @@ final class ClaimToolDispatcher
                                     : VisualizationType.SUBDIVISION;
                             BoundaryVisualization.visualizeClaim(player, subdivisionResult.claim, subdivisionViz,
                                     clickedBlock);
-                            playerData.lastShovelLocation = null;
                             playerData.claimSubdividing = null;
                         }
                     }

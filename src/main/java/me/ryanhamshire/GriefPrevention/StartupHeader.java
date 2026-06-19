@@ -107,15 +107,15 @@ public class StartupHeader {
      * Builds the ${details} placeholder block with consistent alignment.
      */
     private String applyReplacements(String header, String langCode) {
-        String yes = "&#55FF55ON";
-        String no = "&#FF5555OFF";
+        String yes = "&aON";
+        String no = "&cOFF";
 
         String version = plugin.getDescription().getVersion();
         header = header.replace("${project.version}", version);
         header = header.replace("${version}", version);
         header = header.replace("${LANG_CODE}", langCode);
         header = header.replace("${startup.time}",
-                "&#55FF55" + (System.currentTimeMillis() - plugin.startupStartTime) + "ms");
+                "&a" + (System.currentTimeMillis() - plugin.startupStartTime) + "ms");
 
         // Build the detail block with consistent column alignment
         String storageType = "File";
@@ -139,15 +139,15 @@ public class StartupHeader {
         String platformVersion = PlatformDetection.getServerVersion();
 
         StringBuilder details = new StringBuilder();
-        details.append(formatLine("Platform:", "&#55FF55" + platformVersion, "", ""));
+        details.append(formatLine("Platform:", "&a" + platformVersion, "", ""));
         details.append("\n");
-        details.append(formatLine("3D Subdivisions:", "&#55FF55" + sub3d, "3D Admin Claims:", "&#55FF55" + admin3d));
+        details.append(formatLine("3D Subdivisions:", "&a" + sub3d, "3D Admin Claims:", "&a" + admin3d));
         details.append("\n");
-        details.append(formatLine("Nested Claims:", "&#55FF55" + nested, "Shaped Claims:", "&#55FF55" + shaped));
+        details.append(formatLine("Nested Claims:", "&a" + nested, "Shaped Claims:", "&a" + shaped));
         details.append("\n");
-        details.append(formatLine("Locale:", "&#55FF55" + langCode, "Messages loaded:", "&#55FF55" + localeCount));
+        details.append(formatLine("Locale:", "&a" + langCode, "Messages loaded:", "&a" + localeCount));
         details.append("\n");
-        details.append(formatLine("Storage:", "&#55FF55" + storageType, "Claims Loaded:", "&#55FF55" + claimsLoaded));
+        details.append(formatLine("Storage:", "&a" + storageType, "Claims Loaded:", "&a" + claimsLoaded));
 
         header = header.replace("${details}", details.toString());
 
@@ -166,19 +166,19 @@ public class StartupHeader {
         String leftText = leftLabel + " " + leftValue;
         String paddedLeft = pad(leftText, COL_WIDTH);
         StringBuilder sb = new StringBuilder();
-        sb.append("&#AAAAAA").append(paddedLeft);
+        sb.append("&7").append(paddedLeft);
         if (rightLabel != null && !rightLabel.isEmpty()) {
-            sb.append(" &#AAAAAA").append(rightLabel).append(" ").append(rightValue);
+            sb.append(" &7").append(rightLabel).append(" ").append(rightValue);
         }
         return sb.toString();
     }
 
     /**
      * Pads a string to the specified width by appending spaces.
-     * Color codes ({@code §x} or {@code &#RRGGBB}) are excluded from width calculation.
+     * Color codes ({@code &[0-9a-f]}, {@code §x}, {@code &#RRGGBB}) are excluded from width calculation.
      */
     private static String pad(String text, int width) {
-        String stripped = text.replaceAll("§[0-9a-fk-orx]", "")
+        String stripped = text.replaceAll("[&§][0-9a-fk-orx]", "")
                               .replaceAll("&#[0-9a-fA-F]{6}", "")
                               .replaceAll("#[0-9a-fA-F]{6}", "");
         int padding = width - stripped.length();
