@@ -5,10 +5,10 @@
 <h1 align="center">The self-service anti-griefing plugin for Minecraft servers — now with full 3D subdivisions</h1>
 
 <p align="center">
-  <a href="https://modrinth.com/plugin/griefprevention-3d-subdivisions"><img alt="Download on Modrinth" src="https://img.shields.io/badge/Download%20on-Modrinth-1bd96a?style=for-the-badge&logo=modrinth&logoColor=white">
-  <a href="https://github.com/castledking/GriefPrevention3D"><img src="https://img.shields.io/badge/GitHub-Repository-181717?style=for-the-badge&logo=github" alt="GitHub Repository"></a>
-  <a href="https://github.com/castledking/GriefPrevention3D/issues"><img src="https://img.shields.io/badge/GitHub-Issues-181717?style=for-the-badge&logo=github" alt="GitHub Issues"></a>
-  <a href="https://github.com/castledking/GriefPrevention3D/wiki"><img src="https://img.shields.io/badge/GitHub-Wiki-181717?style=for-the-badge&logo=github" alt="GitHub Wiki"></a>
+    <a href="https://modrinth.com/plugin/griefprevention-3d-subdivisions"><img alt="Download on Modrinth" src="https://img.shields.io/badge/Download%20on-Modrinth-1bd96a?style=for-the-badge&logo=modrinth&logoColor=white"></a>
+    <a href="https://discord.com/invite/pCKdCX6nYr"><img src="https://img.shields.io/badge/Discord-Community-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord Community" /></a>
+    <a href="https://github.com/castledking/GriefPrevention3D/issues"><img src="https://img.shields.io/badge/GitHub-Issues-181717?style=for-the-badge&logo=github" alt="GitHub Issues"></a>
+    <a href="https://github.com/castledking/GriefPrevention3D/wiki"><img src="https://img.shields.io/badge/GitHub-Wiki-181717?style=for-the-badge&logo=github" alt="GitHub Wiki"></a>
 </p>
 
 Stop _responding_ to grief and prevent it instead. GriefPrevention stops grief before it starts automatically without any effort from administrators, and with very little (self service) effort from players.
