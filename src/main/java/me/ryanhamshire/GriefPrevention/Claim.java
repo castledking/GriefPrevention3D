@@ -80,6 +80,15 @@ public class Claim
      //list of players who (beyond the claim owner) have permission to grant permissions in this claim
      public ArrayList<String> managers = new ArrayList<>();
 
+     //list of players who have neighbor trust (can bypass minimum distance checks)
+     public ArrayList<String> neighbors = new ArrayList<>();
+
+     //list of players who were auto-granted neighbor trust due to existing nearby claims
+     private ArrayList<String> autoNeighbors = new ArrayList<>();
+
+     //when true, all players can bypass minimum distance checks for this claim
+     public boolean allowAllNeighbors = false;
+
      //permissions for this claim, see ClaimPermission class
      private HashMap<String, ClaimPermission> playerIDToClaimPermissionMap = new HashMap<>();
 
@@ -239,6 +248,9 @@ public class Claim
          this.id = claim.id;
          this.ownerID = claim.ownerID;
          this.managers = new ArrayList<>(claim.managers);
+         this.neighbors = new ArrayList<>(claim.neighbors);
+         this.autoNeighbors = new ArrayList<>(claim.autoNeighbors);
+         this.allowAllNeighbors = claim.allowAllNeighbors;
          this.playerIDToClaimPermissionMap = new HashMap<>(claim.playerIDToClaimPermissionMap);
         this.deniedPermissions.addAll(claim.deniedPermissions);
          this.inDataStore = false; //since it's a copy of a claim, not in datastore!
@@ -990,6 +1002,9 @@ public class Claim
      {
          this.playerIDToClaimPermissionMap.clear();
          this.managers.clear();
+         this.neighbors.clear();
+         this.autoNeighbors.clear();
+         this.allowAllNeighbors = false;
 
          for (Claim child : this.children)
          {
@@ -1021,6 +1036,70 @@ public class Claim
 
          //managers are handled a little differently
          managers.addAll(this.managers);
+     }
+
+     //gets neighbor trust list
+     public ArrayList<String> getNeighbors()
+     {
+         return new ArrayList<>(this.neighbors);
+     }
+
+     //gets the full display list (manual + auto neighbors, no duplicates)
+     public ArrayList<String> getAllNeighbors()
+     {
+         ArrayList<String> all = new ArrayList<>(this.neighbors);
+         for (String auto : this.autoNeighbors) {
+             if (!all.contains(auto)) {
+                 all.add(auto);
+             }
+         }
+         return all;
+     }
+
+     //add a manual neighbor
+     public void addNeighbor(String playerID) {
+         String normalized = normalizeIdentifier(playerID);
+         if (!this.neighbors.contains(normalized)) {
+             this.neighbors.add(normalized);
+         }
+     }
+
+     //remove a manual neighbor (does NOT remove auto-neighbors)
+     public void removeNeighbor(String playerID) {
+         String normalized = normalizeIdentifier(playerID);
+         this.neighbors.remove(normalized);
+     }
+
+     //add an auto-granted neighbor
+     public void addAutoNeighbor(String playerID) {
+         String normalized = normalizeIdentifier(playerID);
+         if (!this.neighbors.contains(normalized) && !this.autoNeighbors.contains(normalized)) {
+             this.autoNeighbors.add(normalized);
+         }
+     }
+
+     //remove an auto-granted neighbor (only if no longer nearby)
+     public void removeAutoNeighbor(String playerID) {
+         String normalized = normalizeIdentifier(playerID);
+         this.autoNeighbors.remove(normalized);
+     }
+
+     //check if a player is an auto-neighbor
+     public boolean isAutoNeighbor(String playerID) {
+         String normalized = normalizeIdentifier(playerID);
+         return this.autoNeighbors.contains(normalized);
+     }
+
+     //check if a player has any neighbor trust (manual or auto)
+     public boolean hasNeighborTrust(String playerID) {
+         String normalized = normalizeIdentifier(playerID);
+         return this.neighbors.contains(normalized) || this.autoNeighbors.contains(normalized);
+     }
+
+     //get only manual (non-auto) neighbors
+     public ArrayList<String> getManualNeighbors()
+     {
+         return new ArrayList<>(this.neighbors);
      }
 
      //returns a copy of the location representing lower x, y, z limits

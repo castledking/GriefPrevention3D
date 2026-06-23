@@ -105,6 +105,12 @@ public class PlaceholderAPIExpansion extends PlaceholderExpansion
             return plugin.dataStore.getMessage(Messages.PlaceholderTrustLevelAccess);
         }
 
+        // Check neighbor trust: player has neighbor trust on this claim and is within minimum distance
+        if (claim.hasNeighborTrust(player.getUniqueId().toString()))
+        {
+            return plugin.dataStore.getMessage(Messages.PlaceholderTrustLevelNeighbor);
+        }
+
         return plugin.dataStore.getMessage(Messages.PlaceholderTrustLevelUntrusted);
     }
 

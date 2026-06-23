@@ -221,6 +221,7 @@ public class GriefPrevention extends JavaPlugin {
     public boolean config_claims_useClaimSelectedMessages; // whether selected-claim command help replaces ResizeStart
     public boolean config_claims_legacySubdivisionFormat; // whether to use original GP subdivision format (separate files)
                                                           // REQUIRED for GPExpansion compatibility. Default: false
+    public int config_claims_minimumDistance; // minimum distance between top-level claims. 0 = disabled.
 
     public Material config_claims_investigationTool; // which material will be used to investigate claims with a right
                                                      // click
@@ -474,6 +475,9 @@ public class GriefPrevention extends JavaPlugin {
 
         String dataMode = (this.dataStore instanceof FlatFileDataStore) ? "(File Mode)" : "(Database Mode)";
         AddLogEntry("[GP Debug] Finished loading data " + dataMode + ".");
+
+        // Auto-grant neighbor trust for existing nearby claims
+        this.dataStore.autoGrantNeighborTrust();
 
         // unless claim block accrual is disabled, start the recurring per 10 minute
         // event to give claim blocks to online players
@@ -901,6 +905,7 @@ public class GriefPrevention extends JavaPlugin {
         }
 
         this.config_claims_minY = config.getInt("GriefPrevention.Claims.MinimumY", Integer.MIN_VALUE);
+        this.config_claims_minimumDistance = Math.max(0, config.getInt("GriefPrevention.Claims.MinimumDistance", 0));
         // Warn if MinimumY is set above sea level, as this is likely unintended
         if (this.config_claims_minY != Integer.MIN_VALUE) {
             for (World world : worlds) {
@@ -1158,6 +1163,7 @@ public class GriefPrevention extends JavaPlugin {
         outConfig.set("GriefPrevention.Claims.ShapedMinimumWidth", this.config_claims_shapedMinWidth);
         outConfig.set("GriefPrevention.Claims.ShapedMinimumArea", this.config_claims_shapedMinArea);
         outConfig.set("GriefPrevention.Claims.MinimumY", this.config_claims_minY);
+        outConfig.set("GriefPrevention.Claims.MinimumDistance", this.config_claims_minimumDistance);
         outConfig.set("GriefPrevention.Claims.InvestigationTool", this.config_claims_investigationTool.name());
         outConfig.set("GriefPrevention.Claims.ModificationTool", this.config_claims_modificationTool.name());
         outConfig.set("GriefPrevention.Claims.Expiration.ChestClaimDays", this.config_claims_chestClaimExpirationDays);
@@ -1388,6 +1394,8 @@ public class GriefPrevention extends JavaPlugin {
         getCommand("containertrust").setTabCompleter(trustTabCompleter);
         getCommand("permissiontrust").setTabCompleter(trustTabCompleter);
         getCommand("untrust").setTabCompleter(trustTabCompleter);
+        getCommand("neighbortrust").setTabCompleter(trustTabCompleter);
+        getCommand("distancetrust").setTabCompleter(trustTabCompleter);
     }
 
     /**
@@ -1812,11 +1820,22 @@ public class GriefPrevention extends JavaPlugin {
 
             player.sendMessage(permissions.toString());
 
+            // Show neighbors
+            ArrayList<String> neighbors = claim.getAllNeighbors();
+            if (!neighbors.isEmpty()) {
+                permissions = new StringBuilder();
+                permissions.append(ChatColor.LIGHT_PURPLE).append('>');
+                for (String neighbor : neighbors)
+                    permissions.append(this.trustEntryToPlayerName(neighbor)).append(' ');
+                player.sendMessage(permissions.toString());
+            }
+
             player.sendMessage(
                     ChatColor.GOLD + this.dataStore.getMessage(Messages.Manage) + " " +
                             ChatColor.YELLOW + this.dataStore.getMessage(Messages.Build) + " " +
                             ChatColor.GREEN + this.dataStore.getMessage(Messages.Containers) + " " +
-                            ChatColor.BLUE + this.dataStore.getMessage(Messages.Access));
+                            ChatColor.BLUE + this.dataStore.getMessage(Messages.Access) +
+                            (neighbors.isEmpty() ? "" : " " + ChatColor.LIGHT_PURPLE + this.dataStore.getMessage(Messages.Neighbor)));
 
             if (claim.getSubclaimRestrictions()) {
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.HasSubclaimRestriction);
@@ -2230,6 +2249,25 @@ public class GriefPrevention extends JavaPlugin {
             return this.handleClaimExplosionsCommand(sender, args);
         } else if (cmd.getName().equalsIgnoreCase("witherexplosions") && player != null) {
             return this.handleWitherExplosionsCommand(sender, args);
+        }
+
+        // neighbortrust <player>
+        else if (cmd.getName().equalsIgnoreCase("neighbortrust") && player != null) {
+            if (args.length != 1)
+                return false;
+            return this.handleNeighborTrustCommand(sender, args);
+        }
+
+        // distancetrust <player> (alias for neighbortrust, handled by plugin.yml alias)
+
+        // checkclaimdistance
+        else if (cmd.getName().equalsIgnoreCase("checkclaimdistance") && player != null) {
+            return this.handleCheckClaimDistanceCommand(sender, args);
+        }
+
+        // toggleclaimdistance
+        else if (cmd.getName().equalsIgnoreCase("toggleclaimdistance") && player != null) {
+            return this.handleToggleClaimDistanceCommand(sender, args);
         }
 
         // checkclaimexpiry
@@ -4252,11 +4290,22 @@ public class GriefPrevention extends JavaPlugin {
 
         player.sendMessage(permissions.toString());
 
+        // Show neighbors
+        ArrayList<String> neighbors = claim.getAllNeighbors();
+        if (!neighbors.isEmpty()) {
+            permissions = new StringBuilder();
+            permissions.append(ChatColor.LIGHT_PURPLE).append('>');
+            for (String neighbor : neighbors)
+                permissions.append(this.trustEntryToPlayerName(neighbor)).append(' ');
+            player.sendMessage(permissions.toString());
+        }
+
         player.sendMessage(
                 ChatColor.GOLD + this.dataStore.getMessage(Messages.Manage) + " " +
                         ChatColor.YELLOW + this.dataStore.getMessage(Messages.Build) + " " +
                         ChatColor.GREEN + this.dataStore.getMessage(Messages.Containers) + " " +
-                        ChatColor.BLUE + this.dataStore.getMessage(Messages.Access));
+                        ChatColor.BLUE + this.dataStore.getMessage(Messages.Access) +
+                        (neighbors.isEmpty() ? "" : " " + ChatColor.LIGHT_PURPLE + this.dataStore.getMessage(Messages.Neighbor)));
 
         if (claim.getSubclaimRestrictions()) {
             GriefPrevention.sendMessage(player, TextMode.Err, Messages.HasSubclaimRestriction);
@@ -4441,6 +4490,219 @@ public class GriefPrevention extends JavaPlugin {
 
         this.dataStore.saveClaim(claim);
         return true;
+    }
+
+    public boolean handleNeighborTrustCommand(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player))
+            return false;
+        Player player = (Player) sender;
+
+        if (args.length != 1)
+            return false;
+
+        // Determine target player
+        OfflinePlayer otherPlayer = this.resolvePlayerByName(args[0]);
+        if (otherPlayer == null && !args[0].equals("public")) {
+            if (args[0].contains(".")) {
+                args[0] = "[" + args[0] + "]";
+            } else {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.PlayerNotFound2);
+                return true;
+            }
+        }
+
+        PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
+        Claim claim = getSelectedOrCurrentClaim(player, playerData, false);
+
+        if (claim == null) {
+            // Apply to all claims
+            String identifierToAdd = otherPlayer != null ? otherPlayer.getUniqueId().toString() : args[0];
+            for (Claim targetClaim : playerData.getClaims()) {
+                targetClaim.addNeighbor(identifierToAdd);
+                this.dataStore.saveClaim(targetClaim);
+            }
+            if (otherPlayer != null) {
+                GriefPrevention.sendMessage(player, TextMode.Success, Messages.NeighborTrustGrantedAll, otherPlayer.getName());
+            } else {
+                GriefPrevention.sendMessage(player, TextMode.Success, Messages.NeighborTrustGrantedAll, args[0]);
+            }
+        } else {
+            // Check permission
+            if (claim.checkPermission(player, ClaimPermission.Manage, null) != null) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionTrust, claim.getOwnerName());
+                return true;
+            }
+
+            String identifierToAdd = otherPlayer != null ? otherPlayer.getUniqueId().toString() : args[0];
+            claim.addNeighbor(identifierToAdd);
+            this.dataStore.saveClaim(claim);
+            if (otherPlayer != null) {
+                GriefPrevention.sendMessage(player, TextMode.Success, Messages.NeighborTrustGranted, otherPlayer.getName());
+            } else {
+                GriefPrevention.sendMessage(player, TextMode.Success, Messages.NeighborTrustGranted, args[0]);
+            }
+        }
+
+        return true;
+    }
+
+    public boolean handleNeighborUntrustCommand(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player))
+            return false;
+        Player player = (Player) sender;
+
+        if (args.length != 1)
+            return false;
+
+        boolean clearAll = args[0].equals("all");
+        OfflinePlayer otherPlayer = null;
+        String idToDrop = null;
+
+        if (!clearAll) {
+            otherPlayer = this.resolvePlayerByName(args[0]);
+            if (otherPlayer != null) {
+                idToDrop = otherPlayer.getUniqueId().toString();
+            } else {
+                idToDrop = args[0];
+            }
+        }
+
+        PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
+        Claim claim = getSelectedOrCurrentClaim(player, playerData, false);
+
+        if (claim == null) {
+            // Apply to all claims - only remove manual neighbors, not auto-neighbors
+            for (Claim targetClaim : playerData.getClaims()) {
+                if (clearAll) {
+                    targetClaim.neighbors.clear();
+                } else {
+                    targetClaim.removeNeighbor(idToDrop);
+                }
+                this.dataStore.saveClaim(targetClaim);
+            }
+            if (clearAll) {
+                GriefPrevention.sendMessage(player, TextMode.Success, Messages.UntrustEveryoneAllClaims);
+            } else if (otherPlayer != null) {
+                GriefPrevention.sendMessage(player, TextMode.Success, Messages.NeighborTrustRevokedAll, otherPlayer.getName());
+            } else {
+                GriefPrevention.sendMessage(player, TextMode.Success, Messages.NeighborTrustRevokedAll, idToDrop);
+            }
+        } else {
+            // Check permission
+            if (claim.checkPermission(player, ClaimPermission.Manage, null) != null) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionTrust, claim.getOwnerName());
+                return true;
+            }
+
+            if (clearAll) {
+                claim.neighbors.clear();
+                this.dataStore.saveClaim(claim);
+                GriefPrevention.sendMessage(player, TextMode.Success, Messages.ClearPermissionsOneClaim);
+            } else {
+                // Don't allow removing auto-neighbors via /untrust
+                if (claim.isAutoNeighbor(idToDrop)) {
+                    GriefPrevention.sendMessage(player, TextMode.Err, "That player has auto-granted neighbor trust from nearby claims. It will be removed when the nearby claim is abandoned.");
+                    return true;
+                }
+                claim.removeNeighbor(idToDrop);
+                this.dataStore.saveClaim(claim);
+                if (otherPlayer != null) {
+                    GriefPrevention.sendMessage(player, TextMode.Success, Messages.NeighborTrustRevoked, otherPlayer.getName());
+                } else {
+                    GriefPrevention.sendMessage(player, TextMode.Success, Messages.NeighborTrustRevoked, idToDrop);
+                }
+            }
+        }
+
+        return true;
+    }
+
+    public boolean handleCheckClaimDistanceCommand(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player))
+            return false;
+        Player player = (Player) sender;
+
+        int minDistance = this.config_claims_minimumDistance;
+        GriefPrevention.sendMessage(player, TextMode.Info, Messages.MinimumDistance, String.valueOf(minDistance));
+
+        // Find nearby claims and show distances, visualize them
+        Location loc = player.getLocation();
+        int found = 0;
+        for (Claim claim : this.dataStore.claims) {
+            if (!claim.inDataStore) continue;
+            if (claim.parent != null) continue;
+            if (claim.getOwnerID() != null && claim.getOwnerID().equals(player.getUniqueId())) continue;
+            if (!claim.getLesserBoundaryCorner().getWorld().equals(loc.getWorld())) continue;
+
+            if (claim.isNear(loc, minDistance)) {
+                int distance = getClaimDistance(loc, claim);
+                GriefPrevention.sendMessage(player, TextMode.Info,
+                        "  " + claim.getOwnerName() + "'s claim at " + getfriendlyLocationString(claim.getLesserBoundaryCorner()) + " - distance: " + distance);
+                // Visualize the nearby claim boundary as conflict zone
+                BoundaryVisualization.visualizeClaim(player, claim, VisualizationType.CONFLICT_ZONE);
+                found++;
+            }
+        }
+
+        GriefPrevention.sendMessage(player, TextMode.Info, Messages.NearbyClaims, String.valueOf(found));
+
+        return true;
+    }
+
+    public boolean handleToggleClaimDistanceCommand(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player))
+            return false;
+        Player player = (Player) sender;
+
+        PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
+        Claim claim = getSelectedOrCurrentClaim(player, playerData, false);
+
+        if (claim == null) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.StandInClaimToResize);
+            return true;
+        }
+
+        // Toggle per-claim allowAllNeighbors (requires owner or manager)
+        Supplier<String> noManage = claim.checkPermission(player, ClaimPermission.Manage, null);
+        if (noManage != null) {
+            GriefPrevention.sendMessage(player, TextMode.Err, noManage.get());
+            return true;
+        }
+        claim.allowAllNeighbors = !claim.allowAllNeighbors;
+        this.dataStore.saveClaim(claim);
+        if (claim.allowAllNeighbors) {
+            GriefPrevention.sendMessage(player, TextMode.Success, Messages.NeighborBypassEnabled);
+        } else {
+            GriefPrevention.sendMessage(player, TextMode.Success, Messages.NeighborBypassDisabled);
+        }
+
+        return true;
+    }
+
+    // Calculate the minimum distance between a location and a claim boundary
+    private int getClaimDistance(Location loc, Claim claim) {
+        int lx = loc.getBlockX();
+        int lz = loc.getBlockZ();
+        int minX = Math.min(claim.getLesserBoundaryCorner().getBlockX(), claim.getGreaterBoundaryCorner().getBlockX());
+        int maxX = Math.max(claim.getLesserBoundaryCorner().getBlockX(), claim.getGreaterBoundaryCorner().getBlockX());
+        int minZ = Math.min(claim.getLesserBoundaryCorner().getBlockZ(), claim.getGreaterBoundaryCorner().getBlockZ());
+        int maxZ = Math.max(claim.getLesserBoundaryCorner().getBlockZ(), claim.getGreaterBoundaryCorner().getBlockZ());
+
+        // If inside the claim, distance is 0
+        if (lx >= minX && lx <= maxX && lz >= minZ && lz <= maxZ) {
+            return 0;
+        }
+
+        // Calculate distance to nearest edge
+        int dx = 0;
+        if (lx < minX) dx = minX - lx;
+        else if (lx > maxX) dx = lx - maxX;
+
+        int dz = 0;
+        if (lz < minZ) dz = minZ - lz;
+        else if (lz > maxZ) dz = lz - maxZ;
+
+        return Math.max(dx, dz); // Chebyshev distance for the "band" approach
     }
 
     private void removeInheritedPermissions(Claim claim) {

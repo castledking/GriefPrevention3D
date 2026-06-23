@@ -76,6 +76,7 @@ public enum Alias {
 "      container: [container]" + "\n" +
 "      permission: [permission]" + "\n" +
 "      build: [build]" + "\n" +
+"      neighbor: [neighbor]" + "\n" +
 "" + "\n",
         "trust"
     ),
@@ -264,6 +265,28 @@ public enum Alias {
 "    type: integer" + "\n" +
 "" + "\n",
         "claimhelp"
+    ),
+
+    ClaimDistanceCheck(
+        "enable: true" + "\n" +
+"commands: [distance, checkdistance]" + "\n" +
+"standalone: [checkclaimdistance, claimcheckdistance]" + "\n" +
+"usage: \"/claim distance check\"" + "\n" +
+"description: Check the minimum distance to nearby claims." + "\n" +
+"permission: griefprevention.checkclaimdistance" + "\n" +
+"" + "\n",
+        "checkclaimdistance"
+    ),
+
+    ClaimDistanceToggle(
+        "enable: true" + "\n" +
+"commands: [distancetoggle, toggledistance]" + "\n" +
+"standalone: [toggleclaimdistance, claimtoggledistance]" + "\n" +
+"usage: \"/claim distance toggle\"" + "\n" +
+"description: Toggle whether all players can bypass minimum distance for your claim." + "\n" +
+"permission: griefprevention.toggleclaimdistance" + "\n" +
+"" + "\n",
+        "toggleclaimdistance"
     ),
 
     // Subcommands section - aclaim commands

@@ -133,6 +133,22 @@ commands:
     description: View claim expiration details for a player.
     usage: /<command> <player>
     permission: griefprevention.checkclaimexpiry
+    aliases: [claimcheckexpiry, checkclaimexpiration, claimcheckexpiration]
+  neighbortrust:
+    description: Grants a player neighbor trust to bypass minimum distance checks.
+    usage: /<command> <player>
+    permission: griefprevention.neighbortrust
+    aliases: [distancetrust]
+  checkclaimdistance:
+    description: Check the minimum distance to nearby claims.
+    usage: /<command>
+    permission: griefprevention.checkclaimdistance
+    aliases: [claimcheckdistance]
+  toggleclaimdistance:
+    description: Toggle whether all players can bypass minimum distance for your claim.
+    usage: /<command>
+    permission: griefprevention.toggleclaimdistance
+    aliases: [claimtoggledistance]
   trapped:
     description: Ejects you to nearby unclaimed land.  Has a substantial cooldown period.
     usage: /<command>
@@ -370,6 +386,87 @@ permissions:
     default: op
   griefprevention.claims:
     description: Grants access to claim-related slash commands.
+    default: true
+    children:
+      griefprevention.trust: true
+      griefprevention.untrust: true
+      griefprevention.containertrust: true
+      griefprevention.accesstrust: true
+      griefprevention.permissiontrust: true
+      griefprevention.neighbortrust: true
+      griefprevention.distancetrust: true
+      griefprevention.checkclaimdistance: true
+      griefprevention.toggleclaimdistance: true
+      griefprevention.claimslist: true
+      griefprevention.abandonclaim: true
+      griefprevention.abandontoplevelclaim: true
+      griefprevention.extendclaim: true
+      griefprevention.subdivideclaims: true
+      griefprevention.restrictsubclaim: true
+      griefprevention.basicclaims: true
+      griefprevention.claimexplosions: true
+      griefprevention.checkclaimexpiry: true
+      griefprevention.shapedclaims: true
+      griefprevention.3dsubdivideclaims: true
+      griefprevention.buysellclaimblocks: true
+      griefprevention.witherexplosions: true
+      griefprevention.unlockdrops: true
+      griefprevention.trapped: true
+      griefprevention.givepet: true
+      griefprevention.createclaims: true
+      griefprevention.accruals: true
+      griefprevention.ignore: true
+      griefprevention.abandonallclaims: true
+  griefprevention.trust:
+    description: Grants permission to use /trust.
+    default: true
+  griefprevention.untrust:
+    description: Grants permission to use /untrust.
+    default: true
+  griefprevention.containertrust:
+    description: Grants permission to use /containertrust.
+    default: true
+  griefprevention.accesstrust:
+    description: Grants permission to use /accesstrust.
+    default: true
+  griefprevention.permissiontrust:
+    description: Grants permission to use /permissiontrust.
+    default: true
+  griefprevention.neighbortrust:
+    description: Grants permission to use /neighbortrust and /distancetrust.
+    default: true
+  griefprevention.distancetrust:
+    description: Grants permission to use /distancetrust (alias for /neighbortrust).
+    default: true
+  griefprevention.checkclaimdistance:
+    description: Grants permission to use /checkclaimdistance.
+    default: true
+  griefprevention.toggleclaimdistance:
+    description: Grants permission to use /toggleclaimdistance.
+    default: true
+  griefprevention.claimslist:
+    description: Grants permission to use /claimslist.
+    default: true
+  griefprevention.abandonclaim:
+    description: Grants permission to use /abandonclaim.
+    default: true
+  griefprevention.abandontoplevelclaim:
+    description: Grants permission to use /abandontoplevelclaim.
+    default: true
+  griefprevention.extendclaim:
+    description: Grants permission to use /extendclaim.
+    default: true
+  griefprevention.subdivideclaims:
+    description: Grants permission to use /subdivideclaims.
+    default: true
+  griefprevention.restrictsubclaim:
+    description: Grants permission to use /restrictsubclaim.
+    default: true
+  griefprevention.basicclaims:
+    description: Grants permission to use /basicclaims.
+    default: true
+  griefprevention.claimexplosions:
+    description: Grants permission to use /claimexplosions.
     default: true
   griefprevention.abandonallclaims:
     description: Grants access to /abandonallclaims.

@@ -935,6 +935,9 @@ public abstract class DataStore {
         }
 
         // mark as deleted so any references elsewhere can be ignored
+
+        // Clean up auto-neighbor trust from nearby claims
+        this.cleanupAutoNeighborsOnDelete(claim);
         claim.inDataStore = false;
 
         // remove from memory
@@ -1373,7 +1376,70 @@ public abstract class DataStore {
         return hashes;
     }
 
-    /*
+    // Scans existing claims and auto-grants neighbor trust between nearby claims.
+    // Called after config load when MinimumDistance is set.
+    public void autoGrantNeighborTrust() {
+        int minDist = GriefPrevention.instance.config_claims_minimumDistance;
+        if (minDist <= 0) return;
+
+        for (Claim claim : this.claims) {
+            if (!claim.inDataStore) continue;
+            if (claim.parent != null) continue;
+            if (claim.getOwnerID() == null) continue;
+
+            for (Claim otherClaim : this.claims) {
+                if (!otherClaim.inDataStore) continue;
+                if (otherClaim.parent != null) continue;
+                if (otherClaim.getOwnerID() == null) continue;
+                if (claim.id.equals(otherClaim.id)) continue;
+                if (claim.getOwnerID().equals(otherClaim.getOwnerID())) continue;
+                if (!claim.getLesserBoundaryCorner().getWorld().equals(otherClaim.getLesserBoundaryCorner().getWorld())) continue;
+
+                if (claim.isNear(otherClaim.getLesserBoundaryCorner(), minDist) || claim.isNear(otherClaim.getGreaterBoundaryCorner(), minDist)) {
+                    claim.addAutoNeighbor(otherClaim.getOwnerID().toString());
+                    otherClaim.addAutoNeighbor(claim.getOwnerID().toString());
+                }
+            }
+        }
+    }
+
+    // When a claim is deleted, remove the owner from auto-neighbor lists on nearby claims,
+    // but only if the deleted owner has no other claims still nearby.
+    void cleanupAutoNeighborsOnDelete(Claim deletedClaim) {
+        if (deletedClaim.parent != null) return;
+        UUID deletedOwner = deletedClaim.getOwnerID();
+        if (deletedOwner == null) return;
+
+        int minDist = GriefPrevention.instance.config_claims_minimumDistance;
+        if (minDist <= 0) return;
+
+        for (Claim claim : this.claims) {
+            if (!claim.inDataStore) continue;
+            if (claim.parent != null) continue;
+            if (!claim.isAutoNeighbor(deletedOwner.toString())) continue;
+
+            boolean hasOtherNearby = false;
+            for (Claim otherClaim : this.claims) {
+                if (!otherClaim.inDataStore) continue;
+                if (otherClaim.parent != null) continue;
+                if (otherClaim.id.equals(deletedClaim.id)) continue;
+                if (!otherClaim.getOwnerID().equals(deletedOwner)) continue;
+                if (!claim.getLesserBoundaryCorner().getWorld().equals(otherClaim.getLesserBoundaryCorner().getWorld())) continue;
+
+                if (claim.isNear(otherClaim.getLesserBoundaryCorner(), minDist) || claim.isNear(otherClaim.getGreaterBoundaryCorner(), minDist)) {
+                    hasOtherNearby = true;
+                    break;
+                }
+            }
+
+            if (!hasOtherNearby) {
+                claim.removeAutoNeighbor(deletedOwner.toString());
+                this.saveClaim(claim);
+            }
+        }
+    }
+
+        /*
      * Creates a claim and flags it as being new....throwing a create claim event;
      */
     synchronized public CreateClaimResult createClaim(World world, int x1, int x2, int y1, int y2, int z1, int z2,
@@ -1746,6 +1812,43 @@ public abstract class DataStore {
                 result.succeeded = false;
                 result.claim = otherClaim;
                 return result;
+            }
+        }
+
+        // Minimum distance check for top-level claims
+        if (newClaim.parent == null
+                && GriefPrevention.instance.config_claims_minimumDistance > 0
+                && !dryRun) {
+            int minDist = GriefPrevention.instance.config_claims_minimumDistance;
+            UUID ownerUUID = newClaim.getOwnerID();
+            for (Claim otherClaim : this.claims) {
+                if (!otherClaim.inDataStore) continue;
+                if (otherClaim.parent != null) continue;
+                if (otherClaim.id != null && newClaim.id != null && otherClaim.id.equals(newClaim.id)) continue;
+                if (otherClaim.getOwnerID() != null && otherClaim.getOwnerID().equals(ownerUUID)) continue;
+                if (!otherClaim.getLesserBoundaryCorner().getWorld().equals(world)) continue;
+
+                if (otherClaim.isNear(newClaim.lesserBoundaryCorner, minDist) || otherClaim.isNear(newClaim.greaterBoundaryCorner, minDist)) {
+                    // Check if the nearby claim allows all neighbors to bypass
+                    if (otherClaim.allowAllNeighbors) {
+                        continue;
+                    }
+                    // Check if creating player has neighbor trust (manual or auto) on the nearby claim
+                    boolean hasNeighborTrust = false;
+                    if (creatingPlayer != null && otherClaim.hasNeighborTrust(creatingPlayer.getUniqueId().toString())) {
+                        hasNeighborTrust = true;
+                    }
+                    if (!hasNeighborTrust) {
+                        result.succeeded = false;
+                        result.claim = otherClaim;
+                        result.denialMessage = () -> {
+                            String ownerName = otherClaim.getOwnerName();
+                            return GriefPrevention.instance.dataStore.getMessage(
+                                    Messages.CreateClaimFailTooClose, ownerName, String.valueOf(minDist));
+                        };
+                        return result;
+                    }
+                }
             }
         }
 
