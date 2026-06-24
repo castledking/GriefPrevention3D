@@ -454,6 +454,52 @@ public abstract class BoundaryVisualization
     }
 
     /**
+     * Add nearby claim boundaries to the player's existing visualization without clearing it.
+     * This preserves shaped claim edit state (draft points, segments, etc.) while adding
+     * nearby claim borders. If the player has an active shaped edit visualization,
+     * the nearby claim boundaries are merged in and the combined set is re-visualized.
+     */
+    public static void mergeNearbyClaims(@NotNull Player player, @NotNull Collection<Claim> claims) {
+        int playerY = player.getLocation().getBlockY();
+        PlayerData playerData = GriefPrevention.instance.dataStore.getPlayerData(player.getUniqueId());
+        BoundaryVisualization currentVisualization = playerData.getVisibleBoundaries();
+
+        Set<Boundary> nearbyBoundaries = claims.stream()
+                .filter(claim -> !claim.is3D() || withinVerticalRange(claim, playerY))
+                .map(claim -> new Boundary(
+                        claim,
+                        claim.isAdminClaim() && claim.parent == null
+                                ? (claim.is3D() ? VisualizationType.ADMIN_CLAIM_3D : VisualizationType.ADMIN_CLAIM)
+                                : claim.is3D() ? VisualizationType.SUBDIVISION_3D : VisualizationType.CLAIM))
+                .collect(Collectors.toSet());
+
+        if (nearbyBoundaries.isEmpty()) {
+            return;
+        }
+
+        // If there's an existing visualization, merge nearby boundaries into it
+        // and re-apply the combined set so both shaped edit state and nearby claims are visible
+        if (currentVisualization != null && !currentVisualization.elements.isEmpty()) {
+            // Start with existing elements (shaped edit state) and add nearby claim boundaries
+            Set<Boundary> combined = new HashSet<>(currentVisualization.elements);
+            combined.addAll(nearbyBoundaries);
+
+            // Clear old visualization and apply combined set
+            currentVisualization.revert(player);
+            playerData.setVisibleBoundaries(null);
+
+            BoundaryVisualizationEvent event = new BoundaryVisualizationEvent(
+                    player, combined, player.getEyeLocation().getBlockY());
+            callAndVisualize(event);
+        } else {
+            // No existing visualization, create a new one with just nearby claims
+            BoundaryVisualizationEvent event = new BoundaryVisualizationEvent(
+                    player, nearbyBoundaries, player.getEyeLocation().getBlockY());
+            callAndVisualize(event);
+        }
+    }
+
+    /**
      * Call a {@link BoundaryVisualizationEvent} and use the resulting values to create and apply a visualization.
      *
      * @param event the {@code BoundaryVisualizationEvent}

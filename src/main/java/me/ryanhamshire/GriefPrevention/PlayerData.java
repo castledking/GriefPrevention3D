@@ -97,6 +97,10 @@ public class PlayerData
      */
     private transient boolean ephemeralBasicShapedSegmentPreview = false;
 
+    // set to true when shaped mode is reset by switching away from the shovel;
+    // cleared when the player re-holds the shovel and the "returned to basic" message is sent
+    public boolean shapedModeResetBySwitch = false;
+
     //whether or not the player has a pending /trapped rescue
     public boolean pendingTrapped = false;
 

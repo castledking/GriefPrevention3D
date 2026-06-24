@@ -1656,7 +1656,7 @@ public class PlayerEventHandler implements Listener {
                 playerData.claimResizing = null;
                 playerData.lastShovelLocation = null;
                 playerData.setClaimEditorSession(null);
-                GriefPrevention.sendMessage(player, TextMode.Success, Messages.BasicClaimsMode);
+                playerData.shapedModeResetBySwitch = true;
             }
         }
     }

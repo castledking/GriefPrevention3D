@@ -57,6 +57,11 @@ class EquipShovelProcessingTask implements Runnable
             playerData.shovelMode = ShovelMode.Basic;
             GriefPrevention.sendMessage(player, TextMode.Info, Messages.ShovelBasicClaimMode);
         }
+        else if (playerData.shapedModeResetBySwitch)
+        {
+            playerData.shapedModeResetBySwitch = false;
+            GriefPrevention.sendMessage(player, TextMode.Info, Messages.ShovelBasicClaimMode);
+        }
 
         //tell him how many claim blocks he has available
         int remainingBlocks = playerData.getRemainingClaimBlocks();

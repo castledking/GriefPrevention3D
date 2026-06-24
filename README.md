@@ -1,5 +1,5 @@
 <p align="center">
-<img alt="GriefPrevention3D" width=100% height=auto src="https://repository-images.githubusercontent.com/1022939485/98eef4fa-4d0c-47c8-83f6-78f2e2112927">
+<img alt="GriefPrevention3D" width=100% height=auto src="https://repository-images.githubusercontent.com/1022939485/fcf66315-8a10-44a9-9919-2f9e1ec7f5d1">
 </p>
 
 <h1 align="center">The self-service anti-griefing plugin for Minecraft servers — now with full 3D subdivisions</h1>
@@ -63,6 +63,19 @@ Stop _responding_ to grief and prevent it instead. GriefPrevention stops grief b
   `/claim trust`
   `/claim abandon`
   [View Docs](https://github.com/castledking/GriefPrevention3D/blob/master/src/main/resources/alias.yml)
+
+- **Neighbor Trust & Minimum Distance**
+  ```
+  GriefPrevention:
+    Claims:
+      MinimumDistance: 0
+  ```
+  Enforce a minimum distance between top-level claims to prevent claim spam and overcrowding. When set, players cannot create claims within the configured distance of another player's claim.
+  - `/claim trust <player> neighbor` — Grant a player neighbor trust so they can bypass minimum distance checks for your claims.
+  - `/neighbortrust <player>` (alias: `/distancetrust <player>`) — Standalone command for the same purpose.
+  - `/claim distance check` — Show the configured minimum distance and list nearby claims.
+  - `/claim distance toggle` — While standing in your own claim, toggle whether ALL players can bypass minimum distance for that claim.
+  - Existing nearby claims auto-grant neighbor trust to each other, cleaned up automatically when claims are abandoned.
 
 - **Wither Explosion Toggle**
   `/witherexplosions`

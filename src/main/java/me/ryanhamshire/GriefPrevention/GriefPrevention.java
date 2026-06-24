@@ -487,6 +487,19 @@ public class GriefPrevention extends JavaPlugin {
             SchedulerUtil.runRepeatingGlobal(this, task, 20L * 60 * 10, 20L * 60 * 10);
         }
 
+        // periodic visualization of nearby claims for players in shaped mode (every 5 seconds)
+        SchedulerUtil.runRepeatingGlobal(this, () -> {
+            for (Player player : Bukkit.getOnlinePlayers()) {
+                PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
+                if (playerData.shovelMode == ShovelMode.Shaped) {
+                    Set<Claim> claims = this.dataStore.getNearbyClaims(player.getLocation());
+                    if (!claims.isEmpty()) {
+                        BoundaryVisualization.mergeNearbyClaims(player, claims);
+                    }
+                }
+            }
+        }, 20L * 5, 20L * 5);
+
         // start recurring cleanup scan for unused claims belonging to inactive players
         FindUnusedClaimsTask task2 = new FindUnusedClaimsTask();
         SchedulerUtil.runRepeatingGlobal(this, task2, 20L * 60, 20L * config_advanced_claim_expiration_check_rate);
@@ -1591,16 +1604,28 @@ public class GriefPrevention extends JavaPlugin {
         if ((cmd.getName().equalsIgnoreCase("extendclaim")
                 || cmd.getName().equalsIgnoreCase("expandclaim")
                 || cmd.getName().equalsIgnoreCase("resizeclaim")) && player != null) {
+            if (!player.hasPermission("griefprevention.extendclaim")) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+                return true;
+            }
             return this.handleExtendClaimCommand(player, args);
         }
 
         // abandonclaim
         if (cmd.getName().equalsIgnoreCase("abandonclaim") && player != null) {
+            if (!player.hasPermission("griefprevention.abandonclaim")) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+                return true;
+            }
             return this.abandonClaimHandler(player, false);
         }
 
         // abandontoplevelclaim
         if (cmd.getName().equalsIgnoreCase("abandontoplevelclaim") && player != null) {
+            if (!player.hasPermission("griefprevention.abandontoplevelclaim")) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+                return true;
+            }
             return this.abandonClaimHandler(player, true);
         }
 
@@ -1621,6 +1646,10 @@ public class GriefPrevention extends JavaPlugin {
 
         // abandonallclaims
         else if (cmd.getName().equalsIgnoreCase("abandonallclaims") && player != null) {
+            if (!player.hasPermission("griefprevention.abandonallclaims")) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+                return true;
+            }
             if (args.length > 1)
                 return false;
 
@@ -1663,6 +1692,10 @@ public class GriefPrevention extends JavaPlugin {
 
         // trust <player>
         else if (cmd.getName().equalsIgnoreCase("trust") && player != null) {
+            if (!player.hasPermission("griefprevention.trust")) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+                return true;
+            }
             // requires exactly one parameter, the other player's name
             if (args.length != 1)
                 return false;
@@ -1846,6 +1879,10 @@ public class GriefPrevention extends JavaPlugin {
 
         // untrust <player> or untrust [<group>]
         else if (cmd.getName().equalsIgnoreCase("untrust") && player != null) {
+            if (!player.hasPermission("griefprevention.untrust")) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+                return true;
+            }
             // requires exactly one parameter, the other player's name
             if (args.length != 1)
                 return false;
@@ -2069,6 +2106,10 @@ public class GriefPrevention extends JavaPlugin {
 
         // accesstrust <player>
         else if (cmd.getName().equalsIgnoreCase("accesstrust") && player != null) {
+            if (!player.hasPermission("griefprevention.accesstrust")) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+                return true;
+            }
             // requires exactly one parameter, the other player's name
             if (args.length != 1)
                 return false;
@@ -2080,6 +2121,10 @@ public class GriefPrevention extends JavaPlugin {
 
         // containertrust <player>
         else if (cmd.getName().equalsIgnoreCase("containertrust") && player != null) {
+            if (!player.hasPermission("griefprevention.containertrust")) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+                return true;
+            }
             // requires exactly one parameter, the other player's name
             if (args.length != 1)
                 return false;
@@ -2091,6 +2136,10 @@ public class GriefPrevention extends JavaPlugin {
 
         // permissiontrust <player>
         else if (cmd.getName().equalsIgnoreCase("permissiontrust") && player != null) {
+            if (!player.hasPermission("griefprevention.permissiontrust")) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+                return true;
+            }
             // requires exactly one parameter, the other player's name
             if (args.length != 1) return false;
 
@@ -2101,6 +2150,10 @@ public class GriefPrevention extends JavaPlugin {
 
         // restrictsubclaim
         else if (cmd.getName().equalsIgnoreCase("restrictsubclaim") && player != null) {
+            if (!player.hasPermission("griefprevention.restrictsubclaim")) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+                return true;
+            }
             return this.handleRestrictSubclaimCommand(player, new String[]{});
         }
 
@@ -2132,6 +2185,10 @@ public class GriefPrevention extends JavaPlugin {
 
         // basicclaims
         else if (cmd.getName().equalsIgnoreCase("basicclaims") && player != null) {
+            if (!player.hasPermission("griefprevention.basicclaims")) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+                return true;
+            }
             PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
             playerData.shovelMode = ShovelMode.Basic;
             playerData.claimSubdividing = null;
@@ -2158,13 +2215,11 @@ public class GriefPrevention extends JavaPlugin {
             playerData.claimResizing = null;
             playerData.lastShovelLocation = null;
             playerData.setClaimEditorSession(null);
-            if (player.hasPermission("griefprevention.visualizenearbyclaims")) {
-                Set<Claim> claims = this.dataStore.getNearbyClaims(player.getLocation());
-                if (!claims.isEmpty()) {
-                    BoundaryVisualization.visualizeNearbyClaims(player, claims, player.getEyeLocation().getBlockY());
-                    GriefPrevention.sendMessage(player, TextMode.Info, Messages.ShowNearbyClaims,
-                            String.valueOf(claims.size()));
-                }
+            // Always visualize nearby claims when entering shaped mode so players
+            // can see existing claim boundaries to shape against
+            Set<Claim> claims = this.dataStore.getNearbyClaims(player.getLocation());
+            if (!claims.isEmpty()) {
+                BoundaryVisualization.mergeNearbyClaims(player, claims);
             }
             GriefPrevention.sendMessage(player, TextMode.Instr, Messages.ShapedClaimsMode);
 
@@ -2173,6 +2228,10 @@ public class GriefPrevention extends JavaPlugin {
 
         // subdivideclaims
         else if (cmd.getName().equalsIgnoreCase("subdivideclaims") && player != null) {
+            if (!player.hasPermission("griefprevention.subdivideclaims")) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+                return true;
+            }
             PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
             playerData.shovelMode = ShovelMode.Subdivide;
             playerData.claimSubdividing = null;
@@ -2246,13 +2305,25 @@ public class GriefPrevention extends JavaPlugin {
 
             return true;
         } else if (cmd.getName().equalsIgnoreCase("claimexplosions") && player != null) {
+            if (!player.hasPermission("griefprevention.claimexplosions")) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+                return true;
+            }
             return this.handleClaimExplosionsCommand(sender, args);
         } else if (cmd.getName().equalsIgnoreCase("witherexplosions") && player != null) {
+            if (!player.hasPermission("griefprevention.witherexplosions")) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+                return true;
+            }
             return this.handleWitherExplosionsCommand(sender, args);
         }
 
         // neighbortrust <player>
         else if (cmd.getName().equalsIgnoreCase("neighbortrust") && player != null) {
+            if (!player.hasPermission("griefprevention.neighbortrust")) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+                return true;
+            }
             if (args.length != 1)
                 return false;
             return this.handleNeighborTrustCommand(sender, args);
@@ -2262,11 +2333,19 @@ public class GriefPrevention extends JavaPlugin {
 
         // checkclaimdistance
         else if (cmd.getName().equalsIgnoreCase("checkclaimdistance") && player != null) {
+            if (!player.hasPermission("griefprevention.checkclaimdistance")) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+                return true;
+            }
             return this.handleCheckClaimDistanceCommand(sender, args);
         }
 
         // toggleclaimdistance
         else if (cmd.getName().equalsIgnoreCase("toggleclaimdistance") && player != null) {
+            if (!player.hasPermission("griefprevention.toggleclaimdistance")) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+                return true;
+            }
             return this.handleToggleClaimDistanceCommand(sender, args);
         }
 
@@ -2740,6 +2819,10 @@ public class GriefPrevention extends JavaPlugin {
 
         // givepet
         else if (cmd.getName().equalsIgnoreCase("givepet") && player != null) {
+            if (!player.hasPermission("griefprevention.givepet")) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+                return true;
+            }
             //requires one parameter
             if (args.length < 1) return false;
 
@@ -2888,6 +2971,10 @@ public class GriefPrevention extends JavaPlugin {
 
         // ignoreplayer
         else if (cmd.getName().equalsIgnoreCase("ignoreplayer") && player != null) {
+            if (!player.hasPermission("griefprevention.ignore")) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+                return true;
+            }
             // requires target player name
             if (args.length < 1)
                 return false;
@@ -2908,6 +2995,10 @@ public class GriefPrevention extends JavaPlugin {
 
         // unignoreplayer
         else if (cmd.getName().equalsIgnoreCase("unignoreplayer") && player != null) {
+            if (!player.hasPermission("griefprevention.ignore")) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+                return true;
+            }
             // requires target player name
             if (args.length < 1)
                 return false;
@@ -2935,6 +3026,10 @@ public class GriefPrevention extends JavaPlugin {
 
         // ignoredplayerlist
         else if (cmd.getName().equalsIgnoreCase("ignoredplayerlist") && player != null) {
+            if (!player.hasPermission("griefprevention.ignore")) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+                return true;
+            }
             PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
             StringBuilder builder = new StringBuilder();
             for (Entry<UUID, Boolean> entry : playerData.ignoredPlayers.entrySet()) {
@@ -4315,10 +4410,13 @@ public class GriefPrevention extends JavaPlugin {
     }
 
     public boolean handleClaimsListCommand(CommandSender sender, String[] args) {
-        // Simplified claims list logic
         if (!(sender instanceof Player))
             return false;
         Player player = (Player) sender;
+        if (!player.hasPermission("griefprevention.claimslist")) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+            return true;
+        }
 
         OfflinePlayer otherPlayer = player;
         if (args.length > 0 && player.hasPermission("griefprevention.claimslistother")) {
@@ -4415,8 +4513,7 @@ public class GriefPrevention extends JavaPlugin {
                     GriefPrevention.sendMessage(player, TextMode.Err, Messages.Subdivisions3DDisabled);
                     return true;
                 }
-                if (!player.hasPermission("griefprevention.3dsubdivideclaims") ||
-                    !player.hasPermission("griefprevention.claims")) {
+                if (!player.hasPermission("griefprevention.3dsubdivideclaims")) {
                     GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
                     return true;
                 }
@@ -4750,6 +4847,10 @@ public class GriefPrevention extends JavaPlugin {
         if (!(sender instanceof Player))
             return false;
         Player player = (Player) sender;
+        if (!player.hasPermission("griefprevention.unlockdrops")) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+            return true;
+        }
 
         PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
 
@@ -4858,6 +4959,10 @@ public class GriefPrevention extends JavaPlugin {
         if (!(sender instanceof Player))
             return false;
         Player player = (Player) sender;
+        if (!player.hasPermission("griefprevention.trapped")) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+            return true;
+        }
 
         PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
         Claim claim = this.dataStore.getClaimAt(player.getLocation(), false, playerData.lastClaim);

@@ -316,7 +316,7 @@ final class ClaimToolDispatcher
     {
         Action action = event.getAction();
 
-        GriefPrevention.AddLogEntry("[GP Debug] handleModificationTool called for " + player.getName() + ", action: " + action, CustomLogEntryTypes.Debug, false);
+        GriefPrevention.AddLogEntry("handleModificationTool called for " + player.getName() + ", action: " + action, CustomLogEntryTypes.Debug, false);
 
         boolean cornerSelected = false; // track if we snapped to a 3D corner so AIR guard can be bypassed
 
@@ -400,6 +400,12 @@ final class ClaimToolDispatcher
                 return true;
             }
             handleShapedModeInteraction(player, playerData, clickedBlock);
+            // After each shaped click, merge nearby claim borders so the player
+            // can see existing claim boundaries to shape against
+            Set<Claim> nearbyClaims = this.dataStore.getNearbyClaims(player.getLocation());
+            if (!nearbyClaims.isEmpty()) {
+                BoundaryVisualization.mergeNearbyClaims(player, nearbyClaims);
+            }
             return true;
         }
 
@@ -2123,6 +2129,8 @@ final class ClaimToolDispatcher
         if (session.mode() != com.griefprevention.claims.editor.ClaimEditorMode.SHAPED) {
             session = session.withMode(com.griefprevention.claims.editor.ClaimEditorMode.SHAPED, ClaimEditSource.TOOL);
         }
+
+        GriefPrevention.AddLogEntry("[GP Debug] handleShapedModeInteraction: player=" + player.getName() + " block=" + clickedBlock.getX() + "," + clickedBlock.getY() + "," + clickedBlock.getZ() + " sessionMode=" + session.mode() + " activeTarget=" + session.activeTarget() + " openPath=" + session.openPath(), CustomLogEntryTypes.Debug, false);
 
         if (session.activeTarget() != null
                 && session.activeTarget().type() == ClaimEditTargetType.EXISTING_PARENT_CLAIM
