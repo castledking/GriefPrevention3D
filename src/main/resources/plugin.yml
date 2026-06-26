@@ -128,6 +128,7 @@ commands:
     description: Merges two claims together. Stand in a claim to start, or click two claim boundaries.
     usage: /<command>
     permission: griefprevention.mergeclaims
+    aliases: [mergeclaim]
   extendclaim:
     description: Resizes the land claim you're standing in by pushing or pulling its boundary in the direction you're facing.
     usage: /<command> <numberOfBlocks>
