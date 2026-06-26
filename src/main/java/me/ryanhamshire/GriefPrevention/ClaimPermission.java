@@ -50,7 +50,12 @@ public enum ClaimPermission
     /**
      * ClaimPermission used for basic access. Command: /accesstrust
      */
-    Access(Messages.NoAccessPermission);
+    Access(Messages.NoAccessPermission),
+    /**
+     * ClaimPermission used for neighbor trust. Allows bypassing minimum distance checks for claim creation.
+     * Command: /neighbortrust or /distancetrust
+     */
+    Neighbor(Messages.NoAccessPermission);
 
     private final Messages denialMessage;
 
@@ -99,6 +104,8 @@ public enum ClaimPermission
                 return 3;
             case Access:
                 return 4;
+            case Neighbor:
+                return 5;
             default:
                 throw new IllegalStateException("Unknown claim permission: " + this);
         }

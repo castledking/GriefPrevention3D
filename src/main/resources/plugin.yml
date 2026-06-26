@@ -124,6 +124,10 @@ commands:
     usage: /<command>
     aliases: [shapedclaim]
     permission: griefprevention.shapedclaims
+  mergeclaims:
+    description: Merges two claims together. Stand in a claim to start, or click two claim boundaries.
+    usage: /<command>
+    permission: griefprevention.mergeclaims
   extendclaim:
     description: Resizes the land claim you're standing in by pushing or pulling its boundary in the direction you're facing.
     usage: /<command> <numberOfBlocks>
@@ -407,6 +411,7 @@ permissions:
       griefprevention.claimexplosions: true
       griefprevention.checkclaimexpiry: true
       griefprevention.shapedclaims: true
+      griefprevention.mergeclaims: true
       griefprevention.3dsubdivideclaims: true
       griefprevention.buysellclaimblocks: true
       griefprevention.witherexplosions: true
@@ -417,6 +422,7 @@ permissions:
       griefprevention.accruals: true
       griefprevention.ignore: true
       griefprevention.abandonallclaims: true
+      griefprevention.visualizenearbyclaims: true
   griefprevention.trust:
     description: Grants permission to use /trust.
     default: true
@@ -473,7 +479,7 @@ permissions:
     default: true
   griefprevention.visualizenearbyclaims:
     description: Allows a player to see all nearby claims at once.
-    default: op
+    default: true
   griefprevention.seeclaimsize:
     description: Allows a player to see claim size for other players claims when right clicking with investigation tool
     default: op
@@ -518,6 +524,9 @@ permissions:
     default: op
   griefprevention.shapedclaims:
     description: Grants permission to use /shapedclaims and /claim mode shaped.
+    default: true
+  griefprevention.mergeclaims:
+    description: Grants permission to use /mergeclaims.
     default: true
   griefprevention.3dsubdivideclaims:
     description: Grants permission to use /3dsubdivideclaims and /claim mode 3d.

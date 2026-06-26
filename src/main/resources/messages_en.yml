@@ -42,6 +42,7 @@ Messages:
   BasicClaimsMode: Returned to basic claim creation mode.
   ShapedClaimsMode: Shaped claim mode. Right-click to place corners in unclaimed land or to start and extend shaped edits from claim boundaries. Boundary clicks create segment markers as needed. Use /basicclaims to exit.
   ShapedClaimsDisabled: Shaped claims are disabled on this server.
+  MergeOverlapConflict: Could not merge; the completed merge would overlap other claims.
   SubdivisionMode: Subdivision mode. Use your shovel to create subdivisions in your existing claims. Use /basicclaims to exit.
   SubdivisionMode3D: '3D Subdivision mode.  Use your shovel to create 3D subdivisions in your existing claims.  Use /basicclaims to exit.'
   SubdivisionVideo2: 'Click for Subdivision Help: {0}'

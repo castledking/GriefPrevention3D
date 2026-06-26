@@ -25,7 +25,7 @@ import java.util.UUID;
 final class FabricCommands
 {
     private static final int MAX_LISTED_CLAIMS = 20;
-    private static final String[] TRUST_LEVELS = {"access", "container", "build", "manage"};
+    private static final String[] TRUST_LEVELS = {"access", "container", "build", "manage", "neighbor"};
 
     private FabricCommands()
     {

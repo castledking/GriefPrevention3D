@@ -12,6 +12,7 @@ final class ClaimToolInteractionState
     {
         if (playerData.claimResizing != null
                 || playerData.claimSubdividing != null
+                || playerData.claimMerging != null
                 || playerData.lastShovelLocation != null)
         {
             return false;

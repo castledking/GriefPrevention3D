@@ -488,10 +488,11 @@ public class GriefPrevention extends JavaPlugin {
         }
 
         // periodic visualization of nearby claims for players in shaped mode (every 5 seconds)
+        // Only visualize nearby claims when player is NOT actively editing a shaped claim
         SchedulerUtil.runRepeatingGlobal(this, () -> {
             for (Player player : Bukkit.getOnlinePlayers()) {
                 PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
-                if (playerData.shovelMode == ShovelMode.Shaped) {
+                if (playerData.shovelMode == ShovelMode.Shaped && playerData.getClaimEditorSession() == null) {
                     Set<Claim> claims = this.dataStore.getNearbyClaims(player.getLocation());
                     if (!claims.isEmpty()) {
                         BoundaryVisualization.mergeNearbyClaims(player, claims);
@@ -2213,6 +2214,8 @@ public class GriefPrevention extends JavaPlugin {
             playerData.shovelMode = ShovelMode.Shaped;
             playerData.claimSubdividing = null;
             playerData.claimResizing = null;
+            playerData.claimMerging = null;
+            playerData.mergeEdgeIndex = null;
             playerData.lastShovelLocation = null;
             playerData.setClaimEditorSession(null);
             // Always visualize nearby claims when entering shaped mode so players
@@ -2224,6 +2227,15 @@ public class GriefPrevention extends JavaPlugin {
             GriefPrevention.sendMessage(player, TextMode.Instr, Messages.ShapedClaimsMode);
 
             return true;
+        }
+
+        // mergeclaims
+        else if (cmd.getName().equalsIgnoreCase("mergeclaims") && player != null) {
+            if (!player.hasPermission("griefprevention.mergeclaims")) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+                return true;
+            }
+            return this.handleMergeClaimsCommand(player);
         }
 
         // subdivideclaims
@@ -5252,6 +5264,133 @@ public class GriefPrevention extends JavaPlugin {
         this.dataStore.resizeClaimWithChecks(player, playerData, newx1, newx2, newy1, newy2, newz1, newz2);
         playerData.claimResizing = null;
 
+        return true;
+    }
+
+    /**
+     * Handles the /mergeclaims command.
+     * If standing inside a claim, starts merge mode with the current claim's edge.
+     * If standing outside a claim, enters merge mode requiring two boundary clicks.
+     *
+     * @param player The player executing the command
+     * @return true if the command was handled successfully
+     */
+    public boolean handleMergeClaimsCommand(Player player) {
+        PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
+
+        // If already in merge mode, check if standing in second claim to complete merge
+        if (playerData.shovelMode == ShovelMode.Merge) {
+            Claim currentClaim = this.dataStore.getClaimAt(player.getLocation(), false, playerData.lastClaim);
+            if (currentClaim != null) {
+                while (currentClaim.parent != null) {
+                    currentClaim = currentClaim.parent;
+                }
+
+                if (playerData.claimMerging != null && !currentClaim.getID().equals(playerData.claimMerging.getID())) {
+                    // Standing in second claim - complete the merge
+                    this.dataStore.mergeClaims(player, playerData, playerData.claimMerging, currentClaim, playerData.mergeEdgeIndex);
+                    return true;
+                }
+
+                if (playerData.claimMerging == null) {
+                    // No first claim selected yet - use current claim as first claim
+                    Supplier<String> noEditReason = currentClaim.checkPermission(player, ClaimPermission.Edit, null);
+                    if (noEditReason != null) {
+                        GriefPrevention.sendMessage(player, TextMode.Err, noEditReason.get());
+                        return true;
+                    }
+                    if (currentClaim.isShaped()) {
+                        Integer edgeIndex = resolveBoundarySegmentForPlayer(currentClaim.getBoundaryPolygon(), player.getLocation());
+                        if (edgeIndex == null) {
+                            GriefPrevention.sendMessage(player, TextMode.Err, "Stand in the shaped section you want to merge and face its boundary.");
+                            return true;
+                        }
+                        playerData.mergeEdgeIndex = edgeIndex;
+                    } else {
+                        playerData.mergeEdgeIndex = null;
+                    }
+                    playerData.claimMerging = currentClaim;
+                    BoundaryVisualization.visualizeClaim(player, currentClaim,
+                            currentClaim.isAdminClaim() ? VisualizationType.ADMIN_CLAIM : VisualizationType.CLAIM);
+                    Set<Claim> nearbyClaims = this.dataStore.getNearbyClaims(player.getLocation());
+                    if (!nearbyClaims.isEmpty()) {
+                        BoundaryVisualization.mergeNearbyClaims(player, nearbyClaims);
+                    }
+                    GriefPrevention.sendMessage(player, TextMode.Instr, "Merge started. Right click the second claim to finish the merge.");
+                    return true;
+                }
+            }
+            // Either standing in same claim or no claim - show merge in progress message
+            if (playerData.claimMerging != null) {
+                GriefPrevention.sendMessage(player, TextMode.Instr, "Merge in progress. Right click the second claim with golden shovel to merge. Or run /basicclaims to exit merge claims mode.");
+            } else {
+                GriefPrevention.sendMessage(player, TextMode.Instr, "Merge mode active. Right click a claim boundary to begin merging.");
+            }
+            return true;
+        }
+
+        Claim currentClaim = this.dataStore.getClaimAt(player.getLocation(), false, playerData.lastClaim);
+
+        // If standing inside a claim, use it as the first claim
+        if (currentClaim != null) {
+            // Navigate to top-level claim
+            while (currentClaim.parent != null) {
+                currentClaim = currentClaim.parent;
+            }
+
+            // Check edit permission
+            Supplier<String> noEditReason = currentClaim.checkPermission(player, ClaimPermission.Edit, null);
+            if (noEditReason != null) {
+                GriefPrevention.sendMessage(player, TextMode.Err, noEditReason.get());
+                return true;
+            }
+
+            // For shaped claims, detect which edge/nib the player is standing in
+            if (currentClaim.isShaped()) {
+                Integer edgeIndex = resolveBoundarySegmentForPlayer(currentClaim.getBoundaryPolygon(), player.getLocation());
+                if (edgeIndex == null) {
+                    GriefPrevention.sendMessage(player, TextMode.Err, "Stand in the shaped section you want to merge and face its boundary.");
+                    return true;
+                }
+                playerData.mergeEdgeIndex = edgeIndex;
+            } else {
+                // For rectangular claims, no specific edge needed
+                playerData.mergeEdgeIndex = null;
+            }
+
+            playerData.claimMerging = currentClaim;
+            playerData.shovelMode = ShovelMode.Merge;
+            playerData.claimResizing = null;
+            playerData.claimSubdividing = null;
+            playerData.lastShovelLocation = null;
+
+            // Visualize the claim being merged and nearby claims
+            BoundaryVisualization.visualizeClaim(player, currentClaim,
+                    currentClaim.isAdminClaim() ? VisualizationType.ADMIN_CLAIM : VisualizationType.CLAIM);
+            Set<Claim> nearbyClaims = this.dataStore.getNearbyClaims(player.getLocation());
+            if (!nearbyClaims.isEmpty()) {
+                BoundaryVisualization.mergeNearbyClaims(player, nearbyClaims);
+            }
+
+            GriefPrevention.sendMessage(player, TextMode.Instr, "Merge started. Right click the second claim to finish the merge.");
+            return true;
+        }
+
+        // Standing outside a claim - enter merge mode requiring two clicks
+        playerData.claimMerging = null;
+        playerData.mergeEdgeIndex = null;
+        playerData.shovelMode = ShovelMode.Merge;
+        playerData.claimResizing = null;
+        playerData.claimSubdividing = null;
+        playerData.lastShovelLocation = null;
+
+        // Visualize nearby claims
+        Set<Claim> nearbyClaims = this.dataStore.getNearbyClaims(player.getLocation());
+        if (!nearbyClaims.isEmpty()) {
+            BoundaryVisualization.mergeNearbyClaims(player, nearbyClaims);
+        }
+
+        GriefPrevention.sendMessage(player, TextMode.Instr, "Merge mode active. Right click a claim boundary to begin merging. Use /basicclaims to cancel.");
         return true;
     }
 

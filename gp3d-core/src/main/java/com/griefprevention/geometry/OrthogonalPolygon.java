@@ -3,9 +3,17 @@ package com.griefprevention.geometry;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Queue;
+import java.util.Set;
 
 /**
  * An immutable closed orthogonal polygon in the X/Z plane.
@@ -406,5 +414,607 @@ public final class OrthogonalPolygon
             cornerIndexes.add(cornerIndex);
         }
         return cornerIndexes;
+    }
+
+    public boolean contains(@NotNull OrthogonalPoint2i point)
+    {
+        if (this.corners().contains(point))
+        {
+            return true;
+        }
+
+        if (!this.edgeIndexesContainingInteriorPoint(point).isEmpty())
+        {
+            return true;
+        }
+
+        double sampleX = point.x() + 0.5D;
+        double sampleZ = point.z() + 0.5D;
+        boolean inside = false;
+        List<OrthogonalPoint2i> corners = this.corners();
+        for (int i = 0, j = corners.size() - 1; i < corners.size(); j = i++)
+        {
+            OrthogonalPoint2i a = corners.get(i);
+            OrthogonalPoint2i b = corners.get(j);
+            boolean crosses = (a.z() > sampleZ) != (b.z() > sampleZ);
+            if (!crosses)
+            {
+                continue;
+            }
+
+            double intersectionX = (double) (b.x() - a.x()) * (sampleZ - a.z()) / (double) (b.z() - a.z()) + a.x();
+            if (sampleX < intersectionX)
+            {
+                inside = !inside;
+            }
+        }
+
+        return inside;
+    }
+
+
+    public boolean containsCell(int x, int z)
+    {
+        OrthogonalPoint2i point = new OrthogonalPoint2i(x, z);
+        if (this.corners().contains(point))
+        {
+            return true;
+        }
+
+        if (!this.edgeIndexesContainingInteriorPoint(point).isEmpty())
+        {
+            return true;
+        }
+
+        double sampleX = point.x() + 0.5D;
+        double sampleZ = point.z() + 0.5D;
+        boolean inside = false;
+        List<OrthogonalPoint2i> corners = this.corners();
+        for (int i = 0, j = corners.size() - 1; i < corners.size(); j = i++)
+        {
+            OrthogonalPoint2i a = corners.get(i);
+            OrthogonalPoint2i b = corners.get(j);
+            boolean crosses = (a.z() > sampleZ) != (b.z() > sampleZ);
+            if (!crosses)
+            {
+                continue;
+            }
+
+            double intersectionX = (double) (b.x() - a.x()) * (sampleZ - a.z()) / (double) (b.z() - a.z()) + a.x();
+            if (sampleX < intersectionX)
+            {
+                inside = !inside;
+            }
+        }
+
+        return inside;
+    }
+
+    public static @NotNull OrthogonalPolygon union(
+            @NotNull OrthogonalPolygon first,
+            @NotNull OrthogonalPolygon second)
+    {
+        Set<OrthogonalPoint2i> occupied = new HashSet<>();
+        int minX = Math.min(first.minX(), second.minX());
+        int maxX = Math.max(first.maxX(), second.maxX());
+        int minZ = Math.min(first.minZ(), second.minZ());
+        int maxZ = Math.max(first.maxZ(), second.maxZ());
+
+        for (int x = minX; x <= maxX; x++)
+        {
+            for (int z = minZ; z <= maxZ; z++)
+            {
+                OrthogonalPoint2i point = new OrthogonalPoint2i(x, z);
+                if (first.containsCell(x, z) || second.containsCell(x, z))
+                {
+                    occupied.add(point);
+                }
+            }
+        }
+
+        if (occupied.isEmpty())
+        {
+            throw new IllegalArgumentException("The union of the polygons is empty.");
+        }
+
+        // Ensure the occupied set is connected. If the two polygons are
+        // disconnected (e.g. reshape path through unclaimed land between
+        // two claims), fill cells along Manhattan paths between the
+        // closest cells of each component until the set is connected.
+        ensureConnected(occupied);
+
+        return fromOccupiedPoints(occupied);
+    }
+
+    /**
+     * Ensure all cells in the occupied set are connected by filling gaps
+     * between disconnected components using the FULL bounding box between
+     * the closest pair of cells (not just a 1-cell corridor).
+     *
+     * A thin 1-cell corridor gets compressed away by the contour simplifier,
+     * causing the merged shape to collapse to a rectangle. Using the full
+     * bounding box between components ensures the connection survives
+     * simplification and the intended shape is preserved.
+     */
+    private static void ensureConnected(@NotNull Set<OrthogonalPoint2i> occupied)
+    {
+        if (occupied.size() <= 1) return;
+
+        // Find connected components using BFS (4-connectivity)
+        Set<OrthogonalPoint2i> unvisited = new HashSet<>(occupied);
+        List<Set<OrthogonalPoint2i>> components = new ArrayList<>();
+
+        while (!unvisited.isEmpty())
+        {
+            OrthogonalPoint2i start = unvisited.iterator().next();
+            Set<OrthogonalPoint2i> component = new HashSet<>();
+            Queue<OrthogonalPoint2i> queue = new LinkedList<>();
+            queue.add(start);
+            unvisited.remove(start);
+
+            while (!queue.isEmpty())
+            {
+                OrthogonalPoint2i current = queue.poll();
+                component.add(current);
+
+                int[][] neighbors = {{1,0},{-1,0},{0,1},{0,-1}};
+                for (int[] n : neighbors)
+                {
+                    OrthogonalPoint2i neighbor = new OrthogonalPoint2i(current.x() + n[0], current.z() + n[1]);
+                    if (unvisited.remove(neighbor))
+                    {
+                        queue.add(neighbor);
+                    }
+                }
+            }
+            components.add(component);
+        }
+
+        if (components.size() <= 1) return; // Already connected
+
+        // Iteratively connect the closest pair of components until fully connected
+        while (components.size() > 1)
+        {
+            int bestI = 0, bestJ = 1;
+            int bestDist = Integer.MAX_VALUE;
+            OrthogonalPoint2i bestA = null, bestB = null;
+
+            for (int i = 0; i < components.size(); i++)
+            {
+                for (int j = i + 1; j < components.size(); j++)
+                {
+                    for (OrthogonalPoint2i a : components.get(i))
+                    {
+                        for (OrthogonalPoint2i b : components.get(j))
+                        {
+                            int dist = Math.abs(a.x() - b.x()) + Math.abs(a.z() - b.z());
+                            if (dist < bestDist)
+                            {
+                                bestDist = dist;
+                                bestA = a;
+                                bestB = b;
+                                bestI = i;
+                                bestJ = j;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Fill a 2-cell-wide Manhattan path between bestA and bestB.
+            // This connects the components while preserving the original
+            // shapes, unlike a full bounding box which always produces a
+            // rectangle. A 2-cell width avoids contour tracing failures
+            // that can occur at diagonal convergence points with 1-cell
+            // corridors, and prevents the path from being collapsed by
+            // the contour simplifier.
+            int cx = bestA.x(), cz = bestA.z();
+            int tx = bestB.x(), tz = bestB.z();
+            while (cx != tx || cz != tz)
+            {
+                fillCellAndOrthogonalNeighbors(occupied, cx, cz);
+                if (cx < tx) cx++;
+                else if (cx > tx) cx--;
+                else if (cz < tz) cz++;
+                else if (cz > tz) cz--;
+            }
+            fillCellAndOrthogonalNeighbors(occupied, tx, tz);
+
+            // Merge the two components
+            components.get(bestI).addAll(components.get(bestJ));
+            components.remove(bestJ);
+        }
+    }
+
+    private static void fillCellAndOrthogonalNeighbors(
+            @NotNull Set<OrthogonalPoint2i> occupied,
+            int x, int z)
+    {
+        occupied.add(new OrthogonalPoint2i(x, z));
+        occupied.add(new OrthogonalPoint2i(x + 1, z));
+        occupied.add(new OrthogonalPoint2i(x - 1, z));
+        occupied.add(new OrthogonalPoint2i(x, z + 1));
+        occupied.add(new OrthogonalPoint2i(x, z - 1));
+    }
+
+    public static @NotNull OrthogonalPolygon fromOccupiedPoints(@NotNull Set<OrthogonalPoint2i> occupied)
+    {
+        List<ContourVertex> tracedContour = traceOccupiedContour(occupied);
+        List<ContourVertex> compressedContour = compressContourPath(tracedContour);
+        List<OrthogonalPoint2i> mappedCorners = mapContourCornersToOccupiedPoints(compressedContour, occupied);
+        List<OrthogonalPoint2i> normalizedCorners = compressOccupiedBoundaryPath(mappedCorners);
+        return OrthogonalPolygon.fromClosedPath(normalizedCorners);
+    }
+
+    private static @NotNull List<ContourVertex> traceOccupiedContour(@NotNull Set<OrthogonalPoint2i> occupied)
+    {
+        List<ContourEdge> edges = new ArrayList<>();
+        for (OrthogonalPoint2i point : occupied)
+        {
+            addContourEdgesForPoint(occupied, point, edges);
+        }
+
+        if (edges.isEmpty())
+        {
+            throw new IllegalArgumentException("Unable to trace merged claim boundary.");
+        }
+
+        Map<ContourVertex, List<ContourEdge>> outgoing = new HashMap<>();
+        for (ContourEdge edge : edges)
+        {
+            outgoing.computeIfAbsent(edge.start(), ignored -> new ArrayList<>()).add(edge);
+        }
+
+        ContourEdge startEdge = edges.stream()
+                .min(Comparator.comparingInt((ContourEdge edge) -> edge.start().z())
+                        .thenComparingInt(edge -> edge.start().x())
+                        .thenComparingInt(edge -> edge.end().x())
+                        .thenComparingInt(edge -> edge.end().z()))
+                .get();
+
+        List<ContourVertex> traced = new ArrayList<>();
+        traced.add(startEdge.start());
+
+        Set<ContourEdge> visited = new HashSet<>();
+        ContourEdge current = startEdge;
+        int guard = edges.size() + 1;
+        while (guard-- > 0)
+        {
+            if (!visited.add(current))
+            {
+                throw new IllegalArgumentException("Merged claim boundary could not be followed.");
+            }
+
+            traced.add(current.end());
+            if (current.end().equals(startEdge.start()))
+            {
+                break;
+            }
+
+            List<ContourEdge> nextEdges = outgoing.get(current.end());
+            if (nextEdges == null || nextEdges.size() != 1)
+            {
+                throw new IllegalArgumentException("Merged claim boundary could not be followed.");
+            }
+
+            current = nextEdges.get(0);
+        }
+
+        if (!traced.get(traced.size() - 1).equals(startEdge.start()))
+        {
+            throw new IllegalArgumentException("Merged claim boundary did not close.");
+        }
+
+        if (visited.size() != edges.size())
+        {
+            throw new IllegalArgumentException("Merged claim boundary is disconnected.");
+        }
+
+        return traced;
+    }
+
+    private static void addContourEdgesForPoint(
+            @NotNull Set<OrthogonalPoint2i> occupied,
+            @NotNull OrthogonalPoint2i point,
+            @NotNull List<ContourEdge> edges)
+    {
+        int x = point.x();
+        int z = point.z();
+
+        if (!occupied.contains(new OrthogonalPoint2i(x, z - 1)))
+        {
+            edges.add(new ContourEdge(
+                    new ContourVertex(2 * x - 1, 2 * z - 1),
+                    new ContourVertex(2 * x + 1, 2 * z - 1)
+            ));
+        }
+
+        if (!occupied.contains(new OrthogonalPoint2i(x + 1, z)))
+        {
+            edges.add(new ContourEdge(
+                    new ContourVertex(2 * x + 1, 2 * z - 1),
+                    new ContourVertex(2 * x + 1, 2 * z + 1)
+            ));
+        }
+
+        if (!occupied.contains(new OrthogonalPoint2i(x, z + 1)))
+        {
+            edges.add(new ContourEdge(
+                    new ContourVertex(2 * x + 1, 2 * z + 1),
+                    new ContourVertex(2 * x - 1, 2 * z + 1)
+            ));
+        }
+
+        if (!occupied.contains(new OrthogonalPoint2i(x - 1, z)))
+        {
+            edges.add(new ContourEdge(
+                    new ContourVertex(2 * x - 1, 2 * z + 1),
+                    new ContourVertex(2 * x - 1, 2 * z - 1)
+            ));
+        }
+    }
+
+    private static @NotNull List<ContourVertex> compressContourPath(@NotNull List<ContourVertex> traced)
+    {
+        if (traced.size() < 4)
+        {
+            throw new IllegalArgumentException("Merged claim boundary is too small.");
+        }
+
+        List<ContourVertex> compressed = new ArrayList<>();
+        int cycleLength = traced.size() - 1;
+        for (int i = 0; i < cycleLength; i++)
+        {
+            ContourVertex previous = traced.get((i - 1 + cycleLength) % cycleLength);
+            ContourVertex current = traced.get(i);
+            ContourVertex next = traced.get((i + 1) % cycleLength);
+
+            int dx1 = Integer.compare(current.x(), previous.x());
+            int dz1 = Integer.compare(current.z(), previous.z());
+            int dx2 = Integer.compare(next.x(), current.x());
+            int dz2 = Integer.compare(next.z(), current.z());
+
+            if (i == 0 || dx1 != dx2 || dz1 != dz2)
+            {
+                compressed.add(current);
+            }
+        }
+
+        compressed.add(compressed.get(0));
+        return compressed;
+    }
+
+    private static @NotNull List<OrthogonalPoint2i> mapContourCornersToOccupiedPoints(
+            @NotNull List<ContourVertex> contour,
+            @NotNull Set<OrthogonalPoint2i> occupied)
+    {
+        List<OrthogonalPoint2i> mapped = new ArrayList<>();
+        int cycleLength = contour.size() - 1;
+        for (int i = 0; i < cycleLength; i++)
+        {
+            ContourVertex previous = contour.get((i - 1 + cycleLength) % cycleLength);
+            ContourVertex current = contour.get(i);
+            ContourVertex next = contour.get((i + 1) % cycleLength);
+            OrthogonalPoint2i point = resolveContourCornerPoint(previous, current, next, occupied);
+            if (mapped.isEmpty() || !mapped.get(mapped.size() - 1).equals(point))
+            {
+                mapped.add(point);
+            }
+        }
+
+        if (mapped.size() < 4)
+        {
+            throw new IllegalArgumentException("Merged claim boundary is too small.");
+        }
+
+        mapped.add(mapped.get(0));
+        return mapped;
+    }
+
+    private static @NotNull OrthogonalPoint2i resolveContourCornerPoint(
+            @NotNull ContourVertex previous,
+            @NotNull ContourVertex vertex,
+            @NotNull ContourVertex next,
+            @NotNull Set<OrthogonalPoint2i> occupied)
+    {
+        int lowX = Math.floorDiv(vertex.x(), 2);
+        int highX = Math.floorDiv(vertex.x() + 1, 2);
+        int lowZ = Math.floorDiv(vertex.z(), 2);
+        int highZ = Math.floorDiv(vertex.z() + 1, 2);
+
+        int incomingDirection = contourDirection(previous, vertex);
+        int outgoingDirection = contourDirection(vertex, next);
+        int interiorFromIncoming = rotateRight(incomingDirection);
+        int interiorFromOutgoing = rotateRight(outgoingDirection);
+
+        int resolvedX;
+        if (interiorFromIncoming == 0 || interiorFromOutgoing == 0)
+        {
+            resolvedX = highX;
+        }
+        else if (interiorFromIncoming == 2 || interiorFromOutgoing == 2)
+        {
+            resolvedX = lowX;
+        }
+        else
+        {
+            throw new IllegalArgumentException("Merged claim boundary could not be followed.");
+        }
+
+        int resolvedZ;
+        if (interiorFromIncoming == 1 || interiorFromOutgoing == 1)
+        {
+            resolvedZ = highZ;
+        }
+        else if (interiorFromIncoming == 3 || interiorFromOutgoing == 3)
+        {
+            resolvedZ = lowZ;
+        }
+        else
+        {
+            throw new IllegalArgumentException("Merged claim boundary could not be followed.");
+        }
+
+        OrthogonalPoint2i match = new OrthogonalPoint2i(resolvedX, resolvedZ);
+        if (!occupied.contains(match))
+        {
+            throw new IllegalArgumentException("Merged claim boundary could not be followed.");
+        }
+
+        return match;
+    }
+
+    private static int contourDirection(@NotNull ContourVertex start, @NotNull ContourVertex end)
+    {
+        if (end.x() > start.x())
+        {
+            return 0;
+        }
+        if (end.z() > start.z())
+        {
+            return 1;
+        }
+        if (end.x() < start.x())
+        {
+            return 2;
+        }
+        if (end.z() < start.z())
+        {
+            return 3;
+        }
+        throw new IllegalArgumentException("Contour path cannot contain duplicate vertices.");
+    }
+
+    private static int rotateRight(int direction)
+    {
+        switch (direction)
+        {
+            case 0:
+                return 1;
+            case 1:
+                return 2;
+            case 2:
+                return 3;
+            case 3:
+                return 0;
+            default:
+                throw new IllegalArgumentException("Unknown contour direction.");
+        }
+    }
+
+    private static @NotNull List<OrthogonalPoint2i> compressOccupiedBoundaryPath(@NotNull List<OrthogonalPoint2i> traced)
+    {
+        List<OrthogonalPoint2i> path = new ArrayList<>(traced);
+        if (path.size() < 4)
+        {
+            throw new IllegalArgumentException("Merged claim boundary is too small.");
+        }
+
+        List<OrthogonalPoint2i> compressed = new ArrayList<>();
+        for (int i = 0; i < path.size() - 1; i++)
+        {
+            OrthogonalPoint2i previous = path.get((i - 1 + path.size() - 1) % (path.size() - 1));
+            OrthogonalPoint2i current = path.get(i);
+            OrthogonalPoint2i next = path.get((i + 1) % (path.size() - 1));
+
+            int dx1 = Integer.compare(current.x(), previous.x());
+            int dz1 = Integer.compare(current.z(), previous.z());
+            int dx2 = Integer.compare(next.x(), current.x());
+            int dz2 = Integer.compare(next.z(), current.z());
+
+            if (i == 0 || dx1 != dx2 || dz1 != dz2)
+            {
+                compressed.add(current);
+            }
+        }
+
+        compressed.add(compressed.get(0));
+        return compressed;
+    }
+
+    private static final class ContourVertex
+    {
+        private final int x;
+        private final int z;
+
+        private ContourVertex(int x, int z)
+        {
+            this.x = x;
+            this.z = z;
+        }
+
+        int x()
+        {
+            return x;
+        }
+
+        int z()
+        {
+            return z;
+        }
+
+        @Override
+        public boolean equals(Object other)
+        {
+            if (this == other)
+            {
+                return true;
+            }
+            if (!(other instanceof ContourVertex))
+            {
+                return false;
+            }
+            ContourVertex that = (ContourVertex) other;
+            return x == that.x && z == that.z;
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return Objects.hash(x, z);
+        }
+    }
+
+    private static final class ContourEdge
+    {
+        private final @NotNull ContourVertex start;
+        private final @NotNull ContourVertex end;
+
+        private ContourEdge(@NotNull ContourVertex start, @NotNull ContourVertex end)
+        {
+            this.start = start;
+            this.end = end;
+        }
+
+        @NotNull ContourVertex start()
+        {
+            return start;
+        }
+
+        @NotNull ContourVertex end()
+        {
+            return end;
+        }
+
+        @Override
+        public boolean equals(Object other)
+        {
+            if (this == other)
+            {
+                return true;
+            }
+            if (!(other instanceof ContourEdge))
+            {
+                return false;
+            }
+            ContourEdge that = (ContourEdge) other;
+            return start.equals(that.start) && end.equals(that.end);
+        }
+
+        @Override
+        public int hashCode()
+        {
+            return Objects.hash(start, end);
+        }
     }
 }

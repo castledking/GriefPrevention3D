@@ -138,6 +138,7 @@ class AddonCompatibilitySurfaceTest {
             enumConstant(ClaimPermission.class, "Inventory");
             enumConstant(ClaimPermission.class, "Build");
             enumConstant(ClaimPermission.class, "Manage");
+            enumConstant(ClaimPermission.class, "Neighbor");
             enumConstant(ClaimPermission.class, "Edit");
 
             load("me.ryanhamshire.GriefPrevention.events.ClaimResizeEvent");

@@ -815,13 +815,16 @@ public class ClaimEditorSkeletonTest
     }
 
     @Test
-    void unionFailsWhenMapCellOnlyTouchesOnDiagonal()
+    void unionConnectsDisconnectedShapesViaManhattanPath()
     {
         ClaimEditorSkeleton editor = new ClaimEditorSkeleton();
         OrthogonalPolygon original = OrthogonalPolygon.fromClosedPath(Arrays.asList(new OrthogonalPoint2i(0, 0), new OrthogonalPoint2i(14, 0), new OrthogonalPoint2i(14, 9), new OrthogonalPoint2i(9, 9), new OrthogonalPoint2i(9, 4), new OrthogonalPoint2i(0, 4), new OrthogonalPoint2i(0, 0)));
         OrthogonalPolygon diagonalOnlyPatch = OrthogonalPolygon.fromRectangle(10, 11, 14, 15);
 
-        assertThrows(IllegalArgumentException.class, () -> invokeUnion(editor, original, diagonalOnlyPatch));
+        OrthogonalPolygon merged = assertDoesNotThrow(() -> invokeUnion(editor, original, diagonalOnlyPatch));
+        assertTrue(polygonContains(merged, new OrthogonalPoint2i(2, 2)));
+        assertTrue(polygonContains(merged, new OrthogonalPoint2i(12, 2)));
+        assertTrue(polygonContains(merged, new OrthogonalPoint2i(12, 13)));
     }
 
     private OrthogonalPolygon invokeUnion(

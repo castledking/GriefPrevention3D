@@ -25,6 +25,7 @@ import com.griefprevention.claims.editor.ClaimEditIntentType;
 import com.griefprevention.claims.editor.ClaimEditPreview;
 import com.griefprevention.claims.editor.ClaimEditResult;
 import com.griefprevention.claims.editor.ClaimEditSource;
+import com.griefprevention.claims.editor.ShapedPathDraft;
 import com.griefprevention.claims.editor.ClaimEditTarget;
 import com.griefprevention.claims.editor.ClaimEditTargetType;
 import com.griefprevention.claims.editor.ClaimEditor;
@@ -316,8 +317,6 @@ final class ClaimToolDispatcher
     {
         Action action = event.getAction();
 
-        GriefPrevention.AddLogEntry("handleModificationTool called for " + player.getName() + ", action: " + action, CustomLogEntryTypes.Debug, false);
-
         boolean cornerSelected = false; // track if we snapped to a 3D corner so AIR guard can be bypassed
 
         if (action == Action.RIGHT_CLICK_AIR) {
@@ -391,6 +390,8 @@ final class ClaimToolDispatcher
                 playerData.shovelMode = ShovelMode.Basic;
                 playerData.claimSubdividing = null;
                 playerData.claimResizing = null;
+                playerData.claimMerging = null;
+                playerData.mergeEdgeIndex = null;
                 playerData.lastShovelLocation = null;
                 playerData.setClaimEditorSession(null);
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.ShapedClaimsDisabled);
@@ -400,19 +401,22 @@ final class ClaimToolDispatcher
                 return true;
             }
             handleShapedModeInteraction(player, playerData, clickedBlock);
-            // After each shaped click, merge nearby claim borders so the player
-            // can see existing claim boundaries to shape against
-            Set<Claim> nearbyClaims = this.dataStore.getNearbyClaims(player.getLocation());
-            if (!nearbyClaims.isEmpty()) {
-                BoundaryVisualization.mergeNearbyClaims(player, nearbyClaims);
-            }
+            return true;
+        }
+
+        if (playerData.shovelMode == ShovelMode.Merge) {
+            handleMergeModeInteraction(player, playerData, clickedBlock);
             return true;
         }
 
         // if he's resizing a claim and that claim hasn't been deleted since he started
         // resizing it
         if (playerData.claimResizing != null && playerData.claimResizing.inDataStore) {
-            if (playerData.lastShovelLocation == null) {
+            // Don't handle resize logic in shaped mode
+            if (playerData.shovelMode == ShovelMode.Shaped) {
+                return true;
+            }
+            if (playerData.lastShovelLocation == null && playerData.shovelMode != ShovelMode.Shaped) {
                 startClaimResizeSelection(player, playerData, playerData.claimResizing, clickedBlock);
                 return true;
             }
@@ -562,9 +566,9 @@ final class ClaimToolDispatcher
                     return true;
                 }
 
-                // if he clicked on a corner, start resizing it
+                // if he clicked on a corner, start resizing it (unless sneaking or in shaped mode)
                 boolean isCorner = isCornerMatch(claim, clickedBlock);
-                if (isCorner) {
+                if (isCorner && !player.isSneaking() && playerData.shovelMode != ShovelMode.Shaped) {
                     startClaimResizeSelection(player, playerData, claim, clickedBlock);
                 }
 
@@ -1085,6 +1089,12 @@ final class ClaimToolDispatcher
     {
         Claim claim = playerData.claimResizing;
         if (claim == null || !claim.inDataStore || !claim.isShaped() || claim.parent != null || claim.is3D())
+        {
+            return false;
+        }
+
+        // Don't try to resize if in shaped mode - this is for boundary marker operations
+        if (playerData.shovelMode == ShovelMode.Shaped)
         {
             return false;
         }
@@ -2124,14 +2134,77 @@ final class ClaimToolDispatcher
         return true;
     }
 
+    private void handleMergeModeInteraction(@NotNull Player player, @NotNull PlayerData playerData, @NotNull Block clickedBlock) {
+        Claim clickedClaim = this.dataStore.getClaimAt(clickedBlock.getLocation(), true, playerData.lastClaim);
+        while (clickedClaim != null && clickedClaim.parent != null) {
+            clickedClaim = clickedClaim.parent;
+        }
+
+        // If no first claim selected, select this one
+        if (playerData.claimMerging == null) {
+            if (clickedClaim == null) {
+                GriefPrevention.sendMessage(player, TextMode.Err, "Click on a claim boundary to begin merging.");
+                return;
+            }
+
+            // Check edit permission
+            Supplier<String> noEditReason = clickedClaim.checkPermission(player, ClaimPermission.Edit, null);
+            if (noEditReason != null) {
+                GriefPrevention.sendMessage(player, TextMode.Err, noEditReason.get());
+                return;
+            }
+
+            // For shaped claims, detect which edge/nib was clicked
+            if (clickedClaim.isShaped()) {
+                OrthogonalPoint2i point = new OrthogonalPoint2i(clickedBlock.getX(), clickedBlock.getZ());
+                List<Integer> edgeMatches = clickedClaim.getBoundaryPolygon().edgeIndexesContainingInteriorPoint(point);
+                if (edgeMatches.size() != 1) {
+                    GriefPrevention.sendMessage(player, TextMode.Err, "Click on a claim boundary edge to select it for merging.");
+                    return;
+                }
+                playerData.mergeEdgeIndex = edgeMatches.get(0);
+            } else {
+                playerData.mergeEdgeIndex = null;
+            }
+
+            playerData.claimMerging = clickedClaim;
+            BoundaryVisualization.visualizeClaim(player, clickedClaim,
+                    clickedClaim.isAdminClaim() ? VisualizationType.ADMIN_CLAIM : VisualizationType.CLAIM);
+            Set<Claim> nearbyClaims = this.dataStore.getNearbyClaims(player.getLocation());
+            if (!nearbyClaims.isEmpty()) {
+                BoundaryVisualization.mergeNearbyClaims(player, nearbyClaims);
+            }
+            GriefPrevention.sendMessage(player, TextMode.Instr, "First claim selected. Right click the second claim to finish the merge.");
+            return;
+        }
+
+        // First claim already selected - merge with second claim
+        if (clickedClaim == null) {
+            GriefPrevention.sendMessage(player, TextMode.Err, "Click on a claim to merge with the first claim.");
+            return;
+        }
+
+        if (clickedClaim.getID().equals(playerData.claimMerging.getID())) {
+            GriefPrevention.sendMessage(player, TextMode.Err, "Cannot merge a claim with itself.");
+            return;
+        }
+
+        // Check edit permission on second claim
+        Supplier<String> noEditReason = clickedClaim.checkPermission(player, ClaimPermission.Edit, null);
+        if (noEditReason != null) {
+            GriefPrevention.sendMessage(player, TextMode.Err, noEditReason.get());
+            return;
+        }
+
+        // Perform the merge
+        this.dataStore.mergeClaims(player, playerData, playerData.claimMerging, clickedClaim, playerData.mergeEdgeIndex);
+    }
+
     private void handleShapedModeInteraction(@NotNull Player player, @NotNull PlayerData playerData, @NotNull Block clickedBlock) {
         ClaimEditorSession session = playerData.getClaimEditorSession();
         if (session.mode() != com.griefprevention.claims.editor.ClaimEditorMode.SHAPED) {
             session = session.withMode(com.griefprevention.claims.editor.ClaimEditorMode.SHAPED, ClaimEditSource.TOOL);
         }
-
-        GriefPrevention.AddLogEntry("[GP Debug] handleShapedModeInteraction: player=" + player.getName() + " block=" + clickedBlock.getX() + "," + clickedBlock.getY() + "," + clickedBlock.getZ() + " sessionMode=" + session.mode() + " activeTarget=" + session.activeTarget() + " openPath=" + session.openPath(), CustomLogEntryTypes.Debug, false);
-
         if (session.activeTarget() != null
                 && session.activeTarget().type() == ClaimEditTargetType.EXISTING_PARENT_CLAIM
                 && session.openPath() != null
@@ -2143,9 +2216,70 @@ final class ClaimToolDispatcher
                     clickedClaim = clickedClaim.parent;
                 }
 
+                // Allow clicking on other self-owned claims for cross-claim merges
                 if (clickedClaim != null && !clickedClaim.getID().equals(targetClaim.getID())) {
-                    GriefPrevention.sendMessage(player, TextMode.Err, "Finish this reshape path before editing a different claim.");
-                    return;
+                    // Check if player owns both claims
+                    Supplier<String> noEditReason = clickedClaim.checkPermission(player, ClaimPermission.Edit, null);
+                    if (noEditReason != null) {
+                        GriefPrevention.sendMessage(player, TextMode.Err, "Finish this reshape path before editing a different claim.");
+                        return;
+                    }
+                    // Add a boundary marker on the clicked claim so the reshape path
+                    // has a valid reconnection target. Then restore the session back
+                    // to the original claim so the player can continue building.
+                    OrthogonalPoint2i point = new OrthogonalPoint2i(clickedBlock.getX(), clickedBlock.getZ());
+                    if (isBoundaryInteriorPoint(clickedClaim, point)) {
+                        // Save original session state (claim 1 + open path)
+                        ClaimEditorSession originalSession = session;
+                        List<OrthogonalPoint2i> originalDraftPoints = originalSession.preview().draftPoints();
+
+                        // Add node on claim 2
+                        ClaimEditorSession clickedSession = loadClaimIntoShapedSession(session, clickedClaim);
+                        ClaimEditResult result = claimEditor.apply(
+                                clickedSession,
+                                new ClaimEditIntent(
+                                        ClaimEditIntentType.ADD_NODE,
+                                        ClaimEditSource.TOOL,
+                                        null,
+                                        clickedClaim.getID(),
+                                        point,
+                                        null,
+                                        true,
+                                        Collections.emptyList()
+                                )
+                        );
+                        if (result.success()) {
+                            // Record the merge target
+                            playerData.addCrossClaimBoundaryMarker(clickedClaim.getID());
+                            GriefPrevention.sendMessage(player, TextMode.Success, "Merge target marked. Continue shaping to connect claims.");
+                            // Restore the original session on claim 1 with the open path intact,
+                            // but add the cross-claim point as a draft point so the path continues
+                            // toward the merge target.
+                            List<OrthogonalPoint2i> newDraftPoints = new ArrayList<>(originalDraftPoints);
+                            newDraftPoints.add(point);
+                            ClaimEditPreview restoredPreview = new ClaimEditPreview(
+                                    originalSession.preview().polygon(),
+                                    originalSession.preview().highlightedSegment(),
+                                    newDraftPoints,
+                                    originalSession.preview().snappedPoint(),
+                                    originalSession.preview().conflictPoints(),
+                                    Collections.emptyList(),
+                                    Collections.singletonList("Merge target marked. Continue shaping to connect claims.")
+                            );
+                            ShapedPathDraft restoredDraft = new ShapedPathDraft(
+                                    targetClaim.getID(),
+                                    newDraftPoints,
+                                    null,
+                                    false
+                            );
+                            ClaimEditorSession restoredSession = originalSession
+                                    .withOpenPath(restoredDraft)
+                                    .withPreview(restoredPreview);
+                            playerData.setClaimEditorSession(restoredSession);
+                            visualizeShapedEditState(player, restoredSession, clickedBlock.getY());
+                            return;
+                        }
+                    }
                 }
 
                 BoundaryNodeEnsureResult targetBoundaryResult = ensureBoundaryNodeForShapedPath(
@@ -2159,8 +2293,15 @@ final class ClaimToolDispatcher
                     return;
                 }
                 targetClaim = targetBoundaryResult.claim();
-                if (targetBoundaryResult.markerEdited() && !player.isSneaking()) {
+                if (targetBoundaryResult.markerEdited()) {
                     return;
+                }
+
+                // Check if we're clicking back on a claim that has cross-claim boundary markers
+                // This indicates a merge operation in progress
+                if (playerData.hasCrossClaimBoundaryMarker(targetClaim.getID())) {
+                    // This is a merge operation - show appropriate message
+                    GriefPrevention.sendMessage(player, TextMode.Instr, "Merge in progress. Continue shaping to connect claims.");
                 }
 
                 ClaimEditorSession targetSession = loadClaimIntoShapedSession(playerData.getClaimEditorSession(), targetClaim);
@@ -2248,6 +2389,31 @@ final class ClaimToolDispatcher
                 return;
             }
 
+            // Snap to start point only when the click would create 4+ collinear corners
+            // on the same boundary line (overshoot scenario).
+            // Determine which axis the clicked point shares with the start, then count
+            // how many existing draft points are on that SAME line. If 3+ already, adding
+            // one more would be illegal collinear geometry — snap to close instead.
+            // With fewer, the player may still be building a valid turning shape.
+            OrthogonalPoint2i clickedPoint = new OrthogonalPoint2i(clickedBlock.getX(), clickedBlock.getZ());
+            List<OrthogonalPoint2i> draftPoints = session.preview().draftPoints();
+            if (!draftPoints.isEmpty()) {
+                OrthogonalPoint2i startPoint = draftPoints.get(0);
+                boolean sameX = clickedPoint.x() == startPoint.x();
+                boolean sameZ = clickedPoint.z() == startPoint.z();
+                if (sameX || sameZ) {
+                    // Count existing draft points on the SAME line (matching axis)
+                    long collinearCount = draftPoints.stream()
+                            .filter(p -> sameX ? p.x() == startPoint.x() : p.z() == startPoint.z())
+                            .count();
+                    // If 3+ already on that line (plus the new point = 4+), snap to close.
+                    // 3 collinear points is the threshold where adding another is always redundant.
+                    if (collinearCount >= 3) {
+                        clickedPoint = startPoint;
+                    }
+                }
+            }
+
             ClaimEditResult result = claimEditor.apply(
                     session.withTarget(new ClaimEditTarget(ClaimEditTargetType.NEW_PARENT_CLAIM, null)),
                     new ClaimEditIntent(
@@ -2255,7 +2421,7 @@ final class ClaimToolDispatcher
                             ClaimEditSource.TOOL,
                             null,
                             null,
-                            new OrthogonalPoint2i(clickedBlock.getX(), clickedBlock.getZ()),
+                            clickedPoint,
                             null,
                             true,
                             Collections.emptyList()
@@ -2294,7 +2460,7 @@ final class ClaimToolDispatcher
             return;
         }
 
-        if (isCornerMatch(claim, clickedBlock) && session.openPath() == null) {
+        if (isCornerMatch(claim, clickedBlock) && session.openPath() == null && !player.isSneaking() && playerData.shovelMode != ShovelMode.Shaped) {
             startClaimResizeSelection(player, playerData, claim, clickedBlock);
             return;
         }
@@ -2361,6 +2527,52 @@ final class ClaimToolDispatcher
         if (!isBoundaryInteriorPoint(claim, point)) {
             return new BoundaryNodeEnsureResult(claim, false);
         }
+
+        // If sneaking, try to remove the nearest boundary node instead of adding
+        if (player.isSneaking()) {
+            OrthogonalPolygon polygon = claim.getBoundaryPolygon();
+            if (polygon != null) {
+                // Find the nearest node to the clicked point
+                OrthogonalPoint2i nearestNode = null;
+                int nearestDistance = Integer.MAX_VALUE;
+                for (OrthogonalPoint2i corner : polygon.corners()) {
+                    int distance = Math.abs(corner.x() - point.x()) + Math.abs(corner.z() - point.z());
+                    if (distance < nearestDistance) {
+                        nearestDistance = distance;
+                        nearestNode = corner;
+                    }
+                }
+                // If the clicked point is close to a node (within 2 blocks), remove it
+                if (nearestNode != null && nearestDistance <= 2) {
+                    // Load claim into session and try to remove the node using ADD_NODE
+                    session = loadClaimIntoShapedSession(session, claim);
+                    ClaimEditResult removeResult = claimEditor.apply(
+                            session,
+                            new ClaimEditIntent(
+                                    ClaimEditIntentType.ADD_NODE,
+                                    ClaimEditSource.TOOL,
+                                    null,
+                                    claim.getID(),
+                                    nearestNode,
+                                    null,
+                                    true,
+                                    Collections.emptyList()
+                            )
+                    );
+                    applyClaimEditResult(player, playerData, removeResult);
+                    if (removeResult.success()) {
+                        GriefPrevention.sendMessage(player, TextMode.Success, "Boundary segment marker removed.");
+                        visualizeShapedEditState(player, removeResult.session(), clickedBlock.getY());
+                        return new BoundaryNodeEnsureResult(claim, true);
+                    } else {
+                        GriefPrevention.sendMessage(player, TextMode.Err, "Failed to remove boundary segment marker.");
+                    }
+                }
+            }
+            GriefPrevention.sendMessage(player, TextMode.Err, "No boundary segment marker nearby to remove.");
+            return new BoundaryNodeEnsureResult(claim, false);
+        }
+
         if (!meetsMinimumNodeSpacing(claim, point))
         {
             GriefPrevention.sendMessage(
@@ -2701,11 +2913,33 @@ final class ClaimToolDispatcher
             polygon = normalizedResult.polygon();
         }
 
+        // Save the original polygon before updating — we need it to identify
+        // the reshape corridor cells for proper cross-claim merge direction.
+        OrthogonalPolygon originalPolygon = claim.getBoundaryPolygon();
         CreateClaimResult updateResult = this.dataStore.updateShapedClaim(player, playerData, claim, polygon);
         if (!updateResult.succeeded || updateResult.claim == null) {
             if (updateResult.denialMessage != null) {
                 GriefPrevention.sendMessage(player, TextMode.Err, updateResult.denialMessage.get());
             } else if (updateResult.claim != null) {
+                // Check if the overlapping claim is owned by the player - if so, merge the claims
+                Supplier<String> noEditReason = updateResult.claim.checkPermission(player, ClaimPermission.Edit, null);
+                if (noEditReason == null) {
+                    // Player owns the overlapping claim — merge via mergeClaims
+                    // with the preview polygon as firstPolygonOverride. This
+                    // ensures the reshape corridor is included in the union
+                    // (claim.getBoundaryPolygon() still returns the original
+                    // polygon since updateShapedClaim failed).
+                    this.dataStore.mergeClaims(player, playerData, claim, updateResult.claim, null, null, polygon);
+                    playerData.clearCrossClaimBoundaryMarkers();
+                    ClaimEditorSession shapedSession = ClaimEditorSession.idle(playerData.playerID)
+                            .withMode(com.griefprevention.claims.editor.ClaimEditorMode.SHAPED, ClaimEditSource.TOOL);
+                    playerData.lastClaim = claim;
+                    playerData.setClaimEditorSession(loadClaimIntoShapedSession(shapedSession, claim));
+                    BoundaryVisualization.visualizeClaim(player, claim,
+                            claim.isAdminClaim() ? VisualizationType.ADMIN_CLAIM : VisualizationType.CLAIM,
+                            clickedBlock);
+                    return;
+                }
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.CreateClaimFailOverlapShort);
                 visualizeConflict(player, playerData, updateResult.claim, clickedBlock, updateResult.claim.is3D());
             } else {
@@ -2715,6 +2949,43 @@ final class ClaimToolDispatcher
             return;
         }
 
+        // If the update succeeded but the player marked a cross-claim merge target,
+        // merge the claims. The marker itself is the signal — the reshape path
+        // may not geometrically overlap the adjacent claim (corridor-only connection),
+        // but the player explicitly marked it for merging.
+        // Note: updateShapedClaim already succeeded (claim now has the reshape polygon).
+        // We need to merge with the marked claim using mergeClaims which handles
+        // chunk map updates, shaped corners, and deletion properly.
+        if (!playerData.getCrossClaimBoundaryMarkers().isEmpty()) {
+            for (Long markedClaimId : playerData.getCrossClaimBoundaryMarkers()) {
+                Claim markedClaim = this.dataStore.getClaim(markedClaimId);
+                if (markedClaim == null || !markedClaim.inDataStore) {
+                    continue;
+                }
+                // Verify same owner
+                if (markedClaim.getOwnerID() == null || !markedClaim.getOwnerID().equals(player.getUniqueId())) {
+                    continue;
+                }
+                // Find the reshape corridor's leading-edge cells (cells in the
+                // preview polygon that were NOT in the original claim). These
+                // guide the merge to connect from the reshape front to the
+                // marked claim, preserving the player's intended path.
+                Set<OrthogonalPoint2i> corridorCells = new HashSet<>();
+                for (int x = polygon.minX(); x <= polygon.maxX(); x++) {
+                    for (int z = polygon.minZ(); z <= polygon.maxZ(); z++) {
+                        if (polygon.containsCell(x, z) && !originalPolygon.containsCell(x, z)) {
+                            corridorCells.add(new OrthogonalPoint2i(x, z));
+                        }
+                    }
+                }
+                this.dataStore.mergeClaims(player, playerData, claim, markedClaim, null, corridorCells);
+                playerData.clearCrossClaimBoundaryMarkers();
+                return;
+            }
+            // No valid merge target found — clear stale markers
+            playerData.clearCrossClaimBoundaryMarkers();
+        }
+
         ClaimEditorSession shapedSession = ClaimEditorSession.idle(playerData.playerID)
                 .withMode(com.griefprevention.claims.editor.ClaimEditorMode.SHAPED, ClaimEditSource.TOOL);
         playerData.lastClaim = updateResult.claim;
@@ -2722,6 +2993,53 @@ final class ClaimToolDispatcher
         BoundaryVisualization.visualizeClaim(player, updateResult.claim,
                 updateResult.claim.isAdminClaim() ? VisualizationType.ADMIN_CLAIM : VisualizationType.CLAIM,
                 clickedBlock);
+    }
+
+    /**
+     * Check if a polygon is adjacent to another claim's polygon (shares a boundary edge or overlaps).
+     * This detects cross-claim merge scenarios where the reshape path connects two claims
+     * that share a boundary but have no interior overlap.
+     */
+    private boolean polygonAdjacentToClaim(@NotNull OrthogonalPolygon polygon, @NotNull OrthogonalPolygon other) {
+        // Check for actual overlap first
+        Set<OrthogonalPoint2i> occupied = new HashSet<>();
+        int minX = Math.min(polygon.minX(), other.minX());
+        int maxX = Math.max(polygon.maxX(), other.maxX());
+        int minZ = Math.min(polygon.minZ(), other.minZ());
+        int maxZ = Math.max(polygon.maxZ(), other.maxZ());
+
+        for (int x = minX; x <= maxX; x++) {
+            for (int z = minZ; z <= maxZ; z++) {
+                OrthogonalPoint2i point = new OrthogonalPoint2i(x, z);
+                if (polygonContains(polygon, point) || polygonContains(other, point)) {
+                    occupied.add(point);
+                }
+            }
+        }
+
+        if (occupied.isEmpty()) {
+            return false;
+        }
+
+        // Check if the occupied region from both claims shares any boundary cells
+        for (OrthogonalPoint2i point : occupied) {
+            if (polygonContains(polygon, point) && polygonContains(other, point)) {
+                return true; // Interior overlap
+            }
+        }
+
+        // Check adjacency: polygon has an edge that lies on the other's boundary
+        for (OrthogonalEdge2i edge : polygon.edges()) {
+            OrthogonalPoint2i mid = new OrthogonalPoint2i(
+                    (edge.start().x() + edge.end().x()) / 2,
+                    (edge.start().z() + edge.end().z()) / 2
+            );
+            if (other.edges().stream().anyMatch(e -> e.containsPoint(mid))) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void persistShapedBoundaryMarkers(
@@ -2740,6 +3058,20 @@ final class ClaimToolDispatcher
             if (updateResult.denialMessage != null) {
                 GriefPrevention.sendMessage(player, TextMode.Err, updateResult.denialMessage.get());
             } else if (updateResult.claim != null) {
+                // Check if the overlapping claim is owned by the player - if so, merge the claims
+                Supplier<String> noEditReason = updateResult.claim.checkPermission(player, ClaimPermission.Edit, null);
+                if (noEditReason == null) {
+                    // Player owns the overlapping claim — merge via mergeClaims
+                    // with the preview polygon as firstPolygonOverride. This
+                    // ensures the reshape corridor is included in the union
+                    // (claim.getBoundaryPolygon() still returns the original
+                    // polygon since updateShapedClaim failed).
+                    this.dataStore.mergeClaims(player, playerData, claim, updateResult.claim, null, null, polygon);
+                    BoundaryVisualization.visualizeClaim(player, claim,
+                            claim.isAdminClaim() ? VisualizationType.ADMIN_CLAIM : VisualizationType.CLAIM,
+                            clickedBlock);
+                    return;
+                }
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.CreateClaimFailOverlapShort);
                 visualizeConflict(player, playerData, updateResult.claim, clickedBlock, updateResult.claim.is3D());
             } else {
@@ -2785,6 +3117,19 @@ final class ClaimToolDispatcher
                 VisualizationType type = targetClaim.isAdminClaim() ? VisualizationType.ADMIN_CLAIM : VisualizationType.CLAIM;
                 boundaries.add(new Boundary(targetClaim, type));
                 selectedPolygon = targetClaim.getBoundaryPolygon();
+            }
+        }
+
+        // Visualize nearby claims for potential merges
+        Set<Claim> nearbyClaims = this.dataStore.getNearbyClaims(player.getLocation());
+        if (!nearbyClaims.isEmpty()) {
+            for (Claim nearbyClaim : nearbyClaims) {
+                if (!nearbyClaim.is3D()) {
+                    VisualizationType type = nearbyClaim.isAdminClaim() && nearbyClaim.parent == null
+                            ? VisualizationType.ADMIN_CLAIM
+                            : VisualizationType.CLAIM;
+                    boundaries.add(new Boundary(nearbyClaim, type));
+                }
             }
         }
 

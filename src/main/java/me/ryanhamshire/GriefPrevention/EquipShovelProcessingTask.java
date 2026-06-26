@@ -50,9 +50,11 @@ class EquipShovelProcessingTask implements Runnable
         //reset any work he might have been doing
         playerData.lastShovelLocation = null;
         playerData.claimResizing = null;
+        playerData.claimMerging = null;
+        playerData.mergeEdgeIndex = null;
 
         // shaped mode should persist while the player is actively using the shovel
-        if (playerData.shovelMode != ShovelMode.Basic && playerData.shovelMode != ShovelMode.Shaped)
+        if (playerData.shovelMode != ShovelMode.Basic && playerData.shovelMode != ShovelMode.Shaped && playerData.shovelMode != ShovelMode.Merge)
         {
             playerData.shovelMode = ShovelMode.Basic;
             GriefPrevention.sendMessage(player, TextMode.Info, Messages.ShovelBasicClaimMode);

@@ -132,6 +132,7 @@ public enum Alias {
 "      2d: [2d, subdivide]" + "\n" +
 "      3d: [3d]" + "\n" +
 "      shaped: [shaped]" + "\n" +
+"      merge: [merge]" + "\n" +
 "" + "\n",
         "basicclaims"
     ),
@@ -570,7 +571,7 @@ public enum Alias {
 "      enable: true" + "\n" +
 "      commands: [mode]" + "\n" +
 "      standalone: [basicclaims, shapedclaims, shapedclaim]" + "\n" +
-"      usage: \"/claim mode <basic|2d|3d|shaped>\"" + "\n" +
+"      usage: \"/claim mode <basic|2d|3d|shaped|merge>\"" + "\n" +
 "      description: Change your golden shovel claim mode." + "\n" +
 "      arguments:" + "\n" +
 "        mode:" + "\n" +
@@ -579,6 +580,7 @@ public enum Alias {
 "            2d: [2d, subdivide]" + "\n" +
 "            3d: [3d]" + "\n" +
 "            shaped: [shaped]" + "\n" +
+"            merge: [merge]" + "\n" +
 "" + "\n" +
 "    restrictsubclaim:" + "\n" +
 "      enable: true" + "\n" +

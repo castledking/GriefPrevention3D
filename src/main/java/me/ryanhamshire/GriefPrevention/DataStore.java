@@ -23,6 +23,7 @@ import com.griefprevention.compat.Compat;
 import com.griefprevention.claims.ClaimSnapshot;
 import com.griefprevention.claims.ClaimSnapshotIndex;
 import com.griefprevention.geometry.OrthogonalEdge2i;
+import com.griefprevention.geometry.OrthogonalPoint2i;
 import com.griefprevention.geometry.OrthogonalPolygon;
 import com.griefprevention.visualization.BoundaryVisualization;
 import com.griefprevention.visualization.VisualizationType;
@@ -54,6 +55,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
@@ -1949,6 +1951,338 @@ public abstract class DataStore {
 
     abstract void overrideSavePlayerData(UUID playerID, PlayerData playerData);
 
+    /**
+     * Merges two claims together.
+     * If mergeEdgeIndex is provided (for shaped claims), only merges along that specific edge/nib.
+     * Collapses claim IDs by deleting the second claim and updating the first.
+     *
+     * @param player The player performing the merge
+     * @param playerData The player's data
+     * @param firstClaim The first claim (will be kept and expanded)
+     * @param secondClaim The second claim (will be deleted)
+     * @param mergeEdgeIndex Optional edge index for shaped claims to limit merge width
+     */
+    synchronized public void mergeClaims(Player player, PlayerData playerData, Claim firstClaim, Claim secondClaim, Integer mergeEdgeIndex) {
+        mergeClaims(player, playerData, firstClaim, secondClaim, mergeEdgeIndex, null, null);
+    }
+
+    synchronized public void mergeClaims(Player player, PlayerData playerData, Claim firstClaim, Claim secondClaim, Integer mergeEdgeIndex, Set<OrthogonalPoint2i> preferredConnectionCells) {
+        mergeClaims(player, playerData, firstClaim, secondClaim, mergeEdgeIndex, preferredConnectionCells, null);
+    }
+
+    synchronized public void mergeClaims(Player player, PlayerData playerData, Claim firstClaim, Claim secondClaim, Integer mergeEdgeIndex, Set<OrthogonalPoint2i> preferredConnectionCells, OrthogonalPolygon firstPolygonOverride) {
+        // Ensure both claims are top-level
+        while (firstClaim.parent != null) {
+            firstClaim = firstClaim.parent;
+        }
+        while (secondClaim.parent != null) {
+            secondClaim = secondClaim.parent;
+        }
+
+        // Validate claims are in the same world
+        if (!firstClaim.getLesserBoundaryCorner().getWorld().equals(secondClaim.getLesserBoundaryCorner().getWorld())) {
+            GriefPrevention.sendMessage(player, TextMode.Err, "Cannot merge claims in different worlds.");
+            playerData.claimMerging = null;
+            playerData.mergeEdgeIndex = null;
+            playerData.shovelMode = ShovelMode.Basic;
+            return;
+        }
+
+        // Get polygons for both claims
+        OrthogonalPolygon firstPolygon = firstPolygonOverride != null ? firstPolygonOverride : firstClaim.getBoundaryPolygon();
+        OrthogonalPolygon secondPolygon = secondClaim.getBoundaryPolygon();
+
+        // Try to compute the proper polygon union.
+        // If the polygons are adjacent or overlapping, this will produce the correct merged shape.
+        // If they are disconnected, fall back to a bounding-box merge (which always works).
+        OrthogonalPolygon mergedPolygon = null;
+        try {
+            mergedPolygon = OrthogonalPolygon.union(firstPolygon, secondPolygon);
+        } catch (IllegalArgumentException e) {
+            // Polygons are disconnected (gap between claims after reshape).
+            // Build a combined occupied set from both polygons.
+            // If they are disconnected, also fill cells along the line between them
+            // to create a connected shape. This handles the cross-claim merge case
+            // where the reshape path extends through unclaimed land.
+            Set<OrthogonalPoint2i> occupied = new HashSet<>();
+            int uMinX = Math.min(firstPolygon.minX(), secondPolygon.minX());
+            int uMaxX = Math.max(firstPolygon.maxX(), secondPolygon.maxX());
+            int uMinZ = Math.min(firstPolygon.minZ(), secondPolygon.minZ());
+            int uMaxZ = Math.max(firstPolygon.maxZ(), secondPolygon.maxZ());
+
+            for (int x = uMinX; x <= uMaxX; x++) {
+                for (int z = uMinZ; z <= uMaxZ; z++) {
+                    OrthogonalPoint2i pt = new OrthogonalPoint2i(x, z);
+                    if (firstPolygon.containsCell(x, z) || secondPolygon.containsCell(x, z)) {
+                        occupied.add(pt);
+                    }
+                }
+            }
+
+            // Fill gaps: find the closest pair of cells between the two polygons
+            // and add cells along that connecting line
+            if (!occupied.isEmpty()) {
+                // Find cells from each polygon
+                Set<OrthogonalPoint2i> firstCells = new HashSet<>();
+                Set<OrthogonalPoint2i> secondCells = new HashSet<>();
+                for (OrthogonalPoint2i pt : occupied) {
+                    if (firstPolygon.containsCell(pt.x(), pt.z())) {
+                        firstCells.add(pt);
+                    }
+                    if (secondPolygon.containsCell(pt.x(), pt.z())) {
+                        secondCells.add(pt);
+                    }
+                }
+
+                // Find the closest pair, constrained to preferred connection cells
+                // if provided. These are the reshape corridor's leading-edge cells
+                // that the player extended toward the marked claim, so the merge
+                // follows the player's intended path rather than a globally-closest
+                // pair that might bypass the corridor entirely.
+                int[] best = null;
+                Set<OrthogonalPoint2i> connectionOrigins;
+                if (preferredConnectionCells != null && !preferredConnectionCells.isEmpty()) {
+                    connectionOrigins = new HashSet<>();
+                    for (OrthogonalPoint2i pc : preferredConnectionCells) {
+                        if (firstCells.contains(pc)) {
+                            connectionOrigins.add(pc);
+                        }
+                    }
+                    if (connectionOrigins.isEmpty()) {
+                        connectionOrigins = firstCells;
+                    }
+                } else {
+                    connectionOrigins = firstCells;
+                }
+                for (OrthogonalPoint2i c1 : connectionOrigins) {
+                    for (OrthogonalPoint2i c2 : secondCells) {
+                        int dist = Math.abs(c1.x() - c2.x()) + Math.abs(c1.z() - c2.z());
+                        if (best == null || dist < best[0]) {
+                            best = new int[]{dist, c1.x(), c1.z(), c2.x(), c2.z()};
+                        }
+                    }
+                }
+
+                if (best != null) {
+                    // Fill a 2-cell-wide Manhattan path between the closest cells.
+                    // This ensures the contour tracing doesn't fail at diagonal
+                    // convergence points and preserves the original shapes.
+                    int cx = best[1], cz = best[2];
+                    int tx = best[3], tz = best[4];
+                    while (cx != tx || cz != tz) {
+                        occupied.add(new OrthogonalPoint2i(cx, cz));
+                        occupied.add(new OrthogonalPoint2i(cx + 1, cz));
+                        occupied.add(new OrthogonalPoint2i(cx - 1, cz));
+                        occupied.add(new OrthogonalPoint2i(cx, cz + 1));
+                        occupied.add(new OrthogonalPoint2i(cx, cz - 1));
+                        if (cx < tx) cx++;
+                        else if (cx > tx) cx--;
+                        else if (cz < tz) cz++;
+                        else if (cz > tz) cz--;
+                    }
+                    occupied.add(new OrthogonalPoint2i(tx, tz));
+                    occupied.add(new OrthogonalPoint2i(tx + 1, tz));
+                    occupied.add(new OrthogonalPoint2i(tx - 1, tz));
+                    occupied.add(new OrthogonalPoint2i(tx, tz + 1));
+                    occupied.add(new OrthogonalPoint2i(tx, tz - 1));
+                }
+            }
+
+            if (!occupied.isEmpty()) {
+                try {
+                    mergedPolygon = OrthogonalPolygon.fromOccupiedPoints(occupied);
+                } catch (IllegalArgumentException e2) {
+                    // Contour tracing failed — fall back to bounding box
+                }
+            }
+
+            if (mergedPolygon == null) {
+                // Final fallback: bounding box
+                int minX = Math.min(firstClaim.getLesserBoundaryCorner().getBlockX(), secondClaim.getLesserBoundaryCorner().getBlockX());
+                int maxX = Math.max(firstClaim.getGreaterBoundaryCorner().getBlockX(), secondClaim.getGreaterBoundaryCorner().getBlockX());
+                int minZ = Math.min(firstClaim.getLesserBoundaryCorner().getBlockZ(), secondClaim.getLesserBoundaryCorner().getBlockZ());
+                int maxZ = Math.max(firstClaim.getGreaterBoundaryCorner().getBlockZ(), secondClaim.getGreaterBoundaryCorner().getBlockZ());
+
+                List<OrthogonalPoint2i> rectCorners = new ArrayList<>();
+                rectCorners.add(new OrthogonalPoint2i(minX, minZ));
+                rectCorners.add(new OrthogonalPoint2i(maxX, minZ));
+                rectCorners.add(new OrthogonalPoint2i(maxX, maxZ));
+                rectCorners.add(new OrthogonalPoint2i(minX, maxZ));
+                rectCorners.add(new OrthogonalPoint2i(minX, minZ));
+                mergedPolygon = OrthogonalPolygon.fromClosedPath(rectCorners);
+            }
+        }
+
+        // Validate merged polygon
+        if (mergedPolygon == null) {
+            GriefPrevention.sendMessage(player, TextMode.Err, "Failed to merge claims: invalid resulting shape.");
+            playerData.claimMerging = null;
+            playerData.mergeEdgeIndex = null;
+            playerData.shovelMode = ShovelMode.Basic;
+            return;
+        }
+
+        // Check claim block limits
+        int newArea = mergedPolygon.cellCount();
+        int currentArea = firstClaim.getArea() + secondClaim.getArea();
+        int areaDifference = newArea - currentArea;
+
+        if (!firstClaim.isAdminClaim() && !secondClaim.isAdminClaim()) {
+            if (player.getUniqueId().equals(firstClaim.ownerID)) {
+                int blocksRemaining = playerData.getRemainingClaimBlocks() - areaDifference;
+                if (blocksRemaining < 0) {
+                    GriefPrevention.sendMessage(player, TextMode.Err, "Not enough claim blocks to merge these claims.");
+                    playerData.claimMerging = null;
+                    playerData.mergeEdgeIndex = null;
+                    playerData.shovelMode = ShovelMode.Basic;
+                    return;
+                }
+            }
+        }
+
+        // Check for overlaps with other claims
+        Set<Claim> nearbyClaims = getNearbyClaims(firstClaim.getLesserBoundaryCorner());
+        List<Claim> overlappingClaims = new ArrayList<>();
+        for (Claim nearby : nearbyClaims) {
+            if (nearby.getID().equals(firstClaim.getID()) || nearby.getID().equals(secondClaim.getID())) {
+                continue;
+            }
+
+            // Check if merged claim would overlap with this nearby claim
+            // Skip if the claim is owned by the same player (they can merge their own claims)
+            if (nearby.getOwnerID() != null && nearby.getOwnerID().equals(firstClaim.getOwnerID())) {
+                continue;
+            }
+
+            if (polygonsOverlap(mergedPolygon, nearby.getBoundaryPolygon())) {
+                overlappingClaims.add(nearby);
+            }
+        }
+
+        if (!overlappingClaims.isEmpty()) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.MergeOverlapConflict);
+            // Visualize all overlapping claims
+            for (Claim overlapping : overlappingClaims) {
+                BoundaryVisualization.visualizeClaim(player, overlapping, VisualizationType.CONFLICT_ZONE);
+            }
+            playerData.claimMerging = null;
+            playerData.mergeEdgeIndex = null;
+            playerData.shovelMode = ShovelMode.Basic;
+            return;
+        }
+
+        // Handle subdivisions
+        // Move all subdivisions from secondClaim to firstClaim
+        if (secondClaim.children != null && !secondClaim.children.isEmpty()) {
+            for (Claim subdivision : new ArrayList<>(secondClaim.children)) {
+                subdivision.parent = firstClaim;
+                if (firstClaim.children == null) {
+                    firstClaim.children = new ArrayList<>();
+                }
+                if (!firstClaim.children.contains(subdivision)) {
+                    firstClaim.children.add(subdivision);
+                }
+                // Save each subdivision with updated parent
+                saveClaim(subdivision);
+            }
+            secondClaim.children.clear();
+        }
+
+        // Update first claim with new polygon
+        removeFromChunkClaimMap(firstClaim);
+        updateClaimPolygon(firstClaim, mergedPolygon);
+        addToChunkClaimMap(firstClaim);
+        indexClaimSnapshot(firstClaim);
+
+        // Save the updated first claim to storage
+        saveClaim(firstClaim);
+
+        // Delete second claim (this clears all visualizations)
+        deleteClaim(secondClaim);
+
+        // Clear merge state but keep the player in merge mode so they can
+        // merge again without re-running /mergeclaims
+        playerData.claimMerging = null;
+        playerData.mergeEdgeIndex = null;
+
+        // Re-visualize the merged claim after deleteClaim cleared everything.
+        // Use mergeNearbyClaims to ensure the visualization persists alongside
+        // the periodic task that runs for shaped mode players.
+        Set<Claim> mergedClaimSet = new HashSet<>();
+        mergedClaimSet.add(firstClaim);
+        BoundaryVisualization.mergeNearbyClaims(player, mergedClaimSet);
+
+        GriefPrevention.sendMessage(player, TextMode.Success, "Claims merged successfully.");
+    }
+
+    public OrthogonalPolygon unionPolygons(OrthogonalPolygon first, OrthogonalPolygon second) {
+        // Delegate to OrthogonalPolygon.union which handles all cases correctly,
+        // including disconnected polygons (which throws, handled by caller).
+        return OrthogonalPolygon.union(first, second);
+    }
+
+
+    private boolean polygonsOverlap(OrthogonalPolygon polygon1, OrthogonalPolygon polygon2) {
+        // Check if bounding boxes overlap
+        if (polygon1.maxX() < polygon2.minX() || polygon1.minX() > polygon2.maxX() ||
+            polygon1.maxZ() < polygon2.minZ() || polygon1.minZ() > polygon2.maxZ()) {
+            return false;
+        }
+
+        // Check if any corner of polygon1 is inside polygon2
+        for (OrthogonalPoint2i corner : polygon1.corners()) {
+            if (polygon2.contains(corner)) {
+                return true;
+            }
+        }
+
+        // Check if any corner of polygon2 is inside polygon1
+        for (OrthogonalPoint2i corner : polygon2.corners()) {
+            if (polygon1.contains(corner)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void updateClaimPolygon(Claim claim, OrthogonalPolygon polygon) {
+        // Update claim boundaries from polygon
+        List<OrthogonalPoint2i> corners = polygon.corners();
+        if (corners.size() >= 4) {
+            int minX = polygon.minX();
+            int minZ = polygon.minZ();
+            int maxX = polygon.maxX();
+            int maxZ = polygon.maxZ();
+
+            World world = claim.getLesserBoundaryCorner().getWorld();
+            int minY = claim.getLesserBoundaryCorner().getBlockY();
+            int maxY = claim.getGreaterBoundaryCorner().getBlockY();
+
+            claim.lesserBoundaryCorner = new Location(world, minX, minY, minZ);
+            claim.greaterBoundaryCorner = new Location(world, maxX, maxY, maxZ);
+            // Preserve the shaped corners so the polygon shape is retained.
+            // If the polygon fails validation (e.g., self-intersecting contour),
+            // fall back to a rectangle so the claim doesn't lose its shaped status.
+            try
+            {
+                claim.setShapedCorners(corners);
+            }
+            catch (Exception e)
+            {
+                // Fallback: use the bounding box as a simple rectangle
+                List<OrthogonalPoint2i> rectangle = Arrays.asList(
+                        new OrthogonalPoint2i(minX, minZ),
+                        new OrthogonalPoint2i(maxX, minZ),
+                        new OrthogonalPoint2i(maxX, maxZ),
+                        new OrthogonalPoint2i(minX, maxZ),
+                        new OrthogonalPoint2i(minX, minZ)
+                );
+                claim.setShapedCorners(rectangle);
+            }
+        }
+    }
+
     // extends a claim to a new depth
     // respects the max depth config variable
     synchronized public void extendClaim(Claim claim, int newDepth) {
@@ -2166,6 +2500,13 @@ public abstract class DataStore {
             }
 
             if (candidate.overlaps(otherClaim)) {
+                // Check if overlapping claim is owned by the same player - if so, return it for merging
+                if (!claim.isAdminClaim() && player.getUniqueId().equals(claim.getOwnerID())
+                        && player.getUniqueId().equals(otherClaim.getOwnerID())) {
+                    result.succeeded = false;
+                    result.claim = otherClaim;
+                    return result;
+                }
                 result.succeeded = false;
                 result.claim = otherClaim;
                 return result;

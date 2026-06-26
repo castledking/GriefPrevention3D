@@ -50,6 +50,7 @@ public enum Messages
     BasicClaimsMode("Returned to basic claim creation mode."),
     ShapedClaimsMode("Shaped claim mode. Right-click to place corners in unclaimed land or to start and extend shaped edits from claim boundaries. Boundary clicks create segment markers as needed. Use /basicclaims to exit."),
     ShapedClaimsDisabled("Shaped claims are disabled on this server."),
+    MergeOverlapConflict("Could not merge; the completed merge would overlap other claims."),
     Subdivisions3DDisabled("3D subdivisions are disabled on this server."),
     AdminClaims3DDisabled("3D admin claims are disabled on this server."),
     SubdivisionMode("Subdivision mode.  Use your shovel to create subdivisions in your existing claims.  Use /basicclaims to exit."),

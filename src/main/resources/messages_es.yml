@@ -42,6 +42,7 @@ Messages:
   BasicClaimsMode: Se volvió al modo básico de creación de terrenos protegidos.
   ShapedClaimsMode: Modo de terreno con forma. Haz clic derecho para colocar esquinas en tierra sin proteger o para iniciar y extender ediciones con forma desde los bordes de terrenos. Los clics en bordes crean marcadores de segmentos segun sea necesario. Usa /basicclaims para salir.
   ShapedClaimsDisabled: Los terrenos con forma estan desactivados en este servidor.
+  MergeOverlapConflict: No se pudo fusionar; la fusión completada se superpondría a otros terrenos.
   SubdivisionMode: Modo de subdivisión. Usa tu pala para crear subdivisiones dentro de tus terrenos protegidos existentes. Usa /basicclaims para salir.
   SubdivisionMode3D: Modo de subdivision 3D. Usa tu pala para crear subdivisiones 3D en tus terrenos existentes. Usa /basicclaims para salir.
   SubdivisionVideo2: 'Haz clic para obtener ayuda sobre subdivisiones: {0}'

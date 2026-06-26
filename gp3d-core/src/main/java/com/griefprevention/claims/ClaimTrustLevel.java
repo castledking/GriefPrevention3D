@@ -27,7 +27,11 @@ public enum ClaimTrustLevel
     /**
      * Basic access permission.
      */
-    ACCESS(4);
+    ACCESS(4),
+    /**
+     * Neighbor trust permission. Allows bypassing minimum distance checks for claim creation.
+     */
+    NEIGHBOR(5);
 
     private final int trustLevel;
 
@@ -53,6 +57,8 @@ public enum ClaimTrustLevel
                 return "#inventory";
             case ACCESS:
                 return "#access";
+            case NEIGHBOR:
+                return "#neighbor";
             case EDIT:
                 return "";
             default:

@@ -66,7 +66,7 @@ Temporary admin commands:
 - `/gp3d claim create <radius>`
 - `/gp3d claim list`
 - `/gp3d claim abandon`
-- `/gp3d claim trust <public|uuid|online-player> <access|container|build|manage>`
+- `/gp3d claim trust <public|uuid|online-player> <access|container|build|manage|neighbor>`
 - `/gp3d claim untrust <public|uuid|online-player>`
 
 `claim create` currently creates a top-level rectangular 2D claim centered on the executor and writes it under

@@ -64,7 +64,13 @@ final class OrthogonalPolygonValidator
 
         if (closed && !edges.isEmpty())
         {
-            detectSelfIntersections(edges, issues);
+            List<OrthogonalPoint2i> simplifiedPath = simplifyPath(normalizedPath);
+            List<OrthogonalEdge2i> simplifiedEdges = new ArrayList<>(simplifiedPath.size() - 1);
+            for (int i = 0; i + 1 < simplifiedPath.size(); i++)
+            {
+                simplifiedEdges.add(new OrthogonalEdge2i(simplifiedPath.get(i), simplifiedPath.get(i + 1)));
+            }
+            detectSelfIntersections(simplifiedEdges, issues);
         }
 
         if (!issues.isEmpty())
@@ -98,6 +104,42 @@ final class OrthogonalPolygonValidator
         }
 
         return Collections.unmodifiableList(new ArrayList<>(closed));
+    }
+
+    private static @NotNull List<OrthogonalPoint2i> simplifyPath(@NotNull List<OrthogonalPoint2i> path)
+    {
+        List<OrthogonalPoint2i> simplified = new ArrayList<>(path.size());
+        for (OrthogonalPoint2i point : path)
+        {
+            if (simplified.size() < 2)
+            {
+                simplified.add(point);
+            }
+            else
+            {
+                OrthogonalPoint2i secondLast = simplified.get(simplified.size() - 2);
+                OrthogonalPoint2i last = simplified.get(simplified.size() - 1);
+                if (isCollinear(secondLast, last, point))
+                {
+                    simplified.remove(simplified.size() - 1);
+                    simplified.add(point);
+                }
+                else
+                {
+                    simplified.add(point);
+                }
+            }
+        }
+        return Collections.unmodifiableList(new ArrayList<>(simplified));
+    }
+
+    private static boolean isCollinear(OrthogonalPoint2i a, OrthogonalPoint2i b, OrthogonalPoint2i c)
+    {
+        if (a.z() == b.z() && b.z() == c.z())
+        {
+            return true;
+        }
+        return a.x() == b.x() && b.x() == c.x();
     }
 
     private static @NotNull List<OrthogonalPoint2i> normalizePath(@NotNull List<OrthogonalPoint2i> rawPath)

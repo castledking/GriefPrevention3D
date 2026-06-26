@@ -28,6 +28,9 @@ import org.jetbrains.annotations.Nullable;
 
 import java.net.InetAddress;
 import java.util.Calendar;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
@@ -88,6 +91,12 @@ public class PlayerData
     //the claim this player is currently subdividing
     public Claim claimSubdividing = null;
 
+    //the claim this player is currently merging (first claim in merge operation)
+    public Claim claimMerging = null;
+
+    //the edge index selected for merging (for shaped claims, the specific nib)
+    public Integer mergeEdgeIndex = null;
+
     //transient in-memory shaped-mode session state for the recode branch
     private transient @Nullable ClaimEditorSession claimEditorSession = null;
 
@@ -96,6 +105,9 @@ public class PlayerData
      * clears or session is reset).
      */
     private transient boolean ephemeralBasicShapedSegmentPreview = false;
+
+    // Track claims that have had boundary markers added during shaped editing for merge operations
+    private transient Set<Long> crossClaimBoundaryMarkers = new HashSet<>();
 
     // set to true when shaped mode is reset by switching away from the shovel;
     // cleared when the player re-holds the shovel and the "returned to basic" message is sent
@@ -202,6 +214,7 @@ public class PlayerData
         this.claimEditorSession = claimEditorSession;
         if (claimEditorSession == null) {
             this.ephemeralBasicShapedSegmentPreview = false;
+            this.clearCrossClaimBoundaryMarkers();
         }
     }
 
@@ -213,6 +226,33 @@ public class PlayerData
     public boolean isEphemeralBasicShapedSegmentPreview()
     {
         return this.ephemeralBasicShapedSegmentPreview;
+    }
+
+    public void addCrossClaimBoundaryMarker(Long claimId)
+    {
+        if (this.crossClaimBoundaryMarkers == null) {
+            this.crossClaimBoundaryMarkers = new HashSet<>();
+        }
+        this.crossClaimBoundaryMarkers.add(claimId);
+    }
+
+    public boolean hasCrossClaimBoundaryMarker(Long claimId)
+    {
+        return this.crossClaimBoundaryMarkers != null && this.crossClaimBoundaryMarkers.contains(claimId);
+    }
+
+    public void clearCrossClaimBoundaryMarkers()
+    {
+        if (this.crossClaimBoundaryMarkers != null) {
+            this.crossClaimBoundaryMarkers.clear();
+        }
+    }
+
+    public @NotNull Set<Long> getCrossClaimBoundaryMarkers()
+    {
+        return this.crossClaimBoundaryMarkers != null
+                ? Collections.unmodifiableSet(this.crossClaimBoundaryMarkers)
+                : Collections.emptySet();
     }
 
     //the number of claim blocks a player has available for claiming land
