@@ -12,7 +12,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.List;
 
@@ -22,6 +21,7 @@ public final class MessageLocalization
     private static final String DEFAULT_LOCALE = "en";
 
     private static final String[] BUNDLED_LOCALE_FILES = {"messages_en.yml", "messages_es.yml", "messages_pt_BR.yml"};
+    static final String[] SUPPORTED_LOCALE_CODES = {"en", "es", "pt_BR"};
 
     private MessageLocalization()
     {
@@ -287,6 +287,144 @@ public final class MessageLocalization
                         .info("Unable to write to the configuration file at \"" + DataStore.messagesFilePath + "\"");
             }
         }
+    }
+
+    // loads all supported locale files into the provided map for per-player message support
+    public static void loadAllMessages(@NotNull java.util.Map<String, String[]> messagesByLocale, @NotNull String defaultLocale)
+    {
+        extractLocaleFiles();
+
+        // Load the default locale first using existing logic (includes custom messages.yml overrides)
+        String[] defaultMessages = new String[Messages.values().length];
+        loadMessages(defaultMessages);
+        messagesByLocale.put(defaultLocale, defaultMessages);
+
+        // Load other bundled locales (without custom overrides)
+        for (String localeCode : SUPPORTED_LOCALE_CODES)
+        {
+            if (localeCode.equals(defaultLocale)) continue;
+
+            String[] messages = new String[Messages.values().length];
+            loadSingleLocale(messages, localeCode);
+            messagesByLocale.put(localeCode, messages);
+        }
+
+        // Ensure English is always available as ultimate fallback
+        if (!messagesByLocale.containsKey("en"))
+        {
+            String[] enMessages = new String[Messages.values().length];
+            loadSingleLocale(enMessages, "en");
+            messagesByLocale.put("en", enMessages);
+        }
+    }
+
+    // loads messages for a single locale from its data folder or bundled file
+    private static void loadSingleLocale(@NotNull String[] messages, @NotNull String locale)
+    {
+        Messages[] messageIDs = Messages.values();
+        File dataFolder = new File(DataStore.languageFolderPath);
+        File localeFile = new File(dataFolder, "messages_" + locale + ".yml");
+
+        FileConfiguration config;
+        if (localeFile.exists())
+        {
+            config = YamlConfiguration.loadConfiguration(localeFile);
+        }
+        else
+        {
+            config = loadConfigFromBundledResource("messages_" + locale + ".yml");
+        }
+
+        if (config == null)
+        {
+            config = new YamlConfiguration();
+        }
+
+        populateMessagesArray(messages, messageIDs, config);
+    }
+
+    // populates the messages array from a FileConfiguration
+    private static void populateMessagesArray(@NotNull String[] messages, @NotNull Messages[] messageIDs, @NotNull FileConfiguration config)
+    {
+        for (Messages message : messageIDs)
+        {
+            String messagePath = "Messages." + message.name();
+            if (config.isString(messagePath + ".Text"))
+            {
+                messages[message.ordinal()] = config.getString(messagePath + ".Text", message.defaultValue);
+            }
+            else
+            {
+                messages[message.ordinal()] = config.getString(messagePath, message.defaultValue);
+            }
+
+            if (message != Messages.HowToClaimRegex)
+            {
+                boolean hasUserColorCodes = messages[message.ordinal()].contains("$")
+                        || messages[message.ordinal()].contains("&");
+                boolean hasUserNewline = messages[message.ordinal()].contains("\\n");
+                boolean isDisabledMessage = Compat.isBlank(messages[message.ordinal()]);
+
+                if (!hasUserColorCodes && !isDisabledMessage)
+                {
+                    switch (message)
+                    {
+                        case ClaimHelpHeader:
+                        case AClaimHelpHeader:
+                            messages[message.ordinal()] = "&b&l" + messages[message.ordinal()];
+                            break;
+                        case ClaimHelpLegend:
+                        case AClaimHelpLegend:
+                            if (!hasUserNewline)
+                            {
+                                messages[message.ordinal()] = "\\n" + messages[message.ordinal()];
+                            }
+                            messages[message.ordinal()] = messages[message.ordinal()]
+                                    .replace("<>", "&c<>")
+                                    .replace("[]", "&a[]")
+                                    .replace("-", "&7-");
+                            break;
+                        case ClaimHelpPagination:
+                        case AClaimHelpPagination:
+                            if (!hasUserNewline)
+                            {
+                                messages[message.ordinal()] = "\\n" + messages[message.ordinal()];
+                            }
+                            messages[message.ordinal()] = "&7" + messages[message.ordinal()];
+                            break;
+                        default:
+                            break;
+                    }
+                }
+
+                messages[message.ordinal()] = TextColor.translate(messages[message.ordinal()]);
+                messages[message.ordinal()] = messages[message.ordinal()]
+                        .replace("\\n", "\n");
+            }
+
+            if (message.notes != null)
+            {
+                // notes are informational only, not needed per-locale
+            }
+        }
+    }
+
+    // loads a config from a bundled resource file, returns null if not found
+    private static @Nullable FileConfiguration loadConfigFromBundledResource(@NotNull String fileName)
+    {
+        try (java.io.InputStream in = GriefPrevention.instance.getResource(fileName))
+        {
+            if (in != null)
+            {
+                BufferedReader reader = new BufferedReader(
+                        new InputStreamReader(in, StandardCharsets.UTF_8));
+                return YamlConfiguration.loadConfiguration(reader);
+            }
+        }
+        catch (IOException e)
+        {
+        }
+        return null;
     }
 
     public static void extractLocaleFiles()

@@ -791,6 +791,12 @@ public class PlayerEventHandler implements Listener {
             playerData.ipAddress = socketAddress.getAddress();
         }
 
+        // detect player's client locale for per-player message support
+        try {
+            playerData.locale = player.getLocale();
+        } catch (Exception ignored) {
+        }
+
         // if newish, prevent chat until he's moved a bit to prove he's not a bot
         if (GriefPrevention.isNewToServer(player) && !player.hasPermission("griefprevention.premovementchat")) {
             playerData.noChatLocation = player.getLocation();

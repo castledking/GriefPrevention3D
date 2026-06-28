@@ -24,15 +24,19 @@ Stop _responding_ to grief and prevent it instead. GriefPrevention stops grief b
 
 - **3D Subdivisions**
   Create subdivisions with exact Y-level boundaries.
-  `/3dsubdivideclaims`
+  ```
+  /3dsubdivideclaims
+  ```
   Use this command to switch to 3D subdivision mode.
-
+####
 - **3D Admin Claims**
   Create free, height-bounded administrative claims with exact Y coordinates.
-  `/3dadminclaims`
+  ```
+  /3dadminclaims
+  ```
   Use this command or `/aclaim mode admin3d` to switch to 3D admin claim mode.
   Requires the `griefprevention.adminclaims` permission.
-
+####
 - **Shaped Claims**
   ```
   AllowShapedClaims: false
@@ -40,19 +44,27 @@ Stop _responding_ to grief and prevent it instead. GriefPrevention stops grief b
   Set to **true** to enable non-rectangular claims.
   `/shapedclaims`
   Use this command to switch to the shaped claims mode.
-
+####
+- **Merge Claims**
+  Merge two of your claims into a single larger claim.
+  ```
+  /mergeclaims
+  ```
+  Stand in the first claim and run `/mergeclaims`, then go to the second claim and run `/mergeclaims` again or right-click with your golden shovel. Both claims and the area between them become one claim.
+  Can also be done with `/shapedclaims` — shape a path that overlaps another claim you own and they merge automatically.
+####
 - **Nested Subclaims**
   ```
   AllowNestedSubClaims: false
   ```
   Set to **true** to allow subdivisions inside other subdivisions.
-
+####
 - **Visualization Glow**
   ```
   VisualizationGlow: false
   ```
   Set to **true** to enable glowing claim boundary visualization. (Requires 1.19.3+)
-
+####
 - **Unified Command Handler**
   In **GriefPreventionData/alias.yml**:
   ```
@@ -63,7 +75,7 @@ Stop _responding_ to grief and prevent it instead. GriefPrevention stops grief b
   `/claim trust`
   `/claim abandon`
   [View Docs](https://github.com/castledking/GriefPrevention3D/blob/master/src/main/resources/alias.yml)
-
+####
 - **Neighbor Trust & Minimum Distance**
   ```
   GriefPrevention:
@@ -76,16 +88,17 @@ Stop _responding_ to grief and prevent it instead. GriefPrevention stops grief b
   - `/claim distance check` — Show the configured minimum distance and list nearby claims.
   - `/claim distance toggle` — While standing in your own claim, toggle whether ALL players can bypass minimum distance for that claim.
   - Existing nearby claims auto-grant neighbor trust to each other, cleaned up automatically when claims are abandoned.
-
+####
 - **Wither Explosion Toggle**
   `/witherexplosions`
   Use this command to toggle wither explosions inside your claim.
-
+####
 - **Subtle Changes**
   - Resizing a claim now selects it and is accessible using common commands like `/claim abandon` or `/claim trust` during that resize session
   - `/restrictsubclaim` while standing in main claims now instantly restricts all subdivisions inside
   - `/trustlist` now shows inherited permissions
   - Split the `griefprevention.eavesdrop` permission to `griefprevention.eavesdrop.pm` & `griefprevention.eavesdrop.softmute` for more granular permission control
+  - **Per-Player Locale**: Enabled by default. Players with a Spanish or Portuguese client locale receive messages in their language automatically, while others receive English. Disable with `PerPlayerLocale: false` in config.yml.
   - Various bug fixes and quality-of-life improvements
   - Full compatibility with original GriefPrevention features
   - Works with Spigot, Paper, Purpur, and Folia

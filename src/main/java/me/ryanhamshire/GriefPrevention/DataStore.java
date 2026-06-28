@@ -19,7 +19,6 @@
 package me.ryanhamshire.GriefPrevention;
 
 import com.google.common.io.Files;
-import com.griefprevention.compat.Compat;
 import com.griefprevention.claims.ClaimSnapshot;
 import com.griefprevention.claims.ClaimSnapshotIndex;
 import com.griefprevention.geometry.OrthogonalEdge2i;
@@ -84,8 +83,8 @@ public abstract class DataStore {
     ConcurrentHashMap<Long, ArrayList<Claim>> chunksToClaimsMap = new ConcurrentHashMap<>();
     private final ClaimSnapshotIndex claimSnapshotIndex = new ClaimSnapshotIndex();
 
-    // in-memory cache for messages
-    private String[] messages;
+    // in-memory cache for messages, keyed by locale code
+    private final Map<String, String[]> messagesByLocale = new HashMap<>();
 
     // pattern for unique user identifiers (UUIDs)
     protected final static Pattern uuidpattern = Pattern
@@ -2850,19 +2849,77 @@ public abstract class DataStore {
 
     protected void loadMessages()
     {
-        this.messages = new String[Messages.values().length];
-        MessageLocalization.loadMessages(this.messages);
+        this.messagesByLocale.clear();
+        MessageLocalization.loadAllMessages(this.messagesByLocale, GriefPrevention.instance.config_locale);
     }
 
-    synchronized public String getMessage(Messages messageID, String... args) {
-        String message = messages[messageID.ordinal()];
+    // resolves a player's Minecraft client locale code to a supported locale code
+    private @NotNull String resolvePlayerLocale(@Nullable Player player)
+    {
+        if (player == null) return GriefPrevention.instance.config_locale;
 
-        for (int i = 0; i < args.length; i++) {
+        PlayerData playerData = this.getPlayerData(player.getUniqueId());
+        String playerLocale = playerData != null ? playerData.locale : null;
+        if (playerLocale == null || playerLocale.trim().isEmpty())
+            return GriefPrevention.instance.config_locale;
+
+        String normalized = playerLocale.toLowerCase().replace('-', '_');
+
+        // Try exact match (case-insensitive)
+        for (String key : this.messagesByLocale.keySet())
+        {
+            if (key.equalsIgnoreCase(normalized)) return key;
+        }
+
+        // Try by language prefix (first 2 chars)
+        if (normalized.length() >= 2)
+        {
+            String langCode = normalized.substring(0, 2);
+            for (String key : this.messagesByLocale.keySet())
+            {
+                if (key.length() >= 2 && key.substring(0, 2).equalsIgnoreCase(langCode)) return key;
+            }
+        }
+
+        return GriefPrevention.instance.config_locale;
+    }
+
+    // gets a message for a specific player, using their locale if per-player is enabled
+    synchronized public String getMessage(@Nullable Player player, @NotNull Messages messageID, @NotNull String @NotNull... args) {
+        String locale = GriefPrevention.instance.config_locale;
+        if (GriefPrevention.instance.config_perPlayerLocale && player != null)
+        {
+            locale = this.resolvePlayerLocale(player);
+        }
+
+        String[] localeMessages = this.messagesByLocale.get(locale);
+        if (localeMessages == null)
+        {
+            localeMessages = this.messagesByLocale.get(GriefPrevention.instance.config_locale);
+        }
+        if (localeMessages == null)
+        {
+            localeMessages = this.messagesByLocale.get("en");
+        }
+        if (localeMessages == null)
+        {
+            return messageID.defaultValue;
+        }
+
+        String message = localeMessages[messageID.ordinal()];
+
+        for (int i = 0; i < args.length; i++)
+        {
             String param = args[i];
             message = message.replace("{" + i + "}", param);
         }
 
         return message;
+    }
+
+    // gets a message using the server's default locale (for console/non-player contexts)
+    synchronized public String getMessage(@NotNull Messages messageID, @NotNull String @NotNull... args) {
+        return getMessage((Player) null, messageID, args);
     }
 
     // used in updating the data schema from 0 to 1.

@@ -343,6 +343,7 @@ public class GriefPrevention extends JavaPlugin {
     public boolean config_logs_debugEnabled;
     public boolean config_logs_mutedChatEnabled;
     public String config_locale;
+    public boolean config_perPlayerLocale = true;
 
     // ban management plugin interop settings
     public boolean config_ban_useCommand;
@@ -744,6 +745,8 @@ public class GriefPrevention extends JavaPlugin {
         // locale for message localization
         this.config_locale = config.getString("GriefPrevention.Locale", "en");
 
+        this.config_perPlayerLocale = config.getBoolean("GriefPrevention.PerPlayerLocale", true);
+
         FileConfiguration outConfig = new YamlConfiguration();
         try {
             outConfig.options().setHeader(Arrays.asList(
@@ -752,7 +755,10 @@ public class GriefPrevention extends JavaPlugin {
                     "Locale settings:",
                     "  GriefPrevention.Locale: Set to 'es' for Spanish, 'pt_BR' for Brazilian Portuguese, or 'en' for English.",
                     "  To use localized messages, copy messages_XX.yml from the Lang/ folder to GriefPreventionData/ and rename it to messages.yml.",
-                    "  If no messages.yml exists, the plugin will use messages_XX.yml from Lang/ based on this locale setting."));
+                    "  If no messages.yml exists, the plugin will use messages_XX.yml from Lang/ based on this locale setting.",
+                    "  GriefPrevention.PerPlayerLocale: If true, send messages in the player's client language (if supported).",
+                    "    Players with Spanish client locale will receive Spanish messages, Portuguese will receive Portuguese.",
+                    "    Players with unsupported locales will receive the server's default locale."));
         } catch (NoSuchMethodError e) {
             // setHeader(List) doesn't exist in older Bukkit versions (1.8.8), ignore
         }
@@ -1309,6 +1315,7 @@ public class GriefPrevention extends JavaPlugin {
         outConfig.set("GriefPrevention.Abridged Logs.Included Entry Types.Muted Chat Messages",
                 this.config_logs_mutedChatEnabled);
         outConfig.set("GriefPrevention.Locale", this.config_locale);
+        outConfig.set("GriefPrevention.PerPlayerLocale", this.config_perPlayerLocale);
         outConfig.set("GriefPrevention.ConfigVersion", 1);
 
         try {
@@ -3742,7 +3749,7 @@ public class GriefPrevention extends JavaPlugin {
     // sends a color-coded message to a player
     public static void sendMessage(@Nullable Player player, @NotNull ChatColor color, @NotNull Messages messageID,
             long delayInTicks, @NotNull String @NotNull... args) {
-        String message = GriefPrevention.instance.dataStore.getMessage(messageID, args);
+        String message = GriefPrevention.instance.dataStore.getMessage(player, messageID, args);
         sendMessage(player, color, message, delayInTicks);
     }
 

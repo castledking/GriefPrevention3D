@@ -57,7 +57,7 @@ class EntityPickupItemEventHandlerTest {
         when(player.getWorld()).thenReturn(world);
         when(plugin.pvpRulesApply(world)).thenReturn(true);
         when(plugin.getItemInHand(player, EquipmentSlot.HAND)).thenReturn(new ItemStack(Material.AIR));
-        when(dataStore.getMessage(eq(Messages.PvPImmunityEnd), any(String[].class))).thenReturn(
+        when(dataStore.getMessage(eq(player), eq(Messages.PvPImmunityEnd), any(String[].class))).thenReturn(
             "Now you can fight with other players."
         );
 

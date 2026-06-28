@@ -169,6 +169,9 @@ public class PlayerData
     //see upstream GriefPrevention/GriefPrevention#2586
     Long tntAboveSeaLevelWarningTimestamp = null;
 
+    //player's client locale (e.g. "en_us", "es_es", "pt_br") for per-player messages
+    public String locale = null;
+
     //spot where a player can't talk, used to mute new players until they've moved a little
     //this is an anti-bot strategy.
     Location noChatLocation = null;

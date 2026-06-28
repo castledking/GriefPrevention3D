@@ -71,7 +71,7 @@ commands:
   3dadminclaims:
     description: Switches the shovel tool to 3D administrative claims mode.
     usage: /<command>
-    aliases: [adminclaim3d, adminclaims3d, 3dadminclaim]
+    aliases: [adminclaim3d, adminclaims3d, 3dadminclaim, 3dac]
     permission: griefprevention.adminclaims
   restrictsubclaim:
     description: Restricts a subclaim, so that it inherits no permissions from the parent claim
