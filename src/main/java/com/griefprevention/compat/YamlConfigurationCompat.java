@@ -1,18 +1,15 @@
 package com.griefprevention.compat;
 
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.FileConfigurationOptions;
-
 import java.lang.reflect.Method;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.FileConfigurationOptions;
 
 public final class YamlConfigurationCompat {
 
-    private YamlConfigurationCompat() {
-    }
+    private YamlConfigurationCompat() {}
 
     public static FileConfigurationOptions setHeader(FileConfigurationOptions options, String... lines) {
         return setHeader(options, Arrays.asList(lines));

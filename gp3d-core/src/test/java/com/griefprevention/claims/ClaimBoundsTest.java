@@ -1,21 +1,18 @@
 package com.griefprevention.claims;
 
-import com.griefprevention.geometry.OrthogonalPoint2i;
-import com.griefprevention.geometry.OrthogonalPolygon;
-import org.junit.jupiter.api.Test;
-
-import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import java.util.Arrays;
 
-class ClaimBoundsTest
-{
+import com.griefprevention.geometry.OrthogonalPoint2i;
+import com.griefprevention.geometry.OrthogonalPolygon;
+import java.util.Arrays;
+import org.junit.jupiter.api.Test;
+
+class ClaimBoundsTest {
+
     @Test
-    void normalizesRectangleCorners()
-    {
+    void normalizesRectangleCorners() {
         ClaimBounds bounds = ClaimBounds.rectangle(5, 10, 4, -1, 6, 2);
 
         assertEquals(-1, bounds.minX());
@@ -31,8 +28,7 @@ class ClaimBoundsTest
     }
 
     @Test
-    void checksRectangleContainmentWithOptionalHeight()
-    {
+    void checksRectangleContainmentWithOptionalHeight() {
         ClaimBounds bounds = ClaimBounds.rectangle(0, 5, 0, 10, 9, 10);
 
         assertTrue(bounds.contains(5, 5, 5, false));
@@ -43,8 +39,7 @@ class ClaimBoundsTest
     }
 
     @Test
-    void checksShapedColumnContainment()
-    {
+    void checksShapedColumnContainment() {
         ClaimBounds bounds = ClaimBounds.shaped(lShape(), 0, 255);
 
         assertTrue(bounds.containsColumn(0, 0));
@@ -54,8 +49,7 @@ class ClaimBoundsTest
     }
 
     @Test
-    void usesExactShapeForIgnoredHeightOverlap()
-    {
+    void usesExactShapeForIgnoredHeightOverlap() {
         ClaimBounds shaped = ClaimBounds.shaped(lShape(), 0, 255);
         ClaimBounds missingCorner = ClaimBounds.rectangle(2, 0, 2, 3, 0, 3);
         ClaimBounds bottomStrip = ClaimBounds.rectangle(2, 0, 0, 3, 0, 0);
@@ -66,8 +60,7 @@ class ClaimBoundsTest
     }
 
     @Test
-    void supportsHeightSensitiveOverlap()
-    {
+    void supportsHeightSensitiveOverlap() {
         ClaimBounds lower = ClaimBounds.rectangle(0, 0, 0, 10, 5, 10);
         ClaimBounds upper = ClaimBounds.rectangle(0, 6, 0, 10, 8, 10);
 
@@ -75,8 +68,17 @@ class ClaimBoundsTest
         assertTrue(lower.overlaps(upper, true));
     }
 
-    private static OrthogonalPolygon lShape()
-    {
-        return OrthogonalPolygon.fromClosedPath(Arrays.asList(new OrthogonalPoint2i(0, 0), new OrthogonalPoint2i(4, 0), new OrthogonalPoint2i(4, 1), new OrthogonalPoint2i(1, 1), new OrthogonalPoint2i(1, 4), new OrthogonalPoint2i(0, 4), new OrthogonalPoint2i(0, 0)));
+    private static OrthogonalPolygon lShape() {
+        return OrthogonalPolygon.fromClosedPath(
+            Arrays.asList(
+                new OrthogonalPoint2i(0, 0),
+                new OrthogonalPoint2i(4, 0),
+                new OrthogonalPoint2i(4, 1),
+                new OrthogonalPoint2i(1, 1),
+                new OrthogonalPoint2i(1, 4),
+                new OrthogonalPoint2i(0, 4),
+                new OrthogonalPoint2i(0, 0)
+            )
+        );
     }
 }

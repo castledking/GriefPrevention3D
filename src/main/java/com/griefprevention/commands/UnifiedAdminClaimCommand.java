@@ -7,7 +7,6 @@ import org.bukkit.OfflinePlayer;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
-import java.util.Collections;
 
 /**
  * Unified command handler for /aclaim with administrative subcommands
@@ -483,7 +482,11 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
             case "player":
                 if (args.length < 2) {
                     if (sender instanceof Player) {
-                        GriefPrevention.sendMessage((Player) sender, TextMode.Err, "Usage: /aclaim delete player <name>");
+                        GriefPrevention.sendMessage(
+                            (Player) sender,
+                            TextMode.Err,
+                            "Usage: /aclaim delete player <name>"
+                        );
                     } else {
                         sender.sendMessage("Usage: /aclaim delete player <name>");
                     }
@@ -807,7 +810,12 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
         OfflinePlayer targetPlayer = plugin.resolvePlayerByName(targetPlayerName);
         if (targetPlayer == null || !targetPlayer.hasPlayedBefore()) {
             if (sender instanceof Player) {
-                GriefPrevention.sendMessage((Player) sender, TextMode.Err, Messages.ClaimExpiryPlayerNotFound, targetPlayerName);
+                GriefPrevention.sendMessage(
+                    (Player) sender,
+                    TextMode.Err,
+                    Messages.ClaimExpiryPlayerNotFound,
+                    targetPlayerName
+                );
             } else {
                 sender.sendMessage("Could not find player: " + targetPlayerName);
             }
@@ -818,7 +826,12 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
         PlayerData playerData = plugin.dataStore.getPlayerData(targetPlayer.getUniqueId());
         if (playerData == null) {
             if (sender instanceof Player) {
-                GriefPrevention.sendMessage((Player) sender, TextMode.Err, Messages.ClaimExpiryPlayerNotFound, targetPlayerName);
+                GriefPrevention.sendMessage(
+                    (Player) sender,
+                    TextMode.Err,
+                    Messages.ClaimExpiryPlayerNotFound,
+                    targetPlayerName
+                );
             } else {
                 sender.sendMessage("Could not find player data for: " + targetPlayerName);
             }
@@ -850,7 +863,12 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
     private void showSingleClaimExpiry(CommandSender sender, Claim claim) {
         // Show header for single claim
         if (sender instanceof Player) {
-            GriefPrevention.sendMessage((Player) sender, TextMode.Info, Messages.ClaimExpiryHeader, claim.getOwnerName());
+            GriefPrevention.sendMessage(
+                (Player) sender,
+                TextMode.Info,
+                Messages.ClaimExpiryHeader,
+                claim.getOwnerName()
+            );
         } else {
             sender.sendMessage("Claim expiration for " + claim.getOwnerName() + ":");
         }
@@ -936,7 +954,13 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
                 ")";
 
             if (sender instanceof Player) {
-                GriefPrevention.sendMessage((Player) sender, TextMode.Info, Messages.ClaimExpiryListEntry, location, expiryInfo);
+                GriefPrevention.sendMessage(
+                    (Player) sender,
+                    TextMode.Info,
+                    Messages.ClaimExpiryListEntry,
+                    location,
+                    expiryInfo
+                );
             } else {
                 sender.sendMessage("- " + location + ": " + expiryInfo);
             }

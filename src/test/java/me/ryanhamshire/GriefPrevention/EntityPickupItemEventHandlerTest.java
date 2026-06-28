@@ -1,7 +1,17 @@
 package me.ryanhamshire.GriefPrevention;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import com.griefprevention.test.ServerMocks;
+import java.util.Collections;
+import java.util.UUID;
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.Server;
 import org.bukkit.World;
@@ -10,45 +20,30 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.Material;
 import org.bukkit.metadata.MetadataValue;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
-
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
 @SuppressWarnings("null")
-class EntityPickupItemEventHandlerTest
-{
+class EntityPickupItemEventHandlerTest {
+
     private Server server;
 
     @BeforeEach
-    void beforeEach()
-    {
+    void beforeEach() {
         server = ServerMocks.newServer();
         Bukkit.setServer(server);
     }
 
     @AfterEach
-    void afterEach()
-    {
+    void afterEach() {
         GriefPrevention.instance = null;
         ServerMocks.unsetBukkitServer();
     }
 
     @Test
-    void pvpFreshSpawnImmunityEndsWhenPlayerPicksUpAnItem()
-    {
+    void pvpFreshSpawnImmunityEndsWhenPlayerPicksUpAnItem() {
         UUID playerId = UUID.fromString("536bd1e1-2f73-49ef-8cc9-8731c39ad566");
         GriefPrevention plugin = mock(GriefPrevention.class);
         DataStore dataStore = mock(DataStore.class);
@@ -62,7 +57,9 @@ class EntityPickupItemEventHandlerTest
         when(player.getWorld()).thenReturn(world);
         when(plugin.pvpRulesApply(world)).thenReturn(true);
         when(plugin.getItemInHand(player, EquipmentSlot.HAND)).thenReturn(new ItemStack(Material.AIR));
-        when(dataStore.getMessage(eq(Messages.PvPImmunityEnd), any(String[].class))).thenReturn("Now you can fight with other players.");
+        when(dataStore.getMessage(eq(Messages.PvPImmunityEnd), any(String[].class))).thenReturn(
+            "Now you can fight with other players."
+        );
 
         PlayerData playerData = new PlayerData();
         playerData.playerID = playerId;
@@ -83,8 +80,7 @@ class EntityPickupItemEventHandlerTest
     }
 
     @Test
-    void ownerCanPickUpTheirOwnLockedDeathDropsByUuid()
-    {
+    void ownerCanPickUpTheirOwnLockedDeathDropsByUuid() {
         UUID playerId = UUID.fromString("358f3aaf-8d8a-48ff-8242-b2f5e5082413");
         GriefPrevention plugin = mock(GriefPrevention.class);
         DataStore dataStore = mock(DataStore.class);

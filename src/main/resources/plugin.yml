@@ -1,5 +1,7 @@
-name: GriefPrevention
+name: GriefPrevention3D
+prefix: GriefPrevention3D
 main: me.ryanhamshire.GriefPrevention.GriefPrevention
+provides: [GriefPrevention]
 softdepend:
   [Multiverse-Core, My_Worlds, MystCraft, Transporter, RoyalCommands, MultiWorld, Denizen, CommandHelper, Iris, PlaceholderAPI, Vault]
 dev-url: https://github.com/castledking/GriefPrevention3D

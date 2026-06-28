@@ -17,7 +17,7 @@ public final class ClaimToolHandlerRegistry
         }
 
         handlers.add(handler);
-        handlers.sort(Comparator.comparingInt(ClaimToolHandler::getPriority).reversed());
+        handlers.sort(Comparator.comparingInt((ClaimToolHandler h) -> h.getPriority()).reversed());
     }
 
     public void unregister(ClaimToolHandler handler)

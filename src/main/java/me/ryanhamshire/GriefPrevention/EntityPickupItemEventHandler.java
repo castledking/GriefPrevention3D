@@ -1,5 +1,7 @@
 package me.ryanhamshire.GriefPrevention;
 
+import java.util.List;
+import java.util.UUID;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.entity.Monster;
 import org.bukkit.entity.Player;
@@ -7,13 +9,9 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityPickupItemEvent;
 import org.bukkit.inventory.EquipmentSlot;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.MetadataValue;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-
-import java.util.List;
-import java.util.UUID;
 
 public final class EntityPickupItemEventHandler implements Listener {
 
@@ -57,7 +55,12 @@ public final class EntityPickupItemEventHandler implements Listener {
 
         if (!playerData.receivedDropUnlockAdvertisement) {
             GriefPrevention.sendMessage(owner.getPlayer(), TextMode.Instr, Messages.DropUnlockAdvertisement);
-            GriefPrevention.sendMessage(player, TextMode.Err, Messages.PickupBlockedExplanation, GriefPrevention.lookupPlayerName(ownerID));
+            GriefPrevention.sendMessage(
+                player,
+                TextMode.Err,
+                Messages.PickupBlockedExplanation,
+                GriefPrevention.lookupPlayerName(ownerID)
+            );
             playerData.receivedDropUnlockAdvertisement = true;
         }
     }
@@ -65,8 +68,10 @@ public final class EntityPickupItemEventHandler implements Listener {
     private void preventPvpSpawnCamp(@NotNull EntityPickupItemEvent event, @Nullable Player player) {
         if (player == null || !GriefPrevention.instance.pvpRulesApply(player.getWorld())) return;
 
-        if (GriefPrevention.instance.config_pvp_protectFreshSpawns
-                && (GriefPrevention.instance.getItemInHand(player, EquipmentSlot.HAND).getType() == org.bukkit.Material.AIR)) {
+        if (
+            GriefPrevention.instance.config_pvp_protectFreshSpawns &&
+            GriefPrevention.instance.getItemInHand(player, EquipmentSlot.HAND).getType() == org.bukkit.Material.AIR
+        ) {
             PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
             if (playerData.pvpImmune) {
                 playerData.pvpImmune = false;

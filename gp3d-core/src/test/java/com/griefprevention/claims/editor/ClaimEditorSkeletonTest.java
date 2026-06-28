@@ -1,48 +1,56 @@
 package com.griefprevention.claims.editor;
 
-import com.griefprevention.geometry.OrthogonalDirection;
-import com.griefprevention.geometry.OrthogonalPoint2i;
-import com.griefprevention.geometry.OrthogonalPolygon;
-import org.junit.jupiter.api.Test;
-
-import java.util.List;
-import java.util.UUID;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.griefprevention.geometry.OrthogonalDirection;
+import com.griefprevention.geometry.OrthogonalPoint2i;
+import com.griefprevention.geometry.OrthogonalPolygon;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
+import java.util.UUID;
+import org.junit.jupiter.api.Test;
 
 @SuppressWarnings("null")
-public class ClaimEditorSkeletonTest
-{
+public class ClaimEditorSkeletonTest {
+
     @Test
-    void entersRequestedMode()
-    {
+    void entersRequestedMode() {
         ClaimEditor editor = new ClaimEditorSkeleton();
         ClaimEditorSession session = ClaimEditorSession.idle(UUID.randomUUID());
 
-        ClaimEditResult result = editor.apply(session, ClaimEditIntent.enterMode(ClaimEditSource.COMMAND, ClaimEditorMode.SHAPED));
+        ClaimEditResult result = editor.apply(
+            session,
+            ClaimEditIntent.enterMode(ClaimEditSource.COMMAND, ClaimEditorMode.SHAPED)
+        );
 
         assertTrue(result.success());
         assertEquals(ClaimEditorMode.SHAPED, result.session().mode());
     }
 
     @Test
-    void reportsUnimplementedIntent()
-    {
+    void reportsUnimplementedIntent() {
         ClaimEditor editor = new ClaimEditorSkeleton();
         ClaimEditorSession session = ClaimEditorSession.idle(UUID.randomUUID());
 
         ClaimEditResult result = editor.apply(
-                session,
-                new ClaimEditIntent(ClaimEditIntentType.COMMIT_PREVIEW, ClaimEditSource.GUI_MAP, null, null, null, null, false, Collections.emptyList())
+            session,
+            new ClaimEditIntent(
+                ClaimEditIntentType.COMMIT_PREVIEW,
+                ClaimEditSource.GUI_MAP,
+                null,
+                null,
+                null,
+                null,
+                false,
+                Collections.emptyList()
+            )
         );
 
         assertFalse(result.success());
@@ -50,50 +58,55 @@ public class ClaimEditorSkeletonTest
     }
 
     @Test
-    void snapsDiagonalCornerToOrthogonalPath()
-    {
+    void snapsDiagonalCornerToOrthogonalPath() {
         ClaimEditor editor = new ClaimEditorSkeleton();
         ClaimEditorSession session = ClaimEditorSession.idle(UUID.randomUUID())
-                .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.COMMAND)
-                .withOpenPath(new ShapedPathDraft(null, Collections.singletonList(new OrthogonalPoint2i(0, 0)), null, false));
+            .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.COMMAND)
+            .withOpenPath(
+                new ShapedPathDraft(null, Collections.singletonList(new OrthogonalPoint2i(0, 0)), null, false)
+            );
 
         ClaimEditResult result = editor.apply(
-                session,
-                new ClaimEditIntent(
-                        ClaimEditIntentType.ADD_CORNER,
-                        ClaimEditSource.TOOL,
-                        null,
-                        null,
-                        new OrthogonalPoint2i(2, 5),
-                        null,
-                        true,
-                        Collections.emptyList()
-                )
+            session,
+            new ClaimEditIntent(
+                ClaimEditIntentType.ADD_CORNER,
+                ClaimEditSource.TOOL,
+                null,
+                null,
+                new OrthogonalPoint2i(2, 5),
+                null,
+                true,
+                Collections.emptyList()
+            )
         );
 
         assertTrue(result.success());
-        assertEquals(Arrays.asList(new OrthogonalPoint2i(0, 0), new OrthogonalPoint2i(0, 5)), result.session().openPath().points());
+        assertEquals(
+            Arrays.asList(new OrthogonalPoint2i(0, 0), new OrthogonalPoint2i(0, 5)),
+            result.session().openPath().points()
+        );
     }
 
     @Test
-    void startsDraftOnFirstCorner()
-    {
+    void startsDraftOnFirstCorner() {
         ClaimEditor editor = new ClaimEditorSkeleton();
-        ClaimEditorSession session = ClaimEditorSession.idle(UUID.randomUUID())
-                .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.COMMAND);
+        ClaimEditorSession session = ClaimEditorSession.idle(UUID.randomUUID()).withMode(
+            ClaimEditorMode.SHAPED,
+            ClaimEditSource.COMMAND
+        );
 
         ClaimEditResult result = editor.apply(
-                session,
-                new ClaimEditIntent(
-                        ClaimEditIntentType.ADD_CORNER,
-                        ClaimEditSource.TOOL,
-                        null,
-                        null,
-                        new OrthogonalPoint2i(0, 0),
-                        null,
-                        true,
-                        Collections.emptyList()
-                )
+            session,
+            new ClaimEditIntent(
+                ClaimEditIntentType.ADD_CORNER,
+                ClaimEditSource.TOOL,
+                null,
+                null,
+                new OrthogonalPoint2i(0, 0),
+                null,
+                true,
+                Collections.emptyList()
+            )
         );
 
         assertTrue(result.success());
@@ -102,56 +115,66 @@ public class ClaimEditorSkeletonTest
     }
 
     @Test
-    void snapsDiagonalCornerInsteadOfRejecting()
-    {
+    void snapsDiagonalCornerInsteadOfRejecting() {
         ClaimEditor editor = new ClaimEditorSkeleton();
         ClaimEditorSession session = ClaimEditorSession.idle(UUID.randomUUID())
-                .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.COMMAND)
-                .withOpenPath(new ShapedPathDraft(null, Collections.singletonList(new OrthogonalPoint2i(0, 0)), null, false));
+            .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.COMMAND)
+            .withOpenPath(
+                new ShapedPathDraft(null, Collections.singletonList(new OrthogonalPoint2i(0, 0)), null, false)
+            );
 
         ClaimEditResult result = editor.apply(
-                session,
-                new ClaimEditIntent(
-                        ClaimEditIntentType.ADD_CORNER,
-                        ClaimEditSource.TOOL,
-                        null,
-                        null,
-                        new OrthogonalPoint2i(2, 2),
-                        null,
-                        true,
-                        Collections.emptyList()
-                )
+            session,
+            new ClaimEditIntent(
+                ClaimEditIntentType.ADD_CORNER,
+                ClaimEditSource.TOOL,
+                null,
+                null,
+                new OrthogonalPoint2i(2, 2),
+                null,
+                true,
+                Collections.emptyList()
+            )
         );
 
         assertTrue(result.success());
-        assertEquals(Arrays.asList(new OrthogonalPoint2i(0, 0), new OrthogonalPoint2i(2, 0)), result.preview().draftPoints());
+        assertEquals(
+            Arrays.asList(new OrthogonalPoint2i(0, 0), new OrthogonalPoint2i(2, 0)),
+            result.preview().draftPoints()
+        );
     }
 
     @Test
-    void closesValidRectanglePath()
-    {
+    void closesValidRectanglePath() {
         ClaimEditor editor = new ClaimEditorSkeleton();
         ClaimEditorSession session = ClaimEditorSession.idle(UUID.randomUUID())
-                .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.COMMAND)
-                .withOpenPath(new ShapedPathDraft(
-                        null,
-                        Arrays.asList(new OrthogonalPoint2i(0, 0), new OrthogonalPoint2i(4, 0), new OrthogonalPoint2i(4, 3), new OrthogonalPoint2i(0, 3)),
-                        null,
-                        false
-                ));
+            .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.COMMAND)
+            .withOpenPath(
+                new ShapedPathDraft(
+                    null,
+                    Arrays.asList(
+                        new OrthogonalPoint2i(0, 0),
+                        new OrthogonalPoint2i(4, 0),
+                        new OrthogonalPoint2i(4, 3),
+                        new OrthogonalPoint2i(0, 3)
+                    ),
+                    null,
+                    false
+                )
+            );
 
         ClaimEditResult result = editor.apply(
-                session,
-                new ClaimEditIntent(
-                        ClaimEditIntentType.ADD_CORNER,
-                        ClaimEditSource.TOOL,
-                        null,
-                        null,
-                        new OrthogonalPoint2i(0, 0),
-                        null,
-                        true,
-                        Collections.emptyList()
-                )
+            session,
+            new ClaimEditIntent(
+                ClaimEditIntentType.ADD_CORNER,
+                ClaimEditSource.TOOL,
+                null,
+                null,
+                new OrthogonalPoint2i(0, 0),
+                null,
+                true,
+                Collections.emptyList()
+            )
         );
 
         assertTrue(result.success());
@@ -160,30 +183,40 @@ public class ClaimEditorSkeletonTest
     }
 
     @Test
-    void reportsSelfIntersectionOnClosure()
-    {
+    void reportsSelfIntersectionOnClosure() {
         ClaimEditor editor = new ClaimEditorSkeleton();
         ClaimEditorSession session = ClaimEditorSession.idle(UUID.randomUUID())
-                .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.COMMAND)
-                .withOpenPath(new ShapedPathDraft(
-                        null,
-                        Arrays.asList(new OrthogonalPoint2i(0, 0), new OrthogonalPoint2i(6, 0), new OrthogonalPoint2i(6, 6), new OrthogonalPoint2i(2, 6), new OrthogonalPoint2i(2, 2), new OrthogonalPoint2i(4, 2), new OrthogonalPoint2i(4, 4), new OrthogonalPoint2i(0, 4)),
-                        null,
-                        false
-                ));
+            .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.COMMAND)
+            .withOpenPath(
+                new ShapedPathDraft(
+                    null,
+                    Arrays.asList(
+                        new OrthogonalPoint2i(0, 0),
+                        new OrthogonalPoint2i(6, 0),
+                        new OrthogonalPoint2i(6, 6),
+                        new OrthogonalPoint2i(2, 6),
+                        new OrthogonalPoint2i(2, 2),
+                        new OrthogonalPoint2i(4, 2),
+                        new OrthogonalPoint2i(4, 4),
+                        new OrthogonalPoint2i(0, 4)
+                    ),
+                    null,
+                    false
+                )
+            );
 
         ClaimEditResult result = editor.apply(
-                session,
-                new ClaimEditIntent(
-                        ClaimEditIntentType.ADD_CORNER,
-                        ClaimEditSource.TOOL,
-                        null,
-                        null,
-                        new OrthogonalPoint2i(0, 0),
-                        null,
-                        true,
-                        Collections.emptyList()
-                )
+            session,
+            new ClaimEditIntent(
+                ClaimEditIntentType.ADD_CORNER,
+                ClaimEditSource.TOOL,
+                null,
+                null,
+                new OrthogonalPoint2i(0, 0),
+                null,
+                true,
+                Collections.emptyList()
+            )
         );
 
         assertFalse(result.success());
@@ -192,107 +225,152 @@ public class ClaimEditorSkeletonTest
     }
 
     @Test
-    void addsNodeToSelectedPolygonBoundary()
-    {
+    void addsNodeToSelectedPolygonBoundary() {
         ClaimEditor editor = new ClaimEditorSkeleton();
         ClaimEditorSession session = ClaimEditorSession.idle(UUID.randomUUID())
-                .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.COMMAND)
-                .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, 42L))
-                .withPreview(new ClaimEditPreview(
-                        com.griefprevention.geometry.OrthogonalPolygon.fromClosedPath(Arrays.asList(new OrthogonalPoint2i(0, 0), new OrthogonalPoint2i(4, 0), new OrthogonalPoint2i(4, 3), new OrthogonalPoint2i(0, 3), new OrthogonalPoint2i(0, 0))),
-                        null,
-                        Collections.emptyList(),
-                        null,
-                        Collections.emptyList(),
-                        Collections.emptyList(),
-                        Collections.emptyList()
-                ));
+            .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.COMMAND)
+            .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, 42L))
+            .withPreview(
+                new ClaimEditPreview(
+                    com.griefprevention.geometry.OrthogonalPolygon.fromClosedPath(
+                        Arrays.asList(
+                            new OrthogonalPoint2i(0, 0),
+                            new OrthogonalPoint2i(4, 0),
+                            new OrthogonalPoint2i(4, 3),
+                            new OrthogonalPoint2i(0, 3),
+                            new OrthogonalPoint2i(0, 0)
+                        )
+                    ),
+                    null,
+                    Collections.emptyList(),
+                    null,
+                    Collections.emptyList(),
+                    Collections.emptyList(),
+                    Collections.emptyList()
+                )
+            );
 
         ClaimEditResult result = editor.apply(
-                session,
-                new ClaimEditIntent(
-                        ClaimEditIntentType.ADD_NODE,
-                        ClaimEditSource.TOOL,
-                        null,
-                        42L,
-                        new OrthogonalPoint2i(2, 0),
-                        null,
-                        true,
-                        Collections.emptyList()
-                )
+            session,
+            new ClaimEditIntent(
+                ClaimEditIntentType.ADD_NODE,
+                ClaimEditSource.TOOL,
+                null,
+                42L,
+                new OrthogonalPoint2i(2, 0),
+                null,
+                true,
+                Collections.emptyList()
+            )
         );
 
         assertTrue(result.success());
         assertEquals(5, result.preview().polygon().corners().size());
         assertNotNull(result.session().activeSegment());
         assertEquals(1, result.session().activeSegment().edgeIndex());
-        assertEquals(Arrays.asList(new OrthogonalPoint2i(0, 0), new OrthogonalPoint2i(2, 0), new OrthogonalPoint2i(4, 0), new OrthogonalPoint2i(4, 3), new OrthogonalPoint2i(0, 3)), result.preview().polygon().corners());
+        assertEquals(
+            Arrays.asList(
+                new OrthogonalPoint2i(0, 0),
+                new OrthogonalPoint2i(2, 0),
+                new OrthogonalPoint2i(4, 0),
+                new OrthogonalPoint2i(4, 3),
+                new OrthogonalPoint2i(0, 3)
+            ),
+            result.preview().polygon().corners()
+        );
     }
 
     @Test
-    void removesExistingSegmentMarkerNode()
-    {
+    void removesExistingSegmentMarkerNode() {
         ClaimEditor editor = new ClaimEditorSkeleton();
         ClaimEditorSession session = ClaimEditorSession.idle(UUID.randomUUID())
-                .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.COMMAND)
-                .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, 42L))
-                .withPreview(new ClaimEditPreview(
-                        OrthogonalPolygon.fromClosedPath(Arrays.asList(new OrthogonalPoint2i(0, 0), new OrthogonalPoint2i(2, 0), new OrthogonalPoint2i(4, 0), new OrthogonalPoint2i(4, 3), new OrthogonalPoint2i(0, 3), new OrthogonalPoint2i(0, 0))),
-                        null,
-                        Collections.emptyList(),
-                        null,
-                        Collections.emptyList(),
-                        Collections.emptyList(),
-                        Collections.emptyList()
-                ));
+            .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.COMMAND)
+            .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, 42L))
+            .withPreview(
+                new ClaimEditPreview(
+                    OrthogonalPolygon.fromClosedPath(
+                        Arrays.asList(
+                            new OrthogonalPoint2i(0, 0),
+                            new OrthogonalPoint2i(2, 0),
+                            new OrthogonalPoint2i(4, 0),
+                            new OrthogonalPoint2i(4, 3),
+                            new OrthogonalPoint2i(0, 3),
+                            new OrthogonalPoint2i(0, 0)
+                        )
+                    ),
+                    null,
+                    Collections.emptyList(),
+                    null,
+                    Collections.emptyList(),
+                    Collections.emptyList(),
+                    Collections.emptyList()
+                )
+            );
 
         ClaimEditResult result = editor.apply(
-                session,
-                new ClaimEditIntent(
-                        ClaimEditIntentType.ADD_NODE,
-                        ClaimEditSource.TOOL,
-                        null,
-                        42L,
-                        new OrthogonalPoint2i(2, 0),
-                        null,
-                        true,
-                        Collections.emptyList()
-                )
+            session,
+            new ClaimEditIntent(
+                ClaimEditIntentType.ADD_NODE,
+                ClaimEditSource.TOOL,
+                null,
+                42L,
+                new OrthogonalPoint2i(2, 0),
+                null,
+                true,
+                Collections.emptyList()
+            )
         );
 
         assertTrue(result.success());
-        assertEquals(Arrays.asList(new OrthogonalPoint2i(0, 0), new OrthogonalPoint2i(4, 0), new OrthogonalPoint2i(4, 3), new OrthogonalPoint2i(0, 3)), result.preview().polygon().corners());
+        assertEquals(
+            Arrays.asList(
+                new OrthogonalPoint2i(0, 0),
+                new OrthogonalPoint2i(4, 0),
+                new OrthogonalPoint2i(4, 3),
+                new OrthogonalPoint2i(0, 3)
+            ),
+            result.preview().polygon().corners()
+        );
     }
 
     @Test
-    void rejectsAmbiguousNodePointAtCorner()
-    {
+    void rejectsAmbiguousNodePointAtCorner() {
         ClaimEditor editor = new ClaimEditorSkeleton();
         ClaimEditorSession session = ClaimEditorSession.idle(UUID.randomUUID())
-                .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.COMMAND)
-                .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, 42L))
-                .withPreview(new ClaimEditPreview(
-                        com.griefprevention.geometry.OrthogonalPolygon.fromClosedPath(Arrays.asList(new OrthogonalPoint2i(0, 0), new OrthogonalPoint2i(4, 0), new OrthogonalPoint2i(4, 3), new OrthogonalPoint2i(0, 3), new OrthogonalPoint2i(0, 0))),
-                        null,
-                        Collections.emptyList(),
-                        null,
-                        Collections.emptyList(),
-                        Collections.emptyList(),
-                        Collections.emptyList()
-                ));
+            .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.COMMAND)
+            .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, 42L))
+            .withPreview(
+                new ClaimEditPreview(
+                    com.griefprevention.geometry.OrthogonalPolygon.fromClosedPath(
+                        Arrays.asList(
+                            new OrthogonalPoint2i(0, 0),
+                            new OrthogonalPoint2i(4, 0),
+                            new OrthogonalPoint2i(4, 3),
+                            new OrthogonalPoint2i(0, 3),
+                            new OrthogonalPoint2i(0, 0)
+                        )
+                    ),
+                    null,
+                    Collections.emptyList(),
+                    null,
+                    Collections.emptyList(),
+                    Collections.emptyList(),
+                    Collections.emptyList()
+                )
+            );
 
         ClaimEditResult result = editor.apply(
-                session,
-                new ClaimEditIntent(
-                        ClaimEditIntentType.ADD_NODE,
-                        ClaimEditSource.TOOL,
-                        null,
-                        42L,
-                        new OrthogonalPoint2i(0, 0),
-                        null,
-                        true,
-                        Collections.emptyList()
-                )
+            session,
+            new ClaimEditIntent(
+                ClaimEditIntentType.ADD_NODE,
+                ClaimEditSource.TOOL,
+                null,
+                42L,
+                new OrthogonalPoint2i(0, 0),
+                null,
+                true,
+                Collections.emptyList()
+            )
         );
 
         assertFalse(result.success());
@@ -300,24 +378,25 @@ public class ClaimEditorSkeletonTest
     }
 
     @Test
-    void requiresGoldenShovelForShapedCorner()
-    {
+    void requiresGoldenShovelForShapedCorner() {
         ClaimEditor editor = new ClaimEditorSkeleton();
-        ClaimEditorSession session = ClaimEditorSession.idle(UUID.randomUUID())
-                .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.COMMAND);
+        ClaimEditorSession session = ClaimEditorSession.idle(UUID.randomUUID()).withMode(
+            ClaimEditorMode.SHAPED,
+            ClaimEditSource.COMMAND
+        );
 
         ClaimEditResult result = editor.apply(
-                session,
-                new ClaimEditIntent(
-                        ClaimEditIntentType.ADD_CORNER,
-                        ClaimEditSource.TOOL,
-                        null,
-                        null,
-                        new OrthogonalPoint2i(0, 0),
-                        null,
-                        false,
-                        Collections.emptyList()
-                )
+            session,
+            new ClaimEditIntent(
+                ClaimEditIntentType.ADD_CORNER,
+                ClaimEditSource.TOOL,
+                null,
+                null,
+                new OrthogonalPoint2i(0, 0),
+                null,
+                false,
+                Collections.emptyList()
+            )
         );
 
         assertFalse(result.success());
@@ -325,39 +404,42 @@ public class ClaimEditorSkeletonTest
     }
 
     @Test
-    void cancelsOpenShapedPath()
-    {
+    void cancelsOpenShapedPath() {
         ClaimEditor editor = new ClaimEditorSkeleton();
         ClaimEditorSession session = ClaimEditorSession.idle(UUID.randomUUID())
-                .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.COMMAND)
-                .withOpenPath(new ShapedPathDraft(
-                        null,
-                        Arrays.asList(new OrthogonalPoint2i(0, 0), new OrthogonalPoint2i(0, 5)),
-                        new OrthogonalPoint2i(0, 5),
-                        false
-                ))
-                .withPreview(new ClaimEditPreview(
-                        null,
-                        null,
-                        Arrays.asList(new OrthogonalPoint2i(0, 0), new OrthogonalPoint2i(0, 5)),
-                        new OrthogonalPoint2i(0, 5),
-                        Collections.emptyList(),
-                        Collections.emptyList(),
-                        Collections.emptyList()
-                ));
+            .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.COMMAND)
+            .withOpenPath(
+                new ShapedPathDraft(
+                    null,
+                    Arrays.asList(new OrthogonalPoint2i(0, 0), new OrthogonalPoint2i(0, 5)),
+                    new OrthogonalPoint2i(0, 5),
+                    false
+                )
+            )
+            .withPreview(
+                new ClaimEditPreview(
+                    null,
+                    null,
+                    Arrays.asList(new OrthogonalPoint2i(0, 0), new OrthogonalPoint2i(0, 5)),
+                    new OrthogonalPoint2i(0, 5),
+                    Collections.emptyList(),
+                    Collections.emptyList(),
+                    Collections.emptyList()
+                )
+            );
 
         ClaimEditResult result = editor.apply(
-                session,
-                new ClaimEditIntent(
-                        ClaimEditIntentType.CANCEL_PATH,
-                        ClaimEditSource.COMMAND,
-                        null,
-                        null,
-                        null,
-                        null,
-                        false,
-                        Collections.emptyList()
-                )
+            session,
+            new ClaimEditIntent(
+                ClaimEditIntentType.CANCEL_PATH,
+                ClaimEditSource.COMMAND,
+                null,
+                null,
+                null,
+                null,
+                false,
+                Collections.emptyList()
+            )
         );
 
         assertTrue(result.success());
@@ -367,34 +449,44 @@ public class ClaimEditorSkeletonTest
     }
 
     @Test
-    void selectsSingleBoundarySegment()
-    {
+    void selectsSingleBoundarySegment() {
         ClaimEditor editor = new ClaimEditorSkeleton();
         ClaimEditorSession session = ClaimEditorSession.idle(UUID.randomUUID())
-                .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.COMMAND)
-                .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, 42L))
-                .withPreview(new ClaimEditPreview(
-                        com.griefprevention.geometry.OrthogonalPolygon.fromClosedPath(Arrays.asList(new OrthogonalPoint2i(0, 0), new OrthogonalPoint2i(2, 0), new OrthogonalPoint2i(4, 0), new OrthogonalPoint2i(4, 3), new OrthogonalPoint2i(0, 3), new OrthogonalPoint2i(0, 0))),
-                        null,
-                        Collections.emptyList(),
-                        null,
-                        Collections.emptyList(),
-                        Collections.emptyList(),
-                        Collections.emptyList()
-                ));
+            .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.COMMAND)
+            .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, 42L))
+            .withPreview(
+                new ClaimEditPreview(
+                    com.griefprevention.geometry.OrthogonalPolygon.fromClosedPath(
+                        Arrays.asList(
+                            new OrthogonalPoint2i(0, 0),
+                            new OrthogonalPoint2i(2, 0),
+                            new OrthogonalPoint2i(4, 0),
+                            new OrthogonalPoint2i(4, 3),
+                            new OrthogonalPoint2i(0, 3),
+                            new OrthogonalPoint2i(0, 0)
+                        )
+                    ),
+                    null,
+                    Collections.emptyList(),
+                    null,
+                    Collections.emptyList(),
+                    Collections.emptyList(),
+                    Collections.emptyList()
+                )
+            );
 
         ClaimEditResult result = editor.apply(
-                session,
-                new ClaimEditIntent(
-                        ClaimEditIntentType.SELECT_SEGMENT,
-                        ClaimEditSource.TOOL,
-                        null,
-                        42L,
-                        new OrthogonalPoint2i(1, 0),
-                        null,
-                        true,
-                        Collections.emptyList()
-                )
+            session,
+            new ClaimEditIntent(
+                ClaimEditIntentType.SELECT_SEGMENT,
+                ClaimEditSource.TOOL,
+                null,
+                42L,
+                new OrthogonalPoint2i(1, 0),
+                null,
+                true,
+                Collections.emptyList()
+            )
         );
 
         assertTrue(result.success());
@@ -403,34 +495,44 @@ public class ClaimEditorSkeletonTest
     }
 
     @Test
-    void rejectsAmbiguousSegmentSelectionAtCorner()
-    {
+    void rejectsAmbiguousSegmentSelectionAtCorner() {
         ClaimEditor editor = new ClaimEditorSkeleton();
         ClaimEditorSession session = ClaimEditorSession.idle(UUID.randomUUID())
-                .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.COMMAND)
-                .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, 42L))
-                .withPreview(new ClaimEditPreview(
-                        com.griefprevention.geometry.OrthogonalPolygon.fromClosedPath(Arrays.asList(new OrthogonalPoint2i(0, 0), new OrthogonalPoint2i(2, 0), new OrthogonalPoint2i(4, 0), new OrthogonalPoint2i(4, 3), new OrthogonalPoint2i(0, 3), new OrthogonalPoint2i(0, 0))),
-                        null,
-                        Collections.emptyList(),
-                        null,
-                        Collections.emptyList(),
-                        Collections.emptyList(),
-                        Collections.emptyList()
-                ));
+            .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.COMMAND)
+            .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, 42L))
+            .withPreview(
+                new ClaimEditPreview(
+                    com.griefprevention.geometry.OrthogonalPolygon.fromClosedPath(
+                        Arrays.asList(
+                            new OrthogonalPoint2i(0, 0),
+                            new OrthogonalPoint2i(2, 0),
+                            new OrthogonalPoint2i(4, 0),
+                            new OrthogonalPoint2i(4, 3),
+                            new OrthogonalPoint2i(0, 3),
+                            new OrthogonalPoint2i(0, 0)
+                        )
+                    ),
+                    null,
+                    Collections.emptyList(),
+                    null,
+                    Collections.emptyList(),
+                    Collections.emptyList(),
+                    Collections.emptyList()
+                )
+            );
 
         ClaimEditResult result = editor.apply(
-                session,
-                new ClaimEditIntent(
-                        ClaimEditIntentType.SELECT_SEGMENT,
-                        ClaimEditSource.TOOL,
-                        null,
-                        42L,
-                        new OrthogonalPoint2i(2, 0),
-                        null,
-                        true,
-                        Collections.emptyList()
-                )
+            session,
+            new ClaimEditIntent(
+                ClaimEditIntentType.SELECT_SEGMENT,
+                ClaimEditSource.TOOL,
+                null,
+                42L,
+                new OrthogonalPoint2i(2, 0),
+                null,
+                true,
+                Collections.emptyList()
+            )
         );
 
         assertFalse(result.success());
@@ -438,34 +540,44 @@ public class ClaimEditorSkeletonTest
     }
 
     @Test
-    void requiresGoldenShovelForSegmentSelection()
-    {
+    void requiresGoldenShovelForSegmentSelection() {
         ClaimEditor editor = new ClaimEditorSkeleton();
         ClaimEditorSession session = ClaimEditorSession.idle(UUID.randomUUID())
-                .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.COMMAND)
-                .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, 42L))
-                .withPreview(new ClaimEditPreview(
-                        com.griefprevention.geometry.OrthogonalPolygon.fromClosedPath(Arrays.asList(new OrthogonalPoint2i(0, 0), new OrthogonalPoint2i(2, 0), new OrthogonalPoint2i(4, 0), new OrthogonalPoint2i(4, 3), new OrthogonalPoint2i(0, 3), new OrthogonalPoint2i(0, 0))),
-                        null,
-                        Collections.emptyList(),
-                        null,
-                        Collections.emptyList(),
-                        Collections.emptyList(),
-                        Collections.emptyList()
-                ));
+            .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.COMMAND)
+            .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, 42L))
+            .withPreview(
+                new ClaimEditPreview(
+                    com.griefprevention.geometry.OrthogonalPolygon.fromClosedPath(
+                        Arrays.asList(
+                            new OrthogonalPoint2i(0, 0),
+                            new OrthogonalPoint2i(2, 0),
+                            new OrthogonalPoint2i(4, 0),
+                            new OrthogonalPoint2i(4, 3),
+                            new OrthogonalPoint2i(0, 3),
+                            new OrthogonalPoint2i(0, 0)
+                        )
+                    ),
+                    null,
+                    Collections.emptyList(),
+                    null,
+                    Collections.emptyList(),
+                    Collections.emptyList(),
+                    Collections.emptyList()
+                )
+            );
 
         ClaimEditResult result = editor.apply(
-                session,
-                new ClaimEditIntent(
-                        ClaimEditIntentType.SELECT_SEGMENT,
-                        ClaimEditSource.TOOL,
-                        null,
-                        42L,
-                        new OrthogonalPoint2i(1, 0),
-                        null,
-                        false,
-                        Collections.emptyList()
-                )
+            session,
+            new ClaimEditIntent(
+                ClaimEditIntentType.SELECT_SEGMENT,
+                ClaimEditSource.TOOL,
+                null,
+                42L,
+                new OrthogonalPoint2i(1, 0),
+                null,
+                false,
+                Collections.emptyList()
+            )
         );
 
         assertFalse(result.success());
@@ -473,137 +585,207 @@ public class ClaimEditorSkeletonTest
     }
 
     @Test
-    void expandsSelectedSegmentImmediately()
-    {
+    void expandsSelectedSegmentImmediately() {
         ClaimEditor editor = new ClaimEditorSkeleton();
         SegmentSelection selection = new SegmentSelection(42L, 1, null, null, null);
         ClaimEditorSession session = ClaimEditorSession.idle(UUID.randomUUID())
-                .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.COMMAND)
-                .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, 42L))
-                .withActiveSegment(selection)
-                .withPreview(new ClaimEditPreview(
-                        com.griefprevention.geometry.OrthogonalPolygon.fromClosedPath(Arrays.asList(new OrthogonalPoint2i(0, 0), new OrthogonalPoint2i(1, 0), new OrthogonalPoint2i(3, 0), new OrthogonalPoint2i(4, 0), new OrthogonalPoint2i(4, 3), new OrthogonalPoint2i(0, 3), new OrthogonalPoint2i(0, 0))),
-                        selection,
-                        Collections.emptyList(),
-                        null,
-                        Collections.emptyList(),
-                        Collections.emptyList(),
-                        Collections.emptyList()
-                ));
+            .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.COMMAND)
+            .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, 42L))
+            .withActiveSegment(selection)
+            .withPreview(
+                new ClaimEditPreview(
+                    com.griefprevention.geometry.OrthogonalPolygon.fromClosedPath(
+                        Arrays.asList(
+                            new OrthogonalPoint2i(0, 0),
+                            new OrthogonalPoint2i(1, 0),
+                            new OrthogonalPoint2i(3, 0),
+                            new OrthogonalPoint2i(4, 0),
+                            new OrthogonalPoint2i(4, 3),
+                            new OrthogonalPoint2i(0, 3),
+                            new OrthogonalPoint2i(0, 0)
+                        )
+                    ),
+                    selection,
+                    Collections.emptyList(),
+                    null,
+                    Collections.emptyList(),
+                    Collections.emptyList(),
+                    Collections.emptyList()
+                )
+            );
 
         ClaimEditResult result = editor.apply(
-                session,
-                new ClaimEditIntent(
-                        ClaimEditIntentType.EXPAND_SEGMENT,
-                        ClaimEditSource.COMMAND,
-                        null,
-                        42L,
-                        null,
-                        2,
-                        true,
-                        Collections.emptyList()
-                )
+            session,
+            new ClaimEditIntent(
+                ClaimEditIntentType.EXPAND_SEGMENT,
+                ClaimEditSource.COMMAND,
+                null,
+                42L,
+                null,
+                2,
+                true,
+                Collections.emptyList()
+            )
         );
 
         assertTrue(result.success());
-        assertEquals(Arrays.asList(new OrthogonalPoint2i(0, 0), new OrthogonalPoint2i(1, 0), new OrthogonalPoint2i(1, 2), new OrthogonalPoint2i(3, 2), new OrthogonalPoint2i(3, 0), new OrthogonalPoint2i(4, 0), new OrthogonalPoint2i(4, 3), new OrthogonalPoint2i(0, 3)), result.preview().polygon().corners());
+        assertEquals(
+            Arrays.asList(
+                new OrthogonalPoint2i(0, 0),
+                new OrthogonalPoint2i(1, 0),
+                new OrthogonalPoint2i(1, 2),
+                new OrthogonalPoint2i(3, 2),
+                new OrthogonalPoint2i(3, 0),
+                new OrthogonalPoint2i(4, 0),
+                new OrthogonalPoint2i(4, 3),
+                new OrthogonalPoint2i(0, 3)
+            ),
+            result.preview().polygon().corners()
+        );
         assertNotNull(result.session().activeSegment());
         assertEquals(2, result.session().activeSegment().edgeIndex());
     }
 
     @Test
-    void expandingSegmentMergesIntoAdjacentNib()
-    {
+    void expandingSegmentMergesIntoAdjacentNib() {
         ClaimEditor editor = new ClaimEditorSkeleton();
         SegmentSelection selection = new SegmentSelection(42L, 4, null, null, null);
         ClaimEditorSession session = ClaimEditorSession.idle(UUID.randomUUID())
-                .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.COMMAND)
-                .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, 42L))
-                .withActiveSegment(selection)
-                .withPreview(new ClaimEditPreview(
-                        OrthogonalPolygon.fromClosedPath(Arrays.asList(new OrthogonalPoint2i(0, 0), new OrthogonalPoint2i(1, 0), new OrthogonalPoint2i(1, 2), new OrthogonalPoint2i(2, 2), new OrthogonalPoint2i(2, 0), new OrthogonalPoint2i(4, 0), new OrthogonalPoint2i(4, 3), new OrthogonalPoint2i(0, 3), new OrthogonalPoint2i(0, 0))),
-                        selection,
-                        Collections.emptyList(),
-                        null,
-                        Collections.emptyList(),
-                        Collections.emptyList(),
-                        Collections.emptyList()
-                ));
+            .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.COMMAND)
+            .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, 42L))
+            .withActiveSegment(selection)
+            .withPreview(
+                new ClaimEditPreview(
+                    OrthogonalPolygon.fromClosedPath(
+                        Arrays.asList(
+                            new OrthogonalPoint2i(0, 0),
+                            new OrthogonalPoint2i(1, 0),
+                            new OrthogonalPoint2i(1, 2),
+                            new OrthogonalPoint2i(2, 2),
+                            new OrthogonalPoint2i(2, 0),
+                            new OrthogonalPoint2i(4, 0),
+                            new OrthogonalPoint2i(4, 3),
+                            new OrthogonalPoint2i(0, 3),
+                            new OrthogonalPoint2i(0, 0)
+                        )
+                    ),
+                    selection,
+                    Collections.emptyList(),
+                    null,
+                    Collections.emptyList(),
+                    Collections.emptyList(),
+                    Collections.emptyList()
+                )
+            );
 
         ClaimEditResult result = editor.apply(
-                session,
-                new ClaimEditIntent(
-                        ClaimEditIntentType.EXPAND_SEGMENT,
-                        ClaimEditSource.COMMAND,
-                        null,
-                        42L,
-                        null,
-                        2,
-                        true,
-                        Collections.emptyList()
-                )
+            session,
+            new ClaimEditIntent(
+                ClaimEditIntentType.EXPAND_SEGMENT,
+                ClaimEditSource.COMMAND,
+                null,
+                42L,
+                null,
+                2,
+                true,
+                Collections.emptyList()
+            )
         );
 
         assertTrue(result.success());
-        assertEquals(Arrays.asList(new OrthogonalPoint2i(0, 0), new OrthogonalPoint2i(1, 0), new OrthogonalPoint2i(1, 2), new OrthogonalPoint2i(4, 2), new OrthogonalPoint2i(4, 3), new OrthogonalPoint2i(0, 3)), result.preview().polygon().corners());
+        assertEquals(
+            Arrays.asList(
+                new OrthogonalPoint2i(0, 0),
+                new OrthogonalPoint2i(1, 0),
+                new OrthogonalPoint2i(1, 2),
+                new OrthogonalPoint2i(4, 2),
+                new OrthogonalPoint2i(4, 3),
+                new OrthogonalPoint2i(0, 3)
+            ),
+            result.preview().polygon().corners()
+        );
     }
 
     @Test
-    void expandsSelectedSegmentTowardRequestedFace()
-    {
+    void expandsSelectedSegmentTowardRequestedFace() {
         ClaimEditor editor = new ClaimEditorSkeleton();
         SegmentSelection selection = new SegmentSelection(42L, 1, null, null, OrthogonalDirection.NORTH);
         ClaimEditorSession session = ClaimEditorSession.idle(UUID.randomUUID())
-                .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.COMMAND)
-                .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, 42L))
-                .withActiveSegment(selection)
-                .withPreview(new ClaimEditPreview(
-                        OrthogonalPolygon.fromClosedPath(Arrays.asList(new OrthogonalPoint2i(0, 0), new OrthogonalPoint2i(1, 0), new OrthogonalPoint2i(3, 0), new OrthogonalPoint2i(4, 0), new OrthogonalPoint2i(4, 3), new OrthogonalPoint2i(0, 3), new OrthogonalPoint2i(0, 0))),
-                        selection,
-                        Collections.emptyList(),
-                        null,
-                        Collections.emptyList(),
-                        Collections.emptyList(),
-                        Collections.emptyList()
-                ));
+            .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.COMMAND)
+            .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, 42L))
+            .withActiveSegment(selection)
+            .withPreview(
+                new ClaimEditPreview(
+                    OrthogonalPolygon.fromClosedPath(
+                        Arrays.asList(
+                            new OrthogonalPoint2i(0, 0),
+                            new OrthogonalPoint2i(1, 0),
+                            new OrthogonalPoint2i(3, 0),
+                            new OrthogonalPoint2i(4, 0),
+                            new OrthogonalPoint2i(4, 3),
+                            new OrthogonalPoint2i(0, 3),
+                            new OrthogonalPoint2i(0, 0)
+                        )
+                    ),
+                    selection,
+                    Collections.emptyList(),
+                    null,
+                    Collections.emptyList(),
+                    Collections.emptyList(),
+                    Collections.emptyList()
+                )
+            );
 
         ClaimEditResult result = editor.apply(
-                session,
-                new ClaimEditIntent(
-                        ClaimEditIntentType.EXPAND_SEGMENT,
-                        ClaimEditSource.COMMAND,
-                        null,
-                        42L,
-                        null,
-                        1,
-                        true,
-                        Collections.emptyList()
-                )
+            session,
+            new ClaimEditIntent(
+                ClaimEditIntentType.EXPAND_SEGMENT,
+                ClaimEditSource.COMMAND,
+                null,
+                42L,
+                null,
+                1,
+                true,
+                Collections.emptyList()
+            )
         );
 
         assertTrue(result.success());
-        assertEquals(Arrays.asList(new OrthogonalPoint2i(0, 0), new OrthogonalPoint2i(1, 0), new OrthogonalPoint2i(1, -1), new OrthogonalPoint2i(3, -1), new OrthogonalPoint2i(3, 0), new OrthogonalPoint2i(4, 0), new OrthogonalPoint2i(4, 3), new OrthogonalPoint2i(0, 3)), result.preview().polygon().corners());
+        assertEquals(
+            Arrays.asList(
+                new OrthogonalPoint2i(0, 0),
+                new OrthogonalPoint2i(1, 0),
+                new OrthogonalPoint2i(1, -1),
+                new OrthogonalPoint2i(3, -1),
+                new OrthogonalPoint2i(3, 0),
+                new OrthogonalPoint2i(4, 0),
+                new OrthogonalPoint2i(4, 3),
+                new OrthogonalPoint2i(0, 3)
+            ),
+            result.preview().polygon().corners()
+        );
     }
 
     @Test
-    void rejectsSegmentExpansionWithoutSelection()
-    {
+    void rejectsSegmentExpansionWithoutSelection() {
         ClaimEditor editor = new ClaimEditorSkeleton();
-        ClaimEditorSession session = ClaimEditorSession.idle(UUID.randomUUID())
-                .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.COMMAND);
+        ClaimEditorSession session = ClaimEditorSession.idle(UUID.randomUUID()).withMode(
+            ClaimEditorMode.SHAPED,
+            ClaimEditSource.COMMAND
+        );
 
         ClaimEditResult result = editor.apply(
-                session,
-                new ClaimEditIntent(
-                        ClaimEditIntentType.EXPAND_SEGMENT,
-                        ClaimEditSource.COMMAND,
-                        null,
-                        null,
-                        null,
-                        1,
-                        true,
-                        Collections.emptyList()
-                )
+            session,
+            new ClaimEditIntent(
+                ClaimEditIntentType.EXPAND_SEGMENT,
+                ClaimEditSource.COMMAND,
+                null,
+                null,
+                null,
+                1,
+                true,
+                Collections.emptyList()
+            )
         );
 
         assertFalse(result.success());
@@ -611,36 +793,47 @@ public class ClaimEditorSkeletonTest
     }
 
     @Test
-    void requiresGoldenShovelForSegmentExpansion()
-    {
+    void requiresGoldenShovelForSegmentExpansion() {
         ClaimEditor editor = new ClaimEditorSkeleton();
         SegmentSelection selection = new SegmentSelection(42L, 1, null, null, null);
         ClaimEditorSession session = ClaimEditorSession.idle(UUID.randomUUID())
-                .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.COMMAND)
-                .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, 42L))
-                .withActiveSegment(selection)
-                .withPreview(new ClaimEditPreview(
-                        com.griefprevention.geometry.OrthogonalPolygon.fromClosedPath(Arrays.asList(new OrthogonalPoint2i(0, 0), new OrthogonalPoint2i(1, 0), new OrthogonalPoint2i(3, 0), new OrthogonalPoint2i(4, 0), new OrthogonalPoint2i(4, 3), new OrthogonalPoint2i(0, 3), new OrthogonalPoint2i(0, 0))),
-                        selection,
-                        Collections.emptyList(),
-                        null,
-                        Collections.emptyList(),
-                        Collections.emptyList(),
-                        Collections.emptyList()
-                ));
+            .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.COMMAND)
+            .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, 42L))
+            .withActiveSegment(selection)
+            .withPreview(
+                new ClaimEditPreview(
+                    com.griefprevention.geometry.OrthogonalPolygon.fromClosedPath(
+                        Arrays.asList(
+                            new OrthogonalPoint2i(0, 0),
+                            new OrthogonalPoint2i(1, 0),
+                            new OrthogonalPoint2i(3, 0),
+                            new OrthogonalPoint2i(4, 0),
+                            new OrthogonalPoint2i(4, 3),
+                            new OrthogonalPoint2i(0, 3),
+                            new OrthogonalPoint2i(0, 0)
+                        )
+                    ),
+                    selection,
+                    Collections.emptyList(),
+                    null,
+                    Collections.emptyList(),
+                    Collections.emptyList(),
+                    Collections.emptyList()
+                )
+            );
 
         ClaimEditResult result = editor.apply(
-                session,
-                new ClaimEditIntent(
-                        ClaimEditIntentType.EXPAND_SEGMENT,
-                        ClaimEditSource.COMMAND,
-                        null,
-                        42L,
-                        null,
-                        1,
-                        false,
-                        Collections.emptyList()
-                )
+            session,
+            new ClaimEditIntent(
+                ClaimEditIntentType.EXPAND_SEGMENT,
+                ClaimEditSource.COMMAND,
+                null,
+                42L,
+                null,
+                1,
+                false,
+                Collections.emptyList()
+            )
         );
 
         assertFalse(result.success());
@@ -648,40 +841,55 @@ public class ClaimEditorSkeletonTest
     }
 
     @Test
-    void mergingOutsideBoundaryPathKeepsOriginalClaimBody()
-    {
+    void mergingOutsideBoundaryPathKeepsOriginalClaimBody() {
         ClaimEditor editor = new ClaimEditorSkeleton();
         ClaimEditorSession session = ClaimEditorSession.idle(UUID.randomUUID())
-                .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.TOOL)
-                .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, 42L))
-                .withPreview(new ClaimEditPreview(
-                        com.griefprevention.geometry.OrthogonalPolygon.fromClosedPath(Arrays.asList(new OrthogonalPoint2i(0, 0), new OrthogonalPoint2i(8, 0), new OrthogonalPoint2i(8, 8), new OrthogonalPoint2i(0, 8), new OrthogonalPoint2i(0, 0))),
-                        null,
-                        Collections.emptyList(),
-                        null,
-                        Collections.emptyList(),
-                        Collections.emptyList(),
-                        Collections.emptyList()
-                ))
-                .withOpenPath(new ShapedPathDraft(
-                        42L,
-                        Arrays.asList(new OrthogonalPoint2i(2, 8), new OrthogonalPoint2i(2, 10), new OrthogonalPoint2i(6, 10)),
-                        null,
-                        false
-                ));
+            .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.TOOL)
+            .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, 42L))
+            .withPreview(
+                new ClaimEditPreview(
+                    com.griefprevention.geometry.OrthogonalPolygon.fromClosedPath(
+                        Arrays.asList(
+                            new OrthogonalPoint2i(0, 0),
+                            new OrthogonalPoint2i(8, 0),
+                            new OrthogonalPoint2i(8, 8),
+                            new OrthogonalPoint2i(0, 8),
+                            new OrthogonalPoint2i(0, 0)
+                        )
+                    ),
+                    null,
+                    Collections.emptyList(),
+                    null,
+                    Collections.emptyList(),
+                    Collections.emptyList(),
+                    Collections.emptyList()
+                )
+            )
+            .withOpenPath(
+                new ShapedPathDraft(
+                    42L,
+                    Arrays.asList(
+                        new OrthogonalPoint2i(2, 8),
+                        new OrthogonalPoint2i(2, 10),
+                        new OrthogonalPoint2i(6, 10)
+                    ),
+                    null,
+                    false
+                )
+            );
 
         ClaimEditResult result = editor.apply(
-                session,
-                new ClaimEditIntent(
-                        ClaimEditIntentType.ADD_CORNER,
-                        ClaimEditSource.TOOL,
-                        null,
-                        42L,
-                        new OrthogonalPoint2i(6, 8),
-                        null,
-                        true,
-                        Collections.emptyList()
-                )
+            session,
+            new ClaimEditIntent(
+                ClaimEditIntentType.ADD_CORNER,
+                ClaimEditSource.TOOL,
+                null,
+                42L,
+                new OrthogonalPoint2i(6, 8),
+                null,
+                true,
+                Collections.emptyList()
+            )
         );
 
         assertTrue(result.success());
@@ -692,69 +900,112 @@ public class ClaimEditorSkeletonTest
     }
 
     @Test
-    void existingClaimBoundaryClicksDoNotMergeUntilPathLeavesBoundary()
-    {
+    void existingClaimBoundaryClicksDoNotMergeUntilPathLeavesBoundary() {
         ClaimEditor editor = new ClaimEditorSkeleton();
-        OrthogonalPolygon original = OrthogonalPolygon.fromClosedPath(Arrays.asList(new OrthogonalPoint2i(0, 0), new OrthogonalPoint2i(8, 0), new OrthogonalPoint2i(8, 8), new OrthogonalPoint2i(0, 8), new OrthogonalPoint2i(0, 0)));
+        OrthogonalPolygon original = OrthogonalPolygon.fromClosedPath(
+            Arrays.asList(
+                new OrthogonalPoint2i(0, 0),
+                new OrthogonalPoint2i(8, 0),
+                new OrthogonalPoint2i(8, 8),
+                new OrthogonalPoint2i(0, 8),
+                new OrthogonalPoint2i(0, 0)
+            )
+        );
         ClaimEditorSession session = ClaimEditorSession.idle(UUID.randomUUID())
-                .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.TOOL)
-                .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, 42L))
-                .withPreview(new ClaimEditPreview(original, null, Collections.emptyList(), null, Collections.emptyList(), Collections.emptyList(), Collections.emptyList()))
-                .withOpenPath(new ShapedPathDraft(
-                        42L,
-                        Collections.singletonList(new OrthogonalPoint2i(0, 4)),
-                        null,
-                        false
-                ));
+            .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.TOOL)
+            .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, 42L))
+            .withPreview(
+                new ClaimEditPreview(
+                    original,
+                    null,
+                    Collections.emptyList(),
+                    null,
+                    Collections.emptyList(),
+                    Collections.emptyList(),
+                    Collections.emptyList()
+                )
+            )
+            .withOpenPath(
+                new ShapedPathDraft(42L, Collections.singletonList(new OrthogonalPoint2i(0, 4)), null, false)
+            );
 
         ClaimEditResult result = editor.apply(
-                session,
-                new ClaimEditIntent(
-                        ClaimEditIntentType.ADD_CORNER,
-                        ClaimEditSource.TOOL,
-                        null,
-                        42L,
-                        new OrthogonalPoint2i(0, 6),
-                        null,
-                        true,
-                        Collections.emptyList()
-                )
+            session,
+            new ClaimEditIntent(
+                ClaimEditIntentType.ADD_CORNER,
+                ClaimEditSource.TOOL,
+                null,
+                42L,
+                new OrthogonalPoint2i(0, 6),
+                null,
+                true,
+                Collections.emptyList()
+            )
         );
 
         assertTrue(result.success());
         assertFalse(result.session().openPath().closureReady());
         assertEquals(original.corners(), result.preview().polygon().corners());
-        assertEquals(Arrays.asList(new OrthogonalPoint2i(0, 4), new OrthogonalPoint2i(0, 5)), result.preview().draftPoints());
+        assertEquals(
+            Arrays.asList(new OrthogonalPoint2i(0, 4), new OrthogonalPoint2i(0, 5)),
+            result.preview().draftPoints()
+        );
     }
 
     @Test
-    void mergingOutsideBoundaryPathKeepsExistingShapedClaimBody()
-    {
+    void mergingOutsideBoundaryPathKeepsExistingShapedClaimBody() {
         ClaimEditor editor = new ClaimEditorSkeleton();
-        OrthogonalPolygon original = OrthogonalPolygon.fromClosedPath(Arrays.asList(new OrthogonalPoint2i(0, 0), new OrthogonalPoint2i(8, 0), new OrthogonalPoint2i(8, 6), new OrthogonalPoint2i(5, 6), new OrthogonalPoint2i(5, 8), new OrthogonalPoint2i(0, 8), new OrthogonalPoint2i(0, 0)));
+        OrthogonalPolygon original = OrthogonalPolygon.fromClosedPath(
+            Arrays.asList(
+                new OrthogonalPoint2i(0, 0),
+                new OrthogonalPoint2i(8, 0),
+                new OrthogonalPoint2i(8, 6),
+                new OrthogonalPoint2i(5, 6),
+                new OrthogonalPoint2i(5, 8),
+                new OrthogonalPoint2i(0, 8),
+                new OrthogonalPoint2i(0, 0)
+            )
+        );
         ClaimEditorSession session = ClaimEditorSession.idle(UUID.randomUUID())
-                .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.TOOL)
-                .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, 42L))
-                .withPreview(new ClaimEditPreview(original, null, Collections.emptyList(), null, Collections.emptyList(), Collections.emptyList(), Collections.emptyList()))
-                .withOpenPath(new ShapedPathDraft(
-                        42L,
-                        Arrays.asList(new OrthogonalPoint2i(5, 8), new OrthogonalPoint2i(5, 10), new OrthogonalPoint2i(10, 10), new OrthogonalPoint2i(10, 2)),
-                        null,
-                        false
-                ));
+            .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.TOOL)
+            .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, 42L))
+            .withPreview(
+                new ClaimEditPreview(
+                    original,
+                    null,
+                    Collections.emptyList(),
+                    null,
+                    Collections.emptyList(),
+                    Collections.emptyList(),
+                    Collections.emptyList()
+                )
+            )
+            .withOpenPath(
+                new ShapedPathDraft(
+                    42L,
+                    Arrays.asList(
+                        new OrthogonalPoint2i(5, 8),
+                        new OrthogonalPoint2i(5, 10),
+                        new OrthogonalPoint2i(10, 10),
+                        new OrthogonalPoint2i(10, 2)
+                    ),
+                    null,
+                    false
+                )
+            );
 
         ClaimEditResult result = editor.apply(
-                session,
-                new ClaimEditIntent(
-                        ClaimEditIntentType.ADD_CORNER,
-                        ClaimEditSource.TOOL,
-                        null,
-                        42L,
-                        new OrthogonalPoint2i(8, 2),
-                        null,
-                        true,
-                        Collections.emptyList()
-                )
+            session,
+            new ClaimEditIntent(
+                ClaimEditIntentType.ADD_CORNER,
+                ClaimEditSource.TOOL,
+                null,
+                42L,
+                new OrthogonalPoint2i(8, 2),
+                null,
+                true,
+                Collections.emptyList()
+            )
         );
 
         assertTrue(result.success());
@@ -765,47 +1016,89 @@ public class ClaimEditorSkeletonTest
     }
 
     @Test
-    void diagonalNibFillMergesIntoMainBodyInsteadOfTinyLocalLoop()
-    {
+    void diagonalNibFillMergesIntoMainBodyInsteadOfTinyLocalLoop() {
         ClaimEditor editor = new ClaimEditorSkeleton();
-        OrthogonalPolygon original = OrthogonalPolygon.fromClosedPath(Arrays.asList(new OrthogonalPoint2i(0, 0), new OrthogonalPoint2i(6, 0), new OrthogonalPoint2i(6, 2), new OrthogonalPoint2i(4, 2), new OrthogonalPoint2i(4, 4), new OrthogonalPoint2i(0, 4), new OrthogonalPoint2i(0, 0)));
+        OrthogonalPolygon original = OrthogonalPolygon.fromClosedPath(
+            Arrays.asList(
+                new OrthogonalPoint2i(0, 0),
+                new OrthogonalPoint2i(6, 0),
+                new OrthogonalPoint2i(6, 2),
+                new OrthogonalPoint2i(4, 2),
+                new OrthogonalPoint2i(4, 4),
+                new OrthogonalPoint2i(0, 4),
+                new OrthogonalPoint2i(0, 0)
+            )
+        );
         ClaimEditorSession session = ClaimEditorSession.idle(UUID.randomUUID())
-                .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.TOOL)
-                .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, 42L))
-                .withPreview(new ClaimEditPreview(original, null, Collections.emptyList(), null, Collections.emptyList(), Collections.emptyList(), Collections.emptyList()))
-                .withOpenPath(new ShapedPathDraft(
-                        42L,
-                        Arrays.asList(new OrthogonalPoint2i(4, 2), new OrthogonalPoint2i(6, 2), new OrthogonalPoint2i(6, 4)),
-                        null,
-                        false
-                ));
+            .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.TOOL)
+            .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, 42L))
+            .withPreview(
+                new ClaimEditPreview(
+                    original,
+                    null,
+                    Collections.emptyList(),
+                    null,
+                    Collections.emptyList(),
+                    Collections.emptyList(),
+                    Collections.emptyList()
+                )
+            )
+            .withOpenPath(
+                new ShapedPathDraft(
+                    42L,
+                    Arrays.asList(
+                        new OrthogonalPoint2i(4, 2),
+                        new OrthogonalPoint2i(6, 2),
+                        new OrthogonalPoint2i(6, 4)
+                    ),
+                    null,
+                    false
+                )
+            );
 
         ClaimEditResult result = editor.apply(
-                session,
-                new ClaimEditIntent(
-                        ClaimEditIntentType.ADD_CORNER,
-                        ClaimEditSource.TOOL,
-                        null,
-                        42L,
-                        new OrthogonalPoint2i(4, 4),
-                        null,
-                        true,
-                        Collections.emptyList()
-                )
+            session,
+            new ClaimEditIntent(
+                ClaimEditIntentType.ADD_CORNER,
+                ClaimEditSource.TOOL,
+                null,
+                42L,
+                new OrthogonalPoint2i(4, 4),
+                null,
+                true,
+                Collections.emptyList()
+            )
         );
 
         assertTrue(result.success());
         assertNotNull(result.preview().polygon());
         assertTrue(polygonContains(result.preview().polygon(), new OrthogonalPoint2i(1, 1)));
         assertTrue(polygonContains(result.preview().polygon(), new OrthogonalPoint2i(5, 3)));
-        assertEquals(Arrays.asList(new OrthogonalPoint2i(0, 0), new OrthogonalPoint2i(6, 0), new OrthogonalPoint2i(6, 4), new OrthogonalPoint2i(0, 4)), result.preview().polygon().corners());
+        assertEquals(
+            Arrays.asList(
+                new OrthogonalPoint2i(0, 0),
+                new OrthogonalPoint2i(6, 0),
+                new OrthogonalPoint2i(6, 4),
+                new OrthogonalPoint2i(0, 4)
+            ),
+            result.preview().polygon().corners()
+        );
     }
 
     @Test
-    void unionOfMapCornerNibAndSouthCellIsTraceable()
-    {
+    void unionOfMapCornerNibAndSouthCellIsTraceable() {
         ClaimEditorSkeleton editor = new ClaimEditorSkeleton();
-        OrthogonalPolygon original = OrthogonalPolygon.fromClosedPath(Arrays.asList(new OrthogonalPoint2i(0, 0), new OrthogonalPoint2i(14, 0), new OrthogonalPoint2i(14, 9), new OrthogonalPoint2i(9, 9), new OrthogonalPoint2i(9, 4), new OrthogonalPoint2i(0, 4), new OrthogonalPoint2i(0, 0)));
+        OrthogonalPolygon original = OrthogonalPolygon.fromClosedPath(
+            Arrays.asList(
+                new OrthogonalPoint2i(0, 0),
+                new OrthogonalPoint2i(14, 0),
+                new OrthogonalPoint2i(14, 9),
+                new OrthogonalPoint2i(9, 9),
+                new OrthogonalPoint2i(9, 4),
+                new OrthogonalPoint2i(0, 4),
+                new OrthogonalPoint2i(0, 0)
+            )
+        );
         OrthogonalPolygon patch = OrthogonalPolygon.fromRectangle(10, 10, 14, 14);
 
         OrthogonalPolygon merged = assertDoesNotThrow(() -> invokeUnion(editor, original, patch));
@@ -815,10 +1108,19 @@ public class ClaimEditorSkeletonTest
     }
 
     @Test
-    void unionConnectsDisconnectedShapesViaManhattanPath()
-    {
+    void unionConnectsDisconnectedShapesViaManhattanPath() {
         ClaimEditorSkeleton editor = new ClaimEditorSkeleton();
-        OrthogonalPolygon original = OrthogonalPolygon.fromClosedPath(Arrays.asList(new OrthogonalPoint2i(0, 0), new OrthogonalPoint2i(14, 0), new OrthogonalPoint2i(14, 9), new OrthogonalPoint2i(9, 9), new OrthogonalPoint2i(9, 4), new OrthogonalPoint2i(0, 4), new OrthogonalPoint2i(0, 0)));
+        OrthogonalPolygon original = OrthogonalPolygon.fromClosedPath(
+            Arrays.asList(
+                new OrthogonalPoint2i(0, 0),
+                new OrthogonalPoint2i(14, 0),
+                new OrthogonalPoint2i(14, 9),
+                new OrthogonalPoint2i(9, 9),
+                new OrthogonalPoint2i(9, 4),
+                new OrthogonalPoint2i(0, 4),
+                new OrthogonalPoint2i(0, 0)
+            )
+        );
         OrthogonalPolygon diagonalOnlyPatch = OrthogonalPolygon.fromRectangle(10, 11, 14, 15);
 
         OrthogonalPolygon merged = assertDoesNotThrow(() -> invokeUnion(editor, original, diagonalOnlyPatch));
@@ -828,36 +1130,29 @@ public class ClaimEditorSkeletonTest
     }
 
     private OrthogonalPolygon invokeUnion(
-            ClaimEditorSkeleton editor,
-            OrthogonalPolygon original,
-            OrthogonalPolygon patch
-    ) throws Exception
-    {
+        ClaimEditorSkeleton editor,
+        OrthogonalPolygon original,
+        OrthogonalPolygon patch
+    ) throws Exception {
         Method unionMethod = ClaimEditorSkeleton.class.getDeclaredMethod(
-                "unionPolygons",
-                OrthogonalPolygon.class,
-                OrthogonalPolygon.class
+            "unionPolygons",
+            OrthogonalPolygon.class,
+            OrthogonalPolygon.class
         );
         unionMethod.setAccessible(true);
-        try
-        {
+        try {
             return (OrthogonalPolygon) unionMethod.invoke(editor, original, patch);
-        }
-        catch (InvocationTargetException exception)
-        {
+        } catch (InvocationTargetException exception) {
             Throwable cause = exception.getCause();
-            if (cause instanceof Exception)
-            {
+            if (cause instanceof Exception) {
                 throw (Exception) cause;
             }
             throw exception;
         }
     }
 
-    private boolean polygonContains(OrthogonalPolygon polygon, OrthogonalPoint2i point)
-    {
-        if (polygon.corners().contains(point) || !polygon.edgeIndexesContainingInteriorPoint(point).isEmpty())
-        {
+    private boolean polygonContains(OrthogonalPolygon polygon, OrthogonalPoint2i point) {
+        if (polygon.corners().contains(point) || !polygon.edgeIndexesContainingInteriorPoint(point).isEmpty()) {
             return true;
         }
 
@@ -865,19 +1160,16 @@ public class ClaimEditorSkeletonTest
         double sampleZ = point.z() + 0.5D;
         boolean inside = false;
         List<OrthogonalPoint2i> corners = polygon.corners();
-        for (int i = 0, j = corners.size() - 1; i < corners.size(); j = i++)
-        {
+        for (int i = 0, j = corners.size() - 1; i < corners.size(); j = i++) {
             OrthogonalPoint2i a = corners.get(i);
             OrthogonalPoint2i b = corners.get(j);
-            boolean crosses = (a.z() > sampleZ) != (b.z() > sampleZ);
-            if (!crosses)
-            {
+            boolean crosses = a.z() > sampleZ != b.z() > sampleZ;
+            if (!crosses) {
                 continue;
             }
 
-            double intersectionX = (double) (b.x() - a.x()) * (sampleZ - a.z()) / (double) (b.z() - a.z()) + a.x();
-            if (sampleX < intersectionX)
-            {
+            double intersectionX = ((double) (b.x() - a.x()) * (sampleZ - a.z())) / (double) (b.z() - a.z()) + a.x();
+            if (sampleX < intersectionX) {
                 inside = !inside;
             }
         }

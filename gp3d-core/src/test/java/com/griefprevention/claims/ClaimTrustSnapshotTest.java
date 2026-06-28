@@ -1,24 +1,20 @@
 package com.griefprevention.claims;
 
-import org.junit.jupiter.api.Test;
-
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+import org.junit.jupiter.api.Test;
 
-class ClaimTrustSnapshotTest
-{
+class ClaimTrustSnapshotTest {
+
     @Test
-    void ownerHasEveryTrustLevel()
-    {
+    void ownerHasEveryTrustLevel() {
         UUID owner = UUID.randomUUID();
         ClaimTrustSnapshot trust = ClaimTrustSnapshot.empty(owner);
 
@@ -30,14 +26,13 @@ class ClaimTrustSnapshotTest
     }
 
     @Test
-    void managerTrustGrantsLowerLevelsButNotOwnerOnlyEdit()
-    {
+    void managerTrustGrantsLowerLevelsButNotOwnerOnlyEdit() {
         UUID manager = UUID.randomUUID();
         ClaimTrustSnapshot trust = new ClaimTrustSnapshot(
-                null,
-                Collections.emptyMap(),
-                Collections.singletonList(manager.toString()),
-                Collections.emptyList()
+            null,
+            Collections.emptyMap(),
+            Collections.singletonList(manager.toString()),
+            Collections.emptyList()
         );
 
         assertFalse(trust.hasExplicitPermission(manager, ClaimTrustLevel.EDIT));
@@ -48,14 +43,13 @@ class ClaimTrustSnapshotTest
     }
 
     @Test
-    void buildTrustGrantsContainerAndAccessOnly()
-    {
+    void buildTrustGrantsContainerAndAccessOnly() {
         UUID builder = UUID.randomUUID();
         ClaimTrustSnapshot trust = new ClaimTrustSnapshot(
-                null,
-                Collections.singletonMap(builder.toString(), ClaimTrustLevel.BUILD),
-                Collections.emptyList(),
-                Collections.emptyList()
+            null,
+            Collections.singletonMap(builder.toString(), ClaimTrustLevel.BUILD),
+            Collections.emptyList(),
+            Collections.emptyList()
         );
 
         assertFalse(trust.hasExplicitPermission(builder, ClaimTrustLevel.EDIT));
@@ -66,69 +60,75 @@ class ClaimTrustSnapshotTest
     }
 
     @Test
-    void explicitIdentifiersCannotGrantOwnerOnlyEdit()
-    {
+    void explicitIdentifiersCannotGrantOwnerOnlyEdit() {
         UUID player = UUID.randomUUID();
         Map<String, ClaimTrustLevel> permissions = new HashMap<>();
         permissions.put(player.toString(), ClaimTrustLevel.EDIT);
         permissions.put("public", ClaimTrustLevel.EDIT);
         ClaimTrustSnapshot trust = new ClaimTrustSnapshot(
-                null,
-                permissions,
-                Collections.singletonList("[gp3d.staff]"),
-                Collections.emptyList()
+            null,
+            permissions,
+            Collections.singletonList("[gp3d.staff]"),
+            Collections.emptyList()
         );
 
         assertFalse(trust.hasExplicitPermission(player, ClaimTrustLevel.EDIT));
         assertFalse(trust.hasPublicPermission(ClaimTrustLevel.EDIT));
-        assertFalse(trust.hasExplicitPermission(player, Collections.singletonList("[gp3d.staff]"), ClaimTrustLevel.EDIT));
+        assertFalse(
+            trust.hasExplicitPermission(player, Collections.singletonList("[gp3d.staff]"), ClaimTrustLevel.EDIT)
+        );
     }
 
     @Test
-    void ownerStillHasOwnerOnlyEdit()
-    {
+    void ownerStillHasOwnerOnlyEdit() {
         UUID owner = UUID.randomUUID();
         ClaimTrustSnapshot trust = new ClaimTrustSnapshot(
-                owner,
-                Collections.emptyMap(),
-                Collections.emptyList(),
-                Collections.emptyList()
+            owner,
+            Collections.emptyMap(),
+            Collections.emptyList(),
+            Collections.emptyList()
         );
 
         assertTrue(trust.hasExplicitPermission(owner, ClaimTrustLevel.EDIT));
     }
 
     @Test
-    void supportsPublicAndPermissionNodeIdentifiers()
-    {
+    void supportsPublicAndPermissionNodeIdentifiers() {
         UUID player = UUID.randomUUID();
         Map<String, ClaimTrustLevel> permissions = new HashMap<>();
         permissions.put("Public", ClaimTrustLevel.ACCESS);
         permissions.put("[gp3d.vip]", ClaimTrustLevel.CONTAINER);
         ClaimTrustSnapshot trust = new ClaimTrustSnapshot(
-                null,
-                permissions,
-                Collections.singletonList("[gp3d.staff]"),
-                Collections.emptyList()
+            null,
+            permissions,
+            Collections.singletonList("[gp3d.staff]"),
+            Collections.emptyList()
         );
 
         assertTrue(trust.hasPublicPermission(ClaimTrustLevel.ACCESS));
         assertFalse(trust.hasPublicPermission(ClaimTrustLevel.CONTAINER));
-        assertTrue(trust.hasExplicitPermission(player, Collections.singletonList("[GP3D.VIP]"), ClaimTrustLevel.ACCESS));
-        assertTrue(trust.hasExplicitPermission(player, Collections.singletonList("[gp3d.vip]"), ClaimTrustLevel.CONTAINER));
-        assertFalse(trust.hasExplicitPermission(player, Collections.singletonList("[gp3d.vip]"), ClaimTrustLevel.BUILD));
-        assertTrue(trust.hasExplicitPermission(player, Collections.singletonList("[gp3d.staff]"), ClaimTrustLevel.MANAGE));
+        assertTrue(
+            trust.hasExplicitPermission(player, Collections.singletonList("[GP3D.VIP]"), ClaimTrustLevel.ACCESS)
+        );
+        assertTrue(
+            trust.hasExplicitPermission(player, Collections.singletonList("[gp3d.vip]"), ClaimTrustLevel.CONTAINER)
+        );
+        assertFalse(
+            trust.hasExplicitPermission(player, Collections.singletonList("[gp3d.vip]"), ClaimTrustLevel.BUILD)
+        );
+        assertTrue(
+            trust.hasExplicitPermission(player, Collections.singletonList("[gp3d.staff]"), ClaimTrustLevel.MANAGE)
+        );
     }
 
     @Test
-    void evaluatesPlatformNeutralAccessSubject()
-    {
+    void evaluatesPlatformNeutralAccessSubject() {
         UUID player = UUID.randomUUID();
         ClaimTrustSnapshot trust = new ClaimTrustSnapshot(
-                null,
-                Collections.singletonMap("[gp3d.vip]", ClaimTrustLevel.CONTAINER),
-                Collections.singletonList("[gp3d.staff]"),
-                Collections.singletonList("[gp3d.blocked]#access")
+            null,
+            Collections.singletonMap("[gp3d.vip]", ClaimTrustLevel.CONTAINER),
+            Collections.singletonList("[gp3d.staff]"),
+            Collections.singletonList("[gp3d.blocked]#access")
         );
 
         ClaimAccessSubject vip = ClaimAccessSubject.of(player, Collections.singletonList("[GP3D.VIP]"));
@@ -143,13 +143,12 @@ class ClaimTrustSnapshotTest
     }
 
     @Test
-    void supportsExactAndLevelSpecificDenyEntries()
-    {
+    void supportsExactAndLevelSpecificDenyEntries() {
         ClaimTrustSnapshot trust = new ClaimTrustSnapshot(
-                null,
-                Collections.emptyMap(),
-                Collections.emptyList(),
-                Arrays.asList("Member", "builder#build", "chest#inventory", "visitor#access")
+            null,
+            Collections.emptyMap(),
+            Collections.emptyList(),
+            Arrays.asList("Member", "builder#build", "chest#inventory", "visitor#access")
         );
 
         assertTrue(trust.isPermissionDenied("member"));
@@ -162,20 +161,20 @@ class ClaimTrustSnapshotTest
     }
 
     @Test
-    void exposesImmutableNormalizedCopies()
-    {
+    void exposesImmutableNormalizedCopies() {
         ClaimTrustSnapshot trust = new ClaimTrustSnapshot(
-                null,
-                Collections.singletonMap("  Player  ", ClaimTrustLevel.ACCESS),
-                Collections.singletonList(" Manager "),
-                Collections.singletonList(" Denied ")
+            null,
+            Collections.singletonMap("  Player  ", ClaimTrustLevel.ACCESS),
+            Collections.singletonList(" Manager "),
+            Collections.singletonList(" Denied ")
         );
 
         assertTrue(trust.permissionsByIdentifier().containsKey("player"));
         assertTrue(trust.managerIdentifiers().contains("manager"));
         assertTrue(trust.deniedIdentifiers().contains("denied"));
-        assertThrows(UnsupportedOperationException.class,
-                () -> trust.permissionsByIdentifier().put("other", ClaimTrustLevel.ACCESS));
+        assertThrows(UnsupportedOperationException.class, () ->
+            trust.permissionsByIdentifier().put("other", ClaimTrustLevel.ACCESS)
+        );
         assertThrows(UnsupportedOperationException.class, () -> trust.managerIdentifiers().add("other"));
         assertThrows(UnsupportedOperationException.class, () -> trust.deniedIdentifiers().add("other"));
     }

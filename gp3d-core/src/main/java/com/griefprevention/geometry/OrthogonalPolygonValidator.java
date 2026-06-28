@@ -64,13 +64,11 @@ final class OrthogonalPolygonValidator
 
         if (closed && !edges.isEmpty())
         {
-            List<OrthogonalPoint2i> simplifiedPath = simplifyPath(normalizedPath);
-            List<OrthogonalEdge2i> simplifiedEdges = new ArrayList<>(simplifiedPath.size() - 1);
-            for (int i = 0; i + 1 < simplifiedPath.size(); i++)
-            {
-                simplifiedEdges.add(new OrthogonalEdge2i(simplifiedPath.get(i), simplifiedPath.get(i + 1)));
-            }
-            detectSelfIntersections(simplifiedEdges, issues);
+            // Check self-intersections on the raw (normalized) edges. We pass the
+            // set of known polygon corners so that intersections at legitimate
+            // vertices are not flagged — this allows valid C/notch/L shapes
+            // where boundary segments share corners on the same axis line.
+            detectSelfIntersections(edges, corners, issues);
         }
 
         if (!issues.isEmpty())
@@ -226,9 +224,15 @@ final class OrthogonalPolygonValidator
 
     private static void detectSelfIntersections(
             @NotNull List<OrthogonalEdge2i> edges,
+            @NotNull List<OrthogonalPoint2i> corners,
             @NotNull List<OrthogonalPolygonValidationIssue> issues
     )
     {
+        // Pre-compute the set of known polygon corners for O(1) lookups.
+        // Intersections at legitimate corner points are not self-intersections —
+        // they are just boundary segments that share a vertex.
+        Set<OrthogonalPoint2i> cornerSet = new HashSet<>(corners);
+
         for (int i = 0; i < edges.size(); i++)
         {
             for (int j = i + 1; j < edges.size(); j++)
@@ -244,6 +248,17 @@ final class OrthogonalPolygonValidator
                     continue;
                 }
 
+                // If the intersection is at a known polygon corner, two boundary
+                // segments meet at a shared vertex. For claim boundaries this is
+                // valid — it represents shapes like C/notch/L where the boundary
+                // folds back along itself. True self-intersections where edges
+                // overlap beyond a shared point are caught by the collinear overlap
+                // checks in the intersect() method.
+                if (cornerSet.contains(intersectionPoint))
+                {
+                    continue;
+                }
+
                 issues.add(new OrthogonalPolygonValidationIssue(
                         OrthogonalPolygonValidationIssueType.SELF_INTERSECTION,
                         "The shaped path intersects itself.",
@@ -254,6 +269,12 @@ final class OrthogonalPolygonValidator
             }
         }
     }
+
+    private static boolean isEndpointOf(@NotNull OrthogonalPoint2i point, @NotNull OrthogonalEdge2i edge)
+    {
+        return point.equals(edge.start()) || point.equals(edge.end());
+    }
+
 
     private static boolean areAdjacent(int first, int second, int edgeCount)
     {
@@ -292,27 +313,21 @@ final class OrthogonalPolygonValidator
 
         if (first.isHorizontal() && second.isHorizontal() && first.start().z() == second.start().z())
         {
-            int overlapMin = Math.max(first.minX(), second.minX());
-            int overlapMax = Math.min(first.maxX(), second.maxX());
-            if (overlapMin <= overlapMax)
-            {
-                return new OrthogonalPoint2i(overlapMin, first.start().z());
-            }
+            return horizontalOverlapPoint(first, second);
         }
 
         if (first.isVertical() && second.isVertical() && first.start().x() == second.start().x())
         {
-            int overlapMin = Math.max(first.minZ(), second.minZ());
-            int overlapMax = Math.min(first.maxZ(), second.maxZ());
-            if (overlapMin <= overlapMax)
-            {
-                return new OrthogonalPoint2i(first.start().x(), overlapMin);
-            }
+            return verticalOverlapPoint(first, second);
         }
 
         return null;
     }
 
+    /**
+     * Checks for a true interior crossing between a horizontal and vertical edge.
+     * Returns null if they only touch at a shared vertex (endpoint of either edge).
+     */
     private static @Nullable OrthogonalPoint2i intersects(
             @NotNull OrthogonalEdge2i horizontal,
             @NotNull OrthogonalEdge2i vertical
@@ -330,6 +345,68 @@ final class OrthogonalPolygonValidator
             return null;
         }
 
-        return new OrthogonalPoint2i(x, z);
+        OrthogonalPoint2i crossing = new OrthogonalPoint2i(x, z);
+
+        return crossing;
+    }
+
+    /**
+     * Returns a point in the interior of the overlap between two collinear horizontal edges,
+     * or null if the overlap is only at shared endpoints (vertex touch).
+     */
+    private static @Nullable OrthogonalPoint2i horizontalOverlapPoint(
+            @NotNull OrthogonalEdge2i first,
+            @NotNull OrthogonalEdge2i second
+    )
+    {
+        int overlapMin = Math.max(first.minX(), second.minX());
+        int overlapMax = Math.min(first.maxX(), second.maxX());
+        if (overlapMin > overlapMax)
+        {
+            return null;
+        }
+
+        // Check if the overlap extends beyond shared endpoints.
+        // If the ENTIRE overlap range is just shared endpoints, it's a vertex touch.
+        // We find an overlap point that is NOT an endpoint of either edge.
+        for (int x = overlapMin; x <= overlapMax; x++)
+        {
+            OrthogonalPoint2i candidate = new OrthogonalPoint2i(x, first.start().z());
+            if (!isEndpointOf(candidate, first) && !isEndpointOf(candidate, second))
+            {
+                return candidate;
+            }
+        }
+
+        // Overlap exists but only at shared endpoint(s) — vertex touch, not self-intersection.
+        return null;
+    }
+
+    /**
+     * Returns a point in the interior of the overlap between two collinear vertical edges,
+     * or null if the overlap is only at shared endpoints (vertex touch).
+     */
+    private static @Nullable OrthogonalPoint2i verticalOverlapPoint(
+            @NotNull OrthogonalEdge2i first,
+            @NotNull OrthogonalEdge2i second
+    )
+    {
+        int overlapMin = Math.max(first.minZ(), second.minZ());
+        int overlapMax = Math.min(first.maxZ(), second.maxZ());
+        if (overlapMin > overlapMax)
+        {
+            return null;
+        }
+
+        for (int z = overlapMin; z <= overlapMax; z++)
+        {
+            OrthogonalPoint2i candidate = new OrthogonalPoint2i(first.start().x(), z);
+            if (!isEndpointOf(candidate, first) && !isEndpointOf(candidate, second))
+            {
+                return candidate;
+            }
+        }
+
+        return null;
     }
 }

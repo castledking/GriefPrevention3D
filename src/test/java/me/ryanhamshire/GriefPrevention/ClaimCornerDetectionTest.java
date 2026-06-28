@@ -1,20 +1,17 @@
 package me.ryanhamshire.GriefPrevention;
 
-import org.bukkit.Location;
-import org.junit.jupiter.api.Test;
-
-import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import java.util.Collections;
 
-class ClaimCornerDetectionTest
-{
+import java.util.Collections;
+import org.bukkit.Location;
+import org.junit.jupiter.api.Test;
+
+class ClaimCornerDetectionTest {
+
     @Test
-    void rectangularCornerDetectionHandlesOneBlockXAndZDimensions()
-    {
+    void rectangularCornerDetectionHandlesOneBlockXAndZDimensions() {
         assertCornerDetected(new3DClaim(5, 64, 5, 5, 64, 5), 5, 5);
         assertCornerDetected(new3DClaim(5, 64, 5, 5, 65, 6), 5, 5);
         assertCornerDetected(new3DClaim(5, 64, 5, 5, 65, 6), 5, 6);
@@ -23,8 +20,7 @@ class ClaimCornerDetectionTest
     }
 
     @Test
-    void rectangularCornerDetectionRejectsNonBoundaryColumns()
-    {
+    void rectangularCornerDetectionRejectsNonBoundaryColumns() {
         Claim claim = new3DClaim(5, 64, 5, 7, 65, 7);
 
         assertEquals(-1, claim.getCornerIndexAt(6, 5));
@@ -33,8 +29,7 @@ class ClaimCornerDetectionTest
     }
 
     @Test
-    void threeDCornerRaycastOnlyAppliesToInitialSelectionClicks()
-    {
+    void threeDCornerRaycastOnlyAppliesToInitialSelectionClicks() {
         PlayerData playerData = new PlayerData();
         playerData.shovelMode = ShovelMode.Subdivide3D;
 
@@ -53,8 +48,7 @@ class ClaimCornerDetectionTest
     }
 
     @Test
-    void threeDCornerRaycastSkipsNonClaimSelectionModes()
-    {
+    void threeDCornerRaycastSkipsNonClaimSelectionModes() {
         PlayerData playerData = new PlayerData();
 
         playerData.shovelMode = ShovelMode.RestoreNature;
@@ -67,23 +61,22 @@ class ClaimCornerDetectionTest
         assertTrue(ClaimToolInteractionState.shouldAttempt3DCornerSelection(playerData));
     }
 
-    private static void assertCornerDetected(Claim claim, int x, int z)
-    {
+    private static void assertCornerDetected(Claim claim, int x, int z) {
         assertTrue(claim.getCornerIndexAt(x, z) >= 0);
     }
 
-    private static Claim new3DClaim(int x1, int y1, int z1, int x2, int y2, int z2)
-    {
+    private static Claim new3DClaim(int x1, int y1, int z1, int x2, int y2, int z2) {
         return new Claim(
-                new Location(null, x1, y1, z1),
-                new Location(null, x2, y2, z2),
-                null,
-                Collections.emptyList(),
-                Collections.emptyList(),
-                Collections.emptyList(),
-                Collections.emptyList(),
-                false,
-                1L,
-                true);
+            new Location(null, x1, y1, z1),
+            new Location(null, x2, y2, z2),
+            null,
+            Collections.emptyList(),
+            Collections.emptyList(),
+            Collections.emptyList(),
+            Collections.emptyList(),
+            false,
+            1L,
+            true
+        );
     }
 }

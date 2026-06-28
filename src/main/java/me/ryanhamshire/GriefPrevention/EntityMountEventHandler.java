@@ -1,6 +1,6 @@
 package me.ryanhamshire.GriefPrevention;
 
-import com.griefprevention.protection.ProtectionHelper;
+import java.util.function.Supplier;
 import org.bukkit.entity.Animals;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -8,8 +8,6 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.entity.EntityMountEvent;
-
-import java.util.function.Supplier;
 
 public final class EntityMountEventHandler implements Listener {
 

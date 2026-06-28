@@ -93,11 +93,6 @@ redhat-java.vsix
 
 # Release work
 wiki/
-.release/old/
-.modrinth/
-
-# Track latest release
-!.release/latest/
 
 # Untrack legacy compat work
 .gradle/

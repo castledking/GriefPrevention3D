@@ -23,19 +23,18 @@ import com.griefprevention.claims.editor.ClaimEditIntent;
 import com.griefprevention.claims.editor.ClaimEditIntentType;
 import com.griefprevention.claims.editor.ClaimEditPreview;
 import com.griefprevention.claims.editor.ClaimEditResult;
-import com.griefprevention.claims.editor.ShapedPathDraft;
 import com.griefprevention.claims.editor.ClaimEditSource;
 import com.griefprevention.claims.editor.ClaimEditTarget;
-import com.griefprevention.claims.editor.ClaimEditorMode;
 import com.griefprevention.claims.editor.ClaimEditTargetType;
 import com.griefprevention.claims.editor.ClaimEditor;
+import com.griefprevention.claims.editor.ClaimEditorMode;
 import com.griefprevention.claims.editor.ClaimEditorSession;
 import com.griefprevention.claims.editor.ClaimEditorSkeleton;
+import com.griefprevention.claims.editor.ShapedPathDraft;
 import com.griefprevention.compat.BlockDataCompat;
 import com.griefprevention.compat.Compat;
 import com.griefprevention.compat.MaterialCompat;
 import com.griefprevention.compat.MaterialTagCompat;
-import me.ryanhamshire.GriefPrevention.compat.CompatUtil;
 import com.griefprevention.events.BoundaryVisualizationEvent;
 import com.griefprevention.geometry.OrthogonalEdge2i;
 import com.griefprevention.geometry.OrthogonalPoint2i;
@@ -48,8 +47,29 @@ import com.griefprevention.util.command.MonitoredCommands;
 import com.griefprevention.visualization.Boundary;
 import com.griefprevention.visualization.BoundaryVisualization;
 import com.griefprevention.visualization.VisualizationType;
+import java.net.InetAddress;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Calendar;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Supplier;
+import java.util.regex.Pattern;
+import me.ryanhamshire.GriefPrevention.compat.CompatUtil;
 import me.ryanhamshire.GriefPrevention.events.ClaimInspectionEvent;
 import me.ryanhamshire.GriefPrevention.util.BoundingBox;
+import me.ryanhamshire.GriefPrevention.util.SchedulerUtil;
+import me.ryanhamshire.GriefPrevention.util.TaskHandle;
 import org.bukkit.BanList;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -81,8 +101,15 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.entity.CreatureSpawnEvent;
+import org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason;
+import org.bukkit.event.entity.EntityChangeBlockEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.entity.PlayerLeashEntityEvent;
+import org.bukkit.event.entity.ProjectileHitEvent;
+import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
+import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import org.bukkit.event.player.PlayerBucketEmptyEvent;
 import org.bukkit.event.player.PlayerBucketFillEvent;
 import org.bukkit.event.player.PlayerCommandPreprocessEvent;
@@ -96,13 +123,6 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemHeldEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerKickEvent;
-import org.bukkit.event.entity.CreatureSpawnEvent;
-import org.bukkit.event.entity.CreatureSpawnEvent.SpawnReason;
-import org.bukkit.event.entity.EntityChangeBlockEvent;
-import org.bukkit.event.entity.PlayerLeashEntityEvent;
-import org.bukkit.event.entity.ProjectileHitEvent;
-import org.bukkit.event.inventory.InventoryType;
-import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import org.bukkit.event.player.PlayerPortalEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
@@ -119,30 +139,8 @@ import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.net.InetAddress;
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Collection;
-import java.util.Date;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.function.Supplier;
-import java.util.regex.Pattern;
-
-import me.ryanhamshire.GriefPrevention.util.SchedulerUtil;
-
-import me.ryanhamshire.GriefPrevention.util.TaskHandle;
-import java.util.Arrays;
-import java.util.Collections;
-
 public class PlayerEventHandler implements Listener {
+
     private static final @NotNull ClaimEditor claimEditor = new ClaimEditorSkeleton();
     private final DataStore dataStore;
     private final GriefPrevention instance;
@@ -175,7 +173,7 @@ public class PlayerEventHandler implements Listener {
 
     /**
      * Gets the banned word finder instance
-     * 
+     *
      * @return The WordFinder instance for checking and censoring banned words
      */
     public WordFinder getBannedWordFinder() {
@@ -209,10 +207,8 @@ public class PlayerEventHandler implements Listener {
         spawnEggs = new HashSet<>();
         dyes = new HashSet<>();
         for (Material material : Material.values()) {
-            if (material.name().endsWith("_SPAWN_EGG"))
-                spawnEggs.add(material);
-            else if (material.name().endsWith("_DYE"))
-                dyes.add(material);
+            if (material.name().endsWith("_SPAWN_EGG")) spawnEggs.add(material);
+            else if (material.name().endsWith("_DYE")) dyes.add(material);
         }
 
         reload();
@@ -245,8 +241,7 @@ public class PlayerEventHandler implements Listener {
             Set<UUID> eavesdroppers = new HashSet<>();
 
             for (Player recipient : event.getRecipients()) {
-                if (recipient == null)
-                    continue;
+                if (recipient == null) continue;
 
                 if (this.dataStore.isSoftMuted(recipient.getUniqueId())) {
                     recipientsToKeep.add(recipient.getUniqueId());
@@ -272,21 +267,25 @@ public class PlayerEventHandler implements Listener {
             final String formattedFinal = formatted;
             final String notificationFinal = ChatColor.GRAY + notificationMessage;
 
-            SchedulerUtil.runLaterGlobal(instance, () -> {
-                for (UUID recipientId : recipientsToKeep) {
-                    Player recipient = Bukkit.getPlayer(recipientId);
-                    if (recipient != null && recipient.isOnline()) {
-                        recipient.sendMessage(formattedFinal);
+            SchedulerUtil.runLaterGlobal(
+                instance,
+                () -> {
+                    for (UUID recipientId : recipientsToKeep) {
+                        Player recipient = Bukkit.getPlayer(recipientId);
+                        if (recipient != null && recipient.isOnline()) {
+                            recipient.sendMessage(formattedFinal);
+                        }
                     }
-                }
 
-                for (UUID recipientId : eavesdroppers) {
-                    Player recipient = Bukkit.getPlayer(recipientId);
-                    if (recipient != null && recipient.isOnline()) {
-                        recipient.sendMessage(notificationFinal);
+                    for (UUID recipientId : eavesdroppers) {
+                        Player recipient = Bukkit.getPlayer(recipientId);
+                        if (recipient != null && recipient.isOnline()) {
+                            recipient.sendMessage(notificationFinal);
+                        }
                     }
-                }
-            }, 1L);
+                },
+                1L
+            );
 
             GriefPrevention.AddLogEntry(notificationMessage, CustomLogEntryTypes.MutedChat, false);
             return;
@@ -300,7 +299,6 @@ public class PlayerEventHandler implements Listener {
             recipients.clear();
             recipients.add(player);
         }
-
         // troll and excessive profanity filter
         else if (!player.hasPermission("griefprevention.spam") && this.bannedWordFinder.hasMatch(message)) {
             // allow admins to see the soft-muted text
@@ -325,19 +323,19 @@ public class PlayerEventHandler implements Listener {
                     return;
                 }
             }
-
             // otherwise assume chat troll and mute all chat from this sender until an admin
             // says otherwise
             else if (instance.config_trollFilterEnabled) {
                 GriefPrevention.AddLogEntry(
-                        "Auto-muted new player " + player.getName()
-                                + " for profanity shortly after join.  Use /SoftMute to undo.",
-                        CustomLogEntryTypes.AdminActivity);
+                    "Auto-muted new player " +
+                        player.getName() +
+                        " for profanity shortly after join.  Use /SoftMute to undo.",
+                    CustomLogEntryTypes.AdminActivity
+                );
                 GriefPrevention.AddLogEntry(notificationMessage, CustomLogEntryTypes.MutedChat, false);
                 instance.dataStore.toggleSoftMute(player.getUniqueId());
             }
         }
-
         // remaining messages
         else {
             // enter in abridged chat logs
@@ -371,35 +369,41 @@ public class PlayerEventHandler implements Listener {
         // watching for message format how*claim*, and will send a link to the basics
         // video
         if (this.howToClaimPattern == null) {
-            this.howToClaimPattern = Pattern.compile(this.dataStore.getMessage(Messages.HowToClaimRegex),
-                    Pattern.CASE_INSENSITIVE);
+            this.howToClaimPattern = Pattern.compile(
+                this.dataStore.getMessage(Messages.HowToClaimRegex),
+                Pattern.CASE_INSENSITIVE
+            );
         }
 
         if (this.howToClaimPattern.matcher(message).matches()) {
             if (instance.creativeRulesApply(player.getLocation())) {
-                GriefPrevention.sendMessage(player, TextMode.Info, Messages.CreativeBasicsVideo2, 10L,
-                        DataStore.CREATIVE_VIDEO_URL);
+                GriefPrevention.sendMessage(
+                    player,
+                    TextMode.Info,
+                    Messages.CreativeBasicsVideo2,
+                    10L,
+                    DataStore.CREATIVE_VIDEO_URL
+                );
             } else {
-                GriefPrevention.sendMessage(player, TextMode.Info, Messages.SurvivalBasicsVideo2, 10L,
-                        DataStore.SURVIVAL_VIDEO_URL);
+                GriefPrevention.sendMessage(
+                    player,
+                    TextMode.Info,
+                    Messages.SurvivalBasicsVideo2,
+                    10L,
+                    DataStore.SURVIVAL_VIDEO_URL
+                );
             }
         }
 
         // FEATURE: automatically educate players about the /trapped command
         // check for "trapped" or "stuck" to educate players about the /trapped command
-        String trappedwords = this.dataStore.getMessage(
-                Messages.TrappedChatKeyword);
+        String trappedwords = this.dataStore.getMessage(Messages.TrappedChatKeyword);
         if (!trappedwords.isEmpty()) {
             String[] checkWords = trappedwords.split(";");
 
             for (String checkWord : checkWords) {
-                if (!message.contains("/trapped")
-                        && message.contains(checkWord)) {
-                    GriefPrevention.sendMessage(
-                            player,
-                            TextMode.Info,
-                            Messages.TrappedInstructions,
-                            10L);
+                if (!message.contains("/trapped") && message.contains(checkWord)) {
+                    GriefPrevention.sendMessage(player, TextMode.Info, Messages.TrappedInstructions, 10L);
                     break;
                 }
             }
@@ -407,16 +411,17 @@ public class PlayerEventHandler implements Listener {
 
         // FEATURE: monitor for chat and command spam
 
-        if (!instance.config_spam_enabled)
-            return false;
+        if (!instance.config_spam_enabled) return false;
 
         // if the player has permission to spam, don't bother even examining the message
-        if (player.hasPermission("griefprevention.spam"))
-            return false;
+        if (player.hasPermission("griefprevention.spam")) return false;
 
         // examine recent messages to detect spam
-        SpamAnalysisResult result = this.spamDetector.AnalyzeMessage(player.getUniqueId(), message,
-                System.currentTimeMillis());
+        SpamAnalysisResult result = this.spamDetector.AnalyzeMessage(
+            player.getUniqueId(),
+            message,
+            System.currentTimeMillis()
+        );
 
         // apply any needed changes to message (like lowercasing all-caps)
         if (event instanceof AsyncPlayerChatEvent) {
@@ -427,8 +432,10 @@ public class PlayerEventHandler implements Listener {
         PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
         if (playerData.noChatLocation != null) {
             Location currentLocation = player.getLocation();
-            if (currentLocation.getBlockX() == playerData.noChatLocation.getBlockX() &&
-                    currentLocation.getBlockZ() == playerData.noChatLocation.getBlockZ()) {
+            if (
+                currentLocation.getBlockX() == playerData.noChatLocation.getBlockX() &&
+                currentLocation.getBlockZ() == playerData.noChatLocation.getBlockZ()
+            ) {
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoChatUntilMove, 10L);
                 result.muteReason = "pre-movement chat";
             } else {
@@ -448,17 +455,25 @@ public class PlayerEventHandler implements Listener {
         if (result.shouldBanChatter) {
             if (instance.config_spam_banOffenders) {
                 // log entry
-                GriefPrevention.AddLogEntry("Banning " + player.getName() + " for spam.",
-                        CustomLogEntryTypes.AdminActivity);
+                GriefPrevention.AddLogEntry(
+                    "Banning " + player.getName() + " for spam.",
+                    CustomLogEntryTypes.AdminActivity
+                );
 
                 // kick and ban
-                PlayerKickBanTask task = new PlayerKickBanTask(player, instance.config_spam_banMessage,
-                        "GriefPrevention Anti-Spam", true);
+                PlayerKickBanTask task = new PlayerKickBanTask(
+                    player,
+                    instance.config_spam_banMessage,
+                    "GriefPrevention Anti-Spam",
+                    true
+                );
                 SchedulerUtil.runLaterEntity(instance, player, task::run, 1L);
             } else {
                 // log entry
-                GriefPrevention.AddLogEntry("Kicking " + player.getName() + " for spam.",
-                        CustomLogEntryTypes.AdminActivity);
+                GriefPrevention.AddLogEntry(
+                    "Kicking " + player.getName() + " for spam.",
+                    CustomLogEntryTypes.AdminActivity
+                );
 
                 // just kick
                 PlayerKickBanTask task = new PlayerKickBanTask(player, "", "GriefPrevention Anti-Spam", false);
@@ -467,15 +482,21 @@ public class PlayerEventHandler implements Listener {
         } else if (result.shouldWarnChatter) {
             // warn and log
             GriefPrevention.sendMessage(player, TextMode.Warn, instance.config_spam_warningMessage, 10L);
-            GriefPrevention.AddLogEntry("Warned " + player.getName() + " about spam penalties.",
-                    CustomLogEntryTypes.Debug, true);
+            GriefPrevention.AddLogEntry(
+                "Warned " + player.getName() + " about spam penalties.",
+                CustomLogEntryTypes.Debug,
+                true
+            );
         }
 
         if (result.muteReason != null) {
             // mute and log
             GriefPrevention.AddLogEntry("Muted " + result.muteReason + ".");
-            GriefPrevention.AddLogEntry("Muted " + player.getName() + " " + result.muteReason + ":" + message,
-                    CustomLogEntryTypes.Debug, true);
+            GriefPrevention.AddLogEntry(
+                "Muted " + player.getName() + " " + result.muteReason + ":" + message,
+                CustomLogEntryTypes.Debug,
+                true
+            );
 
             return true;
         }
@@ -500,8 +521,11 @@ public class PlayerEventHandler implements Listener {
             Player targetPlayer = instance.getServer().getPlayer(command.getArgument(0));
 
             // softmute feature
-            if (this.dataStore.isSoftMuted(player.getUniqueId()) && targetPlayer != null
-                    && !this.dataStore.isSoftMuted(targetPlayer.getUniqueId())) {
+            if (
+                this.dataStore.isSoftMuted(player.getUniqueId()) &&
+                targetPlayer != null &&
+                !this.dataStore.isSoftMuted(targetPlayer.getUniqueId())
+            ) {
                 event.setCancelled(true);
                 return;
             }
@@ -511,15 +535,20 @@ public class PlayerEventHandler implements Listener {
             if (instance.config_whisperNotifications && !player.hasPermission("griefprevention.eavesdropimmune")) {
                 // except for when the recipient has eavesdrop immunity
                 if (targetPlayer == null || !targetPlayer.hasPermission("griefprevention.eavesdropimmune")) {
-
-                    String logMessage = "[[" + event.getPlayer().getName() + "]] " +
-                            command.getCommand().substring(command.getCommand(0).length() + 1);
+                    String logMessage =
+                        "[[" +
+                        event.getPlayer().getName() +
+                        "]] " +
+                        command.getCommand().substring(command.getCommand(0).length() + 1);
 
                     @SuppressWarnings("unchecked")
                     Collection<Player> players = (Collection<Player>) instance.getServer().getOnlinePlayers();
                     for (Player onlinePlayer : players) {
-                        if (onlinePlayer.hasPermission("griefprevention.eavesdrop.pm")
-                                && !onlinePlayer.equals(targetPlayer) && !onlinePlayer.equals(player)) {
+                        if (
+                            onlinePlayer.hasPermission("griefprevention.eavesdrop.pm") &&
+                            !onlinePlayer.equals(targetPlayer) &&
+                            !onlinePlayer.equals(player)
+                        ) {
                             onlinePlayer.sendMessage(ChatColor.GRAY + logMessage);
                         }
                     }
@@ -530,16 +559,20 @@ public class PlayerEventHandler implements Listener {
             if (targetPlayer != null && targetPlayer.isOnline()) {
                 // if either is ignoring the other, cancel this command
                 playerData = this.dataStore.getPlayerData(player.getUniqueId());
-                if (playerData.ignoredPlayers.containsKey(targetPlayer.getUniqueId())
-                        && !targetPlayer.hasPermission("griefprevention.notignorable")) {
+                if (
+                    playerData.ignoredPlayers.containsKey(targetPlayer.getUniqueId()) &&
+                    !targetPlayer.hasPermission("griefprevention.notignorable")
+                ) {
                     event.setCancelled(true);
                     GriefPrevention.sendMessage(player, TextMode.Err, Messages.IsIgnoringYou);
                     return;
                 }
 
                 PlayerData targetPlayerData = this.dataStore.getPlayerData(targetPlayer.getUniqueId());
-                if (targetPlayerData.ignoredPlayers.containsKey(player.getUniqueId())
-                        && !player.hasPermission("griefprevention.notignorable")) {
+                if (
+                    targetPlayerData.ignoredPlayers.containsKey(player.getUniqueId()) &&
+                    !player.hasPermission("griefprevention.notignorable")
+                ) {
                     event.setCancelled(true);
                     GriefPrevention.sendMessage(player, TextMode.Err, Messages.IsIgnoringYou);
                     return;
@@ -548,10 +581,9 @@ public class PlayerEventHandler implements Listener {
         }
 
         // if in pvp, block any pvp-banned slash commands
-        if (playerData == null)
-            playerData = this.dataStore.getPlayerData(event.getPlayer().getUniqueId());
+        if (playerData == null) playerData = this.dataStore.getPlayerData(event.getPlayer().getUniqueId());
 
-        if ((playerData.inPvpCombat()) && pvpBlockedCommands.isMonitoredCommand(command)) {
+        if (playerData.inPvpCombat() && pvpBlockedCommands.isMonitoredCommand(command)) {
             event.setCancelled(true);
             GriefPrevention.sendMessage(event.getPlayer(), TextMode.Err, Messages.CommandBannedInPvP);
             return;
@@ -565,7 +597,7 @@ public class PlayerEventHandler implements Listener {
 
         // if the slash command used is in the list of monitored commands, treat it like
         // a chat message (see above)
-        boolean isMonitoredCommand = (category == CommandCategory.Chat || category == CommandCategory.Whisper);
+        boolean isMonitoredCommand = category == CommandCategory.Chat || category == CommandCategory.Whisper;
         if (isMonitoredCommand) {
             // if anti spam enabled, check for spam
             if (instance.config_spam_enabled) {
@@ -597,8 +629,10 @@ public class PlayerEventHandler implements Listener {
         }
     }
 
-    Claim findDeepestContainingClaim(@org.jetbrains.annotations.Nullable Claim start,
-            @org.jetbrains.annotations.Nullable Location location) {
+    Claim findDeepestContainingClaim(
+        @org.jetbrains.annotations.Nullable Claim start,
+        @org.jetbrains.annotations.Nullable Location location
+    ) {
         if (start == null || location == null) {
             return start;
         }
@@ -631,9 +665,11 @@ public class PlayerEventHandler implements Listener {
         return current;
     }
 
-    private boolean isMoreSpecificChild(@org.jetbrains.annotations.NotNull Claim candidate,
-            @org.jetbrains.annotations.NotNull Claim incumbent,
-            @org.jetbrains.annotations.NotNull Location location) {
+    private boolean isMoreSpecificChild(
+        @org.jetbrains.annotations.NotNull Claim candidate,
+        @org.jetbrains.annotations.NotNull Claim incumbent,
+        @org.jetbrains.annotations.NotNull Location location
+    ) {
         boolean candidate3D = candidate.is3D();
         boolean incumbent3D = incumbent.is3D();
 
@@ -647,10 +683,10 @@ public class PlayerEventHandler implements Listener {
         }
 
         if (candidate3D && incumbent3D) {
-            int candidateHeight = candidate.getGreaterBoundaryCorner().getBlockY()
-                    - candidate.getLesserBoundaryCorner().getBlockY();
-            int incumbentHeight = incumbent.getGreaterBoundaryCorner().getBlockY()
-                    - incumbent.getLesserBoundaryCorner().getBlockY();
+            int candidateHeight =
+                candidate.getGreaterBoundaryCorner().getBlockY() - candidate.getLesserBoundaryCorner().getBlockY();
+            int incumbentHeight =
+                incumbent.getGreaterBoundaryCorner().getBlockY() - incumbent.getLesserBoundaryCorner().getBlockY();
             if (candidateHeight != incumbentHeight) {
                 return candidateHeight < incumbentHeight;
             }
@@ -660,10 +696,8 @@ public class PlayerEventHandler implements Listener {
     }
 
     private CommandCategory getCommandCategory(MonitorableCommand command) {
-        if (whisperCommands.isMonitoredCommand(command))
-            return CommandCategory.Whisper;
-        if (chatCommands.isMonitoredCommand(command))
-            return CommandCategory.Chat;
+        if (whisperCommands.isMonitoredCommand(command)) return CommandCategory.Whisper;
+        if (chatCommands.isMonitoredCommand(command)) return CommandCategory.Chat;
         return CommandCategory.None;
     }
 
@@ -697,9 +731,11 @@ public class PlayerEventHandler implements Listener {
         AsyncPlayerPreLoginEvent.Result result = event.getLoginResult();
 
         // FEATURE: login cooldown to prevent login/logout spam with custom clients
-        if (instance.config_spam_loginCooldownSeconds > 0
-                && result == AsyncPlayerPreLoginEvent.Result.ALLOWED
-                && !hasSpamBypass(uuid)) {
+        if (
+            instance.config_spam_loginCooldownSeconds > 0 &&
+            result == AsyncPlayerPreLoginEvent.Result.ALLOWED &&
+            !hasSpamBypass(uuid)
+        ) {
             Date lastLoginThisSession = lastLoginThisServerSessionMap.get(uuid);
             if (lastLoginThisSession != null) {
                 long millisecondsSinceLastLogin = now - lastLoginThisSession.getTime();
@@ -708,8 +744,9 @@ public class PlayerEventHandler implements Listener {
 
                 if (cooldownRemaining > 0) {
                     event.disallow(
-                            AsyncPlayerPreLoginEvent.Result.KICK_OTHER,
-                            "You must wait " + cooldownRemaining + " seconds before logging-in again.");
+                        AsyncPlayerPreLoginEvent.Result.KICK_OTHER,
+                        "You must wait " + cooldownRemaining + " seconds before logging-in again."
+                    );
                     return;
                 }
             }
@@ -717,10 +754,7 @@ public class PlayerEventHandler implements Listener {
 
         // if logging-in account is banned, remember IP address for later
         if (instance.config_smartBan && result == AsyncPlayerPreLoginEvent.Result.KICK_BANNED) {
-            this.tempBannedIps.add(new IpBanInfo(
-                    event.getAddress(),
-                    now + this.MILLISECONDS_IN_DAY,
-                    event.getName()));
+            this.tempBannedIps.add(new IpBanInfo(event.getAddress(), now + this.MILLISECONDS_IN_DAY, event.getName()));
         }
     }
 
@@ -769,12 +803,19 @@ public class PlayerEventHandler implements Listener {
 
             // if in survival claims mode, send a message about the claim basics video
             // (except for admins - assumed experts)
-            if (instance.config_claims_manualDeliveryDelaySeconds > 0
-                    && instance.config_claims_worldModes.get(player.getWorld()) == ClaimsMode.Survival
-                    && !player.hasPermission("griefprevention.adminclaims") && this.dataStore.claims.size() > 10) {
+            if (
+                instance.config_claims_manualDeliveryDelaySeconds > 0 &&
+                instance.config_claims_worldModes.get(player.getWorld()) == ClaimsMode.Survival &&
+                !player.hasPermission("griefprevention.adminclaims") &&
+                this.dataStore.claims.size() > 10
+            ) {
                 WelcomeTask task = new WelcomeTask(player.getUniqueId());
-                SchedulerUtil.runLaterEntity(instance, player, task::run,
-                        instance.config_claims_manualDeliveryDelaySeconds * 20L);
+                SchedulerUtil.runLaterEntity(
+                    instance,
+                    player,
+                    task::run,
+                    instance.config_claims_manualDeliveryDelaySeconds * 20L
+                );
             }
         }
 
@@ -795,7 +836,6 @@ public class PlayerEventHandler implements Listener {
                 if (now > info.expirationTimestamp) {
                     this.tempBannedIps.remove(i--);
                 }
-
                 // if we find a match
                 else if (address.equals(playerData.ipAddress.toString())) {
                     // if the account associated with the IP ban has been pardoned, remove all ip
@@ -807,8 +847,9 @@ public class PlayerEventHandler implements Listener {
                             IpBanInfo info2 = this.tempBannedIps.get(j);
                             if (info2.address.toString().equals(address)) {
                                 @SuppressWarnings("deprecation")
-                                OfflinePlayer bannedAccount = instance.getServer()
-                                        .getOfflinePlayer(info2.bannedAccountName);
+                                OfflinePlayer bannedAccount = instance
+                                    .getServer()
+                                    .getOfflinePlayer(info2.bannedAccountName);
                                 BanList<PlayerProfile> banList = instance.getServer().getBanList(BanList.Type.PROFILE);
                                 banList.pardon(bannedAccount.getPlayerProfile());
                                 this.tempBannedIps.remove(j--);
@@ -817,27 +858,41 @@ public class PlayerEventHandler implements Listener {
 
                         break;
                     }
-
                     // otherwise if that account is still banned, ban this account, too
                     else {
-                        GriefPrevention.AddLogEntry("Auto-banned new player " + player.getName()
-                                + " because that account is using an IP address very recently used by banned player "
-                                + info.bannedAccountName + " (" + info.address.toString() + ").",
-                                CustomLogEntryTypes.AdminActivity);
+                        GriefPrevention.AddLogEntry(
+                            "Auto-banned new player " +
+                                player.getName() +
+                                " because that account is using an IP address very recently used by banned player " +
+                                info.bannedAccountName +
+                                " (" +
+                                info.address.toString() +
+                                ").",
+                            CustomLogEntryTypes.AdminActivity
+                        );
 
                         // notify any online ops
                         @SuppressWarnings("unchecked")
                         Collection<Player> players = (Collection<Player>) instance.getServer().getOnlinePlayers();
                         for (Player otherPlayer : players) {
                             if (otherPlayer.isOp()) {
-                                GriefPrevention.sendMessage(otherPlayer, TextMode.Success, Messages.AutoBanNotify,
-                                        player.getName(), info.bannedAccountName);
+                                GriefPrevention.sendMessage(
+                                    otherPlayer,
+                                    TextMode.Success,
+                                    Messages.AutoBanNotify,
+                                    player.getName(),
+                                    info.bannedAccountName
+                                );
                             }
                         }
 
                         // ban player
-                        PlayerKickBanTask task = new PlayerKickBanTask(player, "",
-                                "GriefPrevention Smart Ban - Shared Login:" + info.bannedAccountName, true);
+                        PlayerKickBanTask task = new PlayerKickBanTask(
+                            player,
+                            "",
+                            "GriefPrevention Smart Ban - Shared Login:" + info.bannedAccountName,
+                            true
+                        );
                         SchedulerUtil.runLaterEntity(instance, player, task::run, 10L);
 
                         // silence join message
@@ -863,8 +918,7 @@ public class PlayerEventHandler implements Listener {
                 @SuppressWarnings("unchecked")
                 Collection<Player> players = (Collection<Player>) instance.getServer().getOnlinePlayers();
                 for (Player onlinePlayer : players) {
-                    if (onlinePlayer.getUniqueId().equals(player.getUniqueId()))
-                        continue;
+                    if (onlinePlayer.getUniqueId().equals(player.getUniqueId())) continue;
 
                     PlayerData otherData = instance.dataStore.getPlayerData(onlinePlayer.getUniqueId());
                     if (ipAddress.equals(otherData.ipAddress) && GriefPrevention.isNewToServer(onlinePlayer)) {
@@ -874,9 +928,12 @@ public class PlayerEventHandler implements Listener {
 
                 if (ipCount >= ipLimit) {
                     // kick player
-                    PlayerKickBanTask task = new PlayerKickBanTask(player,
-                            instance.dataStore.getMessage(Messages.TooMuchIpOverlap),
-                            "GriefPrevention IP-sharing limit.", false);
+                    PlayerKickBanTask task = new PlayerKickBanTask(
+                        player,
+                        instance.dataStore.getMessage(Messages.TooMuchIpOverlap),
+                        "GriefPrevention IP-sharing limit.",
+                        false
+                    );
                     SchedulerUtil.runLaterEntity(instance, player, task::run, 100L);
 
                     // silence join message
@@ -894,24 +951,33 @@ public class PlayerEventHandler implements Listener {
             // If so, let him know and rescue him in 10 seconds. If he is in fact not
             // trapped, hopefully chunks will have loaded by this time so he can walk out.
             GriefPrevention.sendMessage(player, TextMode.Info, Messages.NetherPortalTrapDetectionMessage, 20L);
-            SchedulerUtil.runLaterEntity(instance, player, () -> {
-                try {
-                    if (player.getPortalCooldown() > 8 && player.hasMetadata("GP_PORTALRESCUE")) {
-                        GriefPrevention.AddLogEntry(
-                                "Rescued " + player.getName() + " from a nether portal.\nTeleported from "
-                                        + GriefPrevention.getfriendlyLocationString(player.getLocation()) + " to "
-                                        + GriefPrevention.getfriendlyLocationString((Location) player.getMetadata("GP_PORTALRESCUE").get(0).value()),
-                                CustomLogEntryTypes.Debug);
-                        player.teleport((Location) player.getMetadata("GP_PORTALRESCUE").get(0).value());
-                        player.removeMetadata("GP_PORTALRESCUE", instance);
-                    }
-                } catch (NoSuchMethodError ignore) {
-                }
-            }, 200L);
+            SchedulerUtil.runLaterEntity(
+                instance,
+                player,
+                () -> {
+                    try {
+                        if (player.getPortalCooldown() > 8 && player.hasMetadata("GP_PORTALRESCUE")) {
+                            GriefPrevention.AddLogEntry(
+                                "Rescued " +
+                                    player.getName() +
+                                    " from a nether portal.\nTeleported from " +
+                                    GriefPrevention.getfriendlyLocationString(player.getLocation()) +
+                                    " to " +
+                                    GriefPrevention.getfriendlyLocationString(
+                                        (Location) player.getMetadata("GP_PORTALRESCUE").get(0).value()
+                                    ),
+                                CustomLogEntryTypes.Debug
+                            );
+                            player.teleport((Location) player.getMetadata("GP_PORTALRESCUE").get(0).value());
+                            player.removeMetadata("GP_PORTALRESCUE", instance);
+                        }
+                    } catch (NoSuchMethodError ignore) {}
+                },
+                200L
+            );
         }
         // Otherwise just reset cooldown, just in case they happened to logout again...
-        else
-            CompatUtil.setPortalCooldown(player, 0);
+        else CompatUtil.setPortalCooldown(player, 0);
 
         // if we're holding a logout message for this player, don't send that or this
         // event's join message
@@ -939,8 +1005,12 @@ public class PlayerEventHandler implements Listener {
         // also send him any messaged from grief prevention he would have received while
         // dead
         if (playerData.messageOnRespawn != null) {
-            GriefPrevention.sendMessage(player, ChatColor.RESET /* color is alrady embedded in message in this case */,
-                    playerData.messageOnRespawn, 40L);
+            GriefPrevention.sendMessage(
+                player,
+                ChatColor.RESET /* color is alrady embedded in message in this case */,
+                playerData.messageOnRespawn,
+                40L
+            );
             playerData.messageOnRespawn = null;
         }
 
@@ -957,10 +1027,13 @@ public class PlayerEventHandler implements Listener {
         Player player = event.getEntity();
         Long lastDeathTime = this.deathTimestamps.get(player.getUniqueId());
         long now = Calendar.getInstance().getTimeInMillis();
-        if (lastDeathTime != null && now - lastDeathTime < instance.config_spam_deathMessageCooldownSeconds * 1000
-                && event.getDeathMessage() != null) {
+        if (
+            lastDeathTime != null &&
+            now - lastDeathTime < instance.config_spam_deathMessageCooldownSeconds * 1000 &&
+            event.getDeathMessage() != null
+        ) {
             player.sendMessage(event.getDeathMessage()); // let the player assume his death message was broadcasted to
-                                                         // everyone
+            // everyone
             event.setDeathMessage(null);
         }
 
@@ -997,8 +1070,7 @@ public class PlayerEventHandler implements Listener {
             if (player.getPortalCooldown() < 9) {
                 player.removeMetadata("GP_PORTALRESCUE", instance);
             }
-        } catch (NoSuchMethodError ignore) {
-        }
+        } catch (NoSuchMethodError ignore) {}
 
         if (playerData.wasKicked) {
             isBanned = player.isBanned();
@@ -1009,8 +1081,9 @@ public class PlayerEventHandler implements Listener {
         // if banned, add IP to the temporary IP ban list
         if (isBanned && playerData.ipAddress != null) {
             long now = Calendar.getInstance().getTimeInMillis();
-            this.tempBannedIps
-                    .add(new IpBanInfo(playerData.ipAddress, now + this.MILLISECONDS_IN_DAY, player.getName()));
+            this.tempBannedIps.add(
+                new IpBanInfo(playerData.ipAddress, now + this.MILLISECONDS_IN_DAY, player.getName())
+            );
         }
 
         // silence notifications when they're coming too fast
@@ -1022,7 +1095,6 @@ public class PlayerEventHandler implements Listener {
         if (isBanned && instance.config_silenceBans) {
             event.setQuitMessage(null);
         }
-
         // make sure his data is all saved - he might have accrued some claim blocks
         // while playing that were not saved immediately
         else {
@@ -1042,8 +1114,11 @@ public class PlayerEventHandler implements Listener {
             String quitMessage = event.getQuitMessage();
             if (quitMessage != null && !quitMessage.isEmpty()) {
                 BroadcastMessageTask task = new BroadcastMessageTask(quitMessage);
-                TaskHandle handle = SchedulerUtil.runLaterGlobal(instance, task,
-                        20L * instance.config_spam_logoutMessageDelaySeconds);
+                TaskHandle handle = SchedulerUtil.runLaterGlobal(
+                    instance,
+                    task,
+                    20L * instance.config_spam_logoutMessageDelaySeconds
+                );
                 this.heldLogoutMessages.put(playerID, handle);
                 event.setQuitMessage("");
             }
@@ -1104,8 +1179,7 @@ public class PlayerEventHandler implements Listener {
     @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGH)
     void onPlayerPortal(PlayerPortalEvent event) {
         // if the player isn't going anywhere, take no action
-        if (event.getTo() == null || event.getTo().getWorld() == null)
-            return;
+        if (event.getTo() == null || event.getTo().getWorld() == null) return;
 
         Player player = event.getPlayer();
         if (event.getCause() == TeleportCause.NETHER_PORTAL) {
@@ -1114,8 +1188,7 @@ public class PlayerEventHandler implements Listener {
             instance.startRescueTask(player, player.getLocation());
 
             // don't track in worlds where claims are not enabled
-            if (!instance.claimsEnabledForWorld(event.getTo().getWorld()))
-                return;
+            if (!instance.claimsEnabledForWorld(event.getTo().getWorld())) return;
         }
     }
 
@@ -1145,18 +1218,29 @@ public class PlayerEventHandler implements Listener {
                 // 1.8.8: CHORUS_FRUIT doesn't exist
             }
             if (isChorusFruitOrEnderPearl) {
-                Supplier<String> noAccessReason = ProtectionHelper.checkPermission(player, event.getTo(),
-                        ClaimPermission.Access, event);
+                Supplier<String> noAccessReason = ProtectionHelper.checkPermission(
+                    player,
+                    event.getTo(),
+                    ClaimPermission.Access,
+                    event
+                );
                 if (noAccessReason != null) {
                     // Skip message if ProjectileHitEvent already handled it (Purpur/Folia: both events fire)
                     if (!refundedByProjectileHitEvent.contains(player.getUniqueId())) {
                         GriefPrevention.sendMessage(player, TextMode.Err, noAccessReason.get());
                     }
                     event.setCancelled(true);
-                    if (cause == TeleportCause.ENDER_PEARL && instance.config_claims_refundDeniedEnderPearls
-                            && !refundedByProjectileHitEvent.contains(player.getUniqueId())) {
+                    if (
+                        cause == TeleportCause.ENDER_PEARL &&
+                        instance.config_claims_refundDeniedEnderPearls &&
+                        !refundedByProjectileHitEvent.contains(player.getUniqueId())
+                    ) {
                         refundedByTeleportEvent.add(player.getUniqueId());
-                        SchedulerUtil.runLaterGlobal(instance, () -> refundedByTeleportEvent.remove(player.getUniqueId()), 15L);
+                        SchedulerUtil.runLaterGlobal(
+                            instance,
+                            () -> refundedByTeleportEvent.remove(player.getUniqueId()),
+                            15L
+                        );
                         player.getInventory().addItem(new ItemStack(Material.ENDER_PEARL));
                     }
                     return; // Don't update lastClaim when teleport is cancelled
@@ -1192,8 +1276,12 @@ public class PlayerEventHandler implements Listener {
 
         for (UUID playerID : recentPearlRollbackPlayers) {
             Player p = instance.getServer().getPlayer(playerID);
-            if (p != null && p.isOnline() && p.getWorld().equals(spawnLoc.getWorld())
-                    && p.getLocation().distanceSquared(spawnLoc) <= 25) {
+            if (
+                p != null &&
+                p.isOnline() &&
+                p.getWorld().equals(spawnLoc.getWorld()) &&
+                p.getLocation().distanceSquared(spawnLoc) <= 25
+            ) {
                 event.setCancelled(true);
                 return;
             }
@@ -1211,11 +1299,13 @@ public class PlayerEventHandler implements Listener {
         if (!instance.claimsEnabledForWorld(event.getEntity().getWorld())) return;
 
         Block hitBlock = event.getHitBlock();
-        Location destLoc = hitBlock != null
-                ? hitBlock.getLocation().add(0.5, 1, 0.5)
-                : event.getEntity().getLocation();
-        Supplier<String> noAccessReason = ProtectionHelper.checkPermission(shooter, destLoc,
-                ClaimPermission.Access, null);
+        Location destLoc = hitBlock != null ? hitBlock.getLocation().add(0.5, 1, 0.5) : event.getEntity().getLocation();
+        Supplier<String> noAccessReason = ProtectionHelper.checkPermission(
+            shooter,
+            destLoc,
+            ClaimPermission.Access,
+            null
+        );
         if (noAccessReason != null) {
             event.setCancelled(true);
             // Skip refund if PlayerTeleportEvent already refunded (Purpur etc have both events fire)
@@ -1224,9 +1314,17 @@ public class PlayerEventHandler implements Listener {
             UUID pearlID = event.getEntity().getUniqueId();
             if (refundedEnderPearlEntities.add(pearlID)) {
                 refundedByProjectileHitEvent.add(shooter.getUniqueId());
-                SchedulerUtil.runLaterGlobal(instance, () -> refundedByProjectileHitEvent.remove(shooter.getUniqueId()), 15L);
+                SchedulerUtil.runLaterGlobal(
+                    instance,
+                    () -> refundedByProjectileHitEvent.remove(shooter.getUniqueId()),
+                    15L
+                );
                 recentPearlRollbackPlayers.add(shooter.getUniqueId());
-                SchedulerUtil.runLaterGlobal(instance, () -> recentPearlRollbackPlayers.remove(shooter.getUniqueId()), 20L);
+                SchedulerUtil.runLaterGlobal(
+                    instance,
+                    () -> recentPearlRollbackPlayers.remove(shooter.getUniqueId()),
+                    20L
+                );
                 GriefPrevention.sendMessage(shooter, TextMode.Err, noAccessReason.get());
                 if (instance.config_claims_refundDeniedEnderPearls) {
                     shooter.getInventory().addItem(new ItemStack(Material.ENDER_PEARL));
@@ -1239,7 +1337,10 @@ public class PlayerEventHandler implements Listener {
     /** Folia/Canvas: use teleportAsync when in region threading. */
     private static void teleportFoliaSafe(Player player, Location location) {
         try {
-            player.getClass().getMethod("teleportAsync", Location.class).invoke(player, location);
+            player
+                .getClass()
+                .getMethod("teleportAsync", Location.class)
+                .invoke(player, location);
         } catch (Exception e) {
             player.teleport(location);
         }
@@ -1256,9 +1357,7 @@ public class PlayerEventHandler implements Listener {
         if (!instance.claimsEnabledForWorld(event.getEntity().getWorld())) return;
 
         Block hitBlock = event.getHitBlock();
-        Location destLoc = hitBlock != null
-                ? hitBlock.getLocation().add(0.5, 1, 0.5)
-                : event.getEntity().getLocation();
+        Location destLoc = hitBlock != null ? hitBlock.getLocation().add(0.5, 1, 0.5) : event.getEntity().getLocation();
         Location fromLoc = shooter.getLocation().clone();
         UUID playerID = shooter.getUniqueId();
         UUID pearlEntityID = event.getEntity().getUniqueId();
@@ -1269,8 +1368,7 @@ public class PlayerEventHandler implements Listener {
             Location now = p.getLocation();
             if (now.getWorld() != destLoc.getWorld()) return;
             if (now.distanceSquared(destLoc) > 25) return;
-            Supplier<String> noAccessReason = ProtectionHelper.checkPermission(p, now,
-                    ClaimPermission.Access, null);
+            Supplier<String> noAccessReason = ProtectionHelper.checkPermission(p, now, ClaimPermission.Access, null);
             if (noAccessReason != null) {
                 recentPearlRollbackPlayers.add(playerID);
                 SchedulerUtil.runLaterGlobal(instance, () -> recentPearlRollbackPlayers.remove(playerID), 20L);
@@ -1318,8 +1416,12 @@ public class PlayerEventHandler implements Listener {
         // Check if the player has permission to interact with the entity in this claim
         Claim claim = this.dataStore.getClaimAt(entity.getLocation(), false, null);
         if (claim != null) {
-            Supplier<String> noBuildReason = ProtectionHelper.checkPermission(player, entity.getLocation(),
-                    ClaimPermission.Container, event);
+            Supplier<String> noBuildReason = ProtectionHelper.checkPermission(
+                player,
+                entity.getLocation(),
+                ClaimPermission.Container,
+                event
+            );
             if (noBuildReason != null) {
                 GriefPrevention.sendRateLimitedErrorMessage(player, noBuildReason.get());
                 event.setCancelled(true);
@@ -1360,9 +1462,11 @@ public class PlayerEventHandler implements Listener {
     @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
     public void onPlayerMove(org.bukkit.event.player.PlayerMoveEvent event) {
         // Only check if the player has moved a full block
-        if (event.getFrom().getBlockX() == event.getTo().getBlockX() &&
-                event.getFrom().getBlockZ() == event.getTo().getBlockZ() &&
-                event.getFrom().getBlockY() == event.getTo().getBlockY()) {
+        if (
+            event.getFrom().getBlockX() == event.getTo().getBlockX() &&
+            event.getFrom().getBlockZ() == event.getTo().getBlockZ() &&
+            event.getFrom().getBlockY() == event.getTo().getBlockY()
+        ) {
             return;
         }
 
@@ -1389,19 +1493,22 @@ public class PlayerEventHandler implements Listener {
         Player player = event.getPlayer();
         Entity entity = event.getRightClicked();
 
-        if (!instance.claimsEnabledForWorld(entity.getWorld()))
-            return;
+        if (!instance.claimsEnabledForWorld(entity.getWorld())) return;
 
         // allow horse protection to be overridden to allow management from other
         // plugins
-        if (!instance.config_claims_protectHorses && entity instanceof AbstractHorse)
-            return;
-        if (!instance.config_claims_protectDonkeys && CompatUtil.canCheckEntityType("Donkey") && entity instanceof Donkey)
-            return;
-        if (!instance.config_claims_protectDonkeys && CompatUtil.canCheckEntityType("Mule") && entity instanceof Mule)
-            return;
-        if (!instance.config_claims_protectLlamas && CompatUtil.canCheckEntityType("Llama") && entity instanceof Llama)
-            return;
+        if (!instance.config_claims_protectHorses && entity instanceof AbstractHorse) return;
+        if (
+            !instance.config_claims_protectDonkeys &&
+            CompatUtil.canCheckEntityType("Donkey") &&
+            entity instanceof Donkey
+        ) return;
+        if (
+            !instance.config_claims_protectDonkeys && CompatUtil.canCheckEntityType("Mule") && entity instanceof Mule
+        ) return;
+        if (
+            !instance.config_claims_protectLlamas && CompatUtil.canCheckEntityType("Llama") && entity instanceof Llama
+        ) return;
 
         PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
 
@@ -1428,18 +1535,18 @@ public class PlayerEventHandler implements Listener {
                         // otherwise disallow
                         OfflinePlayer owner = instance.getServer().getOfflinePlayer(ownerID);
                         String ownerName = owner.getName();
-                        if (ownerName == null)
-                            ownerName = "someone";
+                        if (ownerName == null) ownerName = "someone";
                         String message = instance.dataStore.getMessage(Messages.NotYourPet, ownerName);
-                        if (player.hasPermission("griefprevention.ignoreclaims"))
-                            message += "  " + instance.dataStore.getMessage(Messages.IgnoreClaimsAdvertisement);
+                        if (player.hasPermission("griefprevention.ignoreclaims")) message +=
+                            "  " + instance.dataStore.getMessage(Messages.IgnoreClaimsAdvertisement);
                         GriefPrevention.sendMessage(player, TextMode.Err, message);
                         event.setCancelled(true);
                         return;
                     }
                 }
-            } else // world repair code for a now-fixed GP bug
-            {
+            }
+            // world repair code for a now-fixed GP bug
+            else {
                 // ensure this entity can be tamed by players
                 tameable.setOwner(null);
                 if (tameable instanceof InventoryHolder) {
@@ -1451,8 +1558,12 @@ public class PlayerEventHandler implements Listener {
         // don't allow interaction with item frames or armor stands in claimed areas
         // without build permission
         if (entity.getType() == EntityType.ARMOR_STAND || entity instanceof Hanging) {
-            Supplier<String> noBuildReason = ProtectionHelper.checkPermission(player, entity.getLocation(),
-                    ClaimPermission.Build, event);
+            Supplier<String> noBuildReason = ProtectionHelper.checkPermission(
+                player,
+                entity.getLocation(),
+                ClaimPermission.Build,
+                event
+            );
             if (noBuildReason != null) {
                 GriefPrevention.sendRateLimitedErrorMessage(player, noBuildReason.get());
                 event.setCancelled(true);
@@ -1461,12 +1572,13 @@ public class PlayerEventHandler implements Listener {
         }
 
         // always allow interactions when player is in ignore claims mode
-        if (playerData.ignoreClaims)
-            return;
+        if (playerData.ignoreClaims) return;
 
         // don't allow container access during pvp combat in claimed areas
-        if (!instance.config_pvp_allowContainerAccess
-                && (entity instanceof StorageMinecart || entity instanceof PoweredMinecart)) {
+        if (
+            !instance.config_pvp_allowContainerAccess &&
+            (entity instanceof StorageMinecart || entity instanceof PoweredMinecart)
+        ) {
             if (playerData.inPvpCombat()) {
                 Claim claim = this.dataStore.getClaimAt(entity.getLocation(), false, playerData.lastClaim);
                 if (claim != null) {
@@ -1482,7 +1594,11 @@ public class PlayerEventHandler implements Listener {
             Claim claim = this.dataStore.getClaimAt(entity.getLocation(), false, null);
             if (claim != null) {
                 if (entity instanceof InventoryHolder) {
-                    Supplier<String> noContainersReason = claim.checkPermission(player, ClaimPermission.Container, event);
+                    Supplier<String> noContainersReason = claim.checkPermission(
+                        player,
+                        ClaimPermission.Container,
+                        event
+                    );
                     if (noContainersReason != null) {
                         GriefPrevention.sendRateLimitedErrorMessage(player, noContainersReason.get());
                         event.setCancelled(true);
@@ -1493,14 +1609,15 @@ public class PlayerEventHandler implements Listener {
         }
 
         // sulfur cube (Minecraft 26.2+) - apply container rules for block insert/swap/retrieve
-        if (instance.config_claims_preventTheft && entity.getType().name().equals("SULFUR_CUBE"))
-        {
+        if (instance.config_claims_preventTheft && entity.getType().name().equals("SULFUR_CUBE")) {
             Claim claim = this.dataStore.getClaimAt(entity.getLocation(), false, null);
-            if (claim != null)
-            {
-                final Supplier<String> noContainersReason = claim.checkPermission(player, ClaimPermission.Container, event);
-                if (noContainersReason != null)
-                {
+            if (claim != null) {
+                final Supplier<String> noContainersReason = claim.checkPermission(
+                    player,
+                    ClaimPermission.Container,
+                    event
+                );
+                if (noContainersReason != null) {
                     GriefPrevention.sendRateLimitedErrorMessage(player, noContainersReason.get());
                     event.setCancelled(true);
                     return;
@@ -1509,20 +1626,29 @@ public class PlayerEventHandler implements Listener {
         }
 
         // if the entity is an animal or copper golem, apply container rules
-        if ((instance.config_claims_preventTheft && (entity instanceof Animals || entity instanceof Fish
-                || entity instanceof CopperGolem))
-                || (entity.getType() == EntityType.VILLAGER && instance.config_claims_villagerTradingRequiresTrust)) {
+        if (
+            (instance.config_claims_preventTheft &&
+                (entity instanceof Animals || entity instanceof Fish || entity instanceof CopperGolem)) ||
+            (entity.getType() == EntityType.VILLAGER && instance.config_claims_villagerTradingRequiresTrust)
+        ) {
             Claim claim = this.dataStore.getClaimAt(entity.getLocation(), false, null);
             if (claim != null) {
                 Supplier<String> override = () -> {
-                    String message = instance.dataStore.getMessage(Messages.NoDamageClaimedEntity,
-                            claim.getOwnerName());
-                    if (player.hasPermission("griefprevention.ignoreclaims"))
-                        message += "  " + instance.dataStore.getMessage(Messages.IgnoreClaimsAdvertisement);
+                    String message = instance.dataStore.getMessage(
+                        Messages.NoDamageClaimedEntity,
+                        claim.getOwnerName()
+                    );
+                    if (player.hasPermission("griefprevention.ignoreclaims")) message +=
+                        "  " + instance.dataStore.getMessage(Messages.IgnoreClaimsAdvertisement);
 
                     return message;
                 };
-                final Supplier<String> noContainersReason = claim.checkPermission(player, ClaimPermission.Container, event, override);
+                final Supplier<String> noContainersReason = claim.checkPermission(
+                    player,
+                    ClaimPermission.Container,
+                    event,
+                    override
+                );
                 if (noContainersReason != null) {
                     GriefPrevention.sendRateLimitedErrorMessage(player, noContainersReason.get());
                     event.setCancelled(true);
@@ -1534,8 +1660,11 @@ public class PlayerEventHandler implements Listener {
         ItemStack itemInHand = instance.getItemInHand(player, CompatUtil.getInteractEntityEventHand(event));
 
         // if preventing theft, prevent leashing claimed creatures and boats
-        if (instance.config_claims_preventTheft && itemInHand.getType() == Material.LEAD
-                && (entity.getType().name().contains("BOAT") || entity instanceof Creature)) {
+        if (
+            instance.config_claims_preventTheft &&
+            itemInHand.getType() == Material.LEAD &&
+            (entity.getType().name().contains("BOAT") || entity instanceof Creature)
+        ) {
             Claim claim = this.dataStore.getClaimAt(entity.getLocation(), false, playerData.lastClaim);
             if (claim != null) {
                 Supplier<String> failureReason = claim.checkPermission(player, ClaimPermission.Container, event);
@@ -1550,29 +1679,31 @@ public class PlayerEventHandler implements Listener {
         // Name tags may only be used on entities that the player is allowed to kill.
         if (itemInHand.getType() == Material.NAME_TAG) {
             // don't track in worlds where claims are not enabled
-            if (!instance.claimsEnabledForWorld(entity.getWorld()))
-                return;
+            if (!instance.claimsEnabledForWorld(entity.getWorld())) return;
 
             Claim cachedClaim = playerData.lastClaim;
             Claim claim = this.dataStore.getClaimAt(entity.getLocation(), false, cachedClaim);
 
             // Require a claim to handle.
-            if (claim == null)
-                return;
+            if (claim == null) return;
 
             Supplier<String> override = () -> {
                 String message = dataStore.getMessage(Messages.NoDamageClaimedEntity, claim.getOwnerName());
-                if (player.hasPermission("griefprevention.ignoreclaims"))
-                    message += "  " + dataStore.getMessage(Messages.IgnoreClaimsAdvertisement);
+                if (player.hasPermission("griefprevention.ignoreclaims")) message +=
+                    "  " + dataStore.getMessage(Messages.IgnoreClaimsAdvertisement);
                 return message;
             };
 
             // Check for permission to access containers.
-            Supplier<String> noContainersReason = claim.checkPermission(player, ClaimPermission.Container, event, override);
+            Supplier<String> noContainersReason = claim.checkPermission(
+                player,
+                ClaimPermission.Container,
+                event,
+                override
+            );
 
             // If player has permission, action is allowed.
-            if (noContainersReason == null)
-                return;
+            if (noContainersReason == null) return;
             event.setCancelled(true);
             GriefPrevention.sendRateLimitedErrorMessage(player, noContainersReason.get());
         }
@@ -1586,8 +1717,7 @@ public class PlayerEventHandler implements Listener {
         Claim claim = this.dataStore.getClaimAt(event.getEgg().getLocation(), false, playerData.lastClaim);
 
         // allow throw egg if player is in ignore claims mode
-        if (playerData.ignoreClaims || claim == null)
-            return;
+        if (playerData.ignoreClaims || claim == null) return;
 
         Supplier<String> failureReason = claim.checkPermission(player, ClaimPermission.Container, event);
         if (failureReason != null) {
@@ -1612,8 +1742,7 @@ public class PlayerEventHandler implements Listener {
     @EventHandler(ignoreCancelled = true, priority = EventPriority.LOWEST)
     public void onPlayerFish(PlayerFishEvent event) {
         Entity entity = event.getCaught();
-        if (entity == null)
-            return; // if nothing pulled, uninteresting event
+        if (entity == null) return; // if nothing pulled, uninteresting event
 
         // if should be protected from pulling in land claims without permission
         if (entity.getType() == EntityType.ARMOR_STAND || entity instanceof Animals) {
@@ -1624,8 +1753,11 @@ public class PlayerEventHandler implements Listener {
                 Supplier<String> errorMessage = claim.checkPermission(player, ClaimPermission.Container, event);
                 if (errorMessage != null) {
                     event.setCancelled(true);
-                    GriefPrevention.sendRateLimitedErrorMessage(player, Messages.NoDamageClaimedEntity,
-                            claim.getOwnerName());
+                    GriefPrevention.sendRateLimitedErrorMessage(
+                        player,
+                        Messages.NoDamageClaimedEntity,
+                        claim.getOwnerName()
+                    );
                     return;
                 }
             }
@@ -1636,13 +1768,21 @@ public class PlayerEventHandler implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onItemHeldChange(PlayerItemHeldEvent event) {
         Player player = event.getPlayer();
-        GriefPrevention.AddLogEntry("[GP Debug] onItemHeldChange: player=" + player.getName() + ", newSlot=" + event.getNewSlot(), CustomLogEntryTypes.Debug, false);
+        GriefPrevention.AddLogEntry(
+            "[GP Debug] onItemHeldChange: player=" + player.getName() + ", newSlot=" + event.getNewSlot(),
+            CustomLogEntryTypes.Debug,
+            false
+        );
 
         // if he's switching to the golden shovel
         int newSlot = event.getNewSlot();
         ItemStack newItemStack = player.getInventory().getItem(newSlot);
         if (newItemStack != null && newItemStack.getType() == instance.config_claims_modificationTool) {
-            GriefPrevention.AddLogEntry("[GP Debug] onItemHeldChange: switching to golden shovel", CustomLogEntryTypes.Debug, false);
+            GriefPrevention.AddLogEntry(
+                "[GP Debug] onItemHeldChange: switching to golden shovel",
+                CustomLogEntryTypes.Debug,
+                false
+            );
             // give the player his available claim blocks count and claiming instructions,
             // but only if he keeps the shovel equipped for a minimum time, to avoid mouse
             // wheel spam
@@ -1666,14 +1806,16 @@ public class PlayerEventHandler implements Listener {
 
     // block use of buckets within other players' claims
     private final Set<Material> commonAdjacentBlocks_water = MaterialCompat.availableSet(
-            "WATER", "FARMLAND", "DIRT", "STONE");
-    private final Set<Material> commonAdjacentBlocks_lava = MaterialCompat.availableSet(
-            "LAVA", "DIRT", "STONE");
+        "WATER",
+        "FARMLAND",
+        "DIRT",
+        "STONE"
+    );
+    private final Set<Material> commonAdjacentBlocks_lava = MaterialCompat.availableSet("LAVA", "DIRT", "STONE");
 
     @EventHandler(ignoreCancelled = true, priority = EventPriority.LOWEST)
     public void onPlayerBucketEmpty(PlayerBucketEmptyEvent bucketEvent) {
-        if (!instance.claimsEnabledForWorld(bucketEvent.getBlockClicked().getWorld()))
-            return;
+        if (!instance.claimsEnabledForWorld(bucketEvent.getBlockClicked().getWorld())) return;
 
         Player player = bucketEvent.getPlayer();
         Block block = bucketEvent.getBlockClicked().getRelative(bucketEvent.getBlockFace());
@@ -1683,14 +1825,20 @@ public class PlayerEventHandler implements Listener {
         // Prevents waterlogging blocks placed on a claim's edge.
         // Waterlogging a block affects the clicked block, and NOT the adjacent location
         // relative to it.
-        if (bucketEvent.getBucket() == Material.WATER_BUCKET
-                && BlockDataCompat.isWaterlogged(bucketEvent.getBlockClicked())) {
+        if (
+            bucketEvent.getBucket() == Material.WATER_BUCKET &&
+            BlockDataCompat.isWaterlogged(bucketEvent.getBlockClicked())
+        ) {
             block = bucketEvent.getBlockClicked();
         }
 
         // make sure the player is allowed to build at the location
-        Supplier<String> noBuildReason = ProtectionHelper.checkPermission(player, block.getLocation(),
-                ClaimPermission.Build, bucketEvent);
+        Supplier<String> noBuildReason = ProtectionHelper.checkPermission(
+            player,
+            block.getLocation(),
+            ClaimPermission.Build,
+            bucketEvent
+        );
         if (noBuildReason != null) {
             GriefPrevention.sendRateLimitedErrorMessage(player, noBuildReason.get());
             bucketEvent.setCancelled(true);
@@ -1704,11 +1852,12 @@ public class PlayerEventHandler implements Listener {
         if (claim != null) {
             minLavaDistance = 3;
         }
-
         // otherwise no wilderness dumping in creative mode worlds
         else if (instance.creativeRulesApply(block.getLocation())) {
-            if (block.getY() >= instance.getSeaLevel(block.getWorld()) - 5
-                    && !player.hasPermission("griefprevention.lava")) {
+            if (
+                block.getY() >= instance.getSeaLevel(block.getWorld()) - 5 &&
+                !player.hasPermission("griefprevention.lava")
+            ) {
                 if (bucketEvent.getBucket() == Material.LAVA_BUCKET) {
                     GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoWildernessBuckets);
                     bucketEvent.setCancelled(true);
@@ -1722,12 +1871,19 @@ public class PlayerEventHandler implements Listener {
             if (bucketEvent.getBucket() == Material.LAVA_BUCKET) {
                 List<Player> players = block.getWorld().getPlayers();
                 for (Player otherPlayer : players) {
-                    if (!otherPlayer.equals(player) && otherPlayer.getGameMode() == GameMode.SURVIVAL
-                            && player.canSee(otherPlayer) && block.getY() >= otherPlayer.getLocation().getBlockY() - 1
-                            && otherPlayer.getLocation().distanceSquared(block.getLocation()) < minLavaDistance
-                                    * minLavaDistance) {
-                        GriefPrevention.sendRateLimitedErrorMessage(player, Messages.NoLavaNearOtherPlayer,
-                                "another player");
+                    if (
+                        !otherPlayer.equals(player) &&
+                        otherPlayer.getGameMode() == GameMode.SURVIVAL &&
+                        player.canSee(otherPlayer) &&
+                        block.getY() >= otherPlayer.getLocation().getBlockY() - 1 &&
+                        otherPlayer.getLocation().distanceSquared(block.getLocation()) <
+                            minLavaDistance * minLavaDistance
+                    ) {
+                        GriefPrevention.sendRateLimitedErrorMessage(
+                            player,
+                            Messages.NoLavaNearOtherPlayer,
+                            "another player"
+                        );
                         bucketEvent.setCancelled(true);
                         return;
                     }
@@ -1737,18 +1893,25 @@ public class PlayerEventHandler implements Listener {
 
         // log any suspicious placements (check sea level, world type, and adjacent
         // blocks)
-        if (block.getY() >= instance.getSeaLevel(block.getWorld()) - 5 && !player.hasPermission("griefprevention.lava")
-                && block.getWorld().getEnvironment() != Environment.NETHER) {
+        if (
+            block.getY() >= instance.getSeaLevel(block.getWorld()) - 5 &&
+            !player.hasPermission("griefprevention.lava") &&
+            block.getWorld().getEnvironment() != Environment.NETHER
+        ) {
             // if certain blocks are nearby, it's less suspicious and not worth logging
             Set<Material> exclusionAdjacentTypes;
-            if (bucketEvent.getBucket() == Material.WATER_BUCKET)
-                exclusionAdjacentTypes = this.commonAdjacentBlocks_water;
-            else
-                exclusionAdjacentTypes = this.commonAdjacentBlocks_lava;
+            if (bucketEvent.getBucket() == Material.WATER_BUCKET) exclusionAdjacentTypes =
+                this.commonAdjacentBlocks_water;
+            else exclusionAdjacentTypes = this.commonAdjacentBlocks_lava;
 
             boolean makeLogEntry = true;
-            BlockFace[] adjacentDirections = new BlockFace[] { BlockFace.EAST, BlockFace.WEST, BlockFace.NORTH,
-                    BlockFace.SOUTH, BlockFace.DOWN };
+            BlockFace[] adjacentDirections = new BlockFace[] {
+                BlockFace.EAST,
+                BlockFace.WEST,
+                BlockFace.NORTH,
+                BlockFace.SOUTH,
+                BlockFace.DOWN,
+            };
             for (BlockFace direction : adjacentDirections) {
                 Material adjacentBlockType = block.getRelative(direction).getType();
                 if (exclusionAdjacentTypes.contains(adjacentBlockType)) {
@@ -1759,9 +1922,14 @@ public class PlayerEventHandler implements Listener {
 
             if (makeLogEntry) {
                 GriefPrevention.AddLogEntry(
-                        player.getName() + " placed suspicious " + bucketEvent.getBucket().name() + " @ "
-                                + GriefPrevention.getfriendlyLocationString(block.getLocation()),
-                        CustomLogEntryTypes.SuspiciousActivity, true);
+                    player.getName() +
+                        " placed suspicious " +
+                        bucketEvent.getBucket().name() +
+                        " @ " +
+                        GriefPrevention.getfriendlyLocationString(block.getLocation()),
+                    CustomLogEntryTypes.SuspiciousActivity,
+                    true
+                );
             }
         }
     }
@@ -1780,22 +1948,23 @@ public class PlayerEventHandler implements Listener {
         Player player = bucketEvent.getPlayer();
         Block block = bucketEvent.getBlockClicked();
 
-        if (!instance.claimsEnabledForWorld(block.getWorld()))
-            return;
+        if (!instance.claimsEnabledForWorld(block.getWorld())) return;
 
         // exemption for cow milking (permissions will be handled by player interact
         // with entity event instead)
         Material blockType = block.getType();
-        if (blockType == Material.AIR)
-            return;
+        if (blockType == Material.AIR) return;
         if (blockType.isSolid()) {
-            if (!BlockDataCompat.isWaterlogged(block))
-                return;
+            if (!BlockDataCompat.isWaterlogged(block)) return;
         }
 
         // make sure the player is allowed to build at the location
-        Supplier<String> noBuildReason = ProtectionHelper.checkPermission(player, block.getLocation(),
-                ClaimPermission.Build, bucketEvent);
+        Supplier<String> noBuildReason = ProtectionHelper.checkPermission(
+            player,
+            block.getLocation(),
+            ClaimPermission.Build,
+            bucketEvent
+        );
         if (noBuildReason != null) {
             GriefPrevention.sendRateLimitedErrorMessage(player, noBuildReason.get());
             bucketEvent.setCancelled(true);
@@ -1806,12 +1975,23 @@ public class PlayerEventHandler implements Listener {
     // when a player interacts with the world
     @EventHandler(priority = EventPriority.LOW)
     void onPlayerInteract(PlayerInteractEvent event) {
-        GriefPrevention.AddLogEntry("[GP Debug] PlayerEventHandler.onPlayerInteract: player=" + event.getPlayer().getName() + ", action=" + event.getAction(), CustomLogEntryTypes.Debug, false);
+        GriefPrevention.AddLogEntry(
+            "[GP Debug] PlayerEventHandler.onPlayerInteract: player=" +
+                event.getPlayer().getName() +
+                ", action=" +
+                event.getAction(),
+            CustomLogEntryTypes.Debug,
+            false
+        );
 
         // not interested in left-click-on-air actions
         Action action = event.getAction();
         if (action == Action.LEFT_CLICK_AIR) {
-            GriefPrevention.AddLogEntry("[GP Debug] PlayerEventHandler.onPlayerInteract: LEFT_CLICK_AIR, returning", CustomLogEntryTypes.Debug, false);
+            GriefPrevention.AddLogEntry(
+                "[GP Debug] PlayerEventHandler.onPlayerInteract: LEFT_CLICK_AIR, returning",
+                CustomLogEntryTypes.Debug,
+                false
+            );
             return;
         }
 
@@ -1829,8 +2009,7 @@ public class PlayerEventHandler implements Listener {
 
         // Turtle eggs
         if (action == Action.PHYSICAL) {
-            if (clickedBlockType != Material.TURTLE_EGG)
-                return;
+            if (clickedBlockType != Material.TURTLE_EGG) return;
             playerData = this.dataStore.getPlayerData(player.getUniqueId());
             if (clickedBlock != null) {
                 Claim claim = this.dataStore.getClaimAt(clickedBlock.getLocation(), false, playerData.lastClaim);
@@ -1865,8 +2044,7 @@ public class PlayerEventHandler implements Listener {
             }
             try {
                 if (itemInHand.getType() == Material.valueOf("BRUSH")) {
-                    if (playerData == null)
-                        playerData = this.dataStore.getPlayerData(player.getUniqueId());
+                    if (playerData == null) playerData = this.dataStore.getPlayerData(player.getUniqueId());
 
                     // Check claim permissions
                     Claim claim = this.dataStore.getClaimAt(clickedBlock.getLocation(), false, playerData.lastClaim);
@@ -1892,29 +2070,33 @@ public class PlayerEventHandler implements Listener {
         // (items left in them are dropped to the floor on close), so PreventTheft does not
         // apply — the same way it does not apply to plain CRAFTING_TABLE. See upstream
         // GriefPrevention/GriefPrevention#2587.
-        if (clickedBlock != null && instance.config_claims_preventTheft && (event
-                .getAction() == Action.RIGHT_CLICK_BLOCK
-                && ((this.isInventoryHolder(clickedBlock) && !CompatUtil.isMaterial(clickedBlock.getType(), "LECTERN")) ||
-                        CompatUtil.isMaterial(clickedBlockType, "LECTERN") ||
-                        clickedBlockType == Material.ANVIL ||
-                        clickedBlockType == Material.BEACON ||
-                        CompatUtil.isMaterial(clickedBlockType, "BEE_NEST") ||
-                        CompatUtil.isMaterial(clickedBlockType, "BEEHIVE") ||
-                        CompatUtil.isMaterial(clickedBlockType, "BELL") ||
-                        clickedBlockType == Material.CAKE ||
-                        clickedBlockType == Material.CAULDRON ||
-                        CompatUtil.isMaterial(clickedBlockType, "WATER_CAULDRON") ||
-                        CompatUtil.isMaterial(clickedBlockType, "LAVA_CAULDRON") ||
-                        CompatUtil.isMaterial(clickedBlockType, "CAVE_VINES") ||
-                        CompatUtil.isMaterial(clickedBlockType, "CAVE_VINES_PLANT") ||
-                        CompatUtil.isMaterial(clickedBlockType, "CHIPPED_ANVIL") ||
-                        CompatUtil.isMaterial(clickedBlockType, "DAMAGED_ANVIL") ||
-                        clickedBlockType == Material.JUKEBOX ||
-                        clickedBlockType == Material.PUMPKIN ||
-                        CompatUtil.isMaterial(clickedBlockType, "RESPAWN_ANCHOR") ||
-                        (CompatUtil.isMaterial(clickedBlockType, "ROOTED_DIRT") && MaterialTagCompat.isTagged("ITEMS_HOES", event.getMaterial())) ||
-                        CompatUtil.isMaterial(clickedBlockType, "SWEET_BERRY_BUSH") ||
-                        CompatUtil.isMaterial(clickedBlockType, "DECORATED_POT")))) {
+        if (
+            clickedBlock != null &&
+            instance.config_claims_preventTheft &&
+            event.getAction() == Action.RIGHT_CLICK_BLOCK &&
+                ((this.isInventoryHolder(clickedBlock) && !CompatUtil.isMaterial(clickedBlock.getType(), "LECTERN")) ||
+                    CompatUtil.isMaterial(clickedBlockType, "LECTERN") ||
+                    clickedBlockType == Material.ANVIL ||
+                    clickedBlockType == Material.BEACON ||
+                    CompatUtil.isMaterial(clickedBlockType, "BEE_NEST") ||
+                    CompatUtil.isMaterial(clickedBlockType, "BEEHIVE") ||
+                    CompatUtil.isMaterial(clickedBlockType, "BELL") ||
+                    clickedBlockType == Material.CAKE ||
+                    clickedBlockType == Material.CAULDRON ||
+                    CompatUtil.isMaterial(clickedBlockType, "WATER_CAULDRON") ||
+                    CompatUtil.isMaterial(clickedBlockType, "LAVA_CAULDRON") ||
+                    CompatUtil.isMaterial(clickedBlockType, "CAVE_VINES") ||
+                    CompatUtil.isMaterial(clickedBlockType, "CAVE_VINES_PLANT") ||
+                    CompatUtil.isMaterial(clickedBlockType, "CHIPPED_ANVIL") ||
+                    CompatUtil.isMaterial(clickedBlockType, "DAMAGED_ANVIL") ||
+                    clickedBlockType == Material.JUKEBOX ||
+                    clickedBlockType == Material.PUMPKIN ||
+                    CompatUtil.isMaterial(clickedBlockType, "RESPAWN_ANCHOR") ||
+                    (CompatUtil.isMaterial(clickedBlockType, "ROOTED_DIRT") &&
+                        MaterialTagCompat.isTagged("ITEMS_HOES", event.getMaterial())) ||
+                    CompatUtil.isMaterial(clickedBlockType, "SWEET_BERRY_BUSH") ||
+                    CompatUtil.isMaterial(clickedBlockType, "DECORATED_POT"))
+        ) {
             // Only call claim tool dispatcher if player is holding a claim tool
             ItemStack itemInHand;
             try {
@@ -1922,13 +2104,16 @@ public class PlayerEventHandler implements Listener {
             } catch (NoSuchMethodError e) {
                 itemInHand = player.getItemInHand();
             }
-            if (itemInHand != null && (itemInHand.getType() == instance.config_claims_modificationTool || itemInHand.getType() == instance.config_claims_investigationTool)) {
+            if (
+                itemInHand != null &&
+                (itemInHand.getType() == instance.config_claims_modificationTool ||
+                    itemInHand.getType() == instance.config_claims_investigationTool)
+            ) {
                 if (this.claimToolDispatcher.handle(event, clickedBlock, clickedBlockType)) {
                     return;
                 }
             }
-            if (playerData == null)
-                playerData = this.dataStore.getPlayerData(player.getUniqueId());
+            if (playerData == null) playerData = this.dataStore.getPlayerData(player.getUniqueId());
 
             // allow players with ignoreclaims permission in spectator mode to access
             // containers
@@ -1942,12 +2127,14 @@ public class PlayerEventHandler implements Listener {
 
             // block container use during pvp combat in claimed areas only - in wilderness, allow
             // access since blocking won't prevent attackers from getting those items anyway
-            boolean respawnAnchorPvpException = instance.config_pvp_allowRespawnAnchor
-                    && CompatUtil.isMaterial(clickedBlockType, "RESPAWN_ANCHOR");
-            if (playerData.inPvpCombat()
-                    && claim != null
-                    && !instance.config_pvp_allowContainerAccess
-                    && !respawnAnchorPvpException) {
+            boolean respawnAnchorPvpException =
+                instance.config_pvp_allowRespawnAnchor && CompatUtil.isMaterial(clickedBlockType, "RESPAWN_ANCHOR");
+            if (
+                playerData.inPvpCombat() &&
+                claim != null &&
+                !instance.config_pvp_allowContainerAccess &&
+                !respawnAnchorPvpException
+            ) {
                 GriefPrevention.sendRateLimitedErrorMessage(player, Messages.PvPNoContainers);
                 event.setCancelled(true);
                 return;
@@ -1961,15 +2148,21 @@ public class PlayerEventHandler implements Listener {
                     event.setCancelled(true);
 
                     // Delay the error message to check if another plugin opened an inventory
-                    SchedulerUtil.runLaterEntity(instance, player, () -> {
-                        try {
-                            if (player.getOpenInventory().getTopInventory().getType() != InventoryType.CRAFTING)
-                                return;
-                        } catch (IncompatibleClassChangeError ignored) {
-                            // Pre-1.16: InventoryView is a class, not interface
-                        }
-                        GriefPrevention.sendRateLimitedErrorMessage(player, noContainersReason.get());
-                    }, 1L); // Check 1 tick later
+                    SchedulerUtil.runLaterEntity(
+                        instance,
+                        player,
+                        () -> {
+                            try {
+                                if (
+                                    player.getOpenInventory().getTopInventory().getType() != InventoryType.CRAFTING
+                                ) return;
+                            } catch (IncompatibleClassChangeError ignored) {
+                                // Pre-1.16: InventoryView is a class, not interface
+                            }
+                            GriefPrevention.sendRateLimitedErrorMessage(player, noContainersReason.get());
+                        },
+                        1L
+                    ); // Check 1 tick later
 
                     return;
                 }
@@ -1983,22 +2176,18 @@ public class PlayerEventHandler implements Listener {
                 GriefPrevention.sendMessage(player, TextMode.Warn, Messages.PvPImmunityEnd);
             }
         }
-
         // otherwise apply rules for doors and beds, if configured that way
-        else if (clickedBlock != null &&
-
-                (instance.config_claims_lockWoodenDoors && MaterialTagCompat.isTagged("DOORS", clickedBlockType) ||
-
-                        instance.config_claims_preventButtonsSwitches && MaterialTagCompat.isTagged("BEDS", clickedBlockType) ||
-
-                        instance.config_claims_lockTrapDoors && isLockableTrapdoor(clickedBlockType) ||
-
-                        instance.config_claims_lecternReadingRequiresAccessTrust && CompatUtil.isMaterial(clickedBlockType, "LECTERN")
-                        ||
-
-                        instance.config_claims_lockFenceGates && MaterialTagCompat.isTagged("FENCE_GATES", clickedBlockType))) {
-            if (playerData == null)
-                playerData = this.dataStore.getPlayerData(player.getUniqueId());
+        else if (
+            clickedBlock != null &&
+            ((instance.config_claims_lockWoodenDoors && MaterialTagCompat.isTagged("DOORS", clickedBlockType)) ||
+                (instance.config_claims_preventButtonsSwitches &&
+                    MaterialTagCompat.isTagged("BEDS", clickedBlockType)) ||
+                (instance.config_claims_lockTrapDoors && isLockableTrapdoor(clickedBlockType)) ||
+                (instance.config_claims_lecternReadingRequiresAccessTrust &&
+                    CompatUtil.isMaterial(clickedBlockType, "LECTERN")) ||
+                (instance.config_claims_lockFenceGates && MaterialTagCompat.isTagged("FENCE_GATES", clickedBlockType)))
+        ) {
+            if (playerData == null) playerData = this.dataStore.getPlayerData(player.getUniqueId());
             Claim claim = this.dataStore.getClaimAt(clickedBlock.getLocation(), false, playerData.lastClaim);
             if (claim != null) {
                 playerData.lastClaim = claim;
@@ -2011,12 +2200,13 @@ public class PlayerEventHandler implements Listener {
                 }
             }
         }
-
         // otherwise apply rules for buttons and switches
-        else if (clickedBlock != null && instance.config_claims_preventButtonsSwitches
-                && (MaterialTagCompat.isTagged("BUTTONS", clickedBlockType) || clickedBlockType == Material.LEVER)) {
-            if (playerData == null)
-                playerData = this.dataStore.getPlayerData(player.getUniqueId());
+        else if (
+            clickedBlock != null &&
+            instance.config_claims_preventButtonsSwitches &&
+            (MaterialTagCompat.isTagged("BUTTONS", clickedBlockType) || clickedBlockType == Material.LEVER)
+        ) {
+            if (playerData == null) playerData = this.dataStore.getPlayerData(player.getUniqueId());
             Claim claim = this.dataStore.getClaimAt(clickedBlock.getLocation(), false, playerData.lastClaim);
             if (claim != null) {
                 playerData.lastClaim = claim;
@@ -2029,12 +2219,13 @@ public class PlayerEventHandler implements Listener {
                 }
             }
         }
-
         // otherwise apply rule for cake
-        else if (clickedBlock != null && instance.config_claims_preventTheft
-                && (clickedBlockType == Material.CAKE || MaterialTagCompat.isTagged("CANDLE_CAKES", clickedBlockType))) {
-            if (playerData == null)
-                playerData = this.dataStore.getPlayerData(player.getUniqueId());
+        else if (
+            clickedBlock != null &&
+            instance.config_claims_preventTheft &&
+            (clickedBlockType == Material.CAKE || MaterialTagCompat.isTagged("CANDLE_CAKES", clickedBlockType))
+        ) {
+            if (playerData == null) playerData = this.dataStore.getPlayerData(player.getUniqueId());
             Claim claim = this.dataStore.getClaimAt(clickedBlock.getLocation(), false, playerData.lastClaim);
             if (claim != null) {
                 playerData.lastClaim = claim;
@@ -2047,22 +2238,20 @@ public class PlayerEventHandler implements Listener {
                 }
             }
         }
-
         // apply rule for redstone and various decor blocks that require full trust
-        else if (clickedBlock != null &&
-                (clickedBlockType == Material.NOTE_BLOCK ||
-                        CompatUtil.isMaterial(clickedBlockType, "REPEATER") ||
-                        clickedBlockType == Material.DRAGON_EGG ||
-                        clickedBlockType == Material.DAYLIGHT_DETECTOR ||
-                        CompatUtil.isMaterial(clickedBlockType, "COMPARATOR") ||
-                        clickedBlockType == Material.REDSTONE_WIRE ||
-                        MaterialTagCompat.isTagged("FLOWER_POTS", clickedBlockType) ||
-                        MaterialTagCompat.isTagged("CANDLES", clickedBlockType) ||
-                        MaterialTagCompat.isTagged("COPPER_GOLEM_STATUES", clickedBlockType)
-                ))
-        {
-            if (playerData == null)
-                playerData = this.dataStore.getPlayerData(player.getUniqueId());
+        else if (
+            clickedBlock != null &&
+            (clickedBlockType == Material.NOTE_BLOCK ||
+                CompatUtil.isMaterial(clickedBlockType, "REPEATER") ||
+                clickedBlockType == Material.DRAGON_EGG ||
+                clickedBlockType == Material.DAYLIGHT_DETECTOR ||
+                CompatUtil.isMaterial(clickedBlockType, "COMPARATOR") ||
+                clickedBlockType == Material.REDSTONE_WIRE ||
+                MaterialTagCompat.isTagged("FLOWER_POTS", clickedBlockType) ||
+                MaterialTagCompat.isTagged("CANDLES", clickedBlockType) ||
+                MaterialTagCompat.isTagged("COPPER_GOLEM_STATUES", clickedBlockType))
+        ) {
+            if (playerData == null) playerData = this.dataStore.getPlayerData(player.getUniqueId());
             Claim claim = this.dataStore.getClaimAt(clickedBlock.getLocation(), false, playerData.lastClaim);
             if (claim != null) {
                 Supplier<String> noBuildReason = claim.checkPermission(player, ClaimPermission.Build, event);
@@ -2073,13 +2262,11 @@ public class PlayerEventHandler implements Listener {
                 }
             }
         }
-
         // otherwise handle right click (shovel, string, bonemeal) //RoboMWM: flint and
         // steel
         else {
             // ignore all actions except right-click on a block or in the air
-            if (action != Action.RIGHT_CLICK_BLOCK && action != Action.RIGHT_CLICK_AIR)
-                return;
+            if (action != Action.RIGHT_CLICK_BLOCK && action != Action.RIGHT_CLICK_AIR) return;
 
             // what's the player holding?
             EquipmentSlot hand = CompatUtil.getInteractEventHand(event);
@@ -2088,18 +2275,25 @@ public class PlayerEventHandler implements Listener {
 
             // Require build permission for items that may have an effect on the world when
             // used.
-            if (clickedBlock != null && (CompatUtil.isMaterial(materialInHand, "BONE_MEAL")
-                    || materialInHand == Material.ARMOR_STAND
-                    || (spawnEggs.contains(materialInHand)
-                            && GriefPrevention.instance.config_claims_preventGlobalMonsterEggs)
-                    || CompatUtil.isMaterial(materialInHand, "END_CRYSTAL")
-                    || materialInHand == Material.FLINT_AND_STEEL
-                    || CompatUtil.isMaterial(materialInHand, "INK_SAC")
-                    || CompatUtil.isMaterial(materialInHand, "GLOW_INK_SAC")
-                    || CompatUtil.isMaterial(materialInHand, "HONEYCOMB")
-                    || dyes.contains(materialInHand))) {
-                Supplier<String> noBuildReason = ProtectionHelper.checkPermission(player,
-                        event.getClickedBlock().getLocation(), ClaimPermission.Build, event);
+            if (
+                clickedBlock != null &&
+                (CompatUtil.isMaterial(materialInHand, "BONE_MEAL") ||
+                    materialInHand == Material.ARMOR_STAND ||
+                    (spawnEggs.contains(materialInHand) &&
+                        GriefPrevention.instance.config_claims_preventGlobalMonsterEggs) ||
+                    CompatUtil.isMaterial(materialInHand, "END_CRYSTAL") ||
+                    materialInHand == Material.FLINT_AND_STEEL ||
+                    CompatUtil.isMaterial(materialInHand, "INK_SAC") ||
+                    CompatUtil.isMaterial(materialInHand, "GLOW_INK_SAC") ||
+                    CompatUtil.isMaterial(materialInHand, "HONEYCOMB") ||
+                    dyes.contains(materialInHand))
+            ) {
+                Supplier<String> noBuildReason = ProtectionHelper.checkPermission(
+                    player,
+                    event.getClickedBlock().getLocation(),
+                    ClaimPermission.Build,
+                    event
+                );
                 if (noBuildReason != null) {
                     GriefPrevention.sendRateLimitedErrorMessage(player, noBuildReason.get());
                     event.setCancelled(true);
@@ -2107,8 +2301,7 @@ public class PlayerEventHandler implements Listener {
 
                 return;
             } else if (clickedBlock != null && MaterialTagCompat.isTagged("ITEMS_BOATS", materialInHand)) {
-                if (playerData == null)
-                    playerData = this.dataStore.getPlayerData(player.getUniqueId());
+                if (playerData == null) playerData = this.dataStore.getPlayerData(player.getUniqueId());
                 Claim claim = this.dataStore.getClaimAt(clickedBlock.getLocation(), false, playerData.lastClaim);
                 if (claim != null) {
                     Supplier<String> reason = claim.checkPermission(player, ClaimPermission.Container, event);
@@ -2120,19 +2313,18 @@ public class PlayerEventHandler implements Listener {
 
                 return;
             }
-
             // survival world minecart placement requires container trust, which is the
             // permission required to remove the minecart later
-            else if (clickedBlock != null &&
-                    (materialInHand == Material.MINECART ||
-                            CompatUtil.isMaterial(materialInHand, "FURNACE_MINECART") ||
-                            CompatUtil.isMaterial(materialInHand, "CHEST_MINECART") ||
-                            CompatUtil.isMaterial(materialInHand, "TNT_MINECART") ||
-                            CompatUtil.isMaterial(materialInHand, "HOPPER_MINECART"))
-                    &&
-                    !instance.creativeRulesApply(clickedBlock.getLocation())) {
-                if (playerData == null)
-                    playerData = this.dataStore.getPlayerData(player.getUniqueId());
+            else if (
+                clickedBlock != null &&
+                (materialInHand == Material.MINECART ||
+                    CompatUtil.isMaterial(materialInHand, "FURNACE_MINECART") ||
+                    CompatUtil.isMaterial(materialInHand, "CHEST_MINECART") ||
+                    CompatUtil.isMaterial(materialInHand, "TNT_MINECART") ||
+                    CompatUtil.isMaterial(materialInHand, "HOPPER_MINECART")) &&
+                !instance.creativeRulesApply(clickedBlock.getLocation())
+            ) {
+                if (playerData == null) playerData = this.dataStore.getPlayerData(player.getUniqueId());
                 Claim claim = this.dataStore.getClaimAt(clickedBlock.getLocation(), false, playerData.lastClaim);
                 if (claim != null) {
                     Supplier<String> reason = claim.checkPermission(player, ClaimPermission.Container, event);
@@ -2146,9 +2338,12 @@ public class PlayerEventHandler implements Listener {
             }
 
             // Only call claim tool dispatcher if player is holding a claim tool
-            if (itemInHand != null && (itemInHand.getType() == instance.config_claims_modificationTool || itemInHand.getType() == instance.config_claims_investigationTool)) {
-                if (this.claimToolDispatcher.handle(event, clickedBlock, clickedBlockType))
-                {
+            if (
+                itemInHand != null &&
+                (itemInHand.getType() == instance.config_claims_modificationTool ||
+                    itemInHand.getType() == instance.config_claims_investigationTool)
+            ) {
+                if (this.claimToolDispatcher.handle(event, clickedBlock, clickedBlockType)) {
                     return;
                 }
             } else {
@@ -2176,8 +2371,7 @@ public class PlayerEventHandler implements Listener {
 
             // can't use the shovel from too far away, unless we snapped to a 3D corner
             // (corner itself may be air)
-            if (clickedBlockType == Material.AIR && !cornerSelected)
-                return;
+            if (clickedBlockType == Material.AIR && !cornerSelected) return;
 
             // if the player doesn't have claims permission, don't do anything
             if (!player.hasPermission("griefprevention.createclaims")) {
@@ -2186,9 +2380,11 @@ public class PlayerEventHandler implements Listener {
             }
 
             // Handle RestoreNature shovel modes
-            if (playerData.shovelMode == ShovelMode.RestoreNature ||
-                    playerData.shovelMode == ShovelMode.RestoreNatureAggressive ||
-                    playerData.shovelMode == ShovelMode.RestoreNatureFill) {
+            if (
+                playerData.shovelMode == ShovelMode.RestoreNature ||
+                playerData.shovelMode == ShovelMode.RestoreNatureAggressive ||
+                playerData.shovelMode == ShovelMode.RestoreNatureFill
+            ) {
                 handleRestoreNature(player, clickedBlock, playerData);
                 return;
             }
@@ -2229,8 +2425,7 @@ public class PlayerEventHandler implements Listener {
                     startClaimResizeSelection(player, playerData, playerData.claimResizing, clickedBlock);
                     return;
                 }
-                if (clickedBlock.getLocation().equals(playerData.lastShovelLocation))
-                    return;
+                if (clickedBlock.getLocation().equals(playerData.lastShovelLocation)) return;
 
                 if (tryResizeShapedClaim(player, playerData, clickedBlock)) {
                     return;
@@ -2238,8 +2433,10 @@ public class PlayerEventHandler implements Listener {
 
                 // figure out what the coords of his new claim would be
                 int newx1, newx2, newz1, newz2, newy1, newy2;
-                if (playerData.lastShovelLocation.getBlockX() == playerData.claimResizing.getLesserBoundaryCorner()
-                        .getBlockX()) {
+                if (
+                    playerData.lastShovelLocation.getBlockX() ==
+                    playerData.claimResizing.getLesserBoundaryCorner().getBlockX()
+                ) {
                     newx1 = clickedBlock.getX();
                     newx2 = playerData.claimResizing.getGreaterBoundaryCorner().getBlockX();
                 } else {
@@ -2247,8 +2444,10 @@ public class PlayerEventHandler implements Listener {
                     newx2 = clickedBlock.getX();
                 }
 
-                if (playerData.lastShovelLocation.getBlockZ() == playerData.claimResizing.getLesserBoundaryCorner()
-                        .getBlockZ()) {
+                if (
+                    playerData.lastShovelLocation.getBlockZ() ==
+                    playerData.claimResizing.getLesserBoundaryCorner().getBlockZ()
+                ) {
                     newz1 = clickedBlock.getZ();
                     newz2 = playerData.claimResizing.getGreaterBoundaryCorner().getBlockZ();
                 } else {
@@ -2266,7 +2465,7 @@ public class PlayerEventHandler implements Listener {
                     int endY = clickedBlock.getY();
 
                     // Special case: If it's a single-layer 3D claim, allow resizing from any corner
-                    boolean isSingleLayer = (currentMinY == currentMaxY);
+                    boolean isSingleLayer = currentMinY == currentMaxY;
 
                     // Default: preserve Y range
                     newy1 = currentMinY;
@@ -2311,13 +2510,19 @@ public class PlayerEventHandler implements Listener {
             // creating a new claim, or creating a subdivision
             // Prefer a Y-aware lookup first so we correctly target stacked 3D subclaims at
             // this Y level.
-            Claim resolvedClaim = this.dataStore.getClaimAt(clickedBlock.getLocation(), false /* respect height */,
-                    playerData.lastClaim);
+            Claim resolvedClaim = this.dataStore.getClaimAt(
+                clickedBlock.getLocation(),
+                false /* respect height */,
+                playerData.lastClaim
+            );
             if (resolvedClaim == null) {
                 // Fallback to ignore-height search to preserve legacy behavior when no 3D
                 // subclaim matches Y
-                resolvedClaim = this.dataStore.getClaimAt(clickedBlock.getLocation(), true /* ignore height */,
-                        playerData.lastClaim);
+                resolvedClaim = this.dataStore.getClaimAt(
+                    clickedBlock.getLocation(),
+                    true /* ignore height */,
+                    playerData.lastClaim
+                );
             }
             Claim claim = findDeepestContainingClaim(resolvedClaim, clickedBlock.getLocation());
             if (claim != null) {
@@ -2329,10 +2534,14 @@ public class PlayerEventHandler implements Listener {
             // Don't promote single-block claims (1x1x1) where every block is a corner.
             if (claim != null) {
                 Claim promoted = claim;
-                while (promoted.parent != null
-                        && (promoted.getLesserBoundaryCorner().getBlockX() != promoted.getGreaterBoundaryCorner().getBlockX()
-                        || promoted.getLesserBoundaryCorner().getBlockZ() != promoted.getGreaterBoundaryCorner().getBlockZ())
-                        && isCornerMatch(promoted, clickedBlock)) {
+                while (
+                    promoted.parent != null &&
+                    (promoted.getLesserBoundaryCorner().getBlockX() !=
+                        promoted.getGreaterBoundaryCorner().getBlockX() ||
+                        promoted.getLesserBoundaryCorner().getBlockZ() !=
+                            promoted.getGreaterBoundaryCorner().getBlockZ()) &&
+                    isCornerMatch(promoted, clickedBlock)
+                ) {
                     Claim parent = promoted.parent;
                     if (!isCornerMatch(parent, clickedBlock)) {
                         break;
@@ -2367,15 +2576,18 @@ public class PlayerEventHandler implements Listener {
             if (claim != null) {
                 // if the player has permission to edit the claim or subdivision
                 final String ownerName = claim.getOwnerName();
-                Supplier<String> noEditReason = claim.checkPermission(player, ClaimPermission.Edit, event,
-                        () -> instance.dataStore.getMessage(Messages.CreateClaimFailOverlapOtherPlayer, ownerName));
+                Supplier<String> noEditReason = claim.checkPermission(player, ClaimPermission.Edit, event, () ->
+                    instance.dataStore.getMessage(Messages.CreateClaimFailOverlapOtherPlayer, ownerName)
+                );
                 if (noEditReason == null) {
                     // Shift+right-click on a top-level shaped claim edge (basic mode): ephemeral segment selection for
                     // later expansion in shaped mode. Requires AllowShapedClaims; corners use normal resize below.
-                    if (playerData.shovelMode == ShovelMode.Basic
-                            && player.isSneaking()
-                            && instance.config_claims_allowShapedClaims
-                            && trySelectShapedBoundarySegmentBasicMode(player, playerData, claim, clickedBlock)) {
+                    if (
+                        playerData.shovelMode == ShovelMode.Basic &&
+                        player.isSneaking() &&
+                        instance.config_claims_allowShapedClaims &&
+                        trySelectShapedBoundarySegmentBasicMode(player, playerData, claim, clickedBlock)
+                    ) {
                         return;
                     }
 
@@ -2384,11 +2596,11 @@ public class PlayerEventHandler implements Listener {
                     if (isCorner && !player.isSneaking() && playerData.shovelMode != ShovelMode.Shaped) {
                         startClaimResizeSelection(player, playerData, claim, clickedBlock);
                     }
-
                     // if he didn't click on a corner and is in subdivision mode, he's creating a
                     // new subdivision
-                    else if (playerData.shovelMode == ShovelMode.Subdivide
-                            || playerData.shovelMode == ShovelMode.Subdivide3D) {
+                    else if (
+                        playerData.shovelMode == ShovelMode.Subdivide || playerData.shovelMode == ShovelMode.Subdivide3D
+                    ) {
                         // if it's the first click, he's trying to start a new subdivision
                         if (playerData.lastShovelLocation == null) {
                             // if the clicked claim was a subdivision, decide whether nesting is allowed
@@ -2403,12 +2615,12 @@ public class PlayerEventHandler implements Listener {
                                 } else if (claimIs3D) {
                                     // When nested subclaims enabled and inside a 3D subdivision:
                                     // Only allow if NOT on the same X/Z boundary as the 3D subdivision
-                                    boolean onXBoundary = (clickedBlock.getX() == claim.getLesserBoundaryCorner()
-                                            .getBlockX() ||
-                                            clickedBlock.getX() == claim.getGreaterBoundaryCorner().getBlockX());
-                                    boolean onZBoundary = (clickedBlock.getZ() == claim.getLesserBoundaryCorner()
-                                            .getBlockZ() ||
-                                            clickedBlock.getZ() == claim.getGreaterBoundaryCorner().getBlockZ());
+                                    boolean onXBoundary =
+                                        clickedBlock.getX() == claim.getLesserBoundaryCorner().getBlockX() ||
+                                        clickedBlock.getX() == claim.getGreaterBoundaryCorner().getBlockX();
+                                    boolean onZBoundary =
+                                        clickedBlock.getZ() == claim.getLesserBoundaryCorner().getBlockZ() ||
+                                        clickedBlock.getZ() == claim.getGreaterBoundaryCorner().getBlockZ();
 
                                     // Block if on exact X/Z boundary (corners), allow nesting otherwise
                                     // Also require 3D mode to stack inside 3D claims
@@ -2423,20 +2635,30 @@ public class PlayerEventHandler implements Listener {
                                     GriefPrevention.sendMessage(player, TextMode.Instr, Messages.SubdivisionStart);
                                     playerData.lastShovelLocation = clickedBlock.getLocation();
                                     if (wants3DSubdivision) {
-                                        BoundaryVisualization.visualizeArea(player, new BoundingBox(clickedBlock),
-                                                VisualizationType.INITIALIZE_ZONE_3D, clickedBlock.getY());
+                                        BoundaryVisualization.visualizeArea(
+                                            player,
+                                            new BoundingBox(clickedBlock),
+                                            VisualizationType.INITIALIZE_ZONE_3D,
+                                            clickedBlock.getY()
+                                        );
                                     }
                                     playerData.claimSubdividing = claim;
                                 } else {
                                     // Show conflict zone visualization for the existing 3D subdivision
                                     // Show conflict zone visualization for the existing 3D subdivision
                                     if (claimIs3D) {
-                                        GriefPrevention.sendMessage(player, TextMode.Err,
-                                                Messages.ResizeFailOverlapSubdivision);
+                                        GriefPrevention.sendMessage(
+                                            player,
+                                            TextMode.Err,
+                                            Messages.ResizeFailOverlapSubdivision
+                                        );
                                         visualizeConflict(player, playerData, claim, clickedBlock, true);
                                     } else {
-                                        GriefPrevention.sendMessage(player, TextMode.Err,
-                                                Messages.ResizeFailOverlapSubdivision);
+                                        GriefPrevention.sendMessage(
+                                            player,
+                                            TextMode.Err,
+                                            Messages.ResizeFailOverlapSubdivision
+                                        );
                                     }
                                 }
                             } else {
@@ -2444,13 +2666,16 @@ public class PlayerEventHandler implements Listener {
                                 GriefPrevention.sendMessage(player, TextMode.Instr, Messages.SubdivisionStart);
                                 playerData.lastShovelLocation = clickedBlock.getLocation();
                                 if (playerData.shovelMode == ShovelMode.Subdivide3D) {
-                                    BoundaryVisualization.visualizeArea(player, new BoundingBox(clickedBlock),
-                                            VisualizationType.INITIALIZE_ZONE_3D, clickedBlock.getY());
+                                    BoundaryVisualization.visualizeArea(
+                                        player,
+                                        new BoundingBox(clickedBlock),
+                                        VisualizationType.INITIALIZE_ZONE_3D,
+                                        clickedBlock.getY()
+                                    );
                                 }
                                 playerData.claimSubdividing = claim;
                             }
                         }
-
                         // otherwise, he's trying to finish creating a subdivision by setting the other
                         // boundary corner
                         else {
@@ -2469,7 +2694,11 @@ public class PlayerEventHandler implements Listener {
 
                             if (playerData.shovelMode == ShovelMode.Subdivide) {
                                 if (playerData.claimSubdividing == null) {
-                                    GriefPrevention.sendMessage(player, TextMode.Err, "No claim selected for subdivision.");
+                                    GriefPrevention.sendMessage(
+                                        player,
+                                        TextMode.Err,
+                                        "No claim selected for subdivision."
+                                    );
                                     return;
                                 }
                                 // 2D mode: Always span from parent's bottom to world max height so claim is NOT
@@ -2497,7 +2726,11 @@ public class PlayerEventHandler implements Listener {
                             } else {
                                 // Fallback: default to parent Y bounds
                                 if (playerData.claimSubdividing == null) {
-                                    GriefPrevention.sendMessage(player, TextMode.Err, "No claim selected for subdivision.");
+                                    GriefPrevention.sendMessage(
+                                        player,
+                                        TextMode.Err,
+                                        "No claim selected for subdivision."
+                                    );
                                     return;
                                 }
                                 minY = playerData.claimSubdividing.getLesserBoundaryCorner().getBlockY();
@@ -2505,9 +2738,12 @@ public class PlayerEventHandler implements Listener {
                             }
 
                             // Enforce inner offset if nesting 3D subclaims is enabled
-                            if (instance.config_claims_allowNestedSubClaims && playerData.claimSubdividing != null
-                                    && playerData.claimSubdividing.is3D()
-                                    && playerData.shovelMode == ShovelMode.Subdivide3D) {
+                            if (
+                                instance.config_claims_allowNestedSubClaims &&
+                                playerData.claimSubdividing != null &&
+                                playerData.claimSubdividing.is3D() &&
+                                playerData.shovelMode == ShovelMode.Subdivide3D
+                            ) {
                                 Claim parentClaim = playerData.claimSubdividing;
                                 int inset = 1;
                                 if (inset > 0) {
@@ -2522,8 +2758,11 @@ public class PlayerEventHandler implements Listener {
                                     int maxAllowedY = parentMaxY - inset;
 
                                     if (minAllowedY > maxAllowedY) {
-                                        GriefPrevention.sendMessage(player, TextMode.Err,
-                                                Messages.CreateSubdivisionOverlap);
+                                        GriefPrevention.sendMessage(
+                                            player,
+                                            TextMode.Err,
+                                            Messages.CreateSubdivisionOverlap
+                                        );
                                         return;
                                     }
 
@@ -2531,8 +2770,11 @@ public class PlayerEventHandler implements Listener {
                                     int subMaxY = Math.max(minY, maxY);
 
                                     if (subMinY < minAllowedY || subMaxY > maxAllowedY) {
-                                        GriefPrevention.sendMessage(player, TextMode.Err,
-                                                Messages.InnerSubdivisionTooClose);
+                                        GriefPrevention.sendMessage(
+                                            player,
+                                            TextMode.Err,
+                                            Messages.InnerSubdivisionTooClose
+                                        );
                                         return;
                                     }
                                 }
@@ -2540,24 +2782,33 @@ public class PlayerEventHandler implements Listener {
 
                             // Ensure 3D subclaims placed inside 2D parents - allow X/Z boundaries to match
                             // parent
-                            if (playerData.shovelMode == ShovelMode.Subdivide3D
-                                    && playerData.claimSubdividing != null
-                                    && !playerData.claimSubdividing.is3D()) {
+                            if (
+                                playerData.shovelMode == ShovelMode.Subdivide3D &&
+                                playerData.claimSubdividing != null &&
+                                !playerData.claimSubdividing.is3D()
+                            ) {
                                 // No X/Z inset enforcement - allow subdivisions to share parent boundaries
                                 // Only sibling collision checks remain
                                 Claim parentClaim = playerData.claimSubdividing;
-                                int proposedMinX = Math.min(playerData.lastShovelLocation.getBlockX(),
-                                        clickedBlock.getX());
-                                int proposedMaxX = Math.max(playerData.lastShovelLocation.getBlockX(),
-                                        clickedBlock.getX());
-                                int proposedMinZ = Math.min(playerData.lastShovelLocation.getBlockZ(),
-                                        clickedBlock.getZ());
-                                int proposedMaxZ = Math.max(playerData.lastShovelLocation.getBlockZ(),
-                                        clickedBlock.getZ());
+                                int proposedMinX = Math.min(
+                                    playerData.lastShovelLocation.getBlockX(),
+                                    clickedBlock.getX()
+                                );
+                                int proposedMaxX = Math.max(
+                                    playerData.lastShovelLocation.getBlockX(),
+                                    clickedBlock.getX()
+                                );
+                                int proposedMinZ = Math.min(
+                                    playerData.lastShovelLocation.getBlockZ(),
+                                    clickedBlock.getZ()
+                                );
+                                int proposedMaxZ = Math.max(
+                                    playerData.lastShovelLocation.getBlockZ(),
+                                    clickedBlock.getZ()
+                                );
 
                                 for (Claim sibling : parentClaim.children) {
-                                    if (!sibling.inDataStore || sibling.is3D())
-                                        continue;
+                                    if (!sibling.inDataStore || sibling.is3D()) continue;
 
                                     Location siblingMin = sibling.getLesserBoundaryCorner();
                                     Location siblingMax = sibling.getGreaterBoundaryCorner();
@@ -2571,15 +2822,21 @@ public class PlayerEventHandler implements Listener {
                                     if (zOverlap) {
                                         int gapEast = proposedMinX - siblingMaxX;
                                         if (gapEast >= 0 && gapEast < 1) {
-                                            GriefPrevention.sendMessage(player, TextMode.Err,
-                                                    Messages.InnerSubdivisionTooClose);
+                                            GriefPrevention.sendMessage(
+                                                player,
+                                                TextMode.Err,
+                                                Messages.InnerSubdivisionTooClose
+                                            );
                                             return;
                                         }
 
                                         int gapWest = siblingMinX - proposedMaxX;
                                         if (gapWest >= 0 && gapWest < 1) {
-                                            GriefPrevention.sendMessage(player, TextMode.Err,
-                                                    Messages.InnerSubdivisionTooClose);
+                                            GriefPrevention.sendMessage(
+                                                player,
+                                                TextMode.Err,
+                                                Messages.InnerSubdivisionTooClose
+                                            );
                                             return;
                                         }
                                     }
@@ -2588,15 +2845,21 @@ public class PlayerEventHandler implements Listener {
                                     if (xOverlap) {
                                         int gapSouth = proposedMinZ - siblingMaxZ;
                                         if (gapSouth >= 0 && gapSouth < 1) {
-                                            GriefPrevention.sendMessage(player, TextMode.Err,
-                                                    Messages.InnerSubdivisionTooClose);
+                                            GriefPrevention.sendMessage(
+                                                player,
+                                                TextMode.Err,
+                                                Messages.InnerSubdivisionTooClose
+                                            );
                                             return;
                                         }
 
                                         int gapNorth = siblingMinZ - proposedMaxZ;
                                         if (gapNorth >= 0 && gapNorth < 1) {
-                                            GriefPrevention.sendMessage(player, TextMode.Err,
-                                                    Messages.InnerSubdivisionTooClose);
+                                            GriefPrevention.sendMessage(
+                                                player,
+                                                TextMode.Err,
+                                                Messages.InnerSubdivisionTooClose
+                                            );
                                             return;
                                         }
                                     }
@@ -2606,53 +2869,79 @@ public class PlayerEventHandler implements Listener {
                             // try to create a new claim (will return null if this subdivision overlaps
                             // another)
                             CreateClaimResult subdivisionResult = this.dataStore.createClaim(
-                                    player.getWorld(),
-                                    playerData.lastShovelLocation.getBlockX(), clickedBlock.getX(),
-                                    minY, maxY,
-                                    playerData.lastShovelLocation.getBlockZ(), clickedBlock.getZ(),
-                                    null, // owner is not used for subdivisions
-                                    playerData.claimSubdividing,
-                                    null, player);
+                                player.getWorld(),
+                                playerData.lastShovelLocation.getBlockX(),
+                                clickedBlock.getX(),
+                                minY,
+                                maxY,
+                                playerData.lastShovelLocation.getBlockZ(),
+                                clickedBlock.getZ(),
+                                null, // owner is not used for subdivisions
+                                playerData.claimSubdividing,
+                                null,
+                                player
+                            );
 
                             // if it didn't succeed, tell the player why
                             if (!subdivisionResult.succeeded || subdivisionResult.claim == null) {
                                 if (subdivisionResult.claim != null) {
-                                    GriefPrevention.sendMessage(player, TextMode.Err,
-                                            Messages.CreateSubdivisionOverlap);
-                                    visualizeConflict(player, playerData, subdivisionResult.claim, clickedBlock,
-                                            subdivisionResult.claim.is3D());
+                                    GriefPrevention.sendMessage(
+                                        player,
+                                        TextMode.Err,
+                                        Messages.CreateSubdivisionOverlap
+                                    );
+                                    visualizeConflict(
+                                        player,
+                                        playerData,
+                                        subdivisionResult.claim,
+                                        clickedBlock,
+                                        subdivisionResult.claim.is3D()
+                                    );
                                 } else {
-                                    GriefPrevention.sendMessage(player, TextMode.Err,
-                                            Messages.CreateClaimFailOverlapRegion);
+                                    GriefPrevention.sendMessage(
+                                        player,
+                                        TextMode.Err,
+                                        Messages.CreateClaimFailOverlapRegion
+                                    );
                                 }
 
                                 return;
                             }
-
                             // otherwise, advise him on the /trust command and show him his new subdivision
                             else {
                                 GriefPrevention.sendMessage(player, TextMode.Success, Messages.SubdivisionSuccess);
                                 VisualizationType subdivisionViz = subdivisionResult.claim.is3D()
-                                        ? VisualizationType.SUBDIVISION_3D
-                                        : VisualizationType.SUBDIVISION;
-                                BoundaryVisualization.visualizeClaim(player, subdivisionResult.claim, subdivisionViz,
-                                        clickedBlock);
+                                    ? VisualizationType.SUBDIVISION_3D
+                                    : VisualizationType.SUBDIVISION;
+                                BoundaryVisualization.visualizeClaim(
+                                    player,
+                                    subdivisionResult.claim,
+                                    subdivisionViz,
+                                    clickedBlock
+                                );
                                 playerData.claimSubdividing = null;
                             }
                         }
                     }
-
                     // otherwise tell him he can't create a claim here, and show him the existing
                     // claim
                     // also advise him to consider /abandonclaim or resizing the existing claim
                     else {
                         // Admin3D mode: allow starting a stacked 3D admin claim at a different Y level
-                        if (playerData.shovelMode == ShovelMode.Admin3D && claim.is3D() && claim.isAdminClaim()
-                                && playerData.lastShovelLocation == null) {
+                        if (
+                            playerData.shovelMode == ShovelMode.Admin3D &&
+                            claim.is3D() &&
+                            claim.isAdminClaim() &&
+                            playerData.lastShovelLocation == null
+                        ) {
                             playerData.lastShovelLocation = clickedBlock.getLocation();
                             GriefPrevention.sendMessage(player, TextMode.Instr, Messages.ClaimStart);
-                            BoundaryVisualization.visualizeArea(player, new BoundingBox(clickedBlock),
-                                    VisualizationType.INITIALIZE_ZONE_3D, clickedBlock.getY());
+                            BoundaryVisualization.visualizeArea(
+                                player,
+                                new BoundingBox(clickedBlock),
+                                VisualizationType.INITIALIZE_ZONE_3D,
+                                clickedBlock.getY()
+                            );
                             return;
                         }
 
@@ -2660,7 +2949,6 @@ public class PlayerEventHandler implements Listener {
                         visualizeConflict(player, playerData, claim, clickedBlock, claim.is3D());
                     }
                 }
-
                 // otherwise tell the player he can't claim here because it's someone else's
                 // claim, and show him the claim
                 else {
@@ -2685,9 +2973,11 @@ public class PlayerEventHandler implements Listener {
 
                 // if he's at the claim count per player limit already and doesn't have
                 // permission to bypass, display an error message
-                if (instance.config_claims_maxClaimsPerPlayer > 0 &&
-                        !player.hasPermission("griefprevention.overrideclaimcountlimit") &&
-                        playerData.getClaims().size() >= instance.config_claims_maxClaimsPerPlayer) {
+                if (
+                    instance.config_claims_maxClaimsPerPlayer > 0 &&
+                    !player.hasPermission("griefprevention.overrideclaimcountlimit") &&
+                    playerData.getClaims().size() >= instance.config_claims_maxClaimsPerPlayer
+                ) {
                     GriefPrevention.sendMessage(player, TextMode.Err, Messages.ClaimCreationFailedOverClaimCountLimit);
                     return;
                 }
@@ -2696,16 +2986,22 @@ public class PlayerEventHandler implements Listener {
                 if (playerData.shovelMode == ShovelMode.Admin3D) {
                     playerData.lastShovelLocation = clickedBlock.getLocation();
                     GriefPrevention.sendMessage(player, TextMode.Instr, Messages.ClaimStart);
-                    BoundaryVisualization.visualizeArea(player, new BoundingBox(clickedBlock),
-                            VisualizationType.INITIALIZE_ZONE_3D, clickedBlock.getY());
+                    BoundaryVisualization.visualizeArea(
+                        player,
+                        new BoundingBox(clickedBlock),
+                        VisualizationType.INITIALIZE_ZONE_3D,
+                        clickedBlock.getY()
+                    );
                 } else {
                     playerData.lastShovelLocation = clickedBlock.getLocation();
                     GriefPrevention.sendMessage(player, TextMode.Instr, Messages.ClaimStart);
-                    BoundaryVisualization.visualizeArea(player, new BoundingBox(clickedBlock),
-                            VisualizationType.INITIALIZE_ZONE);
+                    BoundaryVisualization.visualizeArea(
+                        player,
+                        new BoundingBox(clickedBlock),
+                        VisualizationType.INITIALIZE_ZONE
+                    );
                 }
             }
-
             // otherwise, he's trying to finish creating a claim by setting the other
             // boundary corner
             else {
@@ -2727,27 +3023,32 @@ public class PlayerEventHandler implements Listener {
                 int newWidth;
                 int newHeight;
 
-                try
-                {
+                try {
                     newWidth = Math.abs(Math.subtractExact(lastShovelLocation.getBlockX(), clickedBlock.getX())) + 1;
                     newHeight = Math.abs(Math.subtractExact(lastShovelLocation.getBlockZ(), clickedBlock.getZ())) + 1;
-                }
-                catch (ArithmeticException e)
-                {
-                    GriefPrevention.sendMessage(player, TextMode.Err, Messages.CreateClaimInsufficientBlocks, String.valueOf(Integer.MAX_VALUE));
+                } catch (ArithmeticException e) {
+                    GriefPrevention.sendMessage(
+                        player,
+                        TextMode.Err,
+                        Messages.CreateClaimInsufficientBlocks,
+                        String.valueOf(Integer.MAX_VALUE)
+                    );
                     playerData.lastShovelLocation = null;
                     playerData.claimSubdividing = null;
                     return;
                 }
 
                 if (playerData.shovelMode != ShovelMode.Admin && playerData.shovelMode != ShovelMode.Admin3D) {
-                    if (newWidth < instance.config_claims_minWidth
-                            || newHeight < instance.config_claims_minWidth) {
+                    if (newWidth < instance.config_claims_minWidth || newHeight < instance.config_claims_minWidth) {
                         // this IF block is a workaround for craftbukkit bug which fires two events for
                         // one interaction
                         if (newWidth != 1 && newHeight != 1) {
-                            GriefPrevention.sendMessage(player, TextMode.Err, Messages.NewClaimTooNarrow,
-                                    String.valueOf(instance.config_claims_minWidth));
+                            GriefPrevention.sendMessage(
+                                player,
+                                TextMode.Err,
+                                Messages.NewClaimTooNarrow,
+                                String.valueOf(instance.config_claims_minWidth)
+                            );
                         }
                         return;
                     }
@@ -2755,8 +3056,12 @@ public class PlayerEventHandler implements Listener {
                     int newArea = newWidth * newHeight;
                     if (newArea < instance.config_claims_minArea) {
                         if (newArea != 1) {
-                            GriefPrevention.sendMessage(player, TextMode.Err, Messages.ResizeClaimInsufficientArea,
-                                    String.valueOf(instance.config_claims_minArea));
+                            GriefPrevention.sendMessage(
+                                player,
+                                TextMode.Err,
+                                Messages.ResizeClaimInsufficientArea,
+                                String.valueOf(instance.config_claims_minArea)
+                            );
                         }
 
                         return;
@@ -2771,8 +3076,12 @@ public class PlayerEventHandler implements Listener {
                     int newClaimArea = newWidth * newHeight;
                     int remainingBlocks = playerData.getRemainingClaimBlocks();
                     if (newClaimArea > remainingBlocks) {
-                        GriefPrevention.sendMessage(player, TextMode.Err, Messages.CreateClaimInsufficientBlocks,
-                                String.valueOf(newClaimArea - remainingBlocks));
+                        GriefPrevention.sendMessage(
+                            player,
+                            TextMode.Err,
+                            Messages.CreateClaimInsufficientBlocks,
+                            String.valueOf(newClaimArea - remainingBlocks)
+                        );
                         instance.dataStore.tryAdvertiseAdminAlternatives(player);
                         return;
                     }
@@ -2784,15 +3093,23 @@ public class PlayerEventHandler implements Listener {
 
                 // try to create a new claim
                 CreateClaimResult result = this.dataStore.createClaim(
-                        player.getWorld(),
-                        lastShovelLocation.getBlockX(), clickedBlock.getX(),
-                        is3dAdminClaim ? lastShovelLocation.getBlockY() : lastShovelLocation.getBlockY() - instance.config_claims_claimsExtendIntoGroundDistance,
-                        is3dAdminClaim ? clickedBlock.getY() : clickedBlock.getY() - instance.config_claims_claimsExtendIntoGroundDistance,
-                        lastShovelLocation.getBlockZ(), clickedBlock.getZ(),
-                        playerID,
-                        null, null,
-                        player,
-                        is3dAdminClaim);
+                    player.getWorld(),
+                    lastShovelLocation.getBlockX(),
+                    clickedBlock.getX(),
+                    is3dAdminClaim
+                        ? lastShovelLocation.getBlockY()
+                        : lastShovelLocation.getBlockY() - instance.config_claims_claimsExtendIntoGroundDistance,
+                    is3dAdminClaim
+                        ? clickedBlock.getY()
+                        : clickedBlock.getY() - instance.config_claims_claimsExtendIntoGroundDistance,
+                    lastShovelLocation.getBlockZ(),
+                    clickedBlock.getZ(),
+                    playerID,
+                    null,
+                    null,
+                    player,
+                    is3dAdminClaim
+                );
 
                 // if it didn't succeed, tell the player why
                 if (!result.succeeded || result.claim == null) {
@@ -2805,11 +3122,12 @@ public class PlayerEventHandler implements Listener {
 
                     return;
                 }
-
                 // otherwise, advise him on the /trust command and show him his new claim
                 else {
                     GriefPrevention.sendMessage(player, TextMode.Success, Messages.CreateClaimSuccess);
-                    VisualizationType vizType = is3dAdminClaim ? VisualizationType.ADMIN_CLAIM_3D : VisualizationType.CLAIM;
+                    VisualizationType vizType = is3dAdminClaim
+                        ? VisualizationType.ADMIN_CLAIM_3D
+                        : VisualizationType.CLAIM;
                     BoundaryVisualization.visualizeClaim(player, result.claim, vizType, clickedBlock);
                     playerData.lastShovelLocation = null;
                 }
@@ -2819,8 +3137,10 @@ public class PlayerEventHandler implements Listener {
 
     // Helper container for a corner raycast hit
     private static class CornerHit {
+
         @SuppressWarnings("unused")
         final Claim claim;
+
         final int x, y, z;
         final double t;
 
@@ -2864,117 +3184,123 @@ public class PlayerEventHandler implements Listener {
 
         Vector eyePos = player.getEyeLocation().toVector();
         Vector dir = player.getEyeLocation().getDirection().normalize();
-        Vector clickedCenter = clickedBlock.getLocation().toVector().add(new Vector(0.5, 0.5, 0.5));
+        Vector clickedCenter = clickedBlock
+            .getLocation()
+            .toVector()
+            .add(new Vector(0.5, 0.5, 0.5));
         double clickedT = clickedCenter.subtract(eyePos).dot(dir);
         return clickedT < 0 || cornerHit.t <= clickedT + 2.0;
     }
 
-    private boolean tryResizeShapedClaim(@NotNull Player player, @NotNull PlayerData playerData, @NotNull Block clickedBlock)
-    {
+    private boolean tryResizeShapedClaim(
+        @NotNull Player player,
+        @NotNull PlayerData playerData,
+        @NotNull Block clickedBlock
+    ) {
         Claim claim = playerData.claimResizing;
-        if (claim == null || !claim.inDataStore || !claim.isShaped() || claim.parent != null || claim.is3D())
-        {
+        if (claim == null || !claim.inDataStore || !claim.isShaped() || claim.parent != null || claim.is3D()) {
             return false;
         }
 
         // Don't try to resize if in shaped mode - this is for boundary marker operations
-        if (playerData.shovelMode == ShovelMode.Shaped)
-        {
+        if (playerData.shovelMode == ShovelMode.Shaped) {
             return false;
         }
 
         Location anchor = playerData.lastShovelLocation;
-        if (anchor == null)
-        {
+        if (anchor == null) {
             return false;
         }
 
         int cornerIndex = claim.getCornerIndexAt(anchor.getBlockX(), anchor.getBlockZ());
-        if (cornerIndex < 0)
-        {
+        if (cornerIndex < 0) {
             return false;
         }
 
         OrthogonalPolygonValidationResult moveResult = resolveShapedResizeMove(
+            player,
+            claim,
+            claim.getBoundaryPolygon(),
+            cornerIndex,
+            new OrthogonalPoint2i(clickedBlock.getX(), clickedBlock.getZ())
+        );
+        if (!moveResult.isValid() || moveResult.polygon() == null) {
+            boolean selfIntersection = moveResult
+                .issues()
+                .stream()
+                .anyMatch(issue -> issue.type() == OrthogonalPolygonValidationIssueType.SELF_INTERSECTION);
+            GriefPrevention.sendMessage(
                 player,
-                claim,
-                claim.getBoundaryPolygon(),
-                cornerIndex,
-                new OrthogonalPoint2i(clickedBlock.getX(), clickedBlock.getZ()));
-        if (!moveResult.isValid() || moveResult.polygon() == null)
-        {
-            boolean selfIntersection = moveResult.issues().stream()
-                    .anyMatch(issue -> issue.type() == OrthogonalPolygonValidationIssueType.SELF_INTERSECTION);
-            GriefPrevention.sendMessage(player, TextMode.Err,
-                    selfIntersection ? "That corner move would intersect the claim." : "That corner can't move there.");
+                TextMode.Err,
+                selfIntersection ? "That corner move would intersect the claim." : "That corner can't move there."
+            );
             return true;
         }
 
-        CreateClaimResult updateResult = this.dataStore.updateShapedClaim(player, playerData, claim, moveResult.polygon());
-        if (!updateResult.succeeded || updateResult.claim == null)
-        {
-            if (updateResult.denialMessage != null)
-            {
+        CreateClaimResult updateResult = this.dataStore.updateShapedClaim(
+            player,
+            playerData,
+            claim,
+            moveResult.polygon()
+        );
+        if (!updateResult.succeeded || updateResult.claim == null) {
+            if (updateResult.denialMessage != null) {
                 GriefPrevention.sendMessage(player, TextMode.Err, updateResult.denialMessage.get());
-            }
-            else if (updateResult.claim != null)
-            {
+            } else if (updateResult.claim != null) {
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.ResizeFailOverlap);
                 BoundaryVisualization.visualizeClaim(player, updateResult.claim, VisualizationType.CONFLICT_ZONE);
-            }
-            else
-            {
+            } else {
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.ResizeFailOverlapRegion);
             }
             return true;
         }
 
         int claimBlocksRemaining = 0;
-        if (!updateResult.claim.isAdminClaim())
-        {
+        if (!updateResult.claim.isAdminClaim()) {
             UUID ownerID = updateResult.claim.ownerID;
-            if (ownerID != null)
-            {
-                if (ownerID.equals(player.getUniqueId()))
-                {
+            if (ownerID != null) {
+                if (ownerID.equals(player.getUniqueId())) {
                     claimBlocksRemaining = playerData.getRemainingClaimBlocks();
-                }
-                else
-                {
+                } else {
                     PlayerData ownerData = this.dataStore.getPlayerData(ownerID);
                     claimBlocksRemaining = ownerData.getRemainingClaimBlocks();
                     OfflinePlayer owner = GriefPrevention.instance.getServer().getOfflinePlayer(ownerID);
-                    if (!owner.isOnline())
-                    {
+                    if (!owner.isOnline()) {
                         this.dataStore.clearCachedPlayerData(ownerID);
                     }
                 }
             }
         }
 
-        GriefPrevention.sendMessage(player, TextMode.Success, Messages.ClaimResizeSuccess,
-                String.valueOf(claimBlocksRemaining));
-        BoundaryVisualization.visualizeClaim(player, updateResult.claim,
-                updateResult.claim.isAdminClaim() ? VisualizationType.ADMIN_CLAIM : VisualizationType.CLAIM,
-                clickedBlock);
+        GriefPrevention.sendMessage(
+            player,
+            TextMode.Success,
+            Messages.ClaimResizeSuccess,
+            String.valueOf(claimBlocksRemaining)
+        );
+        BoundaryVisualization.visualizeClaim(
+            player,
+            updateResult.claim,
+            updateResult.claim.isAdminClaim() ? VisualizationType.ADMIN_CLAIM : VisualizationType.CLAIM,
+            clickedBlock
+        );
         playerData.claimResizing = null;
         playerData.lastShovelLocation = null;
         return true;
     }
 
     private @NotNull OrthogonalPolygonValidationResult resolveShapedResizeMove(
-            @NotNull Player player,
-            @NotNull Claim claim,
-            @NotNull OrthogonalPolygon polygon,
-            int cornerIndex,
-            @NotNull OrthogonalPoint2i target)
-    {
+        @NotNull Player player,
+        @NotNull Claim claim,
+        @NotNull OrthogonalPolygon polygon,
+        int cornerIndex,
+        @NotNull OrthogonalPoint2i target
+    ) {
         OrthogonalPoint2i anchor = polygon.corners().get(cornerIndex);
         int deltaX = target.x() - anchor.x();
         int deltaZ = target.z() - anchor.z();
 
-        if (deltaX == 0 && deltaZ == 0)
-        {
+        if (deltaX == 0 && deltaZ == 0) {
             return polygon.moveCorner(cornerIndex, anchor);
         }
 
@@ -2982,21 +3308,22 @@ public class PlayerEventHandler implements Listener {
         // Must use moveCorner: face-run logic uses expandEdge/moveEdgeRun and (a) locateResizeSubsegment only
         // matches strictly interior edge points, so exact corner clicks miss, and (b) moveEdgeRun can reject
         // or distort a merge that moveCorner + normalization already handles.
-        for (int i = 0; i < polygon.corners().size(); i++)
-        {
-            if (i != cornerIndex && polygon.corners().get(i).equals(target))
-            {
+        for (int i = 0; i < polygon.corners().size(); i++) {
+            if (i != cornerIndex && polygon.corners().get(i).equals(target)) {
                 return polygon.moveCorner(cornerIndex, target);
             }
         }
 
-        if (deltaX != 0 && deltaZ != 0)
-        {
-            if (polygon.isRemovableNode(cornerIndex) || isConcaveCorner(polygon, cornerIndex))
-            {
-                OrthogonalPolygonValidationResult nibResult = resolveShapedNibResizeMove(player, claim, polygon, cornerIndex, target);
-                if (nibResult.isValid())
-                {
+        if (deltaX != 0 && deltaZ != 0) {
+            if (polygon.isRemovableNode(cornerIndex) || isConcaveCorner(polygon, cornerIndex)) {
+                OrthogonalPolygonValidationResult nibResult = resolveShapedNibResizeMove(
+                    player,
+                    claim,
+                    polygon,
+                    cornerIndex,
+                    target
+                );
+                if (nibResult.isValid()) {
                     return nibResult;
                 }
             }
@@ -3004,36 +3331,32 @@ public class PlayerEventHandler implements Listener {
         }
 
         FaceRun faceRun = findStraightFaceRun(polygon, cornerIndex, deltaX != 0);
-        if (faceRun == null)
-        {
+        if (faceRun == null) {
             return polygon.moveCorner(cornerIndex, target);
         }
 
         Integer selectedEdgeIndex = selectResizeSubsegment(player, polygon, faceRun, target);
         int amount = deltaX != 0 ? deltaX : deltaZ;
-        if (selectedEdgeIndex != null)
-        {
+        if (selectedEdgeIndex != null) {
             return polygon.expandEdge(selectedEdgeIndex, amount);
         }
 
-        if (polygon.isRemovableNode(cornerIndex) || isConcaveCorner(polygon, cornerIndex))
-        {
+        if (polygon.isRemovableNode(cornerIndex) || isConcaveCorner(polygon, cornerIndex)) {
             OrthogonalPolygonValidationResult orthogonalNibResult = resolveOrthogonalShapedNibResizeMove(
-                    player,
-                    claim,
-                    polygon,
-                    cornerIndex,
-                    target);
-            if (orthogonalNibResult != null && orthogonalNibResult.isValid())
-            {
+                player,
+                claim,
+                polygon,
+                cornerIndex,
+                target
+            );
+            if (orthogonalNibResult != null && orthogonalNibResult.isValid()) {
                 return orthogonalNibResult;
             }
         }
 
         // If no subsegment selected but target equals a corner on the face run, use moveCorner
         // to merge/flatten the nib (e.g., dragging (4,4) onto (8,4) on a Z=4 horizontal face)
-        if (isTargetCornerOnFaceRun(polygon, faceRun, target))
-        {
+        if (isTargetCornerOnFaceRun(polygon, faceRun, target)) {
             return polygon.moveCorner(cornerIndex, target);
         }
 
@@ -3041,22 +3364,19 @@ public class PlayerEventHandler implements Listener {
     }
 
     private boolean isTargetCornerOnFaceRun(
-            @NotNull OrthogonalPolygon polygon,
-            @NotNull FaceRun faceRun,
-            @NotNull OrthogonalPoint2i target)
-    {
+        @NotNull OrthogonalPolygon polygon,
+        @NotNull FaceRun faceRun,
+        @NotNull OrthogonalPoint2i target
+    ) {
         int edgeIndex = faceRun.startEdgeIndex();
-        while (true)
-        {
+        while (true) {
             OrthogonalEdge2i edge = polygon.edges().get(edgeIndex);
             // Check both endpoints of this edge
-            if (edge.start().equals(target) || edge.end().equals(target))
-            {
+            if (edge.start().equals(target) || edge.end().equals(target)) {
                 return true;
             }
 
-            if (edgeIndex == faceRun.endEdgeIndex())
-            {
+            if (edgeIndex == faceRun.endEdgeIndex()) {
                 break;
             }
             edgeIndex = (edgeIndex + 1) % polygon.edges().size();
@@ -3065,53 +3385,52 @@ public class PlayerEventHandler implements Listener {
     }
 
     private @NotNull OrthogonalPolygonValidationResult resolveShapedNibResizeMove(
-            @NotNull Player player,
-            @NotNull Claim claim,
-            @NotNull OrthogonalPolygon polygon,
-            int cornerIndex,
-            @NotNull OrthogonalPoint2i target)
-    {
+        @NotNull Player player,
+        @NotNull Claim claim,
+        @NotNull OrthogonalPolygon polygon,
+        int cornerIndex,
+        @NotNull OrthogonalPoint2i target
+    ) {
         OrthogonalPoint2i anchor = polygon.corners().get(cornerIndex);
         List<ShapedNibResizeAttempt> attempts = new ArrayList<>(2);
         addShapedNibResizeAttempt(
-                attempts,
+            attempts,
+            polygon,
+            tryShapedNibResizeCandidate(
+                player,
+                claim,
                 polygon,
-                tryShapedNibResizeCandidate(
-                        player,
-                        claim,
-                        polygon,
-                        anchor,
-                        new OrthogonalPoint2i(anchor.x(), target.z()),
-                        target,
-                        new OrthogonalPoint2i(target.x(), anchor.z()))
+                anchor,
+                new OrthogonalPoint2i(anchor.x(), target.z()),
+                target,
+                new OrthogonalPoint2i(target.x(), anchor.z())
+            )
         );
         addShapedNibResizeAttempt(
-                attempts,
+            attempts,
+            polygon,
+            tryShapedNibResizeCandidate(
+                player,
+                claim,
                 polygon,
-                tryShapedNibResizeCandidate(
-                        player,
-                        claim,
-                        polygon,
-                        anchor,
-                        new OrthogonalPoint2i(target.x(), anchor.z()),
-                        target,
-                        new OrthogonalPoint2i(anchor.x(), target.z()))
+                anchor,
+                new OrthogonalPoint2i(target.x(), anchor.z()),
+                target,
+                new OrthogonalPoint2i(anchor.x(), target.z())
+            )
         );
 
         ShapedNibResizeAttempt bestAttempt = selectBestShapedNibResizeAttempt(attempts);
-        if (bestAttempt != null)
-        {
+        if (bestAttempt != null) {
             return bestAttempt.result();
         }
 
         return polygon.moveCorner(cornerIndex, target);
     }
 
-    private boolean isConcaveCorner(@NotNull OrthogonalPolygon polygon, int cornerIndex)
-    {
+    private boolean isConcaveCorner(@NotNull OrthogonalPolygon polygon, int cornerIndex) {
         List<OrthogonalPoint2i> corners = polygon.corners();
-        if (cornerIndex < 0 || cornerIndex >= corners.size() || corners.size() < 4)
-        {
+        if (cornerIndex < 0 || cornerIndex >= corners.size() || corners.size() < 4) {
             return false;
         }
 
@@ -3125,8 +3444,7 @@ public class PlayerEventHandler implements Listener {
         long edgeBZ = next.z() - current.z();
         long cross = edgeAX * edgeBZ - edgeAZ * edgeBX;
         int crossSign = Long.compare(cross, 0L);
-        if (crossSign == 0)
-        {
+        if (crossSign == 0) {
             return false;
         }
 
@@ -3134,11 +3452,9 @@ public class PlayerEventHandler implements Listener {
         return winding != 0 && crossSign != winding;
     }
 
-    private int polygonWindingSign(@NotNull List<OrthogonalPoint2i> corners)
-    {
+    private int polygonWindingSign(@NotNull List<OrthogonalPoint2i> corners) {
         long area2 = 0L;
-        for (int i = 0; i < corners.size(); i++)
-        {
+        for (int i = 0; i < corners.size(); i++) {
             OrthogonalPoint2i current = corners.get(i);
             OrthogonalPoint2i next = corners.get((i + 1) % corners.size());
             area2 += (long) current.x() * next.z() - (long) next.x() * current.z();
@@ -3148,38 +3464,32 @@ public class PlayerEventHandler implements Listener {
     }
 
     private @Nullable OrthogonalPolygonValidationResult resolveOrthogonalShapedNibResizeMove(
-            @NotNull Player player,
-            @NotNull Claim claim,
-            @NotNull OrthogonalPolygon polygon,
-            int cornerIndex,
-            @NotNull OrthogonalPoint2i target)
-    {
+        @NotNull Player player,
+        @NotNull Claim claim,
+        @NotNull OrthogonalPolygon polygon,
+        int cornerIndex,
+        @NotNull OrthogonalPoint2i target
+    ) {
         OrthogonalPoint2i anchor = polygon.corners().get(cornerIndex);
         int deltaX = target.x() - anchor.x();
         int deltaZ = target.z() - anchor.z();
-        if ((deltaX == 0) == (deltaZ == 0))
-        {
+        if ((deltaX == 0) == (deltaZ == 0)) {
             return null;
         }
 
         OrthogonalPoint2i secondOutside;
         OrthogonalPoint2i reconnectProbe;
-        if (deltaX == 0)
-        {
+        if (deltaX == 0) {
             int playerX = player.getLocation().getBlockX();
-            if (playerX == anchor.x())
-            {
+            if (playerX == anchor.x()) {
                 return null;
             }
 
             secondOutside = new OrthogonalPoint2i(playerX, target.z());
             reconnectProbe = new OrthogonalPoint2i(playerX, anchor.z());
-        }
-        else
-        {
+        } else {
             int playerZ = player.getLocation().getBlockZ();
-            if (playerZ == anchor.z())
-            {
+            if (playerZ == anchor.z()) {
                 return null;
             }
 
@@ -3187,74 +3497,88 @@ public class PlayerEventHandler implements Listener {
             reconnectProbe = new OrthogonalPoint2i(anchor.x(), playerZ);
         }
 
-        if (secondOutside.equals(anchor) || secondOutside.equals(target) || reconnectProbe.equals(secondOutside))
-        {
+        if (secondOutside.equals(anchor) || secondOutside.equals(target) || reconnectProbe.equals(secondOutside)) {
             return null;
         }
 
         ClaimEditorSession session = ClaimEditorSession.idle(player.getUniqueId())
-                .withMode(com.griefprevention.claims.editor.ClaimEditorMode.SHAPED, ClaimEditSource.TOOL)
-                .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, claim.getID()))
-                .withPreview(new ClaimEditPreview(polygon, null, Collections.emptyList(), null, Collections.emptyList(), Collections.emptyList(), Collections.emptyList()))
-                .withOpenPath(new com.griefprevention.claims.editor.ShapedPathDraft(claim.getID(), Collections.singletonList(anchor), null, false));
+            .withMode(com.griefprevention.claims.editor.ClaimEditorMode.SHAPED, ClaimEditSource.TOOL)
+            .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, claim.getID()))
+            .withPreview(
+                new ClaimEditPreview(
+                    polygon,
+                    null,
+                    Collections.emptyList(),
+                    null,
+                    Collections.emptyList(),
+                    Collections.emptyList(),
+                    Collections.emptyList()
+                )
+            )
+            .withOpenPath(
+                new com.griefprevention.claims.editor.ShapedPathDraft(
+                    claim.getID(),
+                    Collections.singletonList(anchor),
+                    null,
+                    false
+                )
+            );
 
         ClaimEditResult first = claimEditor.apply(
-                session,
-                new ClaimEditIntent(
-                        ClaimEditIntentType.ADD_CORNER,
-                        ClaimEditSource.TOOL,
-                        null,
-                        claim.getID(),
-                        target,
-                        null,
-                        true,
-                        Collections.emptyList()
-                )
+            session,
+            new ClaimEditIntent(
+                ClaimEditIntentType.ADD_CORNER,
+                ClaimEditSource.TOOL,
+                null,
+                claim.getID(),
+                target,
+                null,
+                true,
+                Collections.emptyList()
+            )
         );
-        if (!first.success())
-        {
+        if (!first.success()) {
             return null;
         }
 
         ClaimEditResult second = claimEditor.apply(
-                first.session(),
-                new ClaimEditIntent(
-                        ClaimEditIntentType.ADD_CORNER,
-                        ClaimEditSource.TOOL,
-                        null,
-                        claim.getID(),
-                        secondOutside,
-                        null,
-                        true,
-                        Collections.emptyList()
-                )
+            first.session(),
+            new ClaimEditIntent(
+                ClaimEditIntentType.ADD_CORNER,
+                ClaimEditSource.TOOL,
+                null,
+                claim.getID(),
+                secondOutside,
+                null,
+                true,
+                Collections.emptyList()
+            )
         );
-        if (!second.success())
-        {
+        if (!second.success()) {
             return null;
         }
 
         ClaimEditResult merged = claimEditor.apply(
-                second.session(),
-                new ClaimEditIntent(
-                        ClaimEditIntentType.ADD_CORNER,
-                        ClaimEditSource.TOOL,
-                        null,
-                        claim.getID(),
-                        reconnectProbe,
-                        null,
-                        true,
-                        Collections.emptyList()
-                )
+            second.session(),
+            new ClaimEditIntent(
+                ClaimEditIntentType.ADD_CORNER,
+                ClaimEditSource.TOOL,
+                null,
+                claim.getID(),
+                reconnectProbe,
+                null,
+                true,
+                Collections.emptyList()
+            )
         );
-        if (!merged.success() || merged.preview().polygon() == null)
-        {
+        if (!merged.success() || merged.preview().polygon() == null) {
             return null;
         }
 
-        OrthogonalPolygonValidationResult result = OrthogonalPolygon.validatePath(merged.preview().polygon().closedPath());
-        if (!result.isValid() || result.polygon() == null || !polygonContainsPolygon(result.polygon(), polygon))
-        {
+        OrthogonalPolygonValidationResult result = OrthogonalPolygon.validatePath(
+            merged.preview().polygon().closedPath()
+        );
+        if (!result.isValid() || result.polygon() == null || !polygonContainsPolygon(result.polygon(), polygon)) {
             return null;
         }
 
@@ -3262,66 +3586,78 @@ public class PlayerEventHandler implements Listener {
     }
 
     private @Nullable OrthogonalPolygonValidationResult tryShapedNibResizeCandidate(
-            @NotNull Player player,
-            @NotNull Claim claim,
-            @NotNull OrthogonalPolygon polygon,
-            @NotNull OrthogonalPoint2i anchor,
-            @NotNull OrthogonalPoint2i firstStep,
-            @NotNull OrthogonalPoint2i target,
-            @NotNull OrthogonalPoint2i reconnect)
-    {
-        if (firstStep.equals(anchor)
-                || firstStep.equals(target)
-                || reconnect.equals(anchor)
-                || reconnect.equals(firstStep)
-                || reconnect.equals(target))
-        {
+        @NotNull Player player,
+        @NotNull Claim claim,
+        @NotNull OrthogonalPolygon polygon,
+        @NotNull OrthogonalPoint2i anchor,
+        @NotNull OrthogonalPoint2i firstStep,
+        @NotNull OrthogonalPoint2i target,
+        @NotNull OrthogonalPoint2i reconnect
+    ) {
+        if (
+            firstStep.equals(anchor) ||
+            firstStep.equals(target) ||
+            reconnect.equals(anchor) ||
+            reconnect.equals(firstStep) ||
+            reconnect.equals(target)
+        ) {
             return null;
         }
 
         ClaimEditorSession session = ClaimEditorSession.idle(player.getUniqueId())
-                .withMode(com.griefprevention.claims.editor.ClaimEditorMode.SHAPED, ClaimEditSource.TOOL)
-                .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, claim.getID()))
-                .withPreview(new ClaimEditPreview(polygon, null, Collections.emptyList(), null, Collections.emptyList(), Collections.emptyList(), Collections.emptyList()))
-                .withOpenPath(new com.griefprevention.claims.editor.ShapedPathDraft(
-                        claim.getID(),
-                        Arrays.asList(anchor, firstStep),
-                        null,
-                        false));
+            .withMode(com.griefprevention.claims.editor.ClaimEditorMode.SHAPED, ClaimEditSource.TOOL)
+            .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, claim.getID()))
+            .withPreview(
+                new ClaimEditPreview(
+                    polygon,
+                    null,
+                    Collections.emptyList(),
+                    null,
+                    Collections.emptyList(),
+                    Collections.emptyList(),
+                    Collections.emptyList()
+                )
+            )
+            .withOpenPath(
+                new com.griefprevention.claims.editor.ShapedPathDraft(
+                    claim.getID(),
+                    Arrays.asList(anchor, firstStep),
+                    null,
+                    false
+                )
+            );
 
         ClaimEditResult second = claimEditor.apply(
-                session,
-                new ClaimEditIntent(
-                        ClaimEditIntentType.ADD_CORNER,
-                        ClaimEditSource.TOOL,
-                        null,
-                        claim.getID(),
-                        target,
-                        null,
-                        true,
-                        Collections.emptyList()
-                )
+            session,
+            new ClaimEditIntent(
+                ClaimEditIntentType.ADD_CORNER,
+                ClaimEditSource.TOOL,
+                null,
+                claim.getID(),
+                target,
+                null,
+                true,
+                Collections.emptyList()
+            )
         );
-        if (!second.success())
-        {
+        if (!second.success()) {
             return null;
         }
 
         ClaimEditResult merged = claimEditor.apply(
-                second.session(),
-                new ClaimEditIntent(
-                        ClaimEditIntentType.ADD_CORNER,
-                        ClaimEditSource.TOOL,
-                        null,
-                        claim.getID(),
-                        reconnect,
-                        null,
-                        true,
-                        Collections.emptyList()
-                )
+            second.session(),
+            new ClaimEditIntent(
+                ClaimEditIntentType.ADD_CORNER,
+                ClaimEditSource.TOOL,
+                null,
+                claim.getID(),
+                reconnect,
+                null,
+                true,
+                Collections.emptyList()
+            )
         );
-        if (!merged.success() || merged.preview().polygon() == null)
-        {
+        if (!merged.success() || merged.preview().polygon() == null) {
             return null;
         }
 
@@ -3329,36 +3665,34 @@ public class PlayerEventHandler implements Listener {
     }
 
     private void addShapedNibResizeAttempt(
-            @NotNull List<ShapedNibResizeAttempt> attempts,
-            @NotNull OrthogonalPolygon originalPolygon,
-            @Nullable OrthogonalPolygonValidationResult result)
-    {
-        if (result == null || !result.isValid() || result.polygon() == null)
-        {
+        @NotNull List<ShapedNibResizeAttempt> attempts,
+        @NotNull OrthogonalPolygon originalPolygon,
+        @Nullable OrthogonalPolygonValidationResult result
+    ) {
+        if (result == null || !result.isValid() || result.polygon() == null) {
             return;
         }
 
-        attempts.add(new ShapedNibResizeAttempt(
+        attempts.add(
+            new ShapedNibResizeAttempt(
                 result,
                 polygonContainsPolygon(result.polygon(), originalPolygon),
                 polygonArea(result.polygon()),
                 polygonOverlapArea(originalPolygon, result.polygon())
-        ));
+            )
+        );
     }
 
     private @Nullable ShapedNibResizeAttempt selectBestShapedNibResizeAttempt(
-            @NotNull List<ShapedNibResizeAttempt> attempts)
-    {
+        @NotNull List<ShapedNibResizeAttempt> attempts
+    ) {
         ShapedNibResizeAttempt best = null;
-        for (ShapedNibResizeAttempt attempt : attempts)
-        {
-            if (!attempt.containsOriginal())
-            {
+        for (ShapedNibResizeAttempt attempt : attempts) {
+            if (!attempt.containsOriginal()) {
                 continue;
             }
 
-            if (best == null || compareShapedNibResizeAttempts(attempt, best) < 0)
-            {
+            if (best == null || compareShapedNibResizeAttempts(attempt, best) < 0) {
                 best = attempt;
             }
         }
@@ -3367,31 +3701,26 @@ public class PlayerEventHandler implements Listener {
     }
 
     private int compareShapedNibResizeAttempts(
-            @NotNull ShapedNibResizeAttempt first,
-            @NotNull ShapedNibResizeAttempt second)
-    {
-        if (first.area() != second.area())
-        {
+        @NotNull ShapedNibResizeAttempt first,
+        @NotNull ShapedNibResizeAttempt second
+    ) {
+        if (first.area() != second.area()) {
             return Integer.compare(second.area(), first.area());
         }
 
-        if (first.overlap() != second.overlap())
-        {
+        if (first.overlap() != second.overlap()) {
             return Integer.compare(second.overlap(), first.overlap());
         }
 
         return 0;
     }
 
-    private boolean polygonContains(@NotNull OrthogonalPolygon polygon, @NotNull OrthogonalPoint2i point)
-    {
-        if (polygon.corners().contains(point))
-        {
+    private boolean polygonContains(@NotNull OrthogonalPolygon polygon, @NotNull OrthogonalPoint2i point) {
+        if (polygon.corners().contains(point)) {
             return true;
         }
 
-        if (!polygon.edgeIndexesContainingInteriorPoint(point).isEmpty())
-        {
+        if (!polygon.edgeIndexesContainingInteriorPoint(point).isEmpty()) {
             return true;
         }
 
@@ -3399,19 +3728,16 @@ public class PlayerEventHandler implements Listener {
         double sampleZ = point.z() + 0.5D;
         boolean inside = false;
         List<OrthogonalPoint2i> corners = polygon.corners();
-        for (int i = 0, j = corners.size() - 1; i < corners.size(); j = i++)
-        {
+        for (int i = 0, j = corners.size() - 1; i < corners.size(); j = i++) {
             OrthogonalPoint2i a = corners.get(i);
             OrthogonalPoint2i b = corners.get(j);
-            boolean crosses = (a.z() > sampleZ) != (b.z() > sampleZ);
-            if (!crosses)
-            {
+            boolean crosses = a.z() > sampleZ != b.z() > sampleZ;
+            if (!crosses) {
                 continue;
             }
 
-            double intersectionX = (double) (b.x() - a.x()) * (sampleZ - a.z()) / (double) (b.z() - a.z()) + a.x();
-            if (sampleX < intersectionX)
-            {
+            double intersectionX = ((double) (b.x() - a.x()) * (sampleZ - a.z())) / (double) (b.z() - a.z()) + a.x();
+            if (sampleX < intersectionX) {
                 inside = !inside;
             }
         }
@@ -3419,15 +3745,11 @@ public class PlayerEventHandler implements Listener {
         return inside;
     }
 
-    private int polygonArea(@NotNull OrthogonalPolygon polygon)
-    {
+    private int polygonArea(@NotNull OrthogonalPolygon polygon) {
         int area = 0;
-        for (int x = polygon.minX(); x <= polygon.maxX(); x++)
-        {
-            for (int z = polygon.minZ(); z <= polygon.maxZ(); z++)
-            {
-                if (polygonContains(polygon, new OrthogonalPoint2i(x, z)))
-                {
+        for (int x = polygon.minX(); x <= polygon.maxX(); x++) {
+            for (int z = polygon.minZ(); z <= polygon.maxZ(); z++) {
+                if (polygonContains(polygon, new OrthogonalPoint2i(x, z))) {
                     area++;
                 }
             }
@@ -3436,15 +3758,11 @@ public class PlayerEventHandler implements Listener {
         return area;
     }
 
-    private boolean polygonContainsPolygon(@NotNull OrthogonalPolygon container, @NotNull OrthogonalPolygon contents)
-    {
-        for (int x = contents.minX(); x <= contents.maxX(); x++)
-        {
-            for (int z = contents.minZ(); z <= contents.maxZ(); z++)
-            {
+    private boolean polygonContainsPolygon(@NotNull OrthogonalPolygon container, @NotNull OrthogonalPolygon contents) {
+        for (int x = contents.minX(); x <= contents.maxX(); x++) {
+            for (int z = contents.minZ(); z <= contents.maxZ(); z++) {
                 OrthogonalPoint2i point = new OrthogonalPoint2i(x, z);
-                if (polygonContains(contents, point) && !polygonContains(container, point))
-                {
+                if (polygonContains(contents, point) && !polygonContains(container, point)) {
                     return false;
                 }
             }
@@ -3453,21 +3771,17 @@ public class PlayerEventHandler implements Listener {
         return true;
     }
 
-    private int polygonOverlapArea(@NotNull OrthogonalPolygon first, @NotNull OrthogonalPolygon second)
-    {
+    private int polygonOverlapArea(@NotNull OrthogonalPolygon first, @NotNull OrthogonalPolygon second) {
         int area = 0;
         int minX = Math.max(first.minX(), second.minX());
         int maxX = Math.min(first.maxX(), second.maxX());
         int minZ = Math.max(first.minZ(), second.minZ());
         int maxZ = Math.min(first.maxZ(), second.maxZ());
 
-        for (int x = minX; x <= maxX; x++)
-        {
-            for (int z = minZ; z <= maxZ; z++)
-            {
+        for (int x = minX; x <= maxX; x++) {
+            for (int z = minZ; z <= maxZ; z++) {
                 OrthogonalPoint2i point = new OrthogonalPoint2i(x, z);
-                if (polygonContains(first, point) && polygonContains(second, point))
-                {
+                if (polygonContains(first, point) && polygonContains(second, point)) {
                     area++;
                 }
             }
@@ -3476,70 +3790,64 @@ public class PlayerEventHandler implements Listener {
         return area;
     }
 
-    private static final class ShapedNibResizeAttempt
-    {
+    private static final class ShapedNibResizeAttempt {
+
         private final @NotNull OrthogonalPolygonValidationResult result;
         private final boolean containsOriginal;
         private final int area;
         private final int overlap;
 
         private ShapedNibResizeAttempt(
-                @NotNull OrthogonalPolygonValidationResult result,
-                boolean containsOriginal,
-                int area,
-                int overlap)
-        {
+            @NotNull OrthogonalPolygonValidationResult result,
+            boolean containsOriginal,
+            int area,
+            int overlap
+        ) {
             this.result = result;
             this.containsOriginal = containsOriginal;
             this.area = area;
             this.overlap = overlap;
         }
 
-        @NotNull OrthogonalPolygonValidationResult result()
-        {
+        @NotNull
+        OrthogonalPolygonValidationResult result() {
             return result;
         }
 
-        boolean containsOriginal()
-        {
+        boolean containsOriginal() {
             return containsOriginal;
         }
 
-        int area()
-        {
+        int area() {
             return area;
         }
 
-        int overlap()
-        {
+        int overlap() {
             return overlap;
         }
     }
 
     private @Nullable FaceRun findStraightFaceRun(
-            @NotNull OrthogonalPolygon polygon,
-            int cornerIndex,
-            boolean movingVerticalFace)
-    {
+        @NotNull OrthogonalPolygon polygon,
+        int cornerIndex,
+        boolean movingVerticalFace
+    ) {
         int edgeCount = polygon.edges().size();
         int previousEdgeIndex = Math.floorMod(cornerIndex - 1, edgeCount);
         int nextEdgeIndex = cornerIndex % edgeCount;
         Integer anchorEdgeIndex = null;
 
         OrthogonalEdge2i previousEdge = polygon.edges().get(previousEdgeIndex);
-        if ((movingVerticalFace && previousEdge.isVertical()) || (!movingVerticalFace && previousEdge.isHorizontal()))
-        {
+        if ((movingVerticalFace && previousEdge.isVertical()) || (!movingVerticalFace && previousEdge.isHorizontal())) {
             anchorEdgeIndex = previousEdgeIndex;
         }
 
         OrthogonalEdge2i nextEdge = polygon.edges().get(nextEdgeIndex);
-        if ((movingVerticalFace && nextEdge.isVertical()) || (!movingVerticalFace && nextEdge.isHorizontal()))
-        {
+        if ((movingVerticalFace && nextEdge.isVertical()) || (!movingVerticalFace && nextEdge.isHorizontal())) {
             anchorEdgeIndex = nextEdgeIndex;
         }
 
-        if (anchorEdgeIndex == null)
-        {
+        if (anchorEdgeIndex == null) {
             return null;
         }
 
@@ -3548,17 +3856,14 @@ public class PlayerEventHandler implements Listener {
         int coordinate = horizontal ? referenceEdge.start().z() : referenceEdge.start().x();
 
         int startEdgeIndex = anchorEdgeIndex;
-        while (true)
-        {
+        while (true) {
             int previousIndex = Math.floorMod(startEdgeIndex - 1, edgeCount);
-            if (previousIndex == anchorEdgeIndex)
-            {
+            if (previousIndex == anchorEdgeIndex) {
                 break;
             }
 
             OrthogonalEdge2i edge = polygon.edges().get(previousIndex);
-            if (!isSameStraightFace(edge, horizontal, coordinate))
-            {
+            if (!isSameStraightFace(edge, horizontal, coordinate)) {
                 break;
             }
 
@@ -3566,17 +3871,14 @@ public class PlayerEventHandler implements Listener {
         }
 
         int endEdgeIndex = anchorEdgeIndex;
-        while (true)
-        {
+        while (true) {
             int nextIndex = (endEdgeIndex + 1) % edgeCount;
-            if (nextIndex == startEdgeIndex)
-            {
+            if (nextIndex == startEdgeIndex) {
                 break;
             }
 
             OrthogonalEdge2i edge = polygon.edges().get(nextIndex);
-            if (!isSameStraightFace(edge, horizontal, coordinate))
-            {
+            if (!isSameStraightFace(edge, horizontal, coordinate)) {
                 break;
             }
 
@@ -3586,10 +3888,8 @@ public class PlayerEventHandler implements Listener {
         return new FaceRun(startEdgeIndex, endEdgeIndex, horizontal);
     }
 
-    private boolean isSameStraightFace(@NotNull OrthogonalEdge2i edge, boolean horizontal, int coordinate)
-    {
-        if (horizontal)
-        {
+    private boolean isSameStraightFace(@NotNull OrthogonalEdge2i edge, boolean horizontal, int coordinate) {
+        if (horizontal) {
             return edge.isHorizontal() && edge.start().z() == coordinate;
         }
 
@@ -3597,42 +3897,38 @@ public class PlayerEventHandler implements Listener {
     }
 
     private @Nullable Integer selectResizeSubsegment(
-            @NotNull Player player,
-            @NotNull OrthogonalPolygon polygon,
-            @NotNull FaceRun faceRun,
-            @NotNull OrthogonalPoint2i target)
-    {
+        @NotNull Player player,
+        @NotNull OrthogonalPolygon polygon,
+        @NotNull FaceRun faceRun,
+        @NotNull OrthogonalPoint2i target
+    ) {
         int targetCoordinate = faceRun.horizontal() ? target.x() : target.z();
         Integer targetEdgeIndex = locateResizeSubsegment(polygon, faceRun, targetCoordinate);
-        if (targetEdgeIndex != null)
-        {
+        if (targetEdgeIndex != null) {
             return targetEdgeIndex;
         }
 
         int playerCoordinate = faceRun.horizontal()
-                ? player.getLocation().getBlockX()
-                : player.getLocation().getBlockZ();
+            ? player.getLocation().getBlockX()
+            : player.getLocation().getBlockZ();
         return locateResizeSubsegment(polygon, faceRun, playerCoordinate);
     }
 
     private @Nullable Integer locateResizeSubsegment(
-            @NotNull OrthogonalPolygon polygon,
-            @NotNull FaceRun faceRun,
-            int tangentCoordinate)
-    {
+        @NotNull OrthogonalPolygon polygon,
+        @NotNull FaceRun faceRun,
+        int tangentCoordinate
+    ) {
         int edgeIndex = faceRun.startEdgeIndex();
-        while (true)
-        {
+        while (true) {
             OrthogonalEdge2i edge = polygon.edges().get(edgeIndex);
             int min = faceRun.horizontal() ? edge.minX() : edge.minZ();
             int max = faceRun.horizontal() ? edge.maxX() : edge.maxZ();
-            if (tangentCoordinate > min && tangentCoordinate < max)
-            {
+            if (tangentCoordinate > min && tangentCoordinate < max) {
                 return edgeIndex;
             }
 
-            if (edgeIndex == faceRun.endEdgeIndex())
-            {
+            if (edgeIndex == faceRun.endEdgeIndex()) {
                 break;
             }
 
@@ -3642,40 +3938,36 @@ public class PlayerEventHandler implements Listener {
         return null;
     }
 
-    private static final class FaceRun
-    {
+    private static final class FaceRun {
+
         private final int startEdgeIndex;
         private final int endEdgeIndex;
         private final boolean horizontal;
 
-        private FaceRun(int startEdgeIndex, int endEdgeIndex, boolean horizontal)
-        {
+        private FaceRun(int startEdgeIndex, int endEdgeIndex, boolean horizontal) {
             this.startEdgeIndex = startEdgeIndex;
             this.endEdgeIndex = endEdgeIndex;
             this.horizontal = horizontal;
         }
 
-        int startEdgeIndex()
-        {
+        int startEdgeIndex() {
             return startEdgeIndex;
         }
 
-        int endEdgeIndex()
-        {
+        int endEdgeIndex() {
             return endEdgeIndex;
         }
 
-        boolean horizontal()
-        {
+        boolean horizontal() {
             return horizontal;
         }
     }
 
     private boolean handleShapedResizeInteraction(
-            @NotNull Player player,
-            @NotNull PlayerData playerData,
-            @NotNull Block clickedBlock)
-    {
+        @NotNull Player player,
+        @NotNull PlayerData playerData,
+        @NotNull Block clickedBlock
+    ) {
         if (playerData.claimResizing != null && playerData.claimResizing.inDataStore) {
             if (playerData.lastShovelLocation == null) {
                 return true;
@@ -3689,8 +3981,10 @@ public class PlayerEventHandler implements Listener {
             }
 
             int newx1, newx2, newz1, newz2, newy1, newy2;
-            if (playerData.lastShovelLocation.getBlockX() == playerData.claimResizing.getLesserBoundaryCorner()
-                    .getBlockX()) {
+            if (
+                playerData.lastShovelLocation.getBlockX() ==
+                playerData.claimResizing.getLesserBoundaryCorner().getBlockX()
+            ) {
                 newx1 = clickedBlock.getX();
                 newx2 = playerData.claimResizing.getGreaterBoundaryCorner().getBlockX();
             } else {
@@ -3698,8 +3992,10 @@ public class PlayerEventHandler implements Listener {
                 newx2 = clickedBlock.getX();
             }
 
-            if (playerData.lastShovelLocation.getBlockZ() == playerData.claimResizing.getLesserBoundaryCorner()
-                    .getBlockZ()) {
+            if (
+                playerData.lastShovelLocation.getBlockZ() ==
+                playerData.claimResizing.getLesserBoundaryCorner().getBlockZ()
+            ) {
                 newz1 = clickedBlock.getZ();
                 newz2 = playerData.claimResizing.getGreaterBoundaryCorner().getBlockZ();
             } else {
@@ -3715,7 +4011,7 @@ public class PlayerEventHandler implements Listener {
                 int currentMaxY = playerData.claimResizing.getGreaterBoundaryCorner().getBlockY();
                 int startY = playerData.lastShovelLocation.getBlockY();
                 int endY = clickedBlock.getY();
-                boolean isSingleLayer = (currentMinY == currentMaxY);
+                boolean isSingleLayer = currentMinY == currentMaxY;
                 newy1 = currentMinY;
                 newy2 = currentMaxY;
                 if (isSingleLayer || startY == currentMinY) {
@@ -3760,7 +4056,8 @@ public class PlayerEventHandler implements Listener {
         if (playerData.getClaimEditorSession().openPath() != null) {
             if (canStartResizeFromOpenPath(playerData.getClaimEditorSession(), clickedClaim, clickedBlock)) {
                 playerData.setClaimEditorSession(
-                        loadClaimIntoShapedSession(playerData.getClaimEditorSession().withOpenPath(null), clickedClaim));
+                    loadClaimIntoShapedSession(playerData.getClaimEditorSession().withOpenPath(null), clickedClaim)
+                );
             } else {
                 return false;
             }
@@ -3771,15 +4068,17 @@ public class PlayerEventHandler implements Listener {
     }
 
     private boolean canStartResizeFromOpenPath(
-            @NotNull ClaimEditorSession session,
-            @NotNull Claim claim,
-            @NotNull Block clickedBlock)
-    {
-        if (session.activeTarget() == null
-                || session.activeTarget().claimId() == null
-                || !session.activeTarget().claimId().equals(claim.getID())
-                || session.openPath() == null
-                || session.openPath().points().size() != 1) {
+        @NotNull ClaimEditorSession session,
+        @NotNull Claim claim,
+        @NotNull Block clickedBlock
+    ) {
+        if (
+            session.activeTarget() == null ||
+            session.activeTarget().claimId() == null ||
+            !session.activeTarget().claimId().equals(claim.getID()) ||
+            session.openPath() == null ||
+            session.openPath().points().size() != 1
+        ) {
             return false;
         }
 
@@ -3788,16 +4087,18 @@ public class PlayerEventHandler implements Listener {
     }
 
     private void startClaimResizeSelection(
-            @NotNull Player player,
-            @NotNull PlayerData playerData,
-            @NotNull Claim claim,
-            @NotNull Block clickedBlock)
-    {
+        @NotNull Player player,
+        @NotNull PlayerData playerData,
+        @NotNull Claim claim,
+        @NotNull Block clickedBlock
+    ) {
         Claim selection = claim;
         // Don't promote single-block claims (1x1x1) where every block is a corner.
-        while (selection.parent != null
-                && (selection.getLesserBoundaryCorner().getBlockX() != selection.getGreaterBoundaryCorner().getBlockX()
-                || selection.getLesserBoundaryCorner().getBlockZ() != selection.getGreaterBoundaryCorner().getBlockZ())) {
+        while (
+            selection.parent != null &&
+            (selection.getLesserBoundaryCorner().getBlockX() != selection.getGreaterBoundaryCorner().getBlockX() ||
+                selection.getLesserBoundaryCorner().getBlockZ() != selection.getGreaterBoundaryCorner().getBlockZ())
+        ) {
             Claim parent = selection.parent;
             boolean parentContains = parent.contains(clickedBlock.getLocation(), true, false);
             if (parentContains && isCornerMatch(parent, clickedBlock)) {
@@ -3821,8 +4122,7 @@ public class PlayerEventHandler implements Listener {
         BoundaryVisualization.visualizeClaim(player, selection, visualizationType, clickedBlock);
     }
 
-    private Messages claimResizeStartMessage(@NotNull Claim selection)
-    {
+    private Messages claimResizeStartMessage(@NotNull Claim selection) {
         if (!instance.config_claims_useClaimSelectSessions || !instance.config_claims_useClaimSelectedMessages) {
             return Messages.ResizeStart;
         }
@@ -3843,59 +4143,55 @@ public class PlayerEventHandler implements Listener {
      * @return true if this path handled the click (including failure feedback)
      */
     private boolean trySelectShapedBoundarySegmentBasicMode(
-            @NotNull Player player,
-            @NotNull PlayerData playerData,
-            @NotNull Claim deepestClaim,
-            @NotNull Block clickedBlock)
-    {
+        @NotNull Player player,
+        @NotNull PlayerData playerData,
+        @NotNull Claim deepestClaim,
+        @NotNull Block clickedBlock
+    ) {
         Claim claim = deepestClaim;
-        while (claim != null && claim.parent != null)
-        {
+        while (claim != null && claim.parent != null) {
             claim = claim.parent;
         }
-        if (claim == null || !claim.isShaped() || claim.is3D())
-        {
+        if (claim == null || !claim.isShaped() || claim.is3D()) {
             return false;
         }
         Supplier<String> noEdit = claim.checkPermission(player, ClaimPermission.Edit, null);
-        if (noEdit != null)
-        {
+        if (noEdit != null) {
             return false;
         }
 
         OrthogonalPoint2i point = new OrthogonalPoint2i(clickedBlock.getX(), clickedBlock.getZ());
-        if (claim.getCornerIndexAt(point.x(), point.z()) >= 0)
-        {
+        if (claim.getCornerIndexAt(point.x(), point.z()) >= 0) {
             return false;
         }
 
         OrthogonalPolygon polygon = claim.getBoundaryPolygon();
         List<Integer> matches = polygon.edgeIndexesContainingInteriorPoint(point);
-        if (matches.size() != 1)
-        {
+        if (matches.size() != 1) {
             return false;
         }
 
-        ClaimEditorSession session = ClaimEditorSession.idle(player.getUniqueId())
-                .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.TOOL);
+        ClaimEditorSession session = ClaimEditorSession.idle(player.getUniqueId()).withMode(
+            ClaimEditorMode.SHAPED,
+            ClaimEditSource.TOOL
+        );
         session = loadClaimIntoShapedSession(session, claim);
 
         ClaimEditResult result = claimEditor.apply(
-                session,
-                new ClaimEditIntent(
-                        ClaimEditIntentType.SELECT_SEGMENT,
-                        ClaimEditSource.TOOL,
-                        null,
-                        claim.getID(),
-                        point,
-                        null,
-                        true,
-                        Collections.emptyList()
-                )
+            session,
+            new ClaimEditIntent(
+                ClaimEditIntentType.SELECT_SEGMENT,
+                ClaimEditSource.TOOL,
+                null,
+                claim.getID(),
+                point,
+                null,
+                true,
+                Collections.emptyList()
+            )
         );
 
-        if (!result.success())
-        {
+        if (!result.success()) {
             applyClaimEditResult(player, playerData, result);
             return true;
         }
@@ -3904,14 +4200,19 @@ public class PlayerEventHandler implements Listener {
         playerData.setEphemeralBasicShapedSegmentPreview(true);
         playerData.lastClaim = claim;
         BoundaryVisualization.visualizeClaim(
-                player,
-                claim,
-                claim.isAdminClaim() ? VisualizationType.ADMIN_CLAIM : VisualizationType.CLAIM,
-                clickedBlock);
+            player,
+            claim,
+            claim.isAdminClaim() ? VisualizationType.ADMIN_CLAIM : VisualizationType.CLAIM,
+            clickedBlock
+        );
         return true;
     }
 
-    private void handleMergeModeInteraction(@NotNull Player player, @NotNull PlayerData playerData, @NotNull Block clickedBlock) {
+    private void handleMergeModeInteraction(
+        @NotNull Player player,
+        @NotNull PlayerData playerData,
+        @NotNull Block clickedBlock
+    ) {
         Claim clickedClaim = this.dataStore.getClaimAt(clickedBlock.getLocation(), true, playerData.lastClaim);
         while (clickedClaim != null && clickedClaim.parent != null) {
             clickedClaim = clickedClaim.parent;
@@ -3936,7 +4237,11 @@ public class PlayerEventHandler implements Listener {
                 OrthogonalPoint2i point = new OrthogonalPoint2i(clickedBlock.getX(), clickedBlock.getZ());
                 List<Integer> edgeMatches = clickedClaim.getBoundaryPolygon().edgeIndexesContainingInteriorPoint(point);
                 if (edgeMatches.size() != 1) {
-                    GriefPrevention.sendMessage(player, TextMode.Err, "Click on a claim boundary edge to select it for merging.");
+                    GriefPrevention.sendMessage(
+                        player,
+                        TextMode.Err,
+                        "Click on a claim boundary edge to select it for merging."
+                    );
                     return;
                 }
                 playerData.mergeEdgeIndex = edgeMatches.get(0);
@@ -3945,13 +4250,20 @@ public class PlayerEventHandler implements Listener {
             }
 
             playerData.claimMerging = clickedClaim;
-            BoundaryVisualization.visualizeClaim(player, clickedClaim,
-                    clickedClaim.isAdminClaim() ? VisualizationType.ADMIN_CLAIM : VisualizationType.CLAIM);
+            BoundaryVisualization.visualizeClaim(
+                player,
+                clickedClaim,
+                clickedClaim.isAdminClaim() ? VisualizationType.ADMIN_CLAIM : VisualizationType.CLAIM
+            );
             Set<Claim> nearbyClaims = this.dataStore.getNearbyClaims(player.getLocation());
             if (!nearbyClaims.isEmpty()) {
                 BoundaryVisualization.mergeNearbyClaims(player, nearbyClaims);
             }
-            GriefPrevention.sendMessage(player, TextMode.Instr, "First claim selected. Right click the second claim to finish the merge.");
+            GriefPrevention.sendMessage(
+                player,
+                TextMode.Instr,
+                "First claim selected. Right click the second claim to finish the merge."
+            );
             return;
         }
 
@@ -3974,19 +4286,31 @@ public class PlayerEventHandler implements Listener {
         }
 
         // Perform the merge
-        this.dataStore.mergeClaims(player, playerData, playerData.claimMerging, clickedClaim, playerData.mergeEdgeIndex);
+        this.dataStore.mergeClaims(
+            player,
+            playerData,
+            playerData.claimMerging,
+            clickedClaim,
+            playerData.mergeEdgeIndex
+        );
     }
 
-    private void handleShapedModeInteraction(@NotNull Player player, @NotNull PlayerData playerData, @NotNull Block clickedBlock) {
+    private void handleShapedModeInteraction(
+        @NotNull Player player,
+        @NotNull PlayerData playerData,
+        @NotNull Block clickedBlock
+    ) {
         ClaimEditorSession session = playerData.getClaimEditorSession();
         if (session.mode() != com.griefprevention.claims.editor.ClaimEditorMode.SHAPED) {
             session = session.withMode(com.griefprevention.claims.editor.ClaimEditorMode.SHAPED, ClaimEditSource.TOOL);
         }
 
-        if (session.activeTarget() != null
-                && session.activeTarget().type() == ClaimEditTargetType.EXISTING_PARENT_CLAIM
-                && session.openPath() != null
-                && session.activeTarget().claimId() != null) {
+        if (
+            session.activeTarget() != null &&
+            session.activeTarget().type() == ClaimEditTargetType.EXISTING_PARENT_CLAIM &&
+            session.openPath() != null &&
+            session.activeTarget().claimId() != null
+        ) {
             Claim targetClaim = this.dataStore.getClaim(session.activeTarget().claimId());
             if (targetClaim != null) {
                 Claim clickedClaim = this.dataStore.getClaimAt(clickedBlock.getLocation(), true, playerData.lastClaim);
@@ -3999,7 +4323,11 @@ public class PlayerEventHandler implements Listener {
                     // Check if player owns both claims
                     Supplier<String> noEditReason = clickedClaim.checkPermission(player, ClaimPermission.Edit, null);
                     if (noEditReason != null) {
-                        GriefPrevention.sendMessage(player, TextMode.Err, "Finish this reshape path before editing a different claim.");
+                        GriefPrevention.sendMessage(
+                            player,
+                            TextMode.Err,
+                            "Finish this reshape path before editing a different claim."
+                        );
                         return;
                     }
                     // Add a boundary marker on the clicked claim so the reshape path
@@ -4014,45 +4342,49 @@ public class PlayerEventHandler implements Listener {
                         // Add node on claim 2
                         ClaimEditorSession clickedSession = loadClaimIntoShapedSession(session, clickedClaim);
                         ClaimEditResult result = claimEditor.apply(
-                                clickedSession,
-                                new ClaimEditIntent(
-                                        ClaimEditIntentType.ADD_NODE,
-                                        ClaimEditSource.TOOL,
-                                        null,
-                                        clickedClaim.getID(),
-                                        point,
-                                        null,
-                                        true,
-                                        Collections.emptyList()
-                                )
+                            clickedSession,
+                            new ClaimEditIntent(
+                                ClaimEditIntentType.ADD_NODE,
+                                ClaimEditSource.TOOL,
+                                null,
+                                clickedClaim.getID(),
+                                point,
+                                null,
+                                true,
+                                Collections.emptyList()
+                            )
                         );
                         if (result.success()) {
                             // Record the merge target
                             playerData.addCrossClaimBoundaryMarker(clickedClaim.getID());
-                            GriefPrevention.sendMessage(player, TextMode.Success, "Merge target marked. Continue shaping to connect claims.");
+                            GriefPrevention.sendMessage(
+                                player,
+                                TextMode.Success,
+                                "Merge target marked. Continue shaping to connect claims."
+                            );
                             // Restore the original session on claim 1 with the open path intact,
                             // but add the cross-claim point as a draft point so the path continues
                             // toward the merge target.
                             List<OrthogonalPoint2i> newDraftPoints = new ArrayList<>(originalDraftPoints);
                             newDraftPoints.add(point);
                             ClaimEditPreview restoredPreview = new ClaimEditPreview(
-                                    originalSession.preview().polygon(),
-                                    originalSession.preview().highlightedSegment(),
-                                    newDraftPoints,
-                                    originalSession.preview().snappedPoint(),
-                                    originalSession.preview().conflictPoints(),
-                                    Collections.emptyList(),
-                                    Collections.singletonList("Merge target marked. Continue shaping to connect claims.")
+                                originalSession.preview().polygon(),
+                                originalSession.preview().highlightedSegment(),
+                                newDraftPoints,
+                                originalSession.preview().snappedPoint(),
+                                originalSession.preview().conflictPoints(),
+                                Collections.emptyList(),
+                                Collections.singletonList("Merge target marked. Continue shaping to connect claims.")
                             );
                             ShapedPathDraft restoredDraft = new ShapedPathDraft(
-                                    targetClaim.getID(),
-                                    newDraftPoints,
-                                    null,
-                                    false
+                                targetClaim.getID(),
+                                newDraftPoints,
+                                null,
+                                false
                             );
                             ClaimEditorSession restoredSession = originalSession
-                                    .withOpenPath(restoredDraft)
-                                    .withPreview(restoredPreview);
+                                .withOpenPath(restoredDraft)
+                                .withPreview(restoredPreview);
                             playerData.setClaimEditorSession(restoredSession);
                             visualizeShapedEditState(player, restoredSession, clickedBlock.getY());
                             return;
@@ -4061,11 +4393,11 @@ public class PlayerEventHandler implements Listener {
                 }
 
                 BoundaryNodeEnsureResult targetBoundaryResult = ensureBoundaryNodeForShapedPath(
-                        player,
-                        playerData,
-                        targetClaim,
-                        clickedBlock,
-                        loadClaimIntoShapedSession(session, targetClaim)
+                    player,
+                    playerData,
+                    targetClaim,
+                    clickedBlock,
+                    loadClaimIntoShapedSession(session, targetClaim)
                 );
                 if (targetBoundaryResult.claim() == null) {
                     return;
@@ -4079,33 +4411,42 @@ public class PlayerEventHandler implements Listener {
                 // This indicates a merge operation in progress
                 if (playerData.hasCrossClaimBoundaryMarker(targetClaim.getID())) {
                     // This is a merge operation - show appropriate message
-                    GriefPrevention.sendMessage(player, TextMode.Instr, "Merge in progress. Continue shaping to connect claims.");
+                    GriefPrevention.sendMessage(
+                        player,
+                        TextMode.Instr,
+                        "Merge in progress. Continue shaping to connect claims."
+                    );
                 }
 
-                ClaimEditorSession targetSession = loadClaimIntoShapedSession(playerData.getClaimEditorSession(), targetClaim);
+                ClaimEditorSession targetSession = loadClaimIntoShapedSession(
+                    playerData.getClaimEditorSession(),
+                    targetClaim
+                );
                 OrthogonalPoint2i targetPoint = snapOutsideShapedCornerToMinimumDistance(
-                        targetClaim,
-                        targetSession,
-                        new OrthogonalPoint2i(clickedBlock.getX(), clickedBlock.getZ())
+                    targetClaim,
+                    targetSession,
+                    new OrthogonalPoint2i(clickedBlock.getX(), clickedBlock.getZ())
                 );
                 ClaimEditResult result = claimEditor.apply(
-                        targetSession,
-                        new ClaimEditIntent(
-                                ClaimEditIntentType.ADD_CORNER,
-                                ClaimEditSource.TOOL,
-                                null,
-                                targetClaim.getID(),
-                                targetPoint,
-                                null,
-                                true,
-                                Collections.emptyList()
-                        )
+                    targetSession,
+                    new ClaimEditIntent(
+                        ClaimEditIntentType.ADD_CORNER,
+                        ClaimEditSource.TOOL,
+                        null,
+                        targetClaim.getID(),
+                        targetPoint,
+                        null,
+                        true,
+                        Collections.emptyList()
+                    )
                 );
                 applyClaimEditResult(player, playerData, result);
                 if (result.success()) {
-                    if (result.preview().polygon() != null
-                            && result.session().openPath() != null
-                            && result.session().openPath().closureReady()) {
+                    if (
+                        result.preview().polygon() != null &&
+                        result.session().openPath() != null &&
+                        result.session().openPath().closureReady()
+                    ) {
                         finalizeExistingClaimReshape(player, playerData, targetClaim, result, clickedBlock);
                     } else {
                         visualizeShapedEditState(player, result.session(), clickedBlock.getY());
@@ -4136,28 +4477,30 @@ public class PlayerEventHandler implements Listener {
                 }
 
                 OrthogonalPoint2i adjustedPoint = snapOutsideShapedCornerToMinimumDistance(
-                        targetClaim,
-                        session,
-                        clickedPoint
+                    targetClaim,
+                    session,
+                    clickedPoint
                 );
                 ClaimEditResult result = claimEditor.apply(
-                        session,
-                        new ClaimEditIntent(
-                                ClaimEditIntentType.ADD_CORNER,
-                                ClaimEditSource.TOOL,
-                                null,
-                                targetClaim.getID(),
-                                adjustedPoint,
-                                null,
-                                true,
-                                Collections.emptyList()
-                        )
+                    session,
+                    new ClaimEditIntent(
+                        ClaimEditIntentType.ADD_CORNER,
+                        ClaimEditSource.TOOL,
+                        null,
+                        targetClaim.getID(),
+                        adjustedPoint,
+                        null,
+                        true,
+                        Collections.emptyList()
+                    )
                 );
                 applyClaimEditResult(player, playerData, result);
                 if (result.success()) {
-                    if (result.preview().polygon() != null
-                            && result.session().openPath() != null
-                            && result.session().openPath().closureReady()) {
+                    if (
+                        result.preview().polygon() != null &&
+                        result.session().openPath() != null &&
+                        result.session().openPath().closureReady()
+                    ) {
                         finalizeExistingClaimReshape(player, playerData, targetClaim, result, clickedBlock);
                     } else {
                         visualizeShapedEditState(player, result.session(), clickedBlock.getY());
@@ -4180,9 +4523,10 @@ public class PlayerEventHandler implements Listener {
                 boolean sameZ = clickedPoint.z() == startPoint.z();
                 if (sameX || sameZ) {
                     // Count existing draft points on the SAME line (matching axis)
-                    long collinearCount = draftPoints.stream()
-                            .filter(p -> sameX ? p.x() == startPoint.x() : p.z() == startPoint.z())
-                            .count();
+                    long collinearCount = draftPoints
+                        .stream()
+                        .filter(p -> sameX ? p.x() == startPoint.x() : p.z() == startPoint.z())
+                        .count();
                     // If 3+ already on that line (plus the new point = 4+), snap to close.
                     // 3 collinear points is the threshold where adding another is always redundant.
                     if (collinearCount >= 3) {
@@ -4192,17 +4536,17 @@ public class PlayerEventHandler implements Listener {
             }
 
             ClaimEditResult result = claimEditor.apply(
-                    session.withTarget(new ClaimEditTarget(ClaimEditTargetType.NEW_PARENT_CLAIM, null)),
-                    new ClaimEditIntent(
-                            ClaimEditIntentType.ADD_CORNER,
-                            ClaimEditSource.TOOL,
-                            null,
-                            null,
-                            clickedPoint,
-                            null,
-                            true,
-                            Collections.emptyList()
-                    )
+                session.withTarget(new ClaimEditTarget(ClaimEditTargetType.NEW_PARENT_CLAIM, null)),
+                new ClaimEditIntent(
+                    ClaimEditIntentType.ADD_CORNER,
+                    ClaimEditSource.TOOL,
+                    null,
+                    null,
+                    clickedPoint,
+                    null,
+                    true,
+                    Collections.emptyList()
+                )
             );
             applyClaimEditResult(player, playerData, result);
             if (result.success()) {
@@ -4230,25 +4574,32 @@ public class PlayerEventHandler implements Listener {
 
         // Check if player clicked inside their claim but NOT on the boundary
         OrthogonalPoint2i clickedPoint = new OrthogonalPoint2i(clickedBlock.getX(), clickedBlock.getZ());
-        if (!isBoundaryPoint(claim.getBoundaryPolygon(), clickedPoint)
-                && claim.contains(clickedBlock.getLocation(), true, false)) {
+        if (
+            !isBoundaryPoint(claim.getBoundaryPolygon(), clickedPoint) &&
+            claim.contains(clickedBlock.getLocation(), true, false)
+        ) {
             GriefPrevention.sendMessage(player, TextMode.Err, Messages.ShapedClaimInteriorClick);
             visualizeConflict(player, playerData, claim, clickedBlock, claim.is3D());
             return;
         }
 
-        if (isCornerMatch(claim, clickedBlock) && session.openPath() == null && !player.isSneaking() && playerData.shovelMode != ShovelMode.Shaped) {
+        if (
+            isCornerMatch(claim, clickedBlock) &&
+            session.openPath() == null &&
+            !player.isSneaking() &&
+            playerData.shovelMode != ShovelMode.Shaped
+        ) {
             startClaimResizeSelection(player, playerData, claim, clickedBlock);
             return;
         }
 
         session = loadClaimIntoShapedSession(session, claim);
         BoundaryNodeEnsureResult boundaryNodeResult = ensureBoundaryNodeForShapedPath(
-                player,
-                playerData,
-                claim,
-                clickedBlock,
-                session
+            player,
+            playerData,
+            claim,
+            clickedBlock,
+            session
         );
         if (boundaryNodeResult.claim() == null) {
             return;
@@ -4260,28 +4611,30 @@ public class PlayerEventHandler implements Listener {
 
         session = loadClaimIntoShapedSession(playerData.getClaimEditorSession(), claim);
         OrthogonalPoint2i adjustedPoint = snapOutsideShapedCornerToMinimumDistance(
-                claim,
-                session,
-                new OrthogonalPoint2i(clickedBlock.getX(), clickedBlock.getZ())
+            claim,
+            session,
+            new OrthogonalPoint2i(clickedBlock.getX(), clickedBlock.getZ())
         );
         ClaimEditResult result = claimEditor.apply(
-                session,
-                new ClaimEditIntent(
-                        ClaimEditIntentType.ADD_CORNER,
-                        ClaimEditSource.TOOL,
-                        null,
-                        claim.getID(),
-                        adjustedPoint,
-                        null,
-                        true,
-                        Collections.emptyList()
-                )
+            session,
+            new ClaimEditIntent(
+                ClaimEditIntentType.ADD_CORNER,
+                ClaimEditSource.TOOL,
+                null,
+                claim.getID(),
+                adjustedPoint,
+                null,
+                true,
+                Collections.emptyList()
+            )
         );
         applyClaimEditResult(player, playerData, result);
         if (result.success()) {
-            if (result.preview().polygon() != null
-                    && result.session().openPath() != null
-                    && result.session().openPath().closureReady()) {
+            if (
+                result.preview().polygon() != null &&
+                result.session().openPath() != null &&
+                result.session().openPath().closureReady()
+            ) {
                 finalizeExistingClaimReshape(player, playerData, claim, result, clickedBlock);
             } else {
                 visualizeShapedEditState(player, result.session(), clickedBlock.getY());
@@ -4290,12 +4643,12 @@ public class PlayerEventHandler implements Listener {
     }
 
     private @NotNull BoundaryNodeEnsureResult ensureBoundaryNodeForShapedPath(
-            @NotNull Player player,
-            @NotNull PlayerData playerData,
-            @NotNull Claim claim,
-            @NotNull Block clickedBlock,
-            @NotNull ClaimEditorSession session)
-    {
+        @NotNull Player player,
+        @NotNull PlayerData playerData,
+        @NotNull Claim claim,
+        @NotNull Block clickedBlock,
+        @NotNull ClaimEditorSession session
+    ) {
         if (session.openPath() != null) {
             return new BoundaryNodeEnsureResult(claim, false);
         }
@@ -4324,17 +4677,17 @@ public class PlayerEventHandler implements Listener {
                     // Load claim into session and try to remove the node using ADD_NODE
                     session = loadClaimIntoShapedSession(session, claim);
                     ClaimEditResult removeResult = claimEditor.apply(
-                            session,
-                            new ClaimEditIntent(
-                                    ClaimEditIntentType.ADD_NODE,
-                                    ClaimEditSource.TOOL,
-                                    null,
-                                    claim.getID(),
-                                    nearestNode,
-                                    null,
-                                    true,
-                                    Collections.emptyList()
-                            )
+                        session,
+                        new ClaimEditIntent(
+                            ClaimEditIntentType.ADD_NODE,
+                            ClaimEditSource.TOOL,
+                            null,
+                            claim.getID(),
+                            nearestNode,
+                            null,
+                            true,
+                            Collections.emptyList()
+                        )
                     );
                     applyClaimEditResult(player, playerData, removeResult);
                     if (removeResult.success()) {
@@ -4350,28 +4703,28 @@ public class PlayerEventHandler implements Listener {
             return new BoundaryNodeEnsureResult(claim, false);
         }
 
-        if (!meetsMinimumNodeSpacing(claim, point))
-        {
+        if (!meetsMinimumNodeSpacing(claim, point)) {
             GriefPrevention.sendMessage(
-                    player,
-                    TextMode.Err,
-                    Messages.NewClaimTooNarrow,
-                    String.valueOf(Math.max(1, GriefPrevention.instance.config_claims_shapedMinWidth)));
+                player,
+                TextMode.Err,
+                Messages.NewClaimTooNarrow,
+                String.valueOf(Math.max(1, GriefPrevention.instance.config_claims_shapedMinWidth))
+            );
             return new BoundaryNodeEnsureResult(null, false);
         }
 
         ClaimEditResult result = claimEditor.apply(
-                session,
-                new ClaimEditIntent(
-                        ClaimEditIntentType.ADD_NODE,
-                        ClaimEditSource.TOOL,
-                        null,
-                        claim.getID(),
-                        point,
-                        null,
-                        true,
-                        Collections.emptyList()
-                )
+            session,
+            new ClaimEditIntent(
+                ClaimEditIntentType.ADD_NODE,
+                ClaimEditSource.TOOL,
+                null,
+                claim.getID(),
+                point,
+                null,
+                true,
+                Collections.emptyList()
+            )
         );
         applyClaimEditResult(player, playerData, result);
         if (!result.success()) {
@@ -4383,40 +4736,35 @@ public class PlayerEventHandler implements Listener {
         return new BoundaryNodeEnsureResult(updatedClaim != null ? updatedClaim : claim, true);
     }
 
-    private static final class BoundaryNodeEnsureResult
-    {
+    private static final class BoundaryNodeEnsureResult {
+
         private final @Nullable Claim claim;
         private final boolean markerEdited;
 
-        private BoundaryNodeEnsureResult(@Nullable Claim claim, boolean markerEdited)
-        {
+        private BoundaryNodeEnsureResult(@Nullable Claim claim, boolean markerEdited) {
             this.claim = claim;
             this.markerEdited = markerEdited;
         }
 
-        @Nullable Claim claim()
-        {
+        @Nullable
+        Claim claim() {
             return claim;
         }
 
-        boolean markerEdited()
-        {
+        boolean markerEdited() {
             return markerEdited;
         }
     }
 
-    private boolean meetsMinimumNodeSpacing(@NotNull Claim claim, @NotNull OrthogonalPoint2i point)
-    {
+    private boolean meetsMinimumNodeSpacing(@NotNull Claim claim, @NotNull OrthogonalPoint2i point) {
         int minimumEdgeLength = Math.max(0, GriefPrevention.instance.config_claims_shapedMinWidth - 1);
-        if (minimumEdgeLength <= 0)
-        {
+        if (minimumEdgeLength <= 0) {
             return true;
         }
 
         OrthogonalPolygon polygon = claim.getBoundaryPolygon();
         List<Integer> edgeIndexes = polygon.edgeIndexesContainingInteriorPoint(point);
-        if (edgeIndexes.size() != 1)
-        {
+        if (edgeIndexes.size() != 1) {
             return false;
         }
 
@@ -4427,54 +4775,62 @@ public class PlayerEventHandler implements Listener {
     }
 
     private @NotNull OrthogonalPoint2i snapOutsideShapedCornerToMinimumDistance(
-            @NotNull Claim claim,
-            @NotNull ClaimEditorSession session,
-            @NotNull OrthogonalPoint2i clickedPoint)
-    {
+        @NotNull Claim claim,
+        @NotNull ClaimEditorSession session,
+        @NotNull OrthogonalPoint2i clickedPoint
+    ) {
         int minimumEdgeLength = Math.max(0, GriefPrevention.instance.config_claims_shapedMinWidth - 1);
 
-        if (session.openPath() == null || session.openPath().points().size() != 1)
-        {
+        if (session.openPath() == null || session.openPath().points().size() != 1) {
             return clickedPoint;
         }
 
         OrthogonalPoint2i anchor = session.openPath().points().get(0);
         OrthogonalPolygon boundaryPolygon = claim.getBoundaryPolygon();
-        if (!isBoundaryPoint(boundaryPolygon, anchor) || isBoundaryPoint(boundaryPolygon, clickedPoint))
-        {
+        if (!isBoundaryPoint(boundaryPolygon, anchor) || isBoundaryPoint(boundaryPolygon, clickedPoint)) {
             return clickedPoint;
         }
 
         World world = claim.getLesserBoundaryCorner().getWorld();
-        if (world == null)
-        {
+        if (world == null) {
             return clickedPoint;
         }
 
-        Location probe = new Location(world, clickedPoint.x(), claim.getLesserBoundaryCorner().getBlockY(), clickedPoint.z());
-        if (claim.contains(probe, true, false))
-        {
+        Location probe = new Location(
+            world,
+            clickedPoint.x(),
+            claim.getLesserBoundaryCorner().getBlockY(),
+            clickedPoint.z()
+        );
+        if (claim.contains(probe, true, false)) {
             return clickedPoint;
         }
 
         int deltaX = clickedPoint.x() - anchor.x();
         int deltaZ = clickedPoint.z() - anchor.z();
-        if (deltaX == 0 && deltaZ == 0)
-        {
+        if (deltaX == 0 && deltaZ == 0) {
             return clickedPoint;
         }
 
-        if (Math.abs(deltaX) < Math.abs(deltaZ))
-        {
+        if (Math.abs(deltaX) < Math.abs(deltaZ)) {
             int direction = Integer.signum(deltaZ);
-            if (direction == 0)
-            {
+            if (direction == 0) {
                 return clickedPoint;
             }
 
             // Keep the first outside step pointed away from the claim boundary.
-            if (claim.contains(new Location(world, anchor.x(), claim.getLesserBoundaryCorner().getBlockY(), anchor.z() + direction), true, false))
-            {
+            if (
+                claim.contains(
+                    new Location(
+                        world,
+                        anchor.x(),
+                        claim.getLesserBoundaryCorner().getBlockY(),
+                        anchor.z() + direction
+                    ),
+                    true,
+                    false
+                )
+            ) {
                 direction *= -1;
             }
             int snappedDistance = Math.max(Math.abs(deltaZ), minimumEdgeLength);
@@ -4482,26 +4838,30 @@ public class PlayerEventHandler implements Listener {
         }
 
         int direction = Integer.signum(deltaX);
-        if (direction == 0)
-        {
+        if (direction == 0) {
             return clickedPoint;
         }
 
         // Keep the first outside step pointed away from the claim boundary.
-        if (claim.contains(new Location(world, anchor.x() + direction, claim.getLesserBoundaryCorner().getBlockY(), anchor.z()), true, false))
-        {
+        if (
+            claim.contains(
+                new Location(world, anchor.x() + direction, claim.getLesserBoundaryCorner().getBlockY(), anchor.z()),
+                true,
+                false
+            )
+        ) {
             direction *= -1;
         }
         int snappedDistance = Math.max(Math.abs(deltaX), minimumEdgeLength);
         return new OrthogonalPoint2i(anchor.x() + direction * snappedDistance, anchor.z());
     }
 
-    private @Nullable Claim resolveExistingShapedTarget(@NotNull ClaimEditorSession session)
-    {
-        if (session.activeTarget() == null
-                || session.activeTarget().type() != ClaimEditTargetType.EXISTING_PARENT_CLAIM
-                || session.activeTarget().claimId() == null)
-        {
+    private @Nullable Claim resolveExistingShapedTarget(@NotNull ClaimEditorSession session) {
+        if (
+            session.activeTarget() == null ||
+            session.activeTarget().type() != ClaimEditTargetType.EXISTING_PARENT_CLAIM ||
+            session.activeTarget().claimId() == null
+        ) {
             return null;
         }
 
@@ -4509,84 +4869,80 @@ public class PlayerEventHandler implements Listener {
     }
 
     private @NotNull ClaimEditorSession seedOpenPathFromActiveSegmentIfNeeded(
-            @NotNull ClaimEditorSession session,
-            @NotNull Claim claim,
-            @NotNull OrthogonalPoint2i clickedPoint)
-    {
-        if (session.openPath() != null || session.activeSegment() == null || session.preview().polygon() == null)
-        {
+        @NotNull ClaimEditorSession session,
+        @NotNull Claim claim,
+        @NotNull OrthogonalPoint2i clickedPoint
+    ) {
+        if (session.openPath() != null || session.activeSegment() == null || session.preview().polygon() == null) {
             return session;
         }
 
         OrthogonalPolygon polygon = session.preview().polygon();
         int edgeIndex = session.activeSegment().edgeIndex();
-        if (edgeIndex < 0 || edgeIndex >= polygon.edges().size())
-        {
+        if (edgeIndex < 0 || edgeIndex >= polygon.edges().size()) {
             return session;
         }
 
         OrthogonalEdge2i edge = polygon.edges().get(edgeIndex);
         OrthogonalPoint2i start = edge.start();
         OrthogonalPoint2i end = edge.end();
-        OrthogonalPoint2i anchor = manhattanDistance(clickedPoint, start) <= manhattanDistance(clickedPoint, end)
-                ? start
-                : end;
+        OrthogonalPoint2i anchor =
+            manhattanDistance(clickedPoint, start) <= manhattanDistance(clickedPoint, end) ? start : end;
 
-        com.griefprevention.claims.editor.ShapedPathDraft draft =
-                new com.griefprevention.claims.editor.ShapedPathDraft(claim.getID(), Collections.singletonList(anchor), null, false);
+        com.griefprevention.claims.editor.ShapedPathDraft draft = new com.griefprevention.claims.editor.ShapedPathDraft(
+            claim.getID(),
+            Collections.singletonList(anchor),
+            null,
+            false
+        );
         ClaimEditPreview preview = new ClaimEditPreview(
-                polygon,
-                session.activeSegment(),
-                draft.points(),
-                null,
-                Collections.emptyList(),
-                Collections.emptyList(),
-                Collections.singletonList("Segment point added.")
+            polygon,
+            session.activeSegment(),
+            draft.points(),
+            null,
+            Collections.emptyList(),
+            Collections.emptyList(),
+            Collections.singletonList("Segment point added.")
         );
         return session.withOpenPath(draft).withPreview(preview);
     }
 
-    private int manhattanDistance(@NotNull OrthogonalPoint2i first, @NotNull OrthogonalPoint2i second)
-    {
+    private int manhattanDistance(@NotNull OrthogonalPoint2i first, @NotNull OrthogonalPoint2i second) {
         return Math.abs(first.x() - second.x()) + Math.abs(first.z() - second.z());
     }
 
     private @Nullable String validateExistingMergeReconnect(
-            @NotNull Claim claim,
-            @NotNull ClaimEditorSession session,
-            @NotNull OrthogonalPoint2i clickedPoint)
-    {
-        if (session.openPath() == null || !isBoundaryPoint(claim.getBoundaryPolygon(), clickedPoint))
-        {
+        @NotNull Claim claim,
+        @NotNull ClaimEditorSession session,
+        @NotNull OrthogonalPoint2i clickedPoint
+    ) {
+        if (session.openPath() == null || !isBoundaryPoint(claim.getBoundaryPolygon(), clickedPoint)) {
             return null;
         }
 
         List<OrthogonalPoint2i> points = session.openPath().points();
         OrthogonalPolygon boundaryPolygon = claim.getBoundaryPolygon();
-        boolean hasOutsideCorner = points.stream()
-                .skip(1)
-                .anyMatch(point -> !isBoundaryPoint(boundaryPolygon, point));
-        if (!hasOutsideCorner)
-        {
+        boolean hasOutsideCorner = points
+            .stream()
+            .skip(1)
+            .anyMatch(point -> !isBoundaryPoint(boundaryPolygon, point));
+        if (!hasOutsideCorner) {
             return "Cannot merge yet: add at least one outside corner before reconnecting to the claim boundary.";
         }
 
         OrthogonalPoint2i lastPoint = points.get(points.size() - 1);
-        if (!isOrthogonalStep(lastPoint, clickedPoint))
-        {
+        if (!isOrthogonalStep(lastPoint, clickedPoint)) {
             return "Cannot merge yet: reconnect point must be orthogonally aligned with the current endpoint.";
         }
 
         return null;
     }
 
-    private boolean isOrthogonalStep(@NotNull OrthogonalPoint2i first, @NotNull OrthogonalPoint2i second)
-    {
+    private boolean isOrthogonalStep(@NotNull OrthogonalPoint2i first, @NotNull OrthogonalPoint2i second) {
         return (first.x() == second.x()) ^ (first.z() == second.z());
     }
 
-    private boolean isBoundaryInteriorPoint(@NotNull Claim claim, @NotNull OrthogonalPoint2i point)
-    {
+    private boolean isBoundaryInteriorPoint(@NotNull Claim claim, @NotNull OrthogonalPoint2i point) {
         if (claim.getCornerIndexAt(point.x(), point.z()) >= 0) {
             return false;
         }
@@ -4594,35 +4950,54 @@ public class PlayerEventHandler implements Listener {
         return !claim.getBoundaryPolygon().edgeIndexesContainingInteriorPoint(point).isEmpty();
     }
 
-    private boolean isBoundaryPoint(@NotNull OrthogonalPolygon polygon, @NotNull OrthogonalPoint2i point)
-    {
+    private boolean isBoundaryPoint(@NotNull OrthogonalPolygon polygon, @NotNull OrthogonalPoint2i point) {
         if (polygon.corners().contains(point)) {
             return true;
         }
 
-        return polygon.edges().stream().anyMatch(edge -> edge.containsPoint(point));
+        return polygon
+            .edges()
+            .stream()
+            .anyMatch(edge -> edge.containsPoint(point));
     }
 
-    private @NotNull ClaimEditorSession loadClaimIntoShapedSession(@NotNull ClaimEditorSession session, @NotNull Claim claim) {
-        if (session.activeTarget() != null
-                && session.activeTarget().claimId() != null
-                && session.activeTarget().claimId().equals(claim.getID())
-                && session.preview().polygon() != null) {
+    private @NotNull ClaimEditorSession loadClaimIntoShapedSession(
+        @NotNull ClaimEditorSession session,
+        @NotNull Claim claim
+    ) {
+        if (
+            session.activeTarget() != null &&
+            session.activeTarget().claimId() != null &&
+            session.activeTarget().claimId().equals(claim.getID()) &&
+            session.preview().polygon() != null
+        ) {
             return session;
         }
 
         OrthogonalPolygon polygon = claim.getBoundaryPolygon();
-        return session.withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, claim.getID()))
-                .withOpenPath(null)
-                .withActiveSegment(null)
-                .withPreview(new ClaimEditPreview(polygon, null, Collections.emptyList(), null, Collections.emptyList(), Collections.emptyList(), Collections.emptyList()));
+        return session
+            .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_PARENT_CLAIM, claim.getID()))
+            .withOpenPath(null)
+            .withActiveSegment(null)
+            .withPreview(
+                new ClaimEditPreview(
+                    polygon,
+                    null,
+                    Collections.emptyList(),
+                    null,
+                    Collections.emptyList(),
+                    Collections.emptyList(),
+                    Collections.emptyList()
+                )
+            );
     }
 
     private void finalizeShapedClaimCreation(
-            @NotNull Player player,
-            @NotNull PlayerData playerData,
-            @NotNull ClaimEditResult result,
-            @NotNull Block clickedBlock) {
+        @NotNull Player player,
+        @NotNull PlayerData playerData,
+        @NotNull ClaimEditResult result,
+        @NotNull Block clickedBlock
+    ) {
         OrthogonalPolygon polygon = result.preview().polygon();
         if (polygon == null) {
             return;
@@ -4637,11 +5012,12 @@ public class PlayerEventHandler implements Listener {
 
         int claimDepth = clickedBlock.getY() - instance.config_claims_claimsExtendIntoGroundDistance;
         CreateClaimResult createResult = this.dataStore.createShapedClaim(
-                player.getWorld(),
-                polygon,
-                claimDepth,
-                player.getUniqueId(),
-                player);
+            player.getWorld(),
+            polygon,
+            claimDepth,
+            player.getUniqueId(),
+            player
+        );
 
         if (!createResult.succeeded || createResult.claim == null) {
             if (createResult.denialMessage != null) {
@@ -4665,27 +5041,35 @@ public class PlayerEventHandler implements Listener {
         }
 
         playerData.lastClaim = createResult.claim;
-        ClaimEditorSession shapedSession = ClaimEditorSession.idle(playerData.playerID)
-                .withMode(com.griefprevention.claims.editor.ClaimEditorMode.SHAPED, ClaimEditSource.TOOL);
+        ClaimEditorSession shapedSession = ClaimEditorSession.idle(playerData.playerID).withMode(
+            com.griefprevention.claims.editor.ClaimEditorMode.SHAPED,
+            ClaimEditSource.TOOL
+        );
         playerData.setClaimEditorSession(loadClaimIntoShapedSession(shapedSession, createResult.claim));
         GriefPrevention.sendMessage(player, TextMode.Success, Messages.CreateClaimSuccess);
         BoundaryVisualization.visualizeClaim(player, createResult.claim, VisualizationType.CLAIM, clickedBlock);
 
         if (!player.hasPermission("griefprevention.adminclaims") && createResult.claim.getArea() >= 1000) {
             GriefPrevention.sendMessage(player, TextMode.Info, Messages.BecomeMayor, 200L);
-            GriefPrevention.sendMessage(player, TextMode.Instr, Messages.SubdivisionVideo2, 201L,
-                    DataStore.SUBDIVISION_VIDEO_URL);
+            GriefPrevention.sendMessage(
+                player,
+                TextMode.Instr,
+                Messages.SubdivisionVideo2,
+                201L,
+                DataStore.SUBDIVISION_VIDEO_URL
+            );
         }
 
         AutoExtendClaimTask.scheduleAsync(createResult.claim);
     }
 
     private void finalizeExistingClaimReshape(
-            @NotNull Player player,
-            @NotNull PlayerData playerData,
-            @NotNull Claim claim,
-            @NotNull ClaimEditResult result,
-            @NotNull Block clickedBlock) {
+        @NotNull Player player,
+        @NotNull PlayerData playerData,
+        @NotNull Claim claim,
+        @NotNull ClaimEditResult result,
+        @NotNull Block clickedBlock
+    ) {
         OrthogonalPolygon polygon = result.preview().polygon();
         if (polygon == null) {
             return;
@@ -4716,13 +5100,18 @@ public class PlayerEventHandler implements Listener {
                     // polygon since updateShapedClaim failed).
                     this.dataStore.mergeClaims(player, playerData, claim, updateResult.claim, null, null, polygon);
                     playerData.clearCrossClaimBoundaryMarkers();
-                    ClaimEditorSession shapedSession = ClaimEditorSession.idle(playerData.playerID)
-                            .withMode(com.griefprevention.claims.editor.ClaimEditorMode.SHAPED, ClaimEditSource.TOOL);
+                    ClaimEditorSession shapedSession = ClaimEditorSession.idle(playerData.playerID).withMode(
+                        com.griefprevention.claims.editor.ClaimEditorMode.SHAPED,
+                        ClaimEditSource.TOOL
+                    );
                     playerData.lastClaim = claim;
                     playerData.setClaimEditorSession(loadClaimIntoShapedSession(shapedSession, claim));
-                    BoundaryVisualization.visualizeClaim(player, claim,
-                            claim.isAdminClaim() ? VisualizationType.ADMIN_CLAIM : VisualizationType.CLAIM,
-                            clickedBlock);
+                    BoundaryVisualization.visualizeClaim(
+                        player,
+                        claim,
+                        claim.isAdminClaim() ? VisualizationType.ADMIN_CLAIM : VisualizationType.CLAIM,
+                        clickedBlock
+                    );
                     return;
                 }
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.CreateClaimFailOverlapShort);
@@ -4771,21 +5160,27 @@ public class PlayerEventHandler implements Listener {
             playerData.clearCrossClaimBoundaryMarkers();
         }
 
-        ClaimEditorSession shapedSession = ClaimEditorSession.idle(playerData.playerID)
-                .withMode(com.griefprevention.claims.editor.ClaimEditorMode.SHAPED, ClaimEditSource.TOOL);
+        ClaimEditorSession shapedSession = ClaimEditorSession.idle(playerData.playerID).withMode(
+            com.griefprevention.claims.editor.ClaimEditorMode.SHAPED,
+            ClaimEditSource.TOOL
+        );
         playerData.lastClaim = updateResult.claim;
         playerData.setClaimEditorSession(loadClaimIntoShapedSession(shapedSession, updateResult.claim));
-        BoundaryVisualization.visualizeClaim(player, updateResult.claim,
-                updateResult.claim.isAdminClaim() ? VisualizationType.ADMIN_CLAIM : VisualizationType.CLAIM,
-                clickedBlock);
+        BoundaryVisualization.visualizeClaim(
+            player,
+            updateResult.claim,
+            updateResult.claim.isAdminClaim() ? VisualizationType.ADMIN_CLAIM : VisualizationType.CLAIM,
+            clickedBlock
+        );
     }
 
     private void persistShapedBoundaryMarkers(
-            @NotNull Player player,
-            @NotNull PlayerData playerData,
-            @NotNull Claim claim,
-            @NotNull ClaimEditResult result,
-            @NotNull Block clickedBlock) {
+        @NotNull Player player,
+        @NotNull PlayerData playerData,
+        @NotNull Claim claim,
+        @NotNull ClaimEditResult result,
+        @NotNull Block clickedBlock
+    ) {
         OrthogonalPolygon polygon = result.preview().polygon();
         if (polygon == null) {
             return;
@@ -4805,9 +5200,12 @@ public class PlayerEventHandler implements Listener {
                     // (claim.getBoundaryPolygon() still returns the original
                     // polygon since updateShapedClaim failed).
                     this.dataStore.mergeClaims(player, playerData, claim, updateResult.claim, null, null, polygon);
-                    BoundaryVisualization.visualizeClaim(player, claim,
-                            claim.isAdminClaim() ? VisualizationType.ADMIN_CLAIM : VisualizationType.CLAIM,
-                            clickedBlock);
+                    BoundaryVisualization.visualizeClaim(
+                        player,
+                        claim,
+                        claim.isAdminClaim() ? VisualizationType.ADMIN_CLAIM : VisualizationType.CLAIM,
+                        clickedBlock
+                    );
                     return;
                 }
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.CreateClaimFailOverlapShort);
@@ -4819,40 +5217,48 @@ public class PlayerEventHandler implements Listener {
         }
 
         ClaimEditorSession shapedSession = loadClaimIntoShapedSession(
-                ClaimEditorSession.idle(playerData.playerID)
-                        .withMode(com.griefprevention.claims.editor.ClaimEditorMode.SHAPED, ClaimEditSource.TOOL),
-                updateResult.claim
+            ClaimEditorSession.idle(playerData.playerID).withMode(
+                com.griefprevention.claims.editor.ClaimEditorMode.SHAPED,
+                ClaimEditSource.TOOL
+            ),
+            updateResult.claim
         );
         ClaimEditPreview preview = new ClaimEditPreview(
-                updateResult.claim.getBoundaryPolygon(),
-                result.session().activeSegment(),
-                Collections.emptyList(),
-                null,
-                Collections.emptyList(),
-                Collections.emptyList(),
-                result.messages()
+            updateResult.claim.getBoundaryPolygon(),
+            result.session().activeSegment(),
+            Collections.emptyList(),
+            null,
+            Collections.emptyList(),
+            Collections.emptyList(),
+            result.messages()
         );
         playerData.lastClaim = updateResult.claim;
-        playerData.setClaimEditorSession(shapedSession.withActiveSegment(result.session().activeSegment()).withPreview(preview));
-        BoundaryVisualization.visualizeClaim(player, updateResult.claim,
-                updateResult.claim.isAdminClaim() ? VisualizationType.ADMIN_CLAIM : VisualizationType.CLAIM,
-                clickedBlock);
+        playerData.setClaimEditorSession(
+            shapedSession.withActiveSegment(result.session().activeSegment()).withPreview(preview)
+        );
+        BoundaryVisualization.visualizeClaim(
+            player,
+            updateResult.claim,
+            updateResult.claim.isAdminClaim() ? VisualizationType.ADMIN_CLAIM : VisualizationType.CLAIM,
+            clickedBlock
+        );
     }
 
-    private void visualizeShapedEditState(
-            @NotNull Player player,
-            @NotNull ClaimEditorSession session,
-            int y) {
+    private void visualizeShapedEditState(@NotNull Player player, @NotNull ClaimEditorSession session, int y) {
         Set<Boundary> boundaries = new HashSet<>();
         World world = player.getWorld();
         OrthogonalPolygon selectedPolygon = null;
 
-        if (session.activeTarget() != null
-                && session.activeTarget().type() == ClaimEditTargetType.EXISTING_PARENT_CLAIM
-                && session.activeTarget().claimId() != null) {
+        if (
+            session.activeTarget() != null &&
+            session.activeTarget().type() == ClaimEditTargetType.EXISTING_PARENT_CLAIM &&
+            session.activeTarget().claimId() != null
+        ) {
             Claim targetClaim = this.dataStore.getClaim(session.activeTarget().claimId());
             if (targetClaim != null) {
-                VisualizationType type = targetClaim.isAdminClaim() ? VisualizationType.ADMIN_CLAIM : VisualizationType.CLAIM;
+                VisualizationType type = targetClaim.isAdminClaim()
+                    ? VisualizationType.ADMIN_CLAIM
+                    : VisualizationType.CLAIM;
                 boundaries.add(new Boundary(targetClaim, type));
                 selectedPolygon = targetClaim.getBoundaryPolygon();
             }
@@ -4863,7 +5269,8 @@ public class PlayerEventHandler implements Listener {
         if (!nearbyClaims.isEmpty()) {
             for (Claim nearbyClaim : nearbyClaims) {
                 if (!nearbyClaim.is3D()) {
-                    VisualizationType type = nearbyClaim.isAdminClaim() && nearbyClaim.parent == null
+                    VisualizationType type =
+                        nearbyClaim.isAdminClaim() && nearbyClaim.parent == null
                             ? VisualizationType.ADMIN_CLAIM
                             : VisualizationType.CLAIM;
                     boundaries.add(new Boundary(nearbyClaim, type));
@@ -4886,38 +5293,66 @@ public class PlayerEventHandler implements Listener {
             }
 
             if (!onSelectedBoundary) {
-                boundaries.add(new Boundary(
-                        new BoundingBox(new Location(world, point.x(), y, point.z()), new Location(world, point.x(), y, point.z())),
-                        VisualizationType.INITIALIZE_ZONE));
+                boundaries.add(
+                    new Boundary(
+                        new BoundingBox(
+                            new Location(world, point.x(), y, point.z()),
+                            new Location(world, point.x(), y, point.z())
+                        ),
+                        VisualizationType.INITIALIZE_ZONE
+                    )
+                );
             }
         }
 
         if (session.preview().snappedPoint() != null) {
             OrthogonalPoint2i point = session.preview().snappedPoint();
             if (selectedPolygon == null || !isBoundaryPoint(selectedPolygon, point)) {
-                boundaries.add(new Boundary(
-                        new BoundingBox(new Location(world, point.x(), y, point.z()), new Location(world, point.x(), y, point.z())),
-                        VisualizationType.INITIALIZE_ZONE));
+                boundaries.add(
+                    new Boundary(
+                        new BoundingBox(
+                            new Location(world, point.x(), y, point.z()),
+                            new Location(world, point.x(), y, point.z())
+                        ),
+                        VisualizationType.INITIALIZE_ZONE
+                    )
+                );
             }
         }
 
         for (OrthogonalPoint2i point : session.preview().conflictPoints()) {
-            boundaries.add(new Boundary(
-                    new BoundingBox(new Location(world, point.x(), y, point.z()), new Location(world, point.x(), y, point.z())),
-                    VisualizationType.CONFLICT_ZONE));
+            boundaries.add(
+                new Boundary(
+                    new BoundingBox(
+                        new Location(world, point.x(), y, point.z()),
+                        new Location(world, point.x(), y, point.z())
+                    ),
+                    VisualizationType.CONFLICT_ZONE
+                )
+            );
         }
 
         if (!boundaries.isEmpty()) {
-            BoundaryVisualization.callAndVisualize(new BoundaryVisualizationEvent(player, boundaries, player.getEyeLocation().getBlockY()));
+            BoundaryVisualization.callAndVisualize(
+                new BoundaryVisualizationEvent(player, boundaries, player.getEyeLocation().getBlockY())
+            );
         }
     }
 
-    private void applyClaimEditResult(@NotNull Player player, @NotNull PlayerData playerData, @NotNull ClaimEditResult result) {
+    private void applyClaimEditResult(
+        @NotNull Player player,
+        @NotNull PlayerData playerData,
+        @NotNull ClaimEditResult result
+    ) {
         playerData.setClaimEditorSession(result.session());
 
         if (!result.success()) {
             if (result.fallbackMessage() != null) {
-                GriefPrevention.sendMessage(player, TextMode.Err, BukkitClaimEditMessages.toMessage(result.fallbackMessage()));
+                GriefPrevention.sendMessage(
+                    player,
+                    TextMode.Err,
+                    BukkitClaimEditMessages.toMessage(result.fallbackMessage())
+                );
                 return;
             }
 
@@ -4945,19 +5380,15 @@ public class PlayerEventHandler implements Listener {
         double threshold = 1.2; // be more forgiving when aiming at corners
 
         for (Claim root : this.dataStore.getClaims()) {
-            if (root == null || !root.inDataStore)
-                continue;
-            if (!world.equals(root.getLesserBoundaryCorner().getWorld()))
-                continue;
+            if (root == null || !root.inDataStore) continue;
+            if (!world.equals(root.getLesserBoundaryCorner().getWorld())) continue;
             Deque<Claim> stack = new ArrayDeque<>();
             stack.push(root);
 
             while (!stack.isEmpty()) {
                 Claim current = stack.pop();
-                if (current == null || !current.inDataStore)
-                    continue;
-                if (!world.equals(current.getLesserBoundaryCorner().getWorld()))
-                    continue;
+                if (current == null || !current.inDataStore) continue;
+                if (!world.equals(current.getLesserBoundaryCorner().getWorld())) continue;
 
                 if (current.is3D()) {
                     Location lesser = current.getLesserBoundaryCorner();
@@ -4979,9 +5410,18 @@ public class PlayerEventHandler implements Listener {
                             for (int zi : zs) {
                                 // Evaluate the real corner itself
                                 CornerHit candidate = evaluateCornerCandidate(
-                                        eyePos, dir, maxDistance, threshold, current,
-                                        xi + 0.5, yi + 0.5, zi + 0.5,
-                                        xi, yi, zi);
+                                    eyePos,
+                                    dir,
+                                    maxDistance,
+                                    threshold,
+                                    current,
+                                    xi + 0.5,
+                                    yi + 0.5,
+                                    zi + 0.5,
+                                    xi,
+                                    yi,
+                                    zi
+                                );
                                 if (candidate != null && candidate.t < bestT) {
                                     bestT = candidate.t;
                                     best = candidate;
@@ -4991,9 +5431,18 @@ public class PlayerEventHandler implements Listener {
                                 if (maxX - minX >= 1) {
                                     int offsetX = xi == minX ? xi + 1 : xi - 1;
                                     candidate = evaluateCornerCandidate(
-                                            eyePos, dir, maxDistance, threshold, current,
-                                            offsetX + 0.5, yi + 0.5, zi + 0.5,
-                                            xi, yi, zi);
+                                        eyePos,
+                                        dir,
+                                        maxDistance,
+                                        threshold,
+                                        current,
+                                        offsetX + 0.5,
+                                        yi + 0.5,
+                                        zi + 0.5,
+                                        xi,
+                                        yi,
+                                        zi
+                                    );
                                     if (candidate != null && candidate.t < bestT) {
                                         bestT = candidate.t;
                                         best = candidate;
@@ -5003,9 +5452,18 @@ public class PlayerEventHandler implements Listener {
                                 if (maxZ - minZ >= 1) {
                                     int offsetZ = zi == minZ ? zi + 1 : zi - 1;
                                     candidate = evaluateCornerCandidate(
-                                            eyePos, dir, maxDistance, threshold, current,
-                                            xi + 0.5, yi + 0.5, offsetZ + 0.5,
-                                            xi, yi, zi);
+                                        eyePos,
+                                        dir,
+                                        maxDistance,
+                                        threshold,
+                                        current,
+                                        xi + 0.5,
+                                        yi + 0.5,
+                                        offsetZ + 0.5,
+                                        xi,
+                                        yi,
+                                        zi
+                                    );
                                     if (candidate != null && candidate.t < bestT) {
                                         bestT = candidate.t;
                                         best = candidate;
@@ -5015,9 +5473,18 @@ public class PlayerEventHandler implements Listener {
                                 if (maxY - minY >= 1) {
                                     int offsetY = yi == minY ? yi + 1 : yi - 1;
                                     candidate = evaluateCornerCandidate(
-                                            eyePos, dir, maxDistance, threshold, current,
-                                            xi + 0.5, offsetY + 0.5, zi + 0.5,
-                                            xi, yi, zi);
+                                        eyePos,
+                                        dir,
+                                        maxDistance,
+                                        threshold,
+                                        current,
+                                        xi + 0.5,
+                                        offsetY + 0.5,
+                                        zi + 0.5,
+                                        xi,
+                                        yi,
+                                        zi
+                                    );
                                     if (candidate != null && candidate.t < bestT) {
                                         bestT = candidate.t;
                                         best = candidate;
@@ -5028,9 +5495,18 @@ public class PlayerEventHandler implements Listener {
                                     int aboveY = yi + 1;
                                     if (aboveY <= GriefPrevention.getWorldMaxY(world)) {
                                         candidate = evaluateCornerCandidate(
-                                                eyePos, dir, maxDistance, threshold, current,
-                                                xi + 0.5, aboveY + 0.5, zi + 0.5,
-                                                xi, yi, zi);
+                                            eyePos,
+                                            dir,
+                                            maxDistance,
+                                            threshold,
+                                            current,
+                                            xi + 0.5,
+                                            aboveY + 0.5,
+                                            zi + 0.5,
+                                            xi,
+                                            yi,
+                                            zi
+                                        );
                                         if (candidate != null && candidate.t < bestT) {
                                             bestT = candidate.t;
                                             best = candidate;
@@ -5040,9 +5516,18 @@ public class PlayerEventHandler implements Listener {
                                     int belowY = yi - 1;
                                     if (belowY >= GriefPrevention.getWorldMinY(world)) {
                                         candidate = evaluateCornerCandidate(
-                                                eyePos, dir, maxDistance, threshold, current,
-                                                xi + 0.5, belowY + 0.5, zi + 0.5,
-                                                xi, yi, zi);
+                                            eyePos,
+                                            dir,
+                                            maxDistance,
+                                            threshold,
+                                            current,
+                                            xi + 0.5,
+                                            belowY + 0.5,
+                                            zi + 0.5,
+                                            xi,
+                                            yi,
+                                            zi
+                                        );
                                         if (candidate != null && candidate.t < bestT) {
                                             bestT = candidate.t;
                                             best = candidate;
@@ -5066,17 +5551,18 @@ public class PlayerEventHandler implements Listener {
     }
 
     private CornerHit evaluateCornerCandidate(
-            Vector eyePos,
-            Vector dir,
-            int maxDistance,
-            double threshold,
-            Claim claim,
-            double targetX,
-            double targetY,
-            double targetZ,
-            int hitX,
-            int hitY,
-            int hitZ) {
+        Vector eyePos,
+        Vector dir,
+        int maxDistance,
+        double threshold,
+        Claim claim,
+        double targetX,
+        double targetY,
+        double targetZ,
+        int hitX,
+        int hitY,
+        int hitZ
+    ) {
         Vector target = new Vector(targetX, targetY, targetZ);
         Vector toTarget = target.clone().subtract(eyePos);
 
@@ -5093,7 +5579,6 @@ public class PlayerEventHandler implements Listener {
 
         return new CornerHit(claim, hitX, hitY, hitZ, t);
     }
-
 
     // determines whether a block type is an inventory holder. uses a caching
     // strategy to save cpu time
@@ -5128,8 +5613,7 @@ public class PlayerEventHandler implements Listener {
     }
 
     private boolean onLeftClickWatchList(Material material) {
-        if (MaterialTagCompat.isTagged("BUTTONS", material))
-            return true;
+        if (MaterialTagCompat.isTagged("BUTTONS", material)) return true;
         switch (material) {
             case LEVER:
             case REPEATER:
@@ -5144,14 +5628,15 @@ public class PlayerEventHandler implements Listener {
     static Block getTargetBlock(Player player, int maxDistance) throws IllegalStateException {
         Location eye = player.getEyeLocation();
         Material eyeMaterial = eye.getBlock().getType();
-        boolean passThroughWater = (eyeMaterial == Material.WATER);
+        boolean passThroughWater = eyeMaterial == Material.WATER;
         BlockIterator iterator = new BlockIterator(player.getLocation(), player.getEyeHeight(), maxDistance);
         Block result = player.getLocation().getBlock().getRelative(BlockFace.UP);
         while (iterator.hasNext()) {
             result = iterator.next();
             Material type = result.getType();
-            if (!MaterialTagCompat.isTagged("REPLACEABLE", type) || (!passThroughWater && type == Material.WATER))
-                return result;
+            if (
+                !MaterialTagCompat.isTagged("REPLACEABLE", type) || (!passThroughWater && type == Material.WATER)
+            ) return result;
         }
 
         return result;
@@ -5201,7 +5686,9 @@ public class PlayerEventHandler implements Listener {
             offHand = new ItemStack(Material.AIR);
         }
         try {
-            if (mainHand.getType() != Material.valueOf("BRUSH") && offHand.getType() != Material.valueOf("BRUSH")) return;
+            if (
+                mainHand.getType() != Material.valueOf("BRUSH") && offHand.getType() != Material.valueOf("BRUSH")
+            ) return;
         } catch (IllegalArgumentException e) {
             // 1.8.8: BRUSH doesn't exist, skip brush check
         }
@@ -5293,36 +5780,52 @@ public class PlayerEventHandler implements Listener {
         org.bukkit.block.Biome biome = clickedBlock.getBiome();
         boolean creativeMode = instance.creativeRulesApply(clickedBlock.getLocation());
         RestoreNatureProcessingTask processingTask = new RestoreNatureProcessingTask(
-                snapshots,
-                minY,
-                world.getEnvironment(),
-                biome,
-                lesserCorner,
-                greaterCorner,
-                world.getSeaLevel(),
-                aggressiveMode,
-                creativeMode,
-                player);
+            snapshots,
+            minY,
+            world.getEnvironment(),
+            biome,
+            lesserCorner,
+            greaterCorner,
+            world.getSeaLevel(),
+            aggressiveMode,
+            creativeMode,
+            player
+        );
         me.ryanhamshire.GriefPrevention.util.SchedulerUtil.runAsyncNow(instance, processingTask);
         GriefPrevention.sendMessage(player, TextMode.Info, "Restoring nature in the selected area...");
     }
 
-    private void visualizeConflict(Player player, PlayerData playerData, Claim claim, Block clickedBlock,
-            boolean is3D) {
+    private void visualizeConflict(
+        Player player,
+        PlayerData playerData,
+        Claim claim,
+        Block clickedBlock,
+        boolean is3D
+    ) {
         VisualizationType conflictType = is3D ? VisualizationType.CONFLICT_ZONE_3D : VisualizationType.CONFLICT_ZONE;
         BoundaryVisualization.visualizeClaim(player, claim, conflictType, clickedBlock);
 
         // If glow is enabled, auto-clear after 5 seconds
         if (GriefPrevention.instance.config_visualizationGlow) {
-            SchedulerUtil.runLaterEntity(GriefPrevention.instance, player, () -> {
-                playerData.setVisibleBoundaries(null);
-            }, 100L);
+            SchedulerUtil.runLaterEntity(
+                GriefPrevention.instance,
+                player,
+                () -> {
+                    playerData.setVisibleBoundaries(null);
+                },
+                100L
+            );
         }
     }
 
     // Direct entrypoint for legacy right-click-air from Netty packet handler
     // This bypasses the public event system to avoid duplicates
-    public void handleLegacyRightClickAir(Player player, org.bukkit.inventory.ItemStack packetItem, float yaw, float pitch) {
+    public void handleLegacyRightClickAir(
+        Player player,
+        org.bukkit.inventory.ItemStack packetItem,
+        float yaw,
+        float pitch
+    ) {
         // Create a minimal event for the dispatcher (not fired publicly)
         PlayerInteractEvent event = new PlayerInteractEvent(
             player,
@@ -5331,7 +5834,7 @@ public class PlayerEventHandler implements Listener {
             null,
             org.bukkit.block.BlockFace.SELF
         );
-        
+
         this.claimToolDispatcher.handle(event, null, Material.AIR, packetItem, yaw, pitch);
     }
 }

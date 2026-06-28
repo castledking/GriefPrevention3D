@@ -1,18 +1,5 @@
 package me.ryanhamshire.GriefPrevention.compat;
 
-import me.ryanhamshire.GriefPrevention.CustomLogEntryTypes;
-import me.ryanhamshire.GriefPrevention.GriefPrevention;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.block.Action;
-import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.inventory.ItemStack;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -20,6 +7,15 @@ import java.lang.reflect.Proxy;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import me.ryanhamshire.GriefPrevention.CustomLogEntryTypes;
+import me.ryanhamshire.GriefPrevention.GriefPrevention;
+import org.bukkit.Bukkit;
+import org.bukkit.Material;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.inventory.ItemStack;
 
 public class LegacyRightClickAirHandler implements Listener {
 
@@ -34,7 +30,9 @@ public class LegacyRightClickAirHandler implements Listener {
         // DISABLED - Netty injection interferes with player operations on 1.8.8
         // Using Bukkit event approach instead
         available = false;
-        GriefPrevention.AddLogEntry("[GP Debug] LegacyRightClickAirHandler disabled - using Bukkit event approach instead");
+        GriefPrevention.AddLogEntry(
+            "[GP Debug] LegacyRightClickAirHandler disabled - using Bukkit event approach instead"
+        );
     }
 
     public static boolean isAvailable() {
@@ -64,21 +62,23 @@ public class LegacyRightClickAirHandler implements Listener {
             if (getMethod.invoke(pipeline, "gp_rightclick") != null) return;
 
             Object handler = Proxy.newProxyInstance(
-                    getClass().getClassLoader(),
-                    new Class<?>[]{channelHandlerClass, channelInboundHandlerClass},
-                    new RightClickInvocationHandler(player)
+                getClass().getClassLoader(),
+                new Class<?>[] { channelHandlerClass, channelInboundHandlerClass },
+                new RightClickInvocationHandler(player)
             );
 
             Method addBefore = pipelineClass.getMethod("addBefore", String.class, String.class, channelHandlerClass);
             addBefore.setAccessible(true);
             addBefore.invoke(pipeline, "packet_handler", "gp_rightclick", handler);
-
         } catch (Exception e) {
-            GriefPrevention.AddLogEntry("Failed to inject right-click air handler for " + player.getName() + ": " + e.getMessage());
+            GriefPrevention.AddLogEntry(
+                "Failed to inject right-click air handler for " + player.getName() + ": " + e.getMessage()
+            );
         }
     }
 
     private static class RightClickInvocationHandler implements InvocationHandler {
+
         private final Player player;
 
         RightClickInvocationHandler(Player player) {
@@ -124,10 +124,18 @@ public class LegacyRightClickAirHandler implements Listener {
             try {
                 float yaw = getPacketYaw(msg);
                 float pitch = getPacketPitch(msg);
-                playerLookDirections.put(player.getUniqueId(), new float[]{yaw, pitch});
-                GriefPrevention.AddLogEntry("[LegacyRightClick] Cached look direction: yaw=" + yaw + ", pitch=" + pitch, CustomLogEntryTypes.Debug, false);
+                playerLookDirections.put(player.getUniqueId(), new float[] { yaw, pitch });
+                GriefPrevention.AddLogEntry(
+                    "[LegacyRightClick] Cached look direction: yaw=" + yaw + ", pitch=" + pitch,
+                    CustomLogEntryTypes.Debug,
+                    false
+                );
             } catch (Exception e) {
-                GriefPrevention.AddLogEntry("[LegacyRightClick] Failed to extract yaw/pitch: " + e.getMessage(), CustomLogEntryTypes.Debug, false);
+                GriefPrevention.AddLogEntry(
+                    "[LegacyRightClick] Failed to extract yaw/pitch: " + e.getMessage(),
+                    CustomLogEntryTypes.Debug,
+                    false
+                );
             }
             return false;
         }
@@ -144,10 +152,25 @@ public class LegacyRightClickAirHandler implements Listener {
             int y = getCoordinate(blockPosition, "getY");
             int z = getCoordinate(blockPosition, "getZ");
 
-            GriefPrevention.AddLogEntry("[LegacyRightClick] PacketPlayInBlockPlace received for " + player.getName() + " at " + x + "," + y + "," + z, CustomLogEntryTypes.Debug, false);
+            GriefPrevention.AddLogEntry(
+                "[LegacyRightClick] PacketPlayInBlockPlace received for " +
+                    player.getName() +
+                    " at " +
+                    x +
+                    "," +
+                    y +
+                    "," +
+                    z,
+                CustomLogEntryTypes.Debug,
+                false
+            );
 
             if (x != -1 || y != -1 || z != -1) {
-                GriefPrevention.AddLogEntry("[LegacyRightClick] Not air click (coordinates not -1), ignoring", CustomLogEntryTypes.Debug, false);
+                GriefPrevention.AddLogEntry(
+                    "[LegacyRightClick] Not air click (coordinates not -1), ignoring",
+                    CustomLogEntryTypes.Debug,
+                    false
+                );
                 return false;
             }
 
@@ -156,10 +179,23 @@ public class LegacyRightClickAirHandler implements Listener {
             Material modificationTool = GriefPrevention.instance.config_claims_modificationTool;
             Material investigationTool = GriefPrevention.instance.config_claims_investigationTool;
 
-            GriefPrevention.AddLogEntry("[LegacyRightClick] Item from packet: " + handMaterial + ", ModTool: " + modificationTool + ", InvTool: " + investigationTool, CustomLogEntryTypes.Debug, false);
+            GriefPrevention.AddLogEntry(
+                "[LegacyRightClick] Item from packet: " +
+                    handMaterial +
+                    ", ModTool: " +
+                    modificationTool +
+                    ", InvTool: " +
+                    investigationTool,
+                CustomLogEntryTypes.Debug,
+                false
+            );
 
             if (handMaterial != modificationTool && handMaterial != investigationTool) {
-                GriefPrevention.AddLogEntry("[LegacyRightClick] Not a claim tool at packet time, ignoring", CustomLogEntryTypes.Debug, false);
+                GriefPrevention.AddLogEntry(
+                    "[LegacyRightClick] Not a claim tool at packet time, ignoring",
+                    CustomLogEntryTypes.Debug,
+                    false
+                );
                 return false;
             }
 
@@ -177,17 +213,28 @@ public class LegacyRightClickAirHandler implements Listener {
                     }
 
                     // Call direct entrypoint with cached yaw/pitch (no NMS mutation)
-                    GriefPrevention.instance.playerEventHandler.handleLegacyRightClickAir(currentPlayer, packetItem, yaw, pitch);
+                    GriefPrevention.instance.playerEventHandler.handleLegacyRightClickAir(
+                        currentPlayer,
+                        packetItem,
+                        yaw,
+                        pitch
+                    );
                 } catch (Exception e) {
-                    GriefPrevention.AddLogEntry("Right-click air direct call failed for " + fPlayer.getName() + ": " + e.getClass().getSimpleName());
+                    GriefPrevention.AddLogEntry(
+                        "Right-click air direct call failed for " +
+                            fPlayer.getName() +
+                            ": " +
+                            e.getClass().getSimpleName()
+                    );
                     e.printStackTrace();
                 }
             });
 
             return true; // Consume packet to prevent normal Bukkit event
-
         } catch (Exception e) {
-            GriefPrevention.AddLogEntry("Error handling right-click air packet for " + player.getName() + ": " + e.getMessage());
+            GriefPrevention.AddLogEntry(
+                "Error handling right-click air packet for " + player.getName() + ": " + e.getMessage()
+            );
             e.printStackTrace();
             return false;
         }
@@ -260,7 +307,11 @@ public class LegacyRightClickAirHandler implements Listener {
             Method asBukkitCopy = craftItemStack.getMethod("asBukkitCopy", nmsItemStack);
             return (ItemStack) asBukkitCopy.invoke(null, nmsItem);
         } catch (Throwable t) {
-            GriefPrevention.AddLogEntry("[LegacyRightClick] Failed to get item from packet: " + t.getMessage(), CustomLogEntryTypes.Debug, false);
+            GriefPrevention.AddLogEntry(
+                "[LegacyRightClick] Failed to get item from packet: " + t.getMessage(),
+                CustomLogEntryTypes.Debug,
+                false
+            );
             return null;
         }
     }

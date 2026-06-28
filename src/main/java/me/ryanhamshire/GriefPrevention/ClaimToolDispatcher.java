@@ -18,7 +18,6 @@
 
 package me.ryanhamshire.GriefPrevention;
 
-import com.griefprevention.api.ClaimToolContext;
 import com.griefprevention.claims.editor.BukkitClaimEditMessages;
 import com.griefprevention.claims.editor.ClaimEditIntent;
 import com.griefprevention.claims.editor.ClaimEditIntentType;
@@ -55,7 +54,6 @@ import org.bukkit.Material;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
 import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.block.Action;
@@ -2389,30 +2387,7 @@ final class ClaimToolDispatcher
                 return;
             }
 
-            // Snap to start point only when the click would create 4+ collinear corners
-            // on the same boundary line (overshoot scenario).
-            // Determine which axis the clicked point shares with the start, then count
-            // how many existing draft points are on that SAME line. If 3+ already, adding
-            // one more would be illegal collinear geometry — snap to close instead.
-            // With fewer, the player may still be building a valid turning shape.
             OrthogonalPoint2i clickedPoint = new OrthogonalPoint2i(clickedBlock.getX(), clickedBlock.getZ());
-            List<OrthogonalPoint2i> draftPoints = session.preview().draftPoints();
-            if (!draftPoints.isEmpty()) {
-                OrthogonalPoint2i startPoint = draftPoints.get(0);
-                boolean sameX = clickedPoint.x() == startPoint.x();
-                boolean sameZ = clickedPoint.z() == startPoint.z();
-                if (sameX || sameZ) {
-                    // Count existing draft points on the SAME line (matching axis)
-                    long collinearCount = draftPoints.stream()
-                            .filter(p -> sameX ? p.x() == startPoint.x() : p.z() == startPoint.z())
-                            .count();
-                    // If 3+ already on that line (plus the new point = 4+), snap to close.
-                    // 3 collinear points is the threshold where adding another is always redundant.
-                    if (collinearCount >= 3) {
-                        clickedPoint = startPoint;
-                    }
-                }
-            }
 
             ClaimEditResult result = claimEditor.apply(
                     session.withTarget(new ClaimEditTarget(ClaimEditTargetType.NEW_PARENT_CLAIM, null)),
@@ -2993,53 +2968,6 @@ final class ClaimToolDispatcher
         BoundaryVisualization.visualizeClaim(player, updateResult.claim,
                 updateResult.claim.isAdminClaim() ? VisualizationType.ADMIN_CLAIM : VisualizationType.CLAIM,
                 clickedBlock);
-    }
-
-    /**
-     * Check if a polygon is adjacent to another claim's polygon (shares a boundary edge or overlaps).
-     * This detects cross-claim merge scenarios where the reshape path connects two claims
-     * that share a boundary but have no interior overlap.
-     */
-    private boolean polygonAdjacentToClaim(@NotNull OrthogonalPolygon polygon, @NotNull OrthogonalPolygon other) {
-        // Check for actual overlap first
-        Set<OrthogonalPoint2i> occupied = new HashSet<>();
-        int minX = Math.min(polygon.minX(), other.minX());
-        int maxX = Math.max(polygon.maxX(), other.maxX());
-        int minZ = Math.min(polygon.minZ(), other.minZ());
-        int maxZ = Math.max(polygon.maxZ(), other.maxZ());
-
-        for (int x = minX; x <= maxX; x++) {
-            for (int z = minZ; z <= maxZ; z++) {
-                OrthogonalPoint2i point = new OrthogonalPoint2i(x, z);
-                if (polygonContains(polygon, point) || polygonContains(other, point)) {
-                    occupied.add(point);
-                }
-            }
-        }
-
-        if (occupied.isEmpty()) {
-            return false;
-        }
-
-        // Check if the occupied region from both claims shares any boundary cells
-        for (OrthogonalPoint2i point : occupied) {
-            if (polygonContains(polygon, point) && polygonContains(other, point)) {
-                return true; // Interior overlap
-            }
-        }
-
-        // Check adjacency: polygon has an edge that lies on the other's boundary
-        for (OrthogonalEdge2i edge : polygon.edges()) {
-            OrthogonalPoint2i mid = new OrthogonalPoint2i(
-                    (edge.start().x() + edge.end().x()) / 2,
-                    (edge.start().z() + edge.end().z()) / 2
-            );
-            if (other.edges().stream().anyMatch(e -> e.containsPoint(mid))) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     private void persistShapedBoundaryMarkers(
