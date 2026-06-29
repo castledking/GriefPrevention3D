@@ -1,0 +1,309 @@
+# ============================================================
+# GriefPrevention - Nachrichten auf Deutsch
+# ============================================================
+# Um die Sprache zu ändern, kopiere die gewünschte Datei messages_XX.yml
+# aus dem Lang/-Ordner in GriefPreventionData/ und benenne sie um:
+#   plugins/GriefPreventionData/messages.yml
+#
+# Das Plugin lädt die Nachrichten in dieser Reihenfolge:
+#   1. messages.yml (deine benutzerdefinierte oder Sprachdatei)
+#   2. messages_{locale}.yml (gemäß GriefPrevention.Locale in config)
+#   3. messages_en.yml (Fallback)
+#
+# Format: Verwende $ oder & für Farbcodes.
+# Zeilenumbrüche: Verwende \n in Nachrichten.
+# ============================================================
+
+Messages:
+  RespectingClaims: Schutzgebiete werden nun respektiert.
+  IgnoringClaims: Schutzgebiete werden nun ignoriert.
+  NoCreativeUnClaim: Du kannst dieses Gebiet nicht entfernen. Du kannst es nur vergrößern oder weitere Gebiete erstellen.
+  SuccessfulAbandon: "Gebiet aufgegeben. Du hast jetzt noch {0} Schutzblöcke verfügbar."
+  TransferClaimPermission: Dieser Befehl erfordert die Berechtigung für administrative Gebiete.
+  TransferClaimMissing: "Hier gibt es kein Gebiet. Stehe in dem administrativen Gebiet, das du übertragen möchtest."
+  TransferClaimAdminOnly: Nur administrative Gebiete können an einen Spieler übertragen werden.
+  PlayerNotFound2: Kein Spieler mit diesem Namen hat sich kürzlich eingeloggt.
+  TransferTopLevel: Nur Hauptgebiete (keine Unterteilungen) können übertragen werden. Stehe außerhalb der Unterteilung und versuche es erneut.
+  TransferSuccess: Gebiet übertragen.
+  ConvertClaimMissing: "Hier gibt es kein Gebiet. Stehe in dem Gebiet, das du konvertieren möchtest."
+  ConvertClaimAlreadyAdmin: Dieses Gebiet ist bereits ein administratives Gebiet.
+  ConvertClaimAlreadyBasic: Dieses Gebiet ist bereits ein Basisgebiet.
+  ConvertClaimAdminSuccess: Gebiet in ein administratives Gebiet umgewandelt.
+  ConvertClaimBasicSuccess: "Administratives Gebiet in ein Basisgebiet umgewandelt, das dir gehört."
+  TrustListNoClaim: "Stehe in dem Gebiet, über das du Informationen möchtest."
+  ClearPermsOwnerOnly: Nur der Gebietsbesitzer kann alle Berechtigungen löschen.
+  UntrustIndividualAllClaims: "Zugriff von {0} auf ALLE deine Gebiete entzogen. Um Berechtigungen für ein einzelnes Gebiet zu setzen, stehe darin."
+  UntrustEveryoneAllClaims: "Berechtigungen in ALLEN deinen Gebieten gelöscht. Um Berechtigungen für ein einzelnes Gebiet zu setzen, stehe darin."
+  NoPermissionTrust: "Du hast nicht die Berechtigung von {0}, um hier Berechtigungen zu verwalten."
+  ClearPermissionsOneClaim: "Berechtigungen in diesem Gebiet gelöscht. Um Berechtigungen für ALLE deine Gebiete zu setzen, stehe außerhalb."
+  UntrustIndividualSingleClaim: "Zugriff von {0} auf dieses Gebiet entzogen. Um Berechtigungen für ALLE deine Gebiete zu setzen, stehe außerhalb."
+  AdminClaimsMode: Administrativer Modus aktiv. Erstellte Gebiete sind kostenlos und von anderen Administratoren bearbeitbar.
+  _3DAdminClaimsMode: "3D-Administrativer Modus aktiv. Erstellte Gebiete sind kostenlos, höhenbegrenzt und von anderen Administratoren bearbeitbar."
+  BasicClaimsMode: "Zurück zum Basis-Modus für Gebietserstellung."
+  ShapedClaimsMode: "Formgebiets-Modus. Rechtsklick, um Ecken in unbeanspruchtem Land zu setzen oder um Formbearbeitungen von Gebietsgrenzen aus zu starten und zu erweitern. Grenzklicks erstellen bei Bedarf Segmentmarkierungen. Verwende /basicclaims zum Beenden."
+  ShapedClaimsDisabled: Formgebiete sind auf diesem Server deaktiviert.
+  MergeOverlapConflict: Konnte nicht zusammenführen; die fertige Zusammenführung würde andere Gebiete überlappen.
+  SubdivisionMode: "Unterteilungs-Modus. Verwende deine Schaufel, um Unterteilungen in bestehenden Gebieten zu erstellen. Verwende /basicclaims zum Beenden."
+  SubdivisionMode3D: "3D-Unterteilungs-Modus. Verwende deine Schaufel, um 3D-Unterteilungen in bestehenden Gebieten zu erstellen. Verwende /basicclaims zum Beenden."
+  SubdivisionVideo2: "Klicke für Unterteilungshilfe: {0}"
+  DeleteClaimMissing: Hier gibt es kein Gebiet.
+  DeletionSubdivisionWarning: "Dieses Gebiet enthält Unterteilungen. Wenn du sicher bist, verwende /deleteclaim erneut."
+  DeleteSuccess: Gebiet gelöscht.
+  CantDeleteAdminClaim: "Du hast keine Berechtigung, administrative Gebiete zu löschen."
+  NoAdminClaimsPermission: "Du hast keine Berechtigung, administrative Gebiete zu verwalten."
+  DeleteAllSuccess: "Alle Gebiete von {0} gelöscht."
+  NoDeletePermission: "Du hast keine Berechtigung, Gebiete zu löschen."
+  AllAdminDeleted: Alle administrativen Gebiete gelöscht.
+  AdjustBlocksSuccess: "Bonusblöcke von {0} um {1} angepasst. Neue Gesamtanzahl Bonusblöcke: {2}."
+  AdjustBlocksAllSuccess: "Bonusblöcke aller Online-Spieler um {0} angepasst."
+  NotTrappedHere: Du kannst hier bauen. Rette dich selbst.
+  RescuePending: "Wenn du 10 Sekunden stillstehst, wirst du heraus teleportiert. Bitte warte."
+  AbandonClaimMissing: "Stehe in dem Gebiet, das du löschen möchtest, oder erwäge /abandonallclaims."
+  NotYourClaim: Das ist nicht dein Gebiet.
+  DeleteTopLevelClaim: "Um eine Unterteilung zu löschen, stehe darin. Andernfalls verwende /abandontoplevelclaim, um dieses Gebiet und alle Unterteilungen zu löschen."
+  AbandonSuccess: "Gebiet aufgegeben. Du hast jetzt {0} Schutzblöcke verfügbar."
+  ConfirmAbandonAllClaims: "Bist du sicher, dass du ALLE deine Gebiete aufgeben möchtest? Bestätige mit /abandonallclaims confirm"
+  GrantPermissionNoClaim: "Stehe in dem Gebiet, in dem du die Berechtigung erteilen möchtest."
+  GrantPermissionConfirmation: "{0} Berechtigung für {1} {2} erteilt."
+  ManageUniversalPermissionsInstruction: "Um Berechtigungen für ALLE deine Gebiete zu verwalten, stehe außerhalb."
+  ManageOneClaimPermissionsInstruction: "Um Berechtigungen für ein bestimmtes Gebiet zu verwalten, stehe darin."
+  CollectivePublic: die Öffentlichkeit
+  BuildPermission: bauen
+  ContainersPermission: auf Kisten und Tiere zugreifen
+  AccessPermission: Knöpfe und Hebel benutzen
+  PermissionsPermission: Berechtigungen verwalten
+  LocationCurrentClaim: in diesem Gebiet
+  LocationAllClaims: in allen deinen Gebieten
+  PvPImmunityStart: "Du bist vor Angriffen anderer Spieler geschützt, solange dein Inventar leer ist."
+  DonateItemsInstruction: "Um die Gegenstände in deiner Hand zu spenden, klicke die Kiste erneut mit links an."
+  ChestFull: Diese Kiste ist voll.
+  DonationSuccess: "Gegenstand/Gegenstände in die Kiste übertragen!"
+  PlayerTooCloseForFire2: Du kannst kein Feuer in der Nähe eines anderen Spielers entzünden.
+  TooDeepToClaim: "Diese Kiste kann nicht geschützt werden, da sie zu tief unter der Erde ist. Erwäge, sie zu versetzen."
+  ChestClaimConfirmation: Diese Kiste ist geschützt.
+  AutomaticClaimNotification: Diese Kiste und nahegelegene Blöcke sind vor Diebstahl und Zerstörung geschützt.
+  AutomaticClaimOtherClaimTooClose: "Kann kein Gebiet für deine Kiste erstellen, ein anderes Gebiet ist zu nah!"
+  UnprotectedChestWarning: "Diese Kiste ist NICHT geschützt. Verwende eine Goldschaufel, um ein bestehendes Gebiet zu erweitern oder ein neues zu erstellen."
+  ThatPlayerPvPImmune: Du kannst wehrlose Spieler nicht verletzen.
+  CantFightWhileImmune: "Du kannst niemanden bekämpfen, während du vor PvP geschützt bist."
+  NoDamageClaimedEntity: "Das gehört {0}."
+  ShovelBasicClaimMode: "Schaufel zurück zum Basis-Modus."
+  RemainingBlocks: "Du kannst bis zu {0} weitere Blöcke schützen."
+  CreativeBasicsVideo2: "Klicke für Hilfe zu Landgebieten: {0}"
+  SurvivalBasicsVideo2: "Klicke für Hilfe zu Landgebieten: {0}"
+  TrappedChatKeyword: festgesteckt;gefangen
+  TrappedInstructions: "Bist du im Gebiet eines anderen Spielers gefangen? Probiere den Befehl /trapped."
+  PvPNoDrop: "Du kannst während eines PvP-Kampfes keine Gegenstände fallen lassen."
+  PvPNoContainers: "Du kannst während eines PvP-Kampfes nicht auf Kisten zugreifen."
+  PvPImmunityEnd: Du kannst jetzt mit anderen Spielern kämpfen.
+  NoBedPermission: "{0} hat dir keine Erlaubnis gegeben, hier zu schlafen."
+  NoWildernessBuckets: Du kannst Eimer nur innerhalb deiner Gebiete oder unter der Erde entleeren.
+  NoLavaNearOtherPlayer: "Du kannst kein Lava in der Nähe von {0} platzieren."
+  TooFarAway: Das ist zu weit entfernt.
+  BlockNotClaimed: Niemand hat diesen Block beansprucht.
+  BlockClaimed: "Dieser Block wurde von {0} beansprucht."
+  NoCreateClaimPermission: "Du hast keine Berechtigung, Land zu beanspruchen."
+  ResizeClaimTooNarrow: "Diese neue Größe wäre zu klein. Gebiete müssen mindestens {0} Blöcke breit sein."
+  ResizeNeedMoreBlocks: "Du hast nicht genug Blöcke für diese Größe. Du brauchst {0} mehr."
+  ClaimResizeSuccess: "Gebiet vergrößert/verkleinert. {0} Schutzblöcke verbleiben."
+  ResizeFailOverlap: "Kann hier nicht vergrößern/verkleinern, da es ein anderes nahegelegenes Gebiet überlappen würde."
+  ResizeStart: Gebiet wird vergrößert/verkleinert. Verwende deine Schaufel erneut an der neuen Position für diese Ecke.
+  ClaimSelected: "Gebiet ausgewählt. Verwende deine Schaufel erneut, um die andere Ecke zu setzen und anzupassen.\\nHinweis: Du kannst jetzt /claim abandon ausführen, während dieses Gebiet ausgewählt ist."
+  ClaimSelectedTopLevel: "Gebiet ausgewählt. Verwende deine Schaufel erneut, um die andere Ecke zu setzen und anzupassen.\\nHinweis: Du kannst jetzt /claim abandon toplevel ausführen, während dieses Gebiet ausgewählt ist."
+  SubdivisionSelected: "Unterteilung ausgewählt. Du kannst Berechtigungen für diesen spezifischen Bereich verwalten.\\n&6Du kannst Befehle ausführen wie:\\n&7- &f/trust&7, &f/untrust\\n&7- &f/containertrust&7, &f/accesstrust\\n&7- &f/abandonclaim\\n&6oder du kannst rechtsklicken, um die Größe anzupassen."
+  ResizeFailOverlapSubdivision: "Du kannst hier keine Unterteilung erstellen, da sie eine andere Unterteilung überlappen würde. Erwäge /abandonclaim zum Löschen oder verwende deine Schaufel an einer Ecke, um sie anzupassen."
+  SubdivisionStart: "Unterteilungsecke gesetzt! Verwende deine Schaufel an der Position der gegenüberliegenden Ecke dieser neuen Unterteilung."
+  CreateSubdivisionOverlap: Dein ausgewählter Bereich überlappt eine andere Unterteilung.
+  InnerSubdivisionTooClose: Diese Unterteilung muss auf allen Seiten mindestens einen Block innerhalb ihres Elterngebiets bleiben.
+  SubdivisionSuccess: "Unterteilung erstellt! Verwende /trust, um sie mit Freunden zu teilen."
+  CreateClaimFailOverlap: "Du kannst hier kein Gebiet erstellen, da es dein anderes Gebiet überlappen würde. Verwende /abandonclaim zum Löschen oder deine Schaufel an einer Ecke zum Anpassen."
+  CreateClaimFailOverlapOtherPlayer: "Du kannst hier kein Gebiet erstellen, da es {0}s Gebiet überlappen würde."
+  ClaimsDisabledWorld: Landgebiete sind in dieser Welt deaktiviert.
+  ClaimStart: "Gebietsecke gesetzt! Verwende die Schaufel erneut an der gegenüberliegenden Ecke, um ein rechteckiges Gebiet zu beanspruchen. Zum Abbrechen lege die Schaufel weg."
+  NewClaimTooNarrow: "Dieses Gebiet wäre zu klein. Jedes Gebiet muss mindestens {0} Blöcke breit sein."
+  ResizeClaimInsufficientArea: "Dieses Gebiet wäre zu klein. Jedes Gebiet muss mindestens {0} Schutzblöcke insgesamt nutzen."
+  CreateClaimInsufficientBlocks: "Du hast nicht genug Blöcke, um dieses gesamte Gebiet zu beanspruchen. Du brauchst {0} weitere Blöcke."
+  AbandonClaimAdvertisement: "Um ein anderes Gebiet zu löschen und Blöcke freizugeben, verwende /abandonclaim."
+  CreateClaimFailOverlapShort: Dein ausgewählter Bereich überlappt ein bestehendes Gebiet.
+  CreateClaimSuccess: "Gebiet erstellt! Verwende /trust, um es mit Freunden zu teilen."
+  RescueAbortedMoved: "Du hast dich bewegt! Rettung abgebrochen."
+  OnlyOwnersModifyClaims: "Nur {0} kann dieses Gebiet ändern."
+  NoBuildPvP: "Du kannst während eines PvP-Kampfes nicht in Gebieten bauen."
+  NoBuildPermission: "Du hast nicht die Erlaubnis von {0}, hier zu bauen."
+  NoAccessPermission: "Du hast nicht die Erlaubnis von {0}, das zu benutzen."
+  NoContainersPermission: "Du hast nicht die Erlaubnis von {0}, das zu benutzen."
+  OwnerNameForAdminClaims: ein Administrator
+  UnknownPlayerName: jemand
+  ClaimTooSmallForEntities: "Dieses Gebiet ist nicht groß genug dafür. Versuche, es zu vergrößern."
+  TooManyEntitiesInClaim: "Dieses Gebiet hat bereits zu viele Entities. Vergrößere das Gebiet oder entferne Tiere, Monster, Gemälde oder Loren."
+  YouHaveNoClaims: Du hast keine Landgebiete.
+  AutoBanNotify: "Automatisch gebannt: {0}({1}). Siehe Logs für Details."
+  AdjustGroupBlocksSuccess: "Bonusblöcke für Spieler mit der Berechtigung {0} um {1} angepasst. Neue Gesamtanzahl: {2}."
+  InvalidPermissionID: "Bitte gib einen Spielernamen oder eine Berechtigung in [Klammern] an."
+  HowToClaimRegex: "(^|.*\\\\W)(wie|beanspruchen|schützen|gebiet|claim)(\\\\W.*|$)"
+  NoBuildOutsideClaims: "Du kannst hier nicht bauen, solange du nicht zuerst Land beanspruchst."
+  PlayerOfflineTime: "  Letzter Login: vor {0} Tagen."
+  BuildingOutsideClaims: "Andere Spieler können hier auch bauen. Erstelle ein Landgebiet, um deine Arbeit zu schützen!"
+  TrappedWontWorkHere: "Entschuldigung, es konnte kein sicherer Ort zum Teleportieren gefunden werden. Kontaktiere einen Admin."
+  CommandBannedInPvP: "Du kannst diesen Befehl während eines PvP-Kampfes nicht verwenden."
+  NoTeleportPvPCombat: Du kannst dich während eines Kampfes nicht teleportieren.
+  NoTNTDamageAboveSeaLevel: "Warnung: TNT wird Blöcke über dem Meeresspiegel nicht zerstören."
+  NoTNTDamageClaims: "Warnung: TNT wird keine geschützten Blöcke zerstören."
+  IgnoreClaimsAdvertisement: Zum Überschreiben verwende /ignoreclaims.
+  NoPermissionForCommand: "Du hast keine Berechtigung, das zu tun."
+  ClaimsListNoPermission: "Du hast keine Berechtigung, Informationen über die Landgebiete eines anderen Spielers zu erhalten."
+  ExplosivesDisabled: "Dieses Gebiet ist jetzt vor Explosionen geschützt. Verwende /claimexplosions erneut, um zu deaktivieren."
+  ExplosivesEnabled: "Dieses Gebiet ist jetzt anfällig für Explosionen. Verwende /claimexplosions erneut, um den Schutz zu reaktivieren."
+  WitherExplosionsDisabled: "Dieses Gebiet ist jetzt vor Wither-Explosionen geschützt. Verwende /witherexplosions erneut, um zu deaktivieren."
+  WitherExplosionsEnabled: "Dieses Gebiet ist jetzt anfällig für Wither-Explosionen. Verwende /witherexplosions erneut, um den Schutz zu reaktivieren."
+  ClaimExplosivesAdvertisement: "Um Explosionen zu erlauben, Blöcke in diesem Gebiet zu zerstören, verwende /claimexplosions."
+  PlayerInPvPSafeZone: "Dieser Spieler befindet sich in einer PvP-Sicherheitszone."
+  NoPistonsOutsideClaims: "Warnung: Kolben werden keine Blöcke außerhalb von Landgebieten bewegen."
+  SoftMuted: "{0} stummgeschaltet."
+  UnSoftMuted: "Stummschaltung von {0} aufgehoben."
+  DropUnlockAdvertisement: "Andere Spieler können deine fallen gelassenen Gegenstände nicht aufheben, solange du nicht /unlockdrops verwendest."
+  PickupBlockedExplanation: "Du kannst dies nicht aufheben, solange {0} nicht /unlockdrops verwendet."
+  DropUnlockConfirmation: Deine fallen gelassenen Gegenstände wurden freigegeben. Andere Spieler können sie nun aufheben (bis du erneut stirbst).
+  DropLockConfirmation: Deine fallen gelassenen Gegenstände wurden gesperrt. Andere Spieler können sie nicht mehr aufheben.
+  DropUnlockOthersConfirmation: "Die fallen gelassenen Gegenstände von {0} wurden freigegeben."
+  AdvertiseACandACB: "Du kannst /acb verwenden, um dir mehr Schutzblöcke zu geben, oder /adminclaims, um ein kostenloses administratives Gebiet zu erstellen."
+  AdvertiseAdminClaims: "Du könntest stattdessen mit /adminclaims ein administratives Landgebiet erstellen, das du mit anderen Administratoren teilen würdest."
+  AdvertiseACB: "Du kannst /acb verwenden, um dir mehr Schutzblöcke zu geben."
+  NotYourPet: "Das gehört {0}, bis es dir mit /givepet gegeben wird."
+  PetGiveawayConfirmation: Haustier übertragen.
+  PetTransferCancellation: Haustierübergabe abgebrochen.
+  ReadyToTransferPet: "Bereit zur Übergabe! Rechtsklicke auf das Haustier, das du verschenken möchtest, oder brich mit /givepet cancel ab."
+  AvoidGriefClaimLand: "Verhindere Griefing! Wenn du dein Land beanspruchst, bist du vor Griefing geschützt."
+  BecomeMayor: "Unterteile dein Landgebiet und werde Bürgermeister!"
+  ClaimCreationFailedOverClaimCountLimit: "Du hast dein Limit an Landgebieten erreicht. Verwende /abandonclaim, um eines zu entfernen, bevor du ein neues erstellst."
+  CreateClaimFailOverlapRegion: "Du kannst nicht alles davon beanspruchen, weil du hier nicht bauen darfst."
+  ResizeFailOverlapRegion: "Du hast keine Baugenehmigung dort, also kannst du dieses Gebiet nicht beanspruchen."
+  ResizeFailSubdivision: "Gebiet kann nicht angepasst werden: Die neuen Grenzen würden eine bestehende Unterteilung ausschließen. Bitte entferne oder verschiebe zuerst die Unterteilung."
+  ResizeFailSubdivisionExceedsParent: "Konnte nicht anpassen: Die Unterteilung blieb nicht auf allen Seiten innerhalb der Grenzen des Elterngebiets, was zu einer Konfliktzone auf dem Hauptgebiet führt."
+  ShapedClaimInteriorClick: Du kannst hier kein Formgebiet starten. Du kannst entweder ein neues Formgebiet starten oder Segmente an der Grenze deines aktuellen Gebiets erstellen und diese erweitern.
+  ShowNearbyClaims: "{0} Landgebiete gefunden."
+  NoChatUntilMove: "Entschuldigung, du musst dich noch etwas bewegen, bevor du chatten kannst. Wir haben hier viele Spam-Bots. :)"
+  SetClaimBlocksSuccess: Angesammelte Schutzblöcke aktualisiert.
+  IgnoreConfirmation: "Du ignorierst jetzt Chat-Nachrichten von diesem Spieler."
+  UnIgnoreConfirmation: "Du ignorierst Chat-Nachrichten von diesem Spieler nicht mehr."
+  NotIgnoringPlayer: Du ignorierst diesen Spieler nicht.
+  SeparateConfirmation: Diese Spieler ignorieren sich jetzt gegenseitig im Chat.
+  UnSeparateConfirmation: Diese Spieler ignorieren sich nicht mehr gegenseitig im Chat.
+  NotIgnoringAnyone: Du ignorierst niemanden.
+  TrustListHeader: "Explizite Berechtigungen hier:"
+  Manage: Verwalten
+  Build: Bauen
+  Containers: Kisten
+  Access: Zugriff
+  Neighbor: Nachbar
+  HasSubclaimRestriction: Diese Unterteilung erbt keine Berechtigungen vom Elterngebiet
+  StartBlockMath: "{0} Blöcke durch Spielzeit + {1} Bonus = {2} insgesamt."
+  ClaimsListHeader: "Gebiete:"
+  ContinueBlockMath: " (-{0} Blöcke)"
+  EndBlockMath: " = {0} Blöcke übrig zum Ausgeben"
+  ClaimExpiryHeader: "Gebietsablauf für {0}:"
+  ClaimExpiryLocation: "Ort: {0}"
+  ClaimExpiryOwnerStatus: "Besitzer: {0} ({1})"
+  ClaimExpiryOwnerOnline: online
+  ClaimExpiryOwnerOffline: offline
+  ClaimExpiryLastActive: "Zuletzt gesehen: vor {0}"
+  ClaimExpiryLastActiveUnknown: "Zuletzt gesehen: unbekannt"
+  ClaimExpiryClaimModified: "Zuletzt geändert: {0}"
+  ClaimExpiryExpiresIn: "Läuft ab in: {0}"
+  ClaimExpiryExpired: "Abgelaufen vor {0}"
+  ClaimExpiryExempt: "Dieses Gebiet ist von der Ablaufregelung ausgenommen: {0}"
+  ClaimExpiryNeverExpires: Dieses Gebiet läuft niemals ab.
+  ClaimExpiryChestClaim: "Kistengebietsablauf: {0}"
+  ClaimExpiryNoClaim: Du stehst in keinem Gebiet.
+  ClaimExpiryPlayerHeading: "Gebietsablauf für {0}:"
+  ClaimExpiryPlayerNoClaims: "{0} hat keine Gebiete."
+  ClaimExpiryPlayerNotFound: "Konnte Spieler {0} nicht finden."
+  ClaimExpiryUnknown: unbekannt
+  ClaimExpiryUsage: "/checkclaimexpiry [Spieler]"
+  ClaimExpiryListEntry: "- {0}: {1}"
+  NoClaimDuringPvP: "Du kannst während eines PvP-Kampfes keine Gebiete beanspruchen."
+  UntrustAllOwnerOnly: Nur der Gebietsbesitzer kann alle seine Berechtigungen löschen.
+  ManagersDontUntrustManagers: Nur der Gebietsbesitzer kann einen Manager degradieren.
+  PlayerNotIgnorable: Du kannst diesen Spieler nicht ignorieren.
+  NoEnoughBlocksForChestClaim: "Da du keine Schutzblöcke zur Verfügung hast, wurde automatisch kein Gebiet für dich erstellt. Du kannst /claimslist verwenden, um deinen verfügbaren Schutzblock-Vorrat zu überwachen."
+  MustHoldModificationToolForThat: "Du musst eine Goldschaufel in der Hand halten, um das zu tun."
+  StandInClaimToResize: "Stehe in dem Landgebiet, das du anpassen möchtest."
+  ClaimsExtendToSky: Landgebiete erstrecken sich immer bis zur maximalen Bauhöhe.
+  ClaimsAutoExtendDownward: "Landgebiete erweitern sich automatisch tiefer in den Boden, wenn du Blöcke unter ihnen platzierst."
+  MinimumRadius: "Mindestradius ist {0}."
+  RadiusRequiresGoldenShovel: "Du musst eine Goldschaufel halten, wenn du einen Radius angibst."
+  ClaimTooSmallForActiveBlocks: "Dieses Gebiet ist nicht groß genug für aktive Blocktypen (Trichter, Spawner, Leuchtfeuer...). Mache das Gebiet zuerst größer."
+  TooManyActiveBlocksInClaim: "Dieses Gebiet hat sein Limit für aktive Blocktypen erreicht (Trichter, Spawner, Leuchtfeuer...). Mache es größer oder entferne zuerst andere aktive Blöcke."
+  BookAuthor: BigScary
+  BookTitle: So beanspruchst du Land
+  BookLink: "Klicke: {0}"
+  BookIntro: "Beanspruche Land, um deine Sachen zu schützen! Klicke auf den obigen Link, um Landgebiete in 3 Minuten oder weniger zu lernen. :)"
+  BookTools: "Unsere Gebietswerkzeuge sind {0} und {1}."
+  BookDisabledChestClaims:   Auf diesem Server beansprucht das Platzieren einer Kiste NICHT automatisch Land für dich.
+  BookUsefulCommands: "Nützliche Befehle:"
+  NoProfanity: Bitte mäßige deine Ausdrucksweise.
+  IsIgnoringYou: Dieser Spieler ignoriert dich.
+  ConsoleOnlyCommand: Dieser Befehl kann nur von der Serverkonsole ausgeführt werden.
+  WorldNotFound: Welt nicht gefunden.
+  TooMuchIpOverlap: "Entschuldigung, es sind zu viele Spieler mit deiner IP-Adresse eingeloggt."
+  StandInSubclaim: "Du musst in einer Unterteilung stehen, um sie zu beschränken"
+  SubclaimRestricted: Die Berechtigungen dieser Unterteilung werden nicht mehr vom Elterngebiet geerbt
+  SubclaimUnrestricted: Die Berechtigungen dieser Unterteilung werden nun vom Elterngebiet geerbt
+  MainClaimSubdivisionInheritDisabled: Alle Unterteilungen in diesem Gebiet werden KEINE Berechtigungen erben.
+  MainClaimSubdivisionInheritEnabled: Alle Unterteilungen in diesem Gebiet werden Berechtigungen erben.
+  NetherPortalTrapDetectionMessage: "Es scheint, dass du in einem Netherportal feststeckst. Wir werden dich in ein paar Sekunden retten, falls das der Fall ist!"
+  ClaimHelpHeader: "Verfügbare /claim-Befehle:"
+  ClaimHelpLegend: "<> - Erforderlich, [] - Optional."
+  ClaimHelpEntry: "&e/{0}&7 - &f{1}"
+  ClaimHelpPagination: "Gib /claim help {0} für die nächste Seite ein."
+  AClaimHelpHeader: "Verfügbare /aclaim-Befehle:"
+  AClaimHelpLegend: "<> - Erforderlich, [] - Optional."
+  AClaimHelpEntry: "&e/{0}&7 - &f{1}"
+  AClaimHelpPagination: "Gib /aclaim help {0} für die nächste Seite ein."
+  CommandNotFound: "Unbekannter Unterbefehl: {0}"
+  CommandNotImplementedYet: Dieser Befehl ist noch nicht implementiert.
+  CommandInvalidMode: "Ungültiger Modus. Gültige Optionen: basic, 2d, 3d, shaped"
+  RestoreNatureActivate: "Bereit, die Natur wiederherzustellen! Rechtsklicke auf einen Block, um einen Bereich wiederherzustellen. Verwende /basicclaims zum Beenden."
+  RestoreNatureAggressiveActivate: "Aggressiver Wiederherstellungsmodus aktiviert. Rechtsklicke auf einen Block, um einen Bereich wiederherzustellen. Verwende /basicclaims zum Beenden."
+  FillModeActive: "Füllmodus mit Radius {0} aktiviert. Rechtsklicke auf einen Block, um einen Bereich zu füllen. Verwende /basicclaims zum Beenden."
+  EconomyDisabled: Wirtschaftsfunktionen sind auf diesem Server deaktiviert.
+  EconomyBuyBlocksConfirmation: "{0} Schutzblöcke für {1} gekauft. Du hast jetzt {2} Schutzblöcke."
+  EconomySellBlocksConfirmation: "{0} Schutzblöcke für {1} verkauft. Du hast jetzt {2} Schutzblöcke."
+  EconomyNotEnoughMoney: "Du hast nicht genug Geld. Kosten: {0}, Dein Kontostand: {1}"
+  EconomyNotEnoughBlocks: "Du hast nicht genug Schutzblöcke zum Verkaufen. Angefragt: {0}, Verfügbar: {1}"
+  EconomyBuyBlocksUsage: "Verwendung: /buyclaimblocks <Menge>"
+  EconomySellBlocksUsage: "Verwendung: /sellclaimblocks <Menge>"
+  EconomyInvalidAmount: Bitte gib eine gültige positive Anzahl von Blöcken an.
+  EconomyPurchaseCancelled: Kauf abgebrochen.
+  EconomyNoVault: "Die Wirtschaftsfunktion erfordert das Vault-Plugin."
+  CommandRequiresPlayer: Dieser Befehl kann nur von Spielern verwendet werden.
+  PistonExploded: "Der Kolben bei {0} ist explodiert, weil er das Gebiet bei {1} nicht betreten konnte"
+  ExternalPistonBoundaryViolation: "&6Warnung: Ein Kolben versuchte, einen Block in dein Gebiet zu schieben @ x:{0} y:{1} z:{2}!"
+  InternalPistonBoundaryViolation: "&6Warnung: Ein Kolben versuchte, einen Block aus deinem Gebiet zu schieben @ x:{0} y:{1} z:{2}!"
+  ExternalLiquidBoundaryViolation: "&6Warnung: Flüssigkeit versuchte, in dein Gebiet zu fließen @ x:{0} y:{1} z:{2}!"
+  InternalLiquidBoundaryViolation: "&6Warnung: Flüssigkeit versuchte, aus deinem Gebiet zu fließen @ x:{0} y:{1} z:{2}!"
+  BoundaryViolationBurstSummary: "&6Warnung: {0} {1}-Verletzungen in der Nähe deines Gebiets @ x:{2} y:{3} z:{4}!"
+  PlaceholderTrustLevelUnclaimed: Nicht beansprucht
+  PlaceholderTrustLevelOwner: Besitzer
+  PlaceholderTrustLevelManager: Manager
+  PlaceholderTrustLevelBuilder: Baumeister
+  PlaceholderTrustLevelAccess: Zugriff
+  PlaceholderTrustLevelContainer: Kisten
+  PlaceholderTrustLevelNeighbor: Nachbar
+  PlaceholderTrustLevelUntrusted: Nicht vertrauenswürdig
+  NeighborPermission: Mindestabstand umgehen
+  CreateClaimFailTooClose: "Du kannst hier kein Gebiet erstellen, weil es zu nah an {0}s Gebiet ist. Der Mindestabstand beträgt {1} Blöcke."
+  CreateClaimFailTooCloseNoBypass: "Du kannst hier kein Gebiet erstellen, weil es zu nah an einem anderen Gebiet ist. Der Mindestabstand beträgt {0} Blöcke."
+  MinimumDistance: "Mindestabstand zwischen Gebieten: {0} Blöcke."
+  NearbyClaims: "Nahegelegene Gebiete: {0}"
+  NeighborTrustGranted: "Nachbarvertrauen für {0} gewährt. Er/sie kann jetzt die Mindestabstandsprüfungen für deine Gebiete umgehen."
+  NeighborTrustRevoked: "Nachbarvertrauen für {0} entzogen."
+  NeighborTrustGrantedAll: "Nachbarvertrauen für {0} für ALLE deine Gebiete gewährt."
+  NeighborTrustRevokedAll: "Nachbarvertrauen von {0} für ALLE deine Gebiete entzogen."
+  NeighborBypassEnabled: Alle Spieler können jetzt die Mindestabstandsprüfungen für dieses Gebiet umgehen.
+  Subdivisions3DDisabled: 3D-Unterteilungen sind auf diesem Server deaktiviert.
+  AdminClaims3DDisabled: 3D-Admin-Grundstücke sind auf diesem Server deaktiviert.
+  DistanceCheckEnabled: Abstandsprüfung aktiviert. Du wirst gewarnt, wenn du Grundstücke zu nah an anderen erstellst.
+  DistanceCheckDisabled: Abstandsprüfung deaktiviert.
+  NeighborBypassDisabled: Mindestabstandsprüfungen sind jetzt für dieses Gebiet aktiv.
+  MessagesLoaded: "Nachrichten geladen: {0}"

@@ -1888,6 +1888,15 @@ public abstract class DataStore {
             for (String identifier : managers) newClaim.setPermission(identifier, ClaimPermission.Manage);
         }
 
+        // Ensure the creating player has Manage on new subdivisions for cascading trust
+        if (parent != null && creatingPlayer != null
+                && !creatingPlayer.getUniqueId().equals(newClaim.getOwnerID())) {
+            String creatorId = creatingPlayer.getUniqueId().toString();
+            if (!newClaim.managers.contains(creatorId)) {
+                newClaim.managers.add(creatorId);
+            }
+        }
+
         // then return success along with reference to new claim
         result.succeeded = true;
         result.claim = newClaim;

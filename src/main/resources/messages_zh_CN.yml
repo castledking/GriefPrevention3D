@@ -1,0 +1,309 @@
+# ============================================================
+# GriefPrevention - 简体中文消息
+# ============================================================
+# 要更改语言，请将所需 messages_XX.yml 文件从 Lang/ 文件夹复制到
+# GriefPreventionData/ 并重命名：
+#   plugins/GriefPreventionData/messages.yml
+#
+# 插件按以下顺序加载消息：
+#   1. messages.yml（自定义或本地化文件）
+#   2. messages_{locale}.yml（基于配置中的 GriefPrevention.Locale）
+#   3. messages_en.yml（后备）
+#
+# 格式：使用 $ 或 & 作为颜色代码。
+# 换行：在消息中使用 \n。
+# ============================================================
+
+Messages:
+  RespectingClaims: 现在正在尊重领地边界。
+  IgnoringClaims: 现在正在忽略领地边界。
+  NoCreativeUnClaim: 你不能取消认领这块土地。你只能扩大这个领地或创建新的领地。
+  SuccessfulAbandon: 领地已放弃。你现在拥有 {0} 个可用领地方块。
+  TransferClaimPermission: 该命令需要管理员领地权限。
+  TransferClaimMissing: 这里没有领地。请站在你要转移的管理员领地内。
+  TransferClaimAdminOnly: 只有管理员领地可以转移给玩家。
+  PlayerNotFound2: 没有找到最近登录过的该名称玩家。
+  TransferTopLevel: 只能转移顶层领地（非子领地）。请站在子领地外再试一次。
+  TransferSuccess: 领地已转移。
+  ConvertClaimMissing: 这里没有领地。请站在你要转换的领地内。
+  ConvertClaimAlreadyAdmin: 该领地已经是管理员领地。
+  ConvertClaimAlreadyBasic: 该领地已经是基础领地。
+  ConvertClaimAdminSuccess: 领地已转换为管理员领地。
+  ConvertClaimBasicSuccess: 管理员领地已转换为你拥有的基础领地。
+  TrustListNoClaim: 请站在你想查看的领地内。
+  ClearPermsOwnerOnly: 只有领地所有者可以清除所有权限。
+  UntrustIndividualAllClaims: 已撤销 {0} 对你所有领地的访问权限。要为单个领地设置权限，请站在该领地内。
+  UntrustEveryoneAllClaims: 已清除你所有领地的权限。要为单个领地设置权限，请站在该领地内。
+  NoPermissionTrust: 你没有 {0} 的管理权限来管理这里的权限。
+  ClearPermissionsOneClaim: 已清除此领地的权限。要为你所有领地设置权限，请站在领地外。
+  UntrustIndividualSingleClaim: 已撤销 {0} 对此领地的访问权限。要为你所有领地设置权限，请站在领地外。
+  AdminClaimsMode: 管理员领地模式已激活。创建的任何领地都将免费并可由其他管理员编辑。
+  _3DAdminClaimsMode: 3D 管理员领地模式已激活。创建的任何领地都将免费、有高度限制，并可由其他管理员编辑。
+  BasicClaimsMode: 已返回到基础领地创建模式。
+  ShapedClaimsMode: 自定义形状领地模式。在未认领的土地上右键单击放置角落，或在领地边界上开始和扩展形状编辑。边界点击会根据需要创建分段标记。使用 /basicclaims 退出。
+  ShapedClaimsDisabled: 此服务器上已禁用自定义形状领地。
+  MergeOverlapConflict: 无法合并；合并完成后会与其他领地重叠。
+  SubdivisionMode: 子领地模式。使用你的铲子在现有领地中创建子领地。使用 /basicclaims 退出。
+  SubdivisionMode3D: 3D 子领地模式。使用你的铲子在现有领地中创建 3D 子领地。使用 /basicclaims 退出。
+  SubdivisionVideo2: '点击查看子领地帮助：{0}'
+  DeleteClaimMissing: 这里没有领地。
+  DeletionSubdivisionWarning: 该领地包含子领地。如果你确定要删除它，请再次使用 /deleteclaim。
+  DeleteSuccess: 领地已删除。
+  CantDeleteAdminClaim: 你没有删除管理员领地的权限。
+  NoAdminClaimsPermission: 你没有管理管理员领地的权限。
+  DeleteAllSuccess: 已删除 {0} 的所有领地。
+  NoDeletePermission: 你没有删除领地的权限。
+  AllAdminDeleted: 已删除所有管理员领地。
+  AdjustBlocksSuccess: '已将 {0} 的额外领地方块调整了 {1}。新的额外方块总数：{2}。'
+  AdjustBlocksAllSuccess: 已将所有在线玩家的额外领地方块调整了 {0}。
+  NotTrappedHere: 你可以在这里建造。自己出去吧。
+  RescuePending: 如果你保持不动 10 秒钟，你将被传送出去。请稍候。
+  AbandonClaimMissing: 请站在要删除的领地内，或考虑使用 /abandonallclaims。
+  NotYourClaim: 这不是你的领地。
+  DeleteTopLevelClaim: 要删除子领地，请站在子领地内。否则，使用 /abandontoplevelclaim 删除此领地和所有子领地。
+  AbandonSuccess: 领地已放弃。你现在拥有 {0} 个可用领地方块。
+  ConfirmAbandonAllClaims: 你确定要放弃所有领地吗？请使用 /abandonallclaims confirm 确认。
+  GrantPermissionNoClaim: 请站在要授予权限的领地内。
+  GrantPermissionConfirmation: 已授予 {0} 权限，{1} {2}。
+  ManageUniversalPermissionsInstruction: 要管理你所有领地的权限，请站在领地外。
+  ManageOneClaimPermissionsInstruction: 要管理特定领地的权限，请站在该领地内。
+  CollectivePublic: 所有人
+  BuildPermission: 建造
+  ContainersPermission: 使用容器和动物
+  AccessPermission: 使用按钮和拉杆
+  PermissionsPermission: 管理权限
+  LocationCurrentClaim: 在此领地内
+  LocationAllClaims: 在你所有领地内
+  PvPImmunityStart: 只要你的背包是空的，你就受到保护，免受其他玩家攻击。
+  DonateItemsInstruction: 要赠送手中的物品，请再次左键点击箱子。
+  ChestFull: 这个箱子已满。
+  DonationSuccess: 物品已转移到箱子！
+  PlayerTooCloseForFire2: 你不能在离其他玩家这么近的地方点火。
+  TooDeepToClaim: 这个箱子无法被保护，因为它埋得太深了。考虑移动它。
+  ChestClaimConfirmation: 这个箱子已受到保护。
+  AutomaticClaimNotification: 这个箱子和附近的方块已受到保护，防止破坏和盗窃。
+  AutomaticClaimOtherClaimTooClose: 无法为你的箱子创建领地，附近已有另一个领地！
+  UnprotectedChestWarning: 这个箱子未受保护。考虑使用金铲子扩展现有领地或创建新领地。
+  ThatPlayerPvPImmune: 你不能伤害无防御能力的玩家。
+  CantFightWhileImmune: 你在受到 PvP 保护期间不能与他人战斗。
+  NoDamageClaimedEntity: 那属于 {0}。
+  ShovelBasicClaimMode: 铲子已返回到基础领地模式。
+  RemainingBlocks: 你还可以认领最多 {0} 个方块。
+  CreativeBasicsVideo2: '点击查看领地认领帮助：{0}'
+  SurvivalBasicsVideo2: '点击查看领地认领帮助：{0}'
+  TrappedChatKeyword: 被困;卡住;出不去
+  TrappedInstructions: 你是否被困在别人的领地中？试试 /trapped 命令。
+  PvPNoDrop: 你在 PvP 战斗期间不能丢弃物品。
+  PvPNoContainers: 你在 PvP 战斗期间不能打开容器。
+  PvPImmunityEnd: 现在你可以与其他玩家战斗了。
+  NoBedPermission: '{0} 没有给你在这里睡觉的权限。'
+  NoWildernessBuckets: 你只能在你的领地内或地下倒空桶。
+  NoLavaNearOtherPlayer: 你不能在离 {0} 这么近的地方放置岩浆。
+  TooFarAway: 那太远了。
+  BlockNotClaimed: 没有人认领这个方块。
+  BlockClaimed: 该方块已被 {0} 认领。
+  NoCreateClaimPermission: 你没有认领土地的权限。
+  ResizeClaimTooNarrow: 这个新尺寸太小了。领地宽度至少为 {0} 个方块。
+  ResizeNeedMoreBlocks: 你没有足够的方块来达到这个尺寸。你还需要 {0} 个。
+  ClaimResizeSuccess: 领地已调整大小。剩余 {0} 个可用领地方块。
+  ResizeFailOverlap: 无法在此处调整大小，因为它会与附近另一个领地重叠。
+  ResizeStart: 正在调整领地大小。在此角落的新位置再次使用你的铲子。
+  ClaimSelected: '领地已选中。再次使用你的铲子设置另一个角落并调整大小。\n注意：现在你可以在选中此领地时运行 /claim abandon。'
+  ClaimSelectedTopLevel: '领地已选中。再次使用你的铲子设置另一个角落并调整大小。\n注意：现在你可以在选中此领地时运行 /claim abandon toplevel。'
+  SubdivisionSelected: 子领地已选中。你可以管理此特定区域的权限。\n&6你可以运行如下命令：\n&7- &f/trust&7、&f/untrust\n&7- &f/containertrust&7、&f/accesstrust\n&7- &f/abandonclaim\n&6或者你可以再次右键单击以调整大小。
+  ResizeFailOverlapSubdivision: 你无法在此处创建子领地，因为它会与另一个子领地重叠。考虑使用 /abandonclaim 删除它，或在角落使用你的铲子调整其大小。
+  SubdivisionStart: 子领地角落已设置！在新的子领地对角位置使用你的铲子。
+  CreateSubdivisionOverlap: 你选择的区域与另一个子领地重叠。
+  InnerSubdivisionTooClose: 此子领地必须在所有边上与其父领地保持至少一个方块的距离。
+  SubdivisionSuccess: 子领地已创建！使用 /trust 与朋友分享。
+  CreateClaimFailOverlap: 你无法在此处创建领地，因为它会与你另一个领地重叠。使用 /abandonclaim 删除它，或在角落使用你的铲子调整其大小。
+  CreateClaimFailOverlapOtherPlayer: 你无法在此处创建领地，因为它会与 {0} 的领地重叠。
+  ClaimsDisabledWorld: 此世界已禁用领地认领。
+  ClaimStart: 领地角落已设置！再次使用铲子在对面角落认领一块矩形土地。要取消，请收起你的铲子。
+  NewClaimTooNarrow: 这个领地太小了。任何领地宽度至少为 {0} 个方块。
+  ResizeClaimInsufficientArea: 这个领地太小了。任何领地至少需要使用 {0} 个总领地方块。
+  CreateClaimInsufficientBlocks: 你没有足够的方块来认领整个区域。你还需要 {0} 个方块。
+  AbandonClaimAdvertisement: 要删除另一个领地并释放一些方块，请使用 /abandonclaim。
+  CreateClaimFailOverlapShort: 你选择的区域与现有领地重叠。
+  CreateClaimSuccess: 领地已创建！使用 /trust 与朋友分享。
+  RescueAbortedMoved: 你移动了！救援已取消。
+  OnlyOwnersModifyClaims: 只有 {0} 可以修改此领地。
+  NoBuildPvP: 你在 PvP 战斗期间不能在领地内建造。
+  NoBuildPermission: 你没有 {0} 在这里建造的权限。
+  NoAccessPermission: 你没有 {0} 使用该物品的权限。
+  NoContainersPermission: 你没有 {0} 使用该物品的权限。
+  OwnerNameForAdminClaims: 管理员
+  UnknownPlayerName: 某人
+  ClaimTooSmallForEntities: 这个领地不够大。尝试扩大它。
+  TooManyEntitiesInClaim: 这个领地已经有太多实体了。尝试扩大领地或移除一些动物、怪物、画作或矿车。
+  YouHaveNoClaims: 你没有任何领地。
+  AutoBanNotify: 已自动封禁 {0}({1})。详见日志。
+  AdjustGroupBlocksSuccess: '已将拥有 {0} 权限的玩家的额外领地方块调整了 {1}。新的总数：{2}。'
+  InvalidPermissionID: 请指定玩家名称，或使用 [括号] 指定权限。
+  HowToClaimRegex: (^|.*[\W])(怎么|如何|怎样)[\W].*[\W](claim|保护|认领|圈地|领地)([\W].*|$)
+  NoBuildOutsideClaims: 除非你先认领一些土地，否则你不能在这里建造。
+  PlayerOfflineTime: ' 上次登录：{0} 天前。'
+  BuildingOutsideClaims: 其他玩家也可以在这里建造。考虑创建领地来保护你的作品！
+  TrappedWontWorkHere: 抱歉，无法找到安全位置传送你。请联系管理员。
+  CommandBannedInPvP: 你在 PvP 战斗期间不能使用该命令。
+  NoTeleportPvPCombat: 你在与其他玩家战斗时不能传送。
+  NoTNTDamageAboveSeaLevel: '警告：TNT 不会破坏海平面以上的方块。'
+  NoTNTDamageClaims: '警告：TNT 不会破坏已认领的方块。'
+  IgnoreClaimsAdvertisement: 要覆盖此设置，请使用 /ignoreclaims。
+  NoPermissionForCommand: 你没有执行此操作的权限。
+  ClaimsListNoPermission: 你没有获取其他玩家领地信息的权限。
+  ExplosivesDisabled: 此领地现已受到爆炸保护。再次使用 /claimexplosions 来禁用。
+  ExplosivesEnabled: 此领地现在易受爆炸影响。再次使用 /claimexplosions 来重新启用保护。
+  WitherExplosionsDisabled: 此领地现已受到凋灵爆炸保护。再次使用 /witherexplosions 来禁用保护。
+  WitherExplosionsEnabled: 此领地现在易受凋灵爆炸影响。再次使用 /witherexplosions 来重新启用保护。
+  ClaimExplosivesAdvertisement: 要允许爆炸物破坏此领地中的方块，请使用 /claimexplosions。
+  PlayerInPvPSafeZone: 该玩家处于 PvP 安全区域。
+  NoPistonsOutsideClaims: '警告：活塞不会将方块移出领地。'
+  SoftMuted: 已对 {0} 执行软禁言。
+  UnSoftMuted: 已对 {0} 解除软禁言。
+  DropUnlockAdvertisement: 其他玩家无法捡起你丢弃的物品，除非你先使用 /unlockdrops。
+  PickupBlockedExplanation: 除非 {0} 使用 /unlockdrops，否则你无法捡起此物品。
+  DropUnlockConfirmation: 已解锁你的掉落物。其他玩家现在可以捡起它们（直到你再次死亡）。
+  DropLockConfirmation: 已锁定你的掉落物。其他玩家无法再捡起它们。
+  DropUnlockOthersConfirmation: 已解锁 {0} 的掉落物。
+  AdvertiseACandACB: 你可以使用 /acb 给自己更多领地方块，或使用 /adminclaims 创建免费的管理员领地。
+  AdvertiseAdminClaims: 你也可以使用 /adminclaims 创建管理员领地，与其他管理员共享。
+  AdvertiseACB: 你可以使用 /acb 给自己更多领地方块。
+  NotYourPet: 那属于 {0}，直到它通过 /givepet 赠予给你。
+  PetGiveawayConfirmation: 宠物已转让。
+  PetTransferCancellation: 宠物赠送已取消。
+  ReadyToTransferPet: 准备转让！右键单击你想要赠送的宠物，或使用 /givepet cancel 取消。
+  AvoidGriefClaimLand: 防止恶意破坏！如果你认领了土地，你将免受破坏。
+  BecomeMayor: 细分你的领地，成为市长！
+  ClaimCreationFailedOverClaimCountLimit: 你已达到领地数量上限。在创建新领地之前，请使用 /abandonclaim 移除一个。
+  CreateClaimFailOverlapRegion: 你不能认领所有这块区域，因为你没有在这里建造的权限。
+  ResizeFailOverlapRegion: 你没有在那里建造的权限，所以你不能认领该区域。
+  ResizeFailSubdivision: '无法调整领地大小：新边界将排除现有子领地。请先移除或移动子领地。'
+  ResizeFailSubdivisionExceedsParent: '无法调整大小：子领地未在所有边上保持在父领地边界内，导致主领地上出现冲突区域。'
+  ShapedClaimInteriorClick: 你不能在这里开始一个自定义形状领地。你可以开始一个新的自定义形状领地，或在你当前领地的边界上创建分段并扩展它们。
+  ShowNearbyClaims: 找到 {0} 个领地。
+  NoChatUntilMove: 抱歉，你需要再移动一点才能聊天。我们这里有很多垃圾机器人。:)
+  SetClaimBlocksSuccess: 已更新累积的领地方块。
+  IgnoreConfirmation: 你现在正在忽略来自该玩家的聊天消息。
+  UnIgnoreConfirmation: 你不再忽略来自该玩家的聊天消息。
+  NotIgnoringPlayer: 你没有忽略该玩家。
+  SeparateConfirmation: 这些玩家现在将在聊天中互相忽略。
+  UnSeparateConfirmation: 这些玩家将不再在聊天中互相忽略。
+  NotIgnoringAnyone: 你没有忽略任何人。
+  TrustListHeader: "此处的明确权限："
+  Manage: 管理
+  Build: 建造
+  Containers: 容器
+  Access: 访问
+  Neighbor: 邻居
+  HasSubclaimRestriction: 此子领地不从父领地继承权限
+  StartBlockMath: '{0} 个来自游戏时间的方块 + {1} 个额外方块 = 共 {2} 个。'
+  ClaimsListHeader: "领地："
+  ContinueBlockMath: '（-{0} 个方块）'
+  EndBlockMath: ' = 剩余 {0} 个可用的方块'
+  ClaimExpiryHeader: '{0} 的领地过期：'
+  ClaimExpiryLocation: '位置：{0}'
+  ClaimExpiryOwnerStatus: '所有者：{0}（{1}）'
+  ClaimExpiryOwnerOnline: 在线
+  ClaimExpiryOwnerOffline: 离线
+  ClaimExpiryLastActive: '上次在线：{0} 前'
+  ClaimExpiryLastActiveUnknown: '上次在线：未知'
+  ClaimExpiryClaimModified: '上次修改：{0}'
+  ClaimExpiryExpiresIn: '过期时间：{0}'
+  ClaimExpiryExpired: 已于 {0} 前过期
+  ClaimExpiryExempt: '此领地免于过期：{0}'
+  ClaimExpiryNeverExpires: 此领地永不过期。
+  ClaimExpiryChestClaim: '箱子领地过期：{0}'
+  ClaimExpiryNoClaim: 你没有站在领地内。
+  ClaimExpiryPlayerHeading: '{0} 的领地过期：'
+  ClaimExpiryPlayerNoClaims: '{0} 没有领地。'
+  ClaimExpiryPlayerNotFound: 找不到玩家 {0}。
+  ClaimExpiryUnknown: 未知
+  ClaimExpiryUsage: /checkclaimexpiry [玩家]
+  ClaimExpiryListEntry: '- {0}：{1}'
+  NoClaimDuringPvP: 你在 PvP 战斗期间不能认领土地。
+  UntrustAllOwnerOnly: 只有领地所有者可以清除其所有权限。
+  ManagersDontUntrustManagers: 只有领地所有者可以降级管理员。
+  PlayerNotIgnorable: 你不能忽略该玩家。
+  NoEnoughBlocksForChestClaim: 因为你没有任何可用领地方块，所以没有为你自动创建领地。你可以使用 /claimslist 查看你的可用领地方块总数。
+  MustHoldModificationToolForThat: 你必须手持金铲子才能执行此操作。
+  StandInClaimToResize: 请站在你要调整大小的领地内。
+  ClaimsExtendToSky: 领地始终延伸到最大建筑高度。
+  ClaimsAutoExtendDownward: 当你在地面下方放置方块时，领地将自动向地下延伸。
+  MinimumRadius: 最小半径为 {0}。
+  RadiusRequiresGoldenShovel: 指定半径时你必须手持金铲子。
+  ClaimTooSmallForActiveBlocks: 这个领地不够大，无法支持任何活动方块类型（漏斗、刷怪笼、信标……）。请先扩大领地。
+  TooManyActiveBlocksInClaim: 此领地的活动方块类型（漏斗、刷怪笼、信标……）已达到上限。请扩大领地，或先移除其他活动方块。
+  BookAuthor: BigScary
+  BookTitle: 如何认领领地
+  BookLink: '点击：{0}'
+  BookIntro: 认领领地来保护你的物品！点击上面的链接，在 3 分钟或更短时间内学会领地认领。:)
+  BookTools: 我们的领地工具是 {0} 和 {1}。
+  BookDisabledChestClaims: 在此服务器上，放置箱子不会自动认领土地。
+  BookUsefulCommands: "有用的命令："
+  NoProfanity: 请注意你的语言文明。
+  IsIgnoringYou: 该玩家正在忽略你。
+  ConsoleOnlyCommand: 该命令只能从服务器控制台执行。
+  WorldNotFound: 未找到世界。
+  TooMuchIpOverlap: 抱歉，使用你的 IP 地址登录的玩家过多。
+  StandInSubclaim: 你需要站在子领地内才能限制它
+  SubclaimRestricted: 此子领地的权限将不再从父领地继承
+  SubclaimUnrestricted: 此子领地的权限现在将从父领地继承
+  MainClaimSubdivisionInheritDisabled: 此领地中的所有子领地都不会继承权限。
+  MainClaimSubdivisionInheritEnabled: 此领地中的所有子领地将继承权限。
+  NetherPortalTrapDetectionMessage: 你似乎可能卡在了下界传送门中。如果是这种情况，我们将在几秒后救你出来！
+  ClaimHelpHeader: "可用的 /claim 命令："
+  ClaimHelpLegend: <> - 必需，[] - 可选。
+  ClaimHelpEntry: '&e/{0}&7 - &f{1}'
+  ClaimHelpPagination: 输入 /claim help {0} 查看下一页。
+  AClaimHelpHeader: "可用的 /aclaim 命令："
+  AClaimHelpLegend: <> - 必需，[] - 可选。
+  AClaimHelpEntry: '&e/{0}&7 - &f{1}'
+  AClaimHelpPagination: 输入 /aclaim help {0} 查看下一页。
+  CommandNotFound: '未知子命令：{0}'
+  CommandNotImplementedYet: 该命令尚未实现。
+  CommandInvalidMode: '无效模式。有效选项：basic、2d、3d、shaped'
+  RestoreNatureActivate: 准备恢复自然！右键单击一个方块以恢复区域。使用 /basicclaims 退出。
+  RestoreNatureAggressiveActivate: 激进恢复自然模式已激活。右键单击一个方块以恢复区域。使用 /basicclaims 退出。
+  FillModeActive: 填充模式已激活，半径为 {0}。右键单击一个方块以填充区域。使用 /basicclaims 退出。
+  EconomyDisabled: 此服务器上已禁用经济功能。
+  EconomyBuyBlocksConfirmation: 已购买 {0} 个领地方块，花费 {1}。你现在拥有 {2} 个领地方块。
+  EconomySellBlocksConfirmation: 已出售 {0} 个领地方块，获得 {1}。你现在拥有 {2} 个领地方块。
+  EconomyNotEnoughMoney: '你的钱不够。费用：{0}，你的余额：{1}'
+  EconomyNotEnoughBlocks: '你没有足够的领地方块可出售。请求：{0}，可用：{1}'
+  EconomyBuyBlocksUsage: '用法：/buyclaimblocks <数量>'
+  EconomySellBlocksUsage: '用法：/sellclaimblocks <数量>'
+  EconomyInvalidAmount: 请指定一个有效的正数方块数量。
+  EconomyPurchaseCancelled: 购买已取消。
+  EconomyNoVault: 经济支持需要安装 Vault 插件。
+  CommandRequiresPlayer: 此命令只能由玩家使用。
+  PistonExploded: 位于 {0} 的活塞爆炸了，因为它无法进入位于 {1} 的领地
+  ExternalPistonBoundaryViolation: '&6警告：活塞试图将方块推入你在 x：{0} y：{1} z：{2} 的领地！'
+  InternalPistonBoundaryViolation: '&6警告：活塞试图将方块推出你在 x：{0} y：{1} z：{2} 的领地！'
+  ExternalLiquidBoundaryViolation: '&6警告：液体试图流入你在 x：{0} y：{1} z：{2} 的领地！'
+  InternalLiquidBoundaryViolation: '&6警告：液体试图流出你在 x：{0} y：{1} z：{2} 的领地！'
+  BoundaryViolationBurstSummary: '&6警告：在 x：{2} y：{3} z：{4} 附近你的领地有 {0} 次 {1} 违规！'
+  PlaceholderTrustLevelUnclaimed: 未认领
+  PlaceholderTrustLevelOwner: 所有者
+  PlaceholderTrustLevelManager: 管理员
+  PlaceholderTrustLevelBuilder: 建造者
+  PlaceholderTrustLevelAccess: 访问
+  PlaceholderTrustLevelContainer: 容器
+  PlaceholderTrustLevelNeighbor: 邻居
+  PlaceholderTrustLevelUntrusted: 不信任
+  NeighborPermission: 绕过最小距离
+  CreateClaimFailTooClose: "你不能在此处创建领地，因为它离 {0} 的领地太近了。最小距离为 {1} 个方块。"
+  CreateClaimFailTooCloseNoBypass: "你不能在此处创建领地，因为它离另一个领地太近了。最小距离为 {0} 个方块。"
+  MinimumDistance: "领地之间的最小距离：{0} 个方块。"
+  NearbyClaims: "附近领地：{0}"
+  NeighborTrustGranted: "已授予 {0} 邻居信任。他们现在可以绕过你领地的最小距离检查。"
+  NeighborTrustRevoked: "已撤销 {0} 的邻居信任。"
+  NeighborTrustGrantedAll: "已授予 {0} 对你所有领地的邻居信任。"
+  NeighborTrustRevokedAll: "已撤销 {0} 对你所有领地的邻居信任。"
+  NeighborBypassEnabled: "所有玩家现在都可以绕过此领地的最小距离检查。"
+  NeighborBypassDisabled: "此领地现在强制执行最小距离检查。"
+  Subdivisions3DDisabled: 此服务器上已禁用3D子区域。
+  AdminClaims3DDisabled: 此服务器上已禁用3D管理员领地。
+  DistanceCheckEnabled: 距离检查已启用。创建领地时如果太靠近其他领地将会收到警告。
+  DistanceCheckDisabled: 距离检查已禁用。
+  MessagesLoaded: "消息已加载：&a{0}"

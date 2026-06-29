@@ -1,0 +1,309 @@
+# ============================================================
+# GriefPrevention - 日本語メッセージ
+# ============================================================
+# 言語を変更するには、Lang/ フォルダから目的の messages_XX.yml ファイルを
+# GriefPreventionData/ にコピーし、名前を変更します：
+#   plugins/GriefPreventionData/messages.yml
+#
+# プラグインは次の順序でメッセージを読み込みます：
+#   1. messages.yml（カスタマイズまたはロケールファイル）
+#   2. messages_{locale}.yml（設定の GriefPrevention.Locale に基づく）
+#   3. messages_en.yml（フォールバック）
+#
+# 書式：色コードには $ または & を使用します。
+# 改行：メッセージ内では \n を使用します。
+# ============================================================
+
+Messages:
+  RespectingClaims: クレームを尊重するモードになりました。
+  IgnoringClaims: クレームを無視するモードになりました。
+  NoCreativeUnClaim: この土地のクレームを解除できません。このクレームを拡大するか、新しいクレームを作成することのみ可能です。
+  SuccessfulAbandon: クレームを放棄しました。利用可能なクレームブロック：{0}
+  TransferClaimPermission: そのコマンドには管理用クレーム権限が必要です。
+  TransferClaimMissing: ここにはクレームがありません。移行したい管理用クレームの中に立ってください。
+  TransferClaimAdminOnly: 管理用クレームのみをプレイヤーに移行できます。
+  PlayerNotFound2: その名前のプレイヤーは最近ログインしていません。
+  TransferTopLevel: 移行できるのはトップレベルのクレームのみです（サブディビジョンは不可）。サブディビジョンの外に立ってからもう一度試してください。
+  TransferSuccess: クレームを移行しました。
+  ConvertClaimMissing: ここにはクレームがありません。変換したいクレームの中に立ってください。
+  ConvertClaimAlreadyAdmin: このクレームはすでに管理用クレームです。
+  ConvertClaimAlreadyBasic: このクレームはすでに基本クレームです。
+  ConvertClaimAdminSuccess: クレームを管理用クレームに変換しました。
+  ConvertClaimBasicSuccess: 管理用クレームをあなたが所有する基本クレームに変換しました。
+  TrustListNoClaim: 確認したいクレームの中に立ってください。
+  ClearPermsOwnerOnly: クレーム所有者のみがすべての権限をクリアできます。
+  UntrustIndividualAllClaims: '{0} のすべてのクレームへのアクセスを取り消しました。単一のクレームの権限を設定するには、その中に立ってください。'
+  UntrustEveryoneAllClaims: すべてのクレームの権限をクリアしました。単一のクレームの権限を設定するには、その中に立ってください。
+  NoPermissionTrust: ここで権限を管理するための {0} の許可を持っていません。
+  ClearPermissionsOneClaim: このクレームの権限をクリアしました。すべてのクレームの権限を設定するには、クレームの外に立ってください。
+  UntrustIndividualSingleClaim: '{0} のこのクレームへのアクセスを取り消しました。すべてのクレームの権限を設定するには、クレームの外に立ってください。'
+  AdminClaimsMode: 管理用クレームモードが有効です。作成されたクレームは無料で、他の管理者が編集できます。
+  _3DAdminClaimsMode: 3D管理用クレームモードが有効です。作成されたクレームは無料で、高さ制限があり、他の管理者が編集できます。
+  BasicClaimsMode: 基本クレーム作成モードに戻りました。
+  ShapedClaimsMode: 形状クレームモード。未クレームの土地で右クリックしてコーナーを配置するか、クレーム境界から形状編集を開始・拡張します。境界クリックで必要に応じてセグメントマーカーを作成します。/basicclaims で終了します。
+  ShapedClaimsDisabled: このサーバーでは形状クレームは無効です。
+  MergeOverlapConflict: マージできませんでした。完了したマージが他のクレームと重なります。
+  SubdivisionMode: サブディビジョンモード。シャベルを使用して既存のクレーム内にサブディビジョンを作成します。/basicclaims で終了します。
+  SubdivisionMode3D: 3Dサブディビジョンモード。シャベルを使用して既存のクレーム内に3Dサブディビジョンを作成します。/basicclaims で終了します。
+  SubdivisionVideo2: 'サブディビジョンヘルプはこちら：{0}'
+  DeleteClaimMissing: ここにはクレームがありません。
+  DeletionSubdivisionWarning: このクレームにはサブディビジョンが含まれています。本当に削除する場合は、/deleteclaim を再度使用してください。
+  DeleteSuccess: クレームを削除しました。
+  CantDeleteAdminClaim: 管理用クレームを削除する権限がありません。
+  NoAdminClaimsPermission: 管理用クレームを管理する権限がありません。
+  DeleteAllSuccess: '{0} のすべてのクレームを削除しました。'
+  NoDeletePermission: クレームを削除する権限がありません。
+  AllAdminDeleted: すべての管理用クレームを削除しました。
+  AdjustBlocksSuccess: '{0} のボーナスクレームブロックを {1} 調整しました。新しいボーナスブロック総数：{2}。'
+  AdjustBlocksAllSuccess: すべてのオンラインプレイヤーのボーナスクレームブロックを {0} 調整しました。
+  NotTrappedHere: ここで建築できます。自分で脱出してください。
+  RescuePending: 10秒間その場に留まると、テレポートで脱出できます。お待ちください。
+  AbandonClaimMissing: 削除したいクレームの中に立つか、/abandonallclaims を検討してください。
+  NotYourClaim: これはあなたのクレームではありません。
+  DeleteTopLevelClaim: サブディビジョンを削除するには、その中に立ってください。それ以外の場合は、/abandontoplevelclaim を使用してこのクレームとすべてのサブディビジョンを削除してください。
+  AbandonSuccess: クレームを放棄しました。利用可能なクレームブロック：{0}
+  ConfirmAbandonAllClaims: 本当にすべてのクレームを放棄しますか？/abandonallclaims confirm で確認してください。
+  GrantPermissionNoClaim: 権限を付与したいクレームの中に立ってください。
+  GrantPermissionConfirmation: '{0} に {1} {2} の権限を付与しました。'
+  ManageUniversalPermissionsInstruction: すべてのクレームの権限を管理するには、クレームの外に立ってください。
+  ManageOneClaimPermissionsInstruction: 特定のクレームの権限を管理するには、その中に立ってください。
+  CollectivePublic: 一般
+  BuildPermission: 建築
+  ContainersPermission: コンテナと動物へのアクセス
+  AccessPermission: ボタンとレバーの使用
+  PermissionsPermission: 権限の管理
+  LocationCurrentClaim: このクレーム内
+  LocationAllClaims: すべてのクレーム内
+  PvPImmunityStart: インベントリが空の間、他のプレイヤーからの攻撃から保護されています。
+  DonateItemsInstruction: 手に持っているアイテムを寄付するには、チェストをもう一度左クリックしてください。
+  ChestFull: このチェストは満杯です。
+  DonationSuccess: アイテムをチェストに転送しました！
+  PlayerTooCloseForFire2: 他のプレイヤーの近くで火をつけることはできません。
+  TooDeepToClaim: このチェストは地下深すぎて保護できません。移動を検討してください。
+  ChestClaimConfirmation: このチェストは保護されています。
+  AutomaticClaimNotification: このチェストと近くのブロックは破壊や盗難から保護されています。
+  AutomaticClaimOtherClaimTooClose: あなたのチェストのクレームを作成できません。別のクレームが近すぎます！
+  UnprotectedChestWarning: このチェストは保護されていません。金のシャベルを使用して既存のクレームを拡張するか、新しいクレームを作成してください。
+  ThatPlayerPvPImmune: 無防備なプレイヤーを傷つけることはできません。
+  CantFightWhileImmune: PvP保護中は他のプレイヤーと戦闘できません。
+  NoDamageClaimedEntity: それは {0} の所有物です。
+  ShovelBasicClaimMode: シャベルが基本クレームモードに戻りました。
+  RemainingBlocks: 最大 {0} ブロックまでクレームできます。
+  CreativeBasicsVideo2: '土地クレームヘルプはこちら：{0}'
+  SurvivalBasicsVideo2: '土地クレームヘルプはこちら：{0}'
+  TrappedChatKeyword: 閉じ込め;トラップ;抜け出せない
+  TrappedInstructions: 誰かのクレームに閉じ込められましたか？/trapped コマンドを試してください。
+  PvPNoDrop: PvP戦闘中はアイテムをドロップできません。
+  PvPNoContainers: PvP戦闘中はコンテナにアクセスできません。
+  PvPImmunityEnd: 他のプレイヤーと戦闘できるようになりました。
+  NoBedPermission: '{0} はここで眠る許可を与えていません。'
+  NoWildernessBuckets: バケツの中身を捨てられるのは、自分のクレーム内または地下のみです。
+  NoLavaNearOtherPlayer: '{0} の近くに溶岩を配置できません。'
+  TooFarAway: 距離が遠すぎます。
+  BlockNotClaimed: 誰もこのブロックをクレームしていません。
+  BlockClaimed: そのブロックは {0} がクレームしています。
+  NoCreateClaimPermission: 土地をクレームする権限がありません。
+  ResizeClaimTooNarrow: この新しいサイズは小さすぎます。クレームは少なくとも {0} ブロックの幅が必要です。
+  ResizeNeedMoreBlocks: このサイズに十分なブロックがありません。さらに {0} ブロック必要です。
+  ClaimResizeSuccess: クレームのサイズを変更しました。利用可能なクレームブロック：{0}
+  ResizeFailOverlap: 近くの別のクレームと重なるため、ここでサイズを変更できません。
+  ResizeStart: クレームのサイズを変更中。このコーナーの新しい位置で再度シャベルを使ってください。
+  ClaimSelected: 'クレームを選択しました。シャベルをもう一度使用して別のコーナーを設定し、サイズを変更してください。\n注：このクレームが選択されている間、/claim abandon を実行できます。'
+  ClaimSelectedTopLevel: 'クレームを選択しました。シャベルをもう一度使用して別のコーナーを設定し、サイズを変更してください。\n注：このクレームが選択されている間、/claim abandon toplevel を実行できます。'
+  SubdivisionSelected: サブディビジョンを選択しました。この特定のエリアの権限を管理できます。\n&6次のようなコマンドを実行できます：\n&7- &f/trust&7、&f/untrust\n&7- &f/containertrust&7、&f/accesstrust\n&7- &f/abandonclaim\n&6または、右クリックしてサイズを変更することもできます。
+  ResizeFailOverlapSubdivision: 別のサブディビジョンと重なるため、ここにサブディビジョンを作成できません。/abandonclaim で削除するか、コーナーでシャベルを使用してサイズを変更してください。
+  SubdivisionStart: サブディビジョンのコーナーを設定しました！新しいサブディビジョンの反対側のコーナーの位置でシャベルを使用してください。
+  CreateSubdivisionOverlap: 選択した領域が別のサブディビジョンと重なっています。
+  InnerSubdivisionTooClose: このサブディビジョンは、すべての辺で親クレームの内側に少なくとも1ブロック離れている必要があります。
+  SubdivisionSuccess: サブディビジョンを作成しました！/trust を使用して友達と共有しましょう。
+  CreateClaimFailOverlap: 別のあなたのクレームと重なるため、ここにクレームを作成できません。/abandonclaim で削除するか、コーナーでシャベルを使用してサイズを変更してください。
+  CreateClaimFailOverlapOtherPlayer: '{0} のクレームと重なるため、ここにクレームを作成できません。'
+  ClaimsDisabledWorld: このワールドでは土地クレームは無効です。
+  ClaimStart: クレームのコーナーを設定しました！反対側のコーナーで再度シャベルを使用して、長方形の土地をクレームします。キャンセルするには、シャベルをしまってください。
+  NewClaimTooNarrow: このクレームは小さすぎます。クレームは少なくとも {0} ブロックの幅が必要です。
+  ResizeClaimInsufficientArea: このクレームは小さすぎます。クレームは少なくとも {0} の総クレームブロックを使用する必要があります。
+  CreateClaimInsufficientBlocks: そのエリア全体をクレームするのに十分なブロックがありません。さらに {0} ブロック必要です。
+  AbandonClaimAdvertisement: 別のクレームを削除してブロックを解放するには、/abandonclaim を使用してください。
+  CreateClaimFailOverlapShort: 選択した領域が既存のクレームと重なっています。
+  CreateClaimSuccess: クレームを作成しました！/trust を使用して友達と共有しましょう。
+  RescueAbortedMoved: 移動しました！救助をキャンセルしました。
+  OnlyOwnersModifyClaims: '{0} のみがこのクレームを変更できます。'
+  NoBuildPvP: PvP戦闘中はクレーム内で建築できません。
+  NoBuildPermission: ここで建築する {0} の許可を持っていません。
+  NoAccessPermission: それを使用する {0} の許可を持っていません。
+  NoContainersPermission: それを使用する {0} の許可を持っていません。
+  OwnerNameForAdminClaims: 管理者
+  UnknownPlayerName: 誰か
+  ClaimTooSmallForEntities: このクレームはそれに対応するのに十分な大きさではありません。拡大してみてください。
+  TooManyEntitiesInClaim: このクレームにはすでにエンティティが多すぎます。クレームを拡大するか、動物、モンスター、絵画、またはトロッコを一部削除してください。
+  YouHaveNoClaims: 土地クレームがありません。
+  AutoBanNotify: '{0}({1}) を自動BANしました。詳細はログを参照してください。'
+  AdjustGroupBlocksSuccess: '{0} 権限を持つプレイヤーのボーナスクレームブロックを {1} 調整しました。新しい総数：{2}。'
+  InvalidPermissionID: プレイヤー名を指定するか、[括弧] で権限を指定してください。
+  HowToClaimRegex: (^|.*[\W])(方法|やり方|どうやって)[\W].*[\W](claim|保護|所有権|テリトリー|クレーム)([\W].*|$)
+  NoBuildOutsideClaims: まず土地をクレームしない限り、ここで建築できません。
+  PlayerOfflineTime: ' 最終ログイン：{0} 日前。'
+  BuildingOutsideClaims: 他のプレイヤーもここで建築できます。あなたの作品を守るために土地クレームを作成しましょう！
+  TrappedWontWorkHere: 申し訳ございませんが、テレポート先の安全な場所が見つかりませんでした。管理者に連絡してください。
+  CommandBannedInPvP: PvP戦闘中はそのコマンドを使用できません。
+  NoTeleportPvPCombat: 他のプレイヤーと戦闘中はテレポートできません。
+  NoTNTDamageAboveSeaLevel: '警告：TNTは海抜より上のブロックを破壊しません。'
+  NoTNTDamageClaims: '警告：TNTはクレームされたブロックを破壊しません。'
+  IgnoreClaimsAdvertisement: 上書きするには、/ignoreclaims を使用してください。
+  NoPermissionForCommand: それを行う権限がありません。
+  ClaimsListNoPermission: 他のプレイヤーの土地クレーム情報を取得する権限がありません。
+  ExplosivesDisabled: このクレームは爆発から保護されるようになりました。/claimexplosions を再度使用すると無効になります。
+  ExplosivesEnabled: このクレームは爆発に対して脆弱になりました。/claimexplosions を再度使用すると保護が再有効化されます。
+  WitherExplosionsDisabled: このクレームはウィザー爆発から保護されるようになりました。/witherexplosions を再度使用すると保護が無効になります。
+  WitherExplosionsEnabled: このクレームはウィザー爆発に対して脆弱になりました。/witherexplosions を再度使用すると保護が再有効化されます。
+  ClaimExplosivesAdvertisement: 爆発物がこの土地クレーム内のブロックを破壊できるようにするには、/claimexplosions を使用してください。
+  PlayerInPvPSafeZone: そのプレイヤーはPvPセーフゾーンにいます。
+  NoPistonsOutsideClaims: '警告：ピストンは土地クレーム外にブロックを移動できません。'
+  SoftMuted: '{0} をソフトミュートしました。'
+  UnSoftMuted: '{0} のソフトミュートを解除しました。'
+  DropUnlockAdvertisement: 他のプレイヤーは、あなたが /unlockdrops を実行しない限り、あなたのドロップアイテムを拾えません。
+  PickupBlockedExplanation: '{0} が /unlockdrops を実行しない限り、これを拾うことはできません。'
+  DropUnlockConfirmation: ドロップをアンロックしました。他のプレイヤーが拾えるようになりました（再び死亡するまで）。
+  DropLockConfirmation: ドロップをロックしました。他のプレイヤーはもう拾えません。
+  DropUnlockOthersConfirmation: '{0} のドロップをアンロックしました。'
+  AdvertiseACandACB: /acb を使用してクレームブロックを追加するか、/adminclaims を使用して無料の管理用クレームを作成できます。
+  AdvertiseAdminClaims: /adminclaims を使用して管理用土地クレームを作成することもできます。他の管理者と共有されます。
+  AdvertiseACB: /acb を使用してクレームブロックを追加できます。
+  NotYourPet: それは /givepet であなたに譲渡されるまで、{0} の所有物です。
+  PetGiveawayConfirmation: ペットを譲渡しました。
+  PetTransferCancellation: ペットの贈与をキャンセルしました。
+  ReadyToTransferPet: 譲渡準備完了！譲渡したいペットを右クリックするか、/givepet cancel でキャンセルします。
+  AvoidGriefClaimLand: 荒らしを防ぎましょう！土地をクレームすれば、荒らしから保護されます。
+  BecomeMayor: 土地クレームを分割して、市長になりましょう！
+  ClaimCreationFailedOverClaimCountLimit: 土地クレームの上限に達しました。新しいクレームを作成する前に、/abandonclaim を使用して1つ削除してください。
+  CreateClaimFailOverlapRegion: ここで建築する許可がないため、このすべてをクレームできません。
+  ResizeFailOverlapRegion: そこに建築する権限がないため、そのエリアをクレームできません。
+  ResizeFailSubdivision: 'クレームのサイズを変更できません：新しい境界が既存のサブディビジョンを除外します。最初にサブディビジョンを削除または移動してください。'
+  ResizeFailSubdivisionExceedsParent: 'サイズ変更できませんでした：サブディビジョンがすべての辺で親の範囲内に収まらず、メインクレームに競合ゾーンが発生しました。'
+  ShapedClaimInteriorClick: ここで形状クレームを開始できません。新しい形状クレームを開始するか、現在のクレームの境界にセグメントを作成して拡張してください。
+  ShowNearbyClaims: '{0} 個の土地クレームが見つかりました。'
+  NoChatUntilMove: 申し訳ありませんが、チャットするにはもう少し移動する必要があります。ここにはスパムボットが多いのです。:)
+  SetClaimBlocksSuccess: 累積クレームブロックを更新しました。
+  IgnoreConfirmation: そのプレイヤーからのチャットメッセージを無視するようになりました。
+  UnIgnoreConfirmation: そのプレイヤーからのチャットメッセージを無視しなくなりました。
+  NotIgnoringPlayer: そのプレイヤーを無視していません。
+  SeparateConfirmation: それらのプレイヤーはチャットで互いを無視するようになります。
+  UnSeparateConfirmation: それらのプレイヤーはチャットで互いを無視しなくなります。
+  NotIgnoringAnyone: 誰も無視していません。
+  TrustListHeader: "ここでの明示的な権限："
+  Manage: 管理
+  Build: 建築
+  Containers: コンテナ
+  Access: アクセス
+  Neighbor: 隣接者
+  HasSubclaimRestriction: このサブクレームは親クレームから権限を継承しません
+  StartBlockMath: '{0} ブロック（プレイ時間由来）+ {1}（ボーナス）= 合計 {2}'
+  ClaimsListHeader: "クレーム一覧："
+  ContinueBlockMath: '（-{0} ブロック）'
+  EndBlockMath: ' = 使用可能な残り {0} ブロック'
+  ClaimExpiryHeader: '{0} のクレーム有効期限：'
+  ClaimExpiryLocation: '場所：{0}'
+  ClaimExpiryOwnerStatus: '所有者：{0}（{1}）'
+  ClaimExpiryOwnerOnline: オンライン
+  ClaimExpiryOwnerOffline: オフライン
+  ClaimExpiryLastActive: '最終ログイン：{0} 前'
+  ClaimExpiryLastActiveUnknown: '最終ログイン：不明'
+  ClaimExpiryClaimModified: '最終変更：{0}'
+  ClaimExpiryExpiresIn: '期限切れまで：{0}'
+  ClaimExpiryExpired: '{0} 前に期限切れ'
+  ClaimExpiryExempt: 'このクレームは期限切れの対象外です：{0}'
+  ClaimExpiryNeverExpires: このクレームは期限切れになりません。
+  ClaimExpiryChestClaim: 'チェストクレームの期限切れ：{0}'
+  ClaimExpiryNoClaim: クレームの中に立っていません。
+  ClaimExpiryPlayerHeading: '{0} のクレーム有効期限：'
+  ClaimExpiryPlayerNoClaims: '{0} にはクレームがありません。'
+  ClaimExpiryPlayerNotFound: プレイヤー {0} が見つかりませんでした。
+  ClaimExpiryUnknown: 不明
+  ClaimExpiryUsage: /checkclaimexpiry [プレイヤー]
+  ClaimExpiryListEntry: '- {0}：{1}'
+  NoClaimDuringPvP: PvP戦闘中は土地をクレームできません。
+  UntrustAllOwnerOnly: クレーム所有者のみがすべての権限をクリアできます。
+  ManagersDontUntrustManagers: クレーム所有者のみがマネージャーを降格できます。
+  PlayerNotIgnorable: そのプレイヤーを無視できません。
+  NoEnoughBlocksForChestClaim: 利用可能なクレームブロックがないため、自動的な土地クレームは作成されませんでした。/claimslist を使用して利用可能なクレームブロックの総数を確認できます。
+  MustHoldModificationToolForThat: それを行うには金のシャベルを持っている必要があります。
+  StandInClaimToResize: サイズ変更したい土地クレームの中に立ってください。
+  ClaimsExtendToSky: 土地クレームは常に最大建築高さまで延長されます。
+  ClaimsAutoExtendDownward: 土地クレームは、その下にブロックを配置すると自動的に地下深くまで延長されます。
+  MinimumRadius: 最小半径は {0} です。
+  RadiusRequiresGoldenShovel: 半径を指定するときは金のシャベルを持っている必要があります。
+  ClaimTooSmallForActiveBlocks: このクレームはアクティブブロック（ホッパー、スポナー、ビーコンなど）をサポートするのに十分な大きさではありません。先にクレームを拡大してください。
+  TooManyActiveBlocksInClaim: このクレームはアクティブブロック（ホッパー、スポナー、ビーコンなど）の上限に達しています。クレームを拡大するか、他のアクティブブロックを先に削除してください。
+  BookAuthor: BigScary
+  BookTitle: 土地のクレーム方法
+  BookLink: 'クリック：{0}'
+  BookIntro: 土地をクレームして持ち物を守りましょう！上のリンクをクリックして、3分以内で土地クレームを学べます。:)
+  BookTools: クレームツールは {0} と {1} です。
+  BookDisabledChestClaims: このサーバーでは、チェストを設置しても土地は自動クレームされません。
+  BookUsefulCommands: "便利なコマンド："
+  NoProfanity: 言葉遣いにご注意ください。
+  IsIgnoringYou: そのプレイヤーはあなたを無視しています。
+  ConsoleOnlyCommand: そのコマンドはサーバーコンソールからのみ実行できます。
+  WorldNotFound: ワールドが見つかりません。
+  TooMuchIpOverlap: 申し訳ありませんが、あなたのIPアドレスでログインしているプレイヤーが多すぎます。
+  StandInSubclaim: 制限するにはサブクレームの中に立つ必要があります
+  SubclaimRestricted: このサブクレームの権限は親クレームから継承されなくなります
+  SubclaimUnrestricted: このサブクレームの権限は親クレームから継承されるようになります
+  MainClaimSubdivisionInheritDisabled: このクレーム内のすべてのサブディビジョンは権限を継承しません。
+  MainClaimSubdivisionInheritEnabled: このクレーム内のすべてのサブディビジョンは権限を継承します。
+  NetherPortalTrapDetectionMessage: ネザーポータルの中に閉じ込められている可能性があります。その場合は、数秒後に救出します！
+  ClaimHelpHeader: "利用可能な /claim コマンド："
+  ClaimHelpLegend: <> - 必須、[] - オプション。
+  ClaimHelpEntry: '&e/{0}&7 - &f{1}'
+  ClaimHelpPagination: 次のページを表示するには /claim help {0} と入力してください。
+  AClaimHelpHeader: "利用可能な /aclaim コマンド："
+  AClaimHelpLegend: <> - 必須、[] - オプション。
+  AClaimHelpEntry: '&e/{0}&7 - &f{1}'
+  AClaimHelpPagination: 次のページを表示するには /aclaim help {0} と入力してください。
+  CommandNotFound: '未知のサブコマンド：{0}'
+  CommandNotImplementedYet: このコマンドはまだ実装されていません。
+  CommandInvalidMode: '無効なモードです。有効なオプション：basic、2d、3d、shaped'
+  RestoreNatureActivate: 自然復元の準備完了！ブロックを右クリックしてエリアを復元します。/basicclaims で終了します。
+  RestoreNatureAggressiveActivate: 積極的自然復元モードが有効になりました。ブロックを右クリックしてエリアを復元します。/basicclaims で終了します。
+  FillModeActive: 半径 {0} でフィルモードが有効になりました。ブロックを右クリックしてエリアを埋めます。/basicclaims で終了します。
+  EconomyDisabled: このサーバーでは経済機能は無効です。
+  EconomyBuyBlocksConfirmation: '{0} 個のクレームブロックを {1} で購入しました。現在 {2} 個のクレームブロックがあります。'
+  EconomySellBlocksConfirmation: '{0} 個のクレームブロックを {1} で売却しました。現在 {2} 個のクレームブロックがあります。'
+  EconomyNotEnoughMoney: '十分なお金がありません。費用：{0}、あなたの残高：{1}'
+  EconomyNotEnoughBlocks: '売却するのに十分なクレームブロックがありません。要求：{0}、利用可能：{1}'
+  EconomyBuyBlocksUsage: '使用方法：/buyclaimblocks <数量>'
+  EconomySellBlocksUsage: '使用方法：/sellclaimblocks <数量>'
+  EconomyInvalidAmount: 有効な正のブロック数を指定してください。
+  EconomyPurchaseCancelled: 購入をキャンセルしました。
+  EconomyNoVault: 経済機能を使用するには Vault プラグインのインストールが必要です。
+  CommandRequiresPlayer: このコマンドはプレイヤーのみ使用できます。
+  PistonExploded: '{0} のピストンが、{1} のクレームに入れなかったため爆発しました'
+  ExternalPistonBoundaryViolation: '&6警告：ピストンが x：{0} y：{1} z：{2} であなたのクレームにブロックを押し込もうとしました！'
+  InternalPistonBoundaryViolation: '&6警告：ピストンが x：{0} y：{1} z：{2} であなたのクレーム外にブロックを押し出そうとしました！'
+  ExternalLiquidBoundaryViolation: '&6警告：液体が x：{0} y：{1} z：{2} であなたのクレームに流入しようとしました！'
+  InternalLiquidBoundaryViolation: '&6警告：液体が x：{0} y：{1} z：{2} であなたのクレームから流出しようとしました！'
+  BoundaryViolationBurstSummary: '&6警告：x：{2} y：{3} z：{4} 付近のあなたのクレームで {0} 回の {1} 違反！'
+  PlaceholderTrustLevelUnclaimed: 未クレーム
+  PlaceholderTrustLevelOwner: 所有者
+  PlaceholderTrustLevelManager: マネージャー
+  PlaceholderTrustLevelBuilder: 建築者
+  PlaceholderTrustLevelAccess: アクセス
+  PlaceholderTrustLevelContainer: コンテナ
+  PlaceholderTrustLevelNeighbor: 隣接者
+  PlaceholderTrustLevelUntrusted: 信頼なし
+  NeighborPermission: 最小距離のバイパス
+  CreateClaimFailTooClose: "{0} のクレームに近すぎるため、ここにクレームを作成できません。最小距離は {1} ブロックです。"
+  CreateClaimFailTooCloseNoBypass: "別のクレームに近すぎるため、ここにクレームを作成できません。最小距離は {0} ブロックです。"
+  MinimumDistance: "クレーム間の最小距離：{0} ブロック。"
+  NearbyClaims: "近くのクレーム：{0}"
+  NeighborTrustGranted: "{0} に隣接者信頼を付与しました。このプレイヤーはあなたのクレームの最小距離チェックをバイパスできるようになりました。"
+  NeighborTrustRevoked: "{0} の隣接者信頼を取り消しました。"
+  NeighborTrustGrantedAll: "{0} にすべてのクレームの隣接者信頼を付与しました。"
+  NeighborTrustRevokedAll: "{0} の隣接者信頼をすべてのクレームから取り消しました。"
+  NeighborBypassEnabled: "すべてのプレイヤーがこのクレームの最小距離チェックをバイパスできるようになりました。"
+  Subdivisions3DDisabled: このサーバーでは3Dサブディビジョンは無効です。
+  AdminClaims3DDisabled: このサーバーでは3D管理用クレームは無効です。
+  DistanceCheckEnabled: 距離チェックが有効になりました。他のクレームに近すぎる場所にクレームを作成しようとすると警告されます。
+  DistanceCheckDisabled: 距離チェックが無効になりました。
+  NeighborBypassDisabled: "このクレームで最小距離チェックが適用されるようになりました。"
+  MessagesLoaded: "メッセージを読み込みました：&a{0}"

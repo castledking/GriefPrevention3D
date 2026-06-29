@@ -84,6 +84,15 @@ public final class TabCompletions
      */
     public static @NotNull List<String> visiblePlayers(@Nullable CommandSender sender, @NotNull String[] args)
     {
+        // When Allium + PartyManager is present, use its tab completion list
+        // (which excludes genuinely vanished players but includes distance-hidden ones).
+        if (sender instanceof Player) {
+            List<String> alliumCompletions = queryAlliumCompletions((Player) sender, args);
+            if (alliumCompletions != null) {
+                return alliumCompletions;
+            }
+        }
+
         // Bukkit returns a view of the player list. So that Craftbukkit doesn't have to hack around type limitations,
         // this is actually a view of the player implementation, represented via Bukkit as a generic extending Player.
         // Unfortunately, this leads to our own type limitations. We can work around those by converting to an array,
@@ -93,6 +102,43 @@ public final class TabCompletions
         // Require sender to be able to see a player to complete their name.
         Predicate<Player> canSee = sender instanceof Player ? ((Player) sender)::canSee : null;
         return complete(onlinePlayers, Player::getName, canSee, args);
+    }
+
+    /**
+     * Fires an AlliumTabCompletionsEvent via reflection. If Allium's PartyManager is active
+     * and populates the result, returns the completions list. Otherwise returns null.
+     */
+    private static @Nullable List<String> queryAlliumCompletions(@NotNull Player sender, @NotNull String[] args)
+    {
+        try
+        {
+            org.bukkit.plugin.Plugin allium = Bukkit.getPluginManager().getPlugin("Allium");
+            if (allium == null || !allium.isEnabled()) return null;
+
+            Class<?> eventClass = Class.forName("codes.castled.allium.events.AlliumTabCompletionsEvent");
+            Object event = eventClass.getConstructor(Player.class).newInstance(sender);
+
+            Bukkit.getPluginManager().callEvent((org.bukkit.event.Event) event);
+
+            @SuppressWarnings("unchecked")
+            List<String> completions = (List<String>) eventClass.getMethod("getCompletions").invoke(event);
+            if (completions == null) return null;
+
+            // Filter completions by the typed prefix
+            String prefix = asPrefix(args);
+            List<String> filtered = new ArrayList<>();
+            for (String name : completions) {
+                if (prefix.isEmpty() || StringUtil.startsWithIgnoreCase(name, prefix)) {
+                    filtered.add(name);
+                }
+            }
+            filtered.sort(String.CASE_INSENSITIVE_ORDER);
+            return filtered;
+        }
+        catch (Exception e)
+        {
+            return null;
+        }
     }
 
     /**

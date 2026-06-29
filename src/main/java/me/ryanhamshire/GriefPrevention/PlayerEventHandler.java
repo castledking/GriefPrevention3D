@@ -2585,10 +2585,15 @@ public class PlayerEventHandler implements Listener {
                 Supplier<String> noEditReason = claim.checkPermission(player, ClaimPermission.Edit, event, () ->
                     instance.dataStore.getMessage(Messages.CreateClaimFailOverlapOtherPlayer, ownerName)
                 );
-                if (noEditReason == null) {
+                boolean isSubdivisionMode =
+                    playerData.shovelMode == ShovelMode.Subdivide || playerData.shovelMode == ShovelMode.Subdivide3D;
+                boolean canManage =
+                    isSubdivisionMode && claim.checkPermission(player, ClaimPermission.Manage, null) == null;
+                if (noEditReason == null || canManage) {
                     // Shift+right-click on a top-level shaped claim edge (basic mode): ephemeral segment selection for
                     // later expansion in shaped mode. Requires AllowShapedClaims; corners use normal resize below.
                     if (
+                        noEditReason == null &&
                         playerData.shovelMode == ShovelMode.Basic &&
                         player.isSneaking() &&
                         instance.config_claims_allowShapedClaims &&
@@ -2599,11 +2604,10 @@ public class PlayerEventHandler implements Listener {
 
                     // if he clicked on a corner, start resizing it (unless sneaking or in shaped mode)
                     boolean isCorner = isCornerMatch(claim, clickedBlock);
-                    if (isCorner && !player.isSneaking() && playerData.shovelMode != ShovelMode.Shaped) {
+                    if (noEditReason == null && isCorner && !player.isSneaking() && playerData.shovelMode != ShovelMode.Shaped) {
                         startClaimResizeSelection(player, playerData, claim, clickedBlock);
                     }
-                    // if he didn't click on a corner and is in subdivision mode, he's creating a
-                    // new subdivision
+                    // if he's in subdivision mode, he's creating a new subdivision
                     else if (
                         playerData.shovelMode == ShovelMode.Subdivide || playerData.shovelMode == ShovelMode.Subdivide3D
                     ) {

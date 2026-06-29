@@ -1,0 +1,309 @@
+# ============================================================
+# GriefPrevention - Komunikaty w języku polskim
+# ============================================================
+# Aby zmienić język, skopiuj odpowiedni plik messages_XX.yml
+# z folderu Lang/ do GriefPreventionData/ i zmień jego nazwę:
+#   plugins/GriefPreventionData/messages.yml
+#
+# Wtyczka ładuje komunikaty w następującej kolejności:
+#   1. messages.yml (twój spersonalizowany plik językowy)
+#   2. messages_{locale}.yml (zgodnie z GriefPrevention.Locale w config)
+#   3. messages_en.yml (zapasowy)
+#
+# Format: użyj $ lub & dla kodów kolorów.
+# Nowe linie: użyj \n w komunikatach.
+# ============================================================
+
+Messages:
+  RespectingClaims: Teraz szanujesz cudze tereny.
+  IgnoringClaims: Teraz ignorujesz cudze tereny.
+  NoCreativeUnClaim: Nie możesz odbezpieczyć tego terenu. Możesz jedynie powiększyć ten teren lub utworzyć dodatkowe.
+  SuccessfulAbandon: Tereny porzucone. Posiadasz teraz {0} dostępnych bloków terenu.
+  TransferClaimPermission: Ta komenda wymaga uprawnienia do zarządzania terenami administracyjnymi.
+  TransferClaimMissing: Nie ma tu żadnego terenu. Stań w terenie administracyjnym, który chcesz przenieść.
+  TransferClaimAdminOnly: Tylko tereny administracyjne mogą być przenoszone na gracza.
+  PlayerNotFound2: Żaden gracz o tej nazwie nie logował się ostatnio.
+  TransferTopLevel: Tylko tereny główne (nie podziały) mogą być przenoszone. Stań poza podziałem i spróbuj ponownie.
+  TransferSuccess: Teren przeniesiony.
+  ConvertClaimMissing: Nie ma tu żadnego terenu. Stań w terenie, który chcesz przekonwertować.
+  ConvertClaimAlreadyAdmin: Ten teren jest już terenem administracyjnym.
+  ConvertClaimAlreadyBasic: Ten teren jest już podstawowym terenem.
+  ConvertClaimAdminSuccess: Teren przekonwertowany na administracyjny.
+  ConvertClaimBasicSuccess: Teren administracyjny przekonwertowany na podstawowy, który posiadasz.
+  TrustListNoClaim: Stań w terenie, który cię interesuje.
+  ClearPermsOwnerOnly: Tylko właściciel terenu może wyczyścić wszystkie uprawnienia.
+  UntrustIndividualAllClaims: Odebrano dostępu {0} do WSZYSTKICH twoich terenów. Aby ustawić uprawnienia dla pojedynczego terenu, stań w nim.
+  UntrustEveryoneAllClaims: Wyczyszczono uprawnienia we WSZYSTKICH twoich terenach. Aby ustawić uprawnienia dla pojedynczego terenu, stań w nim.
+  NoPermissionTrust: Nie masz uprawnień od {0} do zarządzania tutaj uprawnieniami.
+  ClearPermissionsOneClaim: Wyczyszczono uprawnienia w tym terenie. Aby ustawić uprawnienia dla WSZYSTKICH twoich terenów, stań poza nimi.
+  UntrustIndividualSingleClaim: Odebrano dostęp {0} do tego terenu. Aby ustawić uprawnienia dla WSZYSTKICH twoich terenów, stań poza nimi.
+  AdminClaimsMode: Tryb terenów administracyjnych aktywny. Wszelkie tworzone tereny będą darmowe i edytowalne przez innych administratorów.
+  _3DAdminClaimsMode: Tryb terenów administracyjnych 3D aktywny. Tworzone tereny będą darmowe, z limitem wysokości i edytowalne przez innych administratorów.
+  BasicClaimsMode: Powrócono do podstawowego trybu tworzenia terenów.
+  ShapedClaimsMode: Tryb terenu o dowolnym kształcie. Kliknij prawym, aby umieścić narożniki na niezagospodarowanym terenie lub rozpocząć i rozszerzyć edycje kształtu z granic terenu. Kliknięcia na granicach tworzą znaczniki segmentów w razie potrzeby. Użyj /basicclaims, aby wyjść.
+  ShapedClaimsDisabled: Tereny o dowolnym kształcie są wyłączone na tym serwerze.
+  MergeOverlapConflict: Nie można połączyć; scalony teren nachodziłby na inne tereny.
+  SubdivisionMode: Tryb podziału. Użyj łopaty, aby tworzyć podziały w istniejących terenach. Użyj /basicclaims, aby wyjść.
+  SubdivisionMode3D: Tryb podziału 3D. Użyj łopaty, aby tworzyć podziały 3D w istniejących terenach. Użyj /basicclaims, aby wyjść.
+  SubdivisionVideo2: 'Kliknij po pomoc dotyczącą podziałów: {0}'
+  DeleteClaimMissing: Nie ma tu żadnego terenu.
+  DeletionSubdivisionWarning: Ten teren zawiera podziały. Jeśli na pewno chcesz go usunąć, użyj /deleteclaim ponownie.
+  DeleteSuccess: Teren usunięty.
+  CantDeleteAdminClaim: Nie masz uprawnień do usuwania terenów administracyjnych.
+  NoAdminClaimsPermission: Nie masz uprawnień do zarządzania terenami administracyjnymi.
+  DeleteAllSuccess: Usunięto wszystkie tereny {0}.
+  NoDeletePermission: Nie masz uprawnień do usuwania terenów.
+  AllAdminDeleted: Usunięto wszystkie tereny administracyjne.
+  AdjustBlocksSuccess: 'Dostosowano dodatkowe bloki terenu {0} o {1}. Nowa suma dodatkowych bloków: {2}.'
+  AdjustBlocksAllSuccess: Dostosowano dodatkowe bloki terenu wszystkich graczy online o {0}.
+  NotTrappedHere: Możesz tu budować. Uratuj się sam.
+  RescuePending: Jeśli pozostaniesz nieruchomo przez 10 sekund, zostaniesz teleportowany. Proszę czekaj.
+  AbandonClaimMissing: Stań w terenie, który chcesz usunąć, lub rozważ /abandonallclaims.
+  NotYourClaim: To nie jest twój teren.
+  DeleteTopLevelClaim: Aby usunąć podział, stań w nim. W przeciwnym razie użyj /abandontoplevelclaim, aby usunąć ten teren i wszystkie jego podziały.
+  AbandonSuccess: Teren porzucony. Posiadasz teraz {0} dostępnych bloków terenu.
+  ConfirmAbandonAllClaims: Czy na pewno chcesz porzucić WSZYSTKIE swoje tereny? Potwierdź komendą /abandonallclaims confirm
+  GrantPermissionNoClaim: Stań w terenie, w którym chcesz nadać uprawnienia.
+  GrantPermissionConfirmation: Nadano {0} uprawnienie do {1} {2}.
+  ManageUniversalPermissionsInstruction: Aby zarządzać uprawnieniami dla WSZYSTKICH swoich terenów, stań poza nimi.
+  ManageOneClaimPermissionsInstruction: Aby zarządzać uprawnieniami dla konkretnego terenu, stań w nim.
+  CollectivePublic: wszyscy
+  BuildPermission: budowanie
+  ContainersPermission: dostęp do skrzyń i zwierząt
+  AccessPermission: używanie przycisków i dźwigni
+  PermissionsPermission: zarządzanie uprawnieniami
+  LocationCurrentClaim: w tym terenie
+  LocationAllClaims: we wszystkich twoich terenach
+  PvPImmunityStart: Jesteś chroniony przed atakami innych graczy, dopóki twój ekwipunek jest pusty.
+  DonateItemsInstruction: Aby oddać przedmioty trzymane w ręce, kliknij lewym przyciskiem skrzynię ponownie.
+  ChestFull: Ta skrzynia jest pełna.
+  DonationSuccess: Przedmioty przekazane do skrzyni!
+  PlayerTooCloseForFire2: Nie możesz rozpalać ognia tak blisko innego gracza.
+  TooDeepToClaim: Ta skrzynia nie może być chroniona, ponieważ jest zbyt głęboko pod ziemią. Rozważ przeniesienie jej.
+  ChestClaimConfirmation: Ta skrzynia jest chroniona.
+  AutomaticClaimNotification: Ta skrzynia i pobliskie bloki są chronione przed zniszczeniem i kradzieżą.
+  AutomaticClaimOtherClaimTooClose: 'Nie można utworzyć terenu dla twojej skrzyni: inny teren jest zbyt blisko!'
+  UnprotectedChestWarning: Ta skrzynia NIE jest chroniona. Rozważ użycie złotej łopaty, aby powiększyć istniejący teren lub utworzyć nowy.
+  ThatPlayerPvPImmune: Nie możesz ranić bezbronnych graczy.
+  CantFightWhileImmune: Nie możesz walczyć z kimś, gdy jesteś chroniony przed PvP.
+  NoDamageClaimedEntity: To należy do {0}.
+  ShovelBasicClaimMode: Łopata wróciła do podstawowego trybu terenów.
+  RemainingBlocks: Możesz chronić do {0} dodatkowych bloków.
+  CreativeBasicsVideo2: 'Kliknij po pomoc dotyczącą ochrony terenu: {0}'
+  SurvivalBasicsVideo2: 'Kliknij po pomoc dotyczącą ochrony terenu: {0}'
+  TrappedChatKeyword: uwięziony;utknięty;zablokowany
+  TrappedInstructions: Czy utknąłeś w cudzym terenie? Wypróbuj komendę /trapped.
+  PvPNoDrop: Nie możesz wyrzucać przedmiotów podczas walki PvP.
+  PvPNoContainers: Nie możesz otwierać skrzyń podczas walki PvP.
+  PvPImmunityEnd: Teraz możesz walczyć z innymi graczami.
+  NoBedPermission: '{0} nie dał ci pozwolenia na spanie tutaj.'
+  NoWildernessBuckets: Możesz wylewać wiadra tylko w swoim terenie lub pod ziemią.
+  NoLavaNearOtherPlayer: Nie możesz stawiać lawy tak blisko {0}.
+  TooFarAway: To jest zbyt daleko.
+  BlockNotClaimed: Nikt nie oznaczył tego bloku.
+  BlockClaimed: Ten blok został oznaczony przez {0}.
+  NoCreateClaimPermission: Nie masz uprawnień do oznaczania terenu.
+  ResizeClaimTooNarrow: Ten nowy rozmiar byłby za mały. Tereny muszą mieć co najmniej {0} bloków szerokości.
+  ResizeNeedMoreBlocks: Nie masz wystarczającej liczby bloków dla tego rozmiaru. Potrzebujesz {0} więcej.
+  ClaimResizeSuccess: Teren zmieniony. Pozostało {0} dostępnych bloków terenu.
+  ResizeFailOverlap: Nie można zmienić rozmiaru, ponieważ nachodziłoby to na inny pobliskim teren.
+  ResizeStart: Zmiana rozmiaru terenu. Użyj łopaty ponownie w nowym miejscu tego narożnika.
+  ClaimSelected: "Teren zaznaczony. Użyj łopaty ponownie, aby ustawić drugi narożnik i zmienić rozmiar.\nUwaga: Możesz teraz wykonać /claim abandon, gdy ten teren jest zaznaczony."
+  ClaimSelectedTopLevel: "Teren zaznaczony. Użyj łopaty ponownie, aby ustawić drugi narożnik i zmienić rozmiar.\nUwaga: Możesz teraz wykonać /claim abandon toplevel, gdy ten teren jest zaznaczony."
+  SubdivisionSelected: "Podział zaznaczony. Możesz zarządzać uprawnieniami dla tego konkretnego obszaru.\n&6Możesz użyć komend takich jak:\n&7- &f/trust&7, &f/untrust\n&7- &f/containertrust&7, &f/accesstrust\n&7- &f/abandonclaim\n&6lub kliknij prawym przyciskiem ponownie, aby zmienić rozmiar."
+  ResizeFailOverlapSubdivision: Nie możesz utworzyć podziału tutaj, ponieważ nachodziłby na inny podział. Rozważ /abandonclaim, aby go usunąć, lub użyj łopaty na narożniku, aby zmienić jego rozmiar.
+  SubdivisionStart: Narożnik podziału ustawiony! Użyj łopaty w miejscu przeciwległego narożnika tego nowego podziału.
+  CreateSubdivisionOverlap: Zaznaczony obszar nachodzi na inny podział.
+  InnerSubdivisionTooClose: Ten podział musi pozostawać co najmniej jeden blok wewnątrz swojego rodzica ze wszystkich stron.
+  SubdivisionSuccess: Podział utworzony! Użyj /trust, aby udostępnić go znajomym.
+  CreateClaimFailOverlap: Nie możesz utworzyć terenu tutaj, ponieważ nachodziłby na inny twój teren. Użyj /abandonclaim, aby go usunąć, lub użyj łopaty na narożniku, aby zmienić jego rozmiar.
+  CreateClaimFailOverlapOtherPlayer: Nie możesz utworzyć terenu tutaj, ponieważ nachodziłby na teren {0}.
+  ClaimsDisabledWorld: Oznaczanie terenów jest wyłączone w tym świecie.
+  ClaimStart: Narożnik terenu ustawiony! Użyj łopaty ponownie na przeciwległym narożniku, aby oznaczyć prostokątny obszar. Aby anulować, schowaj łopatę.
+  NewClaimTooNarrow: Ten teren byłby za mały. Każdy teren musi mieć co najmniej {0} bloków szerokości.
+  ResizeClaimInsufficientArea: Ten teren byłby za mały. Każdy teren musi używać co najmniej {0} bloków terenu.
+  CreateClaimInsufficientBlocks: Nie masz wystarczającej liczby bloków, aby oznaczyć cały ten obszar. Potrzebujesz {0} więcej bloków.
+  AbandonClaimAdvertisement: Aby usunąć inny teren i zwolnić bloki, użyj /abandonclaim.
+  CreateClaimFailOverlapShort: Zaznaczony obszar nachodzi na istniejący teren.
+  CreateClaimSuccess: Teren utworzony! Użyj /trust, aby udostępnić go znajomym.
+  RescueAbortedMoved: Poruszyłeś się! Ratunek anulowany.
+  OnlyOwnersModifyClaims: Tylko {0} może modyfikować ten teren.
+  NoBuildPvP: Nie możesz budować w terenach podczas walki PvP.
+  NoBuildPermission: Nie masz uprawnień od {0}, aby tutaj budować.
+  NoAccessPermission: Nie masz uprawnień od {0}, aby tego użyć.
+  NoContainersPermission: Nie masz uprawnień od {0}, aby tego użyć.
+  OwnerNameForAdminClaims: administrator
+  UnknownPlayerName: ktoś
+  ClaimTooSmallForEntities: Ten teren nie jest wystarczająco duży. Spróbuj go powiększyć.
+  TooManyEntitiesInClaim: Ten teren ma już zbyt wiele bytów. Spróbuj powiększyć teren lub usunąć zwierzęta, potwory, obrazy lub wagoniki.
+  YouHaveNoClaims: Nie masz żadnych oznaczonych terenów.
+  AutoBanNotify: Automatycznie zbanowano {0}({1}). Zobacz logi po więcej szczegółów.
+  AdjustGroupBlocksSuccess: 'Dostosowano dodatkowe bloki terenu dla graczy z uprawnieniem {0} o {1}. Nowa suma: {2}.'
+  InvalidPermissionID: Podaj nazwę gracza lub uprawnienie w [nawiasach].
+  HowToClaimRegex: (^|.*\W)(jak|w jaki sposób)\W.*\W(zaznaczyć|chronić|oznaczyć|zabezpieczyć)(\W.*|$)
+  NoBuildOutsideClaims: Nie możesz tu budować, dopóki nie oznaczysz najpierw terenu.
+  PlayerOfflineTime: 'Ostatnie logowanie: {0} dni temu.'
+  BuildingOutsideClaims: Inni gracze również mogą tu budować. Rozważ utworzenie terenu, aby chronić swoją pracę!
+  TrappedWontWorkHere: Przepraszamy, nie można znaleźć bezpiecznego miejsca do teleportacji. Skontaktuj się z administratorem.
+  CommandBannedInPvP: Nie możesz użyć tej komendy podczas walki PvP.
+  NoTeleportPvPCombat: Nie możesz się teleportować podczas walki z innym graczem.
+  NoTNTDamageAboveSeaLevel: 'Ostrzeżenie: TNT nie zniszczy bloków powyżej poziomu morza.'
+  NoTNTDamageClaims: 'Ostrzeżenie: TNT nie zniszczy oznaczonych bloków.'
+  IgnoreClaimsAdvertisement: Aby to anulować, użyj /ignoreclaims.
+  NoPermissionForCommand: Nie masz uprawnień, aby to zrobić.
+  ClaimsListNoPermission: Nie masz uprawnień, aby uzyskać informacje o terenach innego gracza.
+  ExplosivesDisabled: Ten teren jest teraz chroniony przed wybuchami. Użyj /claimexplosions ponownie, aby wyłączyć ochronę.
+  ExplosivesEnabled: Ten teren jest teraz podatny na wybuchy. Użyj /claimexplosions ponownie, aby włączyć ochronę.
+  WitherExplosionsDisabled: Ten teren jest teraz chroniony przed wybuchami withera. Użyj /witherexplosions ponownie, aby wyłączyć ochronę.
+  WitherExplosionsEnabled: Ten teren jest teraz podatny na wybuchy withera. Użyj /witherexplosions ponownie, aby włączyć ochronę.
+  ClaimExplosivesAdvertisement: Aby zezwolić na niszczenie bloków przez materiały wybuchowe w tym terenie, użyj /claimexplosions.
+  PlayerInPvPSafeZone: Ten gracz znajduje się w strefie bezpiecznej PvP.
+  NoPistonsOutsideClaims: 'Ostrzeżenie: Tłoki nie będą przesuwać bloków poza oznaczonymi terenami.'
+  SoftMuted: Wyciszono {0}.
+  UnSoftMuted: Cofnięto wyciszenie {0}.
+  DropUnlockAdvertisement: Inni gracze nie mogą podnosić twoich wyrzuconych przedmiotów, dopóki nie użyjesz /unlockdrops.
+  PickupBlockedExplanation: Nie możesz tego podnieść, dopóki {0} nie użyje /unlockdrops.
+  DropUnlockConfirmation: Twoje wyrzucone przedmioty zostały odblokowane. Inni gracze mogą je teraz podnosić (dopóki nie umrzesz ponownie).
+  DropLockConfirmation: Twoje wyrzucone przedmioty zostały zablokowane. Inni gracze nie mogą ich już podnosić.
+  DropUnlockOthersConfirmation: Odblokowano wyrzucone przedmioty {0}.
+  AdvertiseACandACB: Możesz użyć /acb, aby dać sobie więcej bloków terenu, lub /adminclaims, aby utworzyć darmowy teren administracyjny.
+  AdvertiseAdminClaims: Możesz utworzyć administracyjny teren za pomocą /adminclaims, który będziesz dzielić z innymi administratorami.
+  AdvertiseACB: Możesz użyć /acb, aby dać sobie więcej bloków terenu.
+  NotYourPet: To należy do {0}, dopóki nie zostanie ci przekazane za pomocą /givepet.
+  PetGiveawayConfirmation: Zwierzę przekazane.
+  PetTransferCancellation: Przekazanie zwierzęcia anulowane.
+  ReadyToTransferPet: Gotowy do przekazania! Kliknij prawym przyciskiem zwierzę, które chcesz oddać, lub anuluj komendą /givepet cancel.
+  AvoidGriefClaimLand: Zapobiegaj griefowi! Jeśli oznaczysz swoją ziemię, będziesz odporny na grief.
+  BecomeMayor: Podziel swój teren i zostań burmistrzem!
+  ClaimCreationFailedOverClaimCountLimit: Osiągnąłeś limit oznaczonych terenów. Użyj /abandonclaim, aby usunąć jeden przed utworzeniem kolejnego.
+  CreateClaimFailOverlapRegion: Nie możesz oznaczyć tego obszaru, ponieważ nie masz pozwolenia na budowanie tutaj.
+  ResizeFailOverlapRegion: Nie masz uprawnień do budowania tam, więc nie możesz oznaczyć tego obszaru.
+  ResizeFailSubdivision: 'Nie można zmienić rozmiaru terenu: Nowe granice wykluczałyby istniejący podział. Najpierw usuń lub przenieś podział.'
+  ResizeFailSubdivisionExceedsParent: 'Nie można zmienić rozmiaru: Podział nie został utrzymany w granicach rodzica ze wszystkich stron, powodując konflikt na głównym terenie.'
+  ShapedClaimInteriorClick: Nie możesz rozpocząć terenu o dowolnym kształcie tutaj. Możesz rozpocząć nowy teren lub utworzyć segmenty na granicy obecnego terenu i je rozszerzyć.
+  ShowNearbyClaims: Znaleziono {0} oznaczonych terenów.
+  NoChatUntilMove: Przepraszamy, ale musisz się trochę więcej poruszyć, zanim będziesz mógł pisać na czacie. Mamy tutaj dużo botów spamujących. :)
+  SetClaimBlocksSuccess: Zaktualizowano naliczone bloki terenu.
+  IgnoreConfirmation: Teraz ignorujesz wiadomości na czacie od tego gracza.
+  UnIgnoreConfirmation: Nie ignorujesz już wiadomości na czacie od tego gracza.
+  NotIgnoringPlayer: Nie ignorujesz tego gracza.
+  SeparateConfirmation: Ci gracze będą teraz ignorować się nawzajem na czacie.
+  UnSeparateConfirmation: Ci gracze nie będą już ignorować się nawzajem na czacie.
+  NotIgnoringAnyone: Nie ignorujesz nikogo.
+  TrustListHeader: "Wyraźne uprawnienia tutaj:"
+  Manage: Zarządzaj
+  Build: Buduj
+  Containers: Skrzynie
+  Access: Dostęp
+  Neighbor: Sąsiad
+  HasSubclaimRestriction: Ten podpodział nie dziedziczy uprawnień z terenu nadrzędnego
+  StartBlockMath: '{0} bloków z gry + {1} dodatkowych = {2} łącznie.'
+  ClaimsListHeader: "Tereny:"
+  ContinueBlockMath: '(-{0} bloków)'
+  EndBlockMath: ' = {0} bloków pozostało do wykorzystania'
+  ClaimExpiryHeader: "Wygaśnięcie terenu dla {0}:"
+  ClaimExpiryLocation: 'Lokalizacja: {0}'
+  ClaimExpiryOwnerStatus: 'Właściciel: {0} ({1})'
+  ClaimExpiryOwnerOnline: online
+  ClaimExpiryOwnerOffline: offline
+  ClaimExpiryLastActive: 'Ostatnio widziany: {0} temu'
+  ClaimExpiryLastActiveUnknown: 'Ostatnio widziany: nieznane'
+  ClaimExpiryClaimModified: 'Ostatnia modyfikacja: {0}'
+  ClaimExpiryExpiresIn: 'Wygaśnie za: {0}'
+  ClaimExpiryExpired: Wygasł {0} temu
+  ClaimExpiryExempt: 'Ten teren jest zwolniony z wygaśnięcia: {0}'
+  ClaimExpiryNeverExpires: Ten teren nigdy nie wygaśnie.
+  ClaimExpiryChestClaim: 'Wygaśnięcie terenu skrzyni: {0}'
+  ClaimExpiryNoClaim: Nie stoisz w żadnym terenie.
+  ClaimExpiryPlayerHeading: "Wygaśnięcie terenu dla {0}:"
+  ClaimExpiryPlayerNoClaims: '{0} nie ma żadnych terenów.'
+  ClaimExpiryPlayerNotFound: 'Nie można znaleźć gracza {0}.'
+  ClaimExpiryUnknown: nieznane
+  ClaimExpiryUsage: /checkclaimexpiry [gracz]
+  ClaimExpiryListEntry: '- {0}: {1}'
+  NoClaimDuringPvP: Nie możesz oznaczać terenów podczas walki PvP.
+  UntrustAllOwnerOnly: Tylko właściciel terenu może wyczyścić wszystkie jego uprawnienia.
+  ManagersDontUntrustManagers: Tylko właściciel terenu może zdegradować zarządcę.
+  PlayerNotIgnorable: Nie możesz ignorować tego gracza.
+  NoEnoughBlocksForChestClaim: Ponieważ nie masz dostępnych bloków terenu, nie utworzono automatycznie terenu dla twojej skrzyni. Możesz użyć /claimslist, aby monitorować liczbę dostępnych bloków terenu.
+  MustHoldModificationToolForThat: Musisz trzymać złotą łopatę, aby to zrobić.
+  StandInClaimToResize: Stań wewnątrz terenu, który chcesz zmienić.
+  ClaimsExtendToSky: Tereny zawsze sięgają maksymalnej wysokości budowania.
+  ClaimsAutoExtendDownward: Tereny automatycznie rozszerzają się głębiej w ziemię, gdy umieścisz pod nimi bloki.
+  MinimumRadius: Minimalny promień to {0}.
+  RadiusRequiresGoldenShovel: Musisz trzymać złotą łopatę, gdy określasz promień.
+  ClaimTooSmallForActiveBlocks: Ten teren nie jest wystarczająco duży, aby obsłużyć aktywne bloki (leje, spawnery, beacon'y...). Najpierw powiększ teren.
+  TooManyActiveBlocksInClaim: Ten teren osiągnął limit aktywnych bloków (leje, spawnery, beacon'y...). Powiększ go lub usuń inne aktywne bloki.
+  BookAuthor: BigScary
+  BookTitle: Jak oznaczyć teren
+  BookLink: 'Kliknij: {0}'
+  BookIntro: Oznacz teren, aby chronić swoje rzeczy! Kliknij powyższy link, aby poznać oznaczenia terenów w 3 minuty lub mniej. :)
+  BookTools: Nasze narzędzia do terenów to {0} i {1}.
+  BookDisabledChestClaims: Na tym serwerze postawienie skrzyni NIE oznaczy dla ciebie terenu.
+  BookUsefulCommands: "Przydatne komendy:"
+  NoProfanity: Prosimy o umiarkowany język.
+  IsIgnoringYou: Ten gracz cię ignoruje.
+  ConsoleOnlyCommand: Ta komenda może być wykonana tylko z konsoli serwera.
+  WorldNotFound: Nie znaleziono świata.
+  TooMuchIpOverlap: Przepraszamy, zbyt wielu graczy jest zalogowanych z twojego adresu IP.
+  StandInSubclaim: Musisz stać w podpodziale, aby go ograniczyć
+  SubclaimRestricted: Uprawnienia tego podpodziału nie będą już dziedziczyć z terenu nadrzędnego
+  SubclaimUnrestricted: Uprawnienia tego podpodziału będą teraz dziedziczyć z terenu nadrzędnego
+  MainClaimSubdivisionInheritDisabled: Wszystkie podziały w tym terenie NIE będą dziedziczyć uprawnień.
+  MainClaimSubdivisionInheritEnabled: Wszystkie podziały w tym terenie będą dziedziczyć uprawnienia.
+  NetherPortalTrapDetectionMessage: Wygląda na to, że utknąłeś w portalu Netheru. Uratujemy cię za kilka sekund, jeśli tak jest!
+  ClaimHelpHeader: "Dostępne komendy /claim:"
+  ClaimHelpLegend: <> - Wymagane, [] - Opcjonalne.
+  ClaimHelpEntry: '&e/{0}&7 - &f{1}'
+  ClaimHelpPagination: Wpisz /claim help {0}, aby przejść do następnej strony.
+  AClaimHelpHeader: "Dostępne komendy /aclaim:"
+  AClaimHelpLegend: <> - Wymagane, [] - Opcjonalne.
+  AClaimHelpEntry: '&e/{0}&7 - &f{1}'
+  AClaimHelpPagination: Wpisz /aclaim help {0}, aby przejść do następnej strony.
+  CommandNotFound: 'Nieznane podpolecenie: {0}'
+  CommandNotImplementedYet: Ta komenda nie jest jeszcze zaimplementowana.
+  CommandInvalidMode: 'Nieprawidłowy tryb. Dostępne opcje: basic, 2d, 3d, shaped'
+  RestoreNatureActivate: Gotowy do przywracania natury! Kliknij prawym przyciskiem na blok, aby przywrócić obszar. Użyj /basicclaims, aby wyjść.
+  RestoreNatureAggressiveActivate: Agresywny tryb przywracania natury aktywowany. Kliknij prawym przyciskiem na blok, aby przywrócić obszar. Użyj /basicclaims, aby wyjść.
+  FillModeActive: Tryb wypełniania aktywowany z promieniem {0}. Kliknij prawym przyciskiem na blok, aby wypełnić obszar. Użyj /basicclaims, aby wyjść.
+  EconomyDisabled: Funkcje ekonomiczne są wyłączone na tym serwerze.
+  EconomyBuyBlocksConfirmation: Zakupiono {0} bloków terenu za {1}. Posiadasz teraz {2} bloków terenu.
+  EconomySellBlocksConfirmation: Sprzedano {0} bloków terenu za {1}. Posiadasz teraz {2} bloków terenu.
+  EconomyNotEnoughMoney: 'Nie masz wystarczająco dużo pieniędzy. Koszt: {0}, twoje saldo: {1}'
+  EconomyNotEnoughBlocks: 'Nie masz wystarczająco bloków terenu do sprzedaży. Żądano: {0}, dostępne: {1}'
+  EconomyBuyBlocksUsage: 'Użycie: /buyclaimblocks <ilość>'
+  EconomySellBlocksUsage: 'Użycie: /sellclaimblocks <ilość>'
+  EconomyInvalidAmount: Podaj prawidłową dodatnią liczbę bloków.
+  EconomyPurchaseCancelled: Zakup anulowany.
+  EconomyNoVault: Wsparcie ekonomii wymaga zainstalowania wtyczki Vault.
+  CommandRequiresPlayer: Ta komenda może być używana tylko przez graczy.
+  PistonExploded: Tłok na {0} eksplodował, ponieważ nie mógł wejść w teren na {1}
+  ExternalPistonBoundaryViolation: '&6Ostrzeżenie: Tłok próbował wepchnąć blok do twojego terenu na x:{0} y:{1} z:{2}!'
+  InternalPistonBoundaryViolation: '&6Ostrzeżenie: Tłok próbował wypchnąć blok z twojego terenu na x:{0} y:{1} z:{2}!'
+  ExternalLiquidBoundaryViolation: '&6Ostrzeżenie: Ciecz próbowała wpłynąć do twojego terenu na x:{0} y:{1} z:{2}!'
+  InternalLiquidBoundaryViolation: '&6Ostrzeżenie: Ciecz próbowała wypłynąć z twojego terenu na x:{0} y:{1} z:{2}!'
+  BoundaryViolationBurstSummary: '&6Ostrzeżenie: {0} naruszeń typu {1} w pobliżu twojego terenu na x:{2} y:{3} z:{4}!'
+  PlaceholderTrustLevelUnclaimed: Nieoznaczony
+  PlaceholderTrustLevelOwner: Właściciel
+  PlaceholderTrustLevelManager: Zarządca
+  PlaceholderTrustLevelBuilder: Budowniczy
+  PlaceholderTrustLevelAccess: Dostęp
+  PlaceholderTrustLevelContainer: Skrzynie
+  PlaceholderTrustLevelNeighbor: Sąsiad
+  PlaceholderTrustLevelUntrusted: Bez zaufania
+  NeighborPermission: pomijanie minimalnej odległości
+  CreateClaimFailTooClose: "Nie możesz utworzyć terenu tutaj, ponieważ jest zbyt blisko terenu {0}. Minimalna odległość wynosi {1} bloków."
+  CreateClaimFailTooCloseNoBypass: "Nie możesz utworzyć terenu tutaj, ponieważ jest zbyt blisko innego terenu. Minimalna odległość wynosi {0} bloków."
+  MinimumDistance: "Minimalna odległość między terenami: {0} bloków."
+  NearbyClaims: "Pobliskie tereny: {0}"
+  NeighborTrustGranted: "Nadano {0} zaufanie sąsiedzkie. Może teraz pomijać sprawdzanie minimalnej odległości dla twoich terenów."
+  NeighborTrustRevoked: "Odebrano zaufanie sąsiedzkie {0}."
+  NeighborTrustGrantedAll: "Nadano {0} zaufanie sąsiedzkie dla WSZYSTKICH twoich terenów."
+  NeighborTrustRevokedAll: "Odebrano zaufanie sąsiedzkie {0} ze WSZYSTKICH twoich terenów."
+  NeighborBypassEnabled: "Wszyscy gracze mogą teraz pomijać sprawdzanie minimalnej odległości dla tego terenu."
+  Subdivisions3DDisabled: Poddziały 3D są wyłączone na tym serwerze.
+  AdminClaims3DDisabled: Działki administracyjne 3D są wyłączone na tym serwerze.
+  DistanceCheckEnabled: Sprawdzanie odległości włączone. Otrzymasz ostrzeżenie podczas tworzenia działki zbyt blisko innych.
+  DistanceCheckDisabled: Sprawdzanie odległości wyłączone.
+  NeighborBypassDisabled: "Sprawdzanie minimalnej odległości jest teraz wymagane dla tego terenu."
+  MessagesLoaded: "Komunikaty załadowane: &a{0}"

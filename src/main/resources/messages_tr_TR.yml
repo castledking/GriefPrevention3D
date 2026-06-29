@@ -1,0 +1,310 @@
+# ============================================================
+# GriefPrevention - Türkçe mesajlar
+# ============================================================
+# Dili değiştirmek için istediğiniz messages_XX.yml dosyasını
+# Lang/ klasöründen GriefPreventionData/ klasörüne kopyalayın
+# ve adını şu şekilde değiştirin:
+#   plugins/GriefPreventionData/messages.yml
+#
+# Eklenti mesajları şu sırayla yükler:
+#   1. messages.yml (özel veya dil dosyanız)
+#   2. messages_{locale}.yml (config'deki GriefPrevention.Locale'ye göre)
+#   3. messages_en.yml (yedek)
+#
+# Biçim: Renk kodları için $ veya & kullanın.
+# Satır sonları: Mesajlarda \n kullanın.
+# ============================================================
+
+Messages:
+  RespectingClaims: Artık bölgelere saygı gösteriliyor.
+  IgnoringClaims: Artık bölgeler yok sayılıyor.
+  NoCreativeUnClaim: Bu bölgenin korumasını kaldıramazsınız. Yalnızca bu bölgeyi büyütebilir veya ek bölgeler oluşturabilirsiniz.
+  SuccessfulAbandon: Bölgeler terk edildi. Artık {0} kullanılabilir bölge blokunuz var.
+  TransferClaimPermission: Bu komut, yönetici bölgesi izni gerektirir.
+  TransferClaimMissing: Burada bölge yok. Devretmek istediğiniz yönetici bölgesinin içinde durun.
+  TransferClaimAdminOnly: Yalnızca yönetici bölgeleri bir oyuncuya devredilebilir.
+  PlayerNotFound2: Bu isimde bir oyuncu yakın zamanda giriş yapmadı.
+  TransferTopLevel: Yalnızca ana bölgeler (alt bölgeler değil) devredilebilir. Alt bölgenin dışında durun ve tekrar deneyin.
+  TransferSuccess: Bölge devredildi.
+  ConvertClaimMissing: Burada bölge yok. Dönüştürmek istediğiniz bölgenin içinde durun.
+  ConvertClaimAlreadyAdmin: Bu bölge zaten bir yönetici bölgesi.
+  ConvertClaimAlreadyBasic: Bu bölge zaten temel bir bölge.
+  ConvertClaimAdminSuccess: Bölge, yönetici bölgesine dönüştürüldü.
+  ConvertClaimBasicSuccess: Yönetici bölgesi, size ait temel bir bölgeye dönüştürüldü.
+  TrustListNoClaim: Merak ettiğiniz bölgenin içinde durun.
+  ClearPermsOwnerOnly: Yalnızca bölge sahibi tüm izinleri temizleyebilir.
+  UntrustIndividualAllClaims: "{0} kişisinin TÜM bölgelerinize erişimi iptal edildi. Tek bir bölge için izin ayarlamak üzere içinde durun."
+  UntrustEveryoneAllClaims: TÜM bölgelerinizdeki izinler temizlendi. Tek bir bölge için izin ayarlamak üzere içinde durun.
+  NoPermissionTrust: Burada izinleri yönetmek için {0} iznine sahip değilsiniz.
+  ClearPermissionsOneClaim: Bu bölgedeki izinler temizlendi. TÜM bölgeleriniz için izin ayarlamak üzere dışında durun.
+  UntrustIndividualSingleClaim: "{0} kişisinin bu bölgeye erişimi iptal edildi. TÜM bölgeleriniz için izin ayarlamak üzere dışında durun."
+  AdminClaimsMode: Yönetici bölgesi modu aktif. Oluşturulan bölgeler ücretsiz olacak ve diğer yöneticiler tarafından düzenlenebilecek.
+  _3DAdminClaimsMode: 3D Yönetici bölgesi modu aktif. Oluşturulan bölgeler ücretsiz, yükseklik sınırlı ve diğer yöneticiler tarafından düzenlenebilir olacak.
+  BasicClaimsMode: Temel bölge oluşturma moduna dönüldü.
+  ShapedClaimsMode: Şekilli bölge modu. Sahipsiz arazide köşe yerleştirmek için sağ tıklayın veya bölge sınırlarından şekilli düzenlemeler başlatıp genişletin. Sınır tıklamaları gerektiğinde segment işaretçileri oluşturur. Çıkmak için /basicclaims kullanın.
+  ShapedClaimsDisabled: Şekilli bölgeler bu sunucuda devre dışı.
+  MergeOverlapConflict: Birleştirilemedi; tamamlanan birleştirme diğer bölgelerle çakışırdı.
+  SubdivisionMode: Alt bölge modu. Mevcut bölgelerinizde alt bölgeler oluşturmak için küreğinizi kullanın. Çıkmak için /basicclaims kullanın.
+  SubdivisionMode3D: 3D Alt bölge modu. Mevcut bölgelerinizde 3D alt bölgeler oluşturmak için küreğinizi kullanın. Çıkmak için /basicclaims kullanın.
+  SubdivisionVideo2: 'Alt Bölge Yardımı için tıklayın: {0}'
+  DeleteClaimMissing: Burada bölge yok.
+  DeletionSubdivisionWarning: Bu bölge alt bölgeler içeriyor. Silmek istediğinizden eminseniz /deleteclaim komutunu tekrar kullanın.
+  DeleteSuccess: Bölge silindi.
+  CantDeleteAdminClaim: Yönetici bölgelerini silme izniniz yok.
+  NoAdminClaimsPermission: Yönetici bölgelerini yönetme izniniz yok.
+  DeleteAllSuccess: '{0} kullanıcısının tüm bölgeleri silindi.'
+  NoDeletePermission: Bölgeleri silme izniniz yok.
+  AllAdminDeleted: Tüm yönetici bölgeleri silindi.
+  AdjustBlocksSuccess: '{0} kullanıcısının bonus bölge blokları {1} olarak ayarlandı. Yeni toplam bonus blok: {2}.'
+  AdjustBlocksAllSuccess: Tüm çevrimiçi oyuncuların bonus bölge blokları {0} olarak ayarlandı.
+  NotTrappedHere: Burada inşa edebilirsiniz. Kendinizi kurtarın.
+  RescuePending: 10 saniye hareketsiz kalırsanız ışınlanacaksınız. Lütfen bekleyin.
+  AbandonClaimMissing: Silmek istediğiniz bölgenin içinde durun veya /abandonallclaims kullanmayı düşünün.
+  NotYourClaim: Bu sizin bölgeniz değil.
+  DeleteTopLevelClaim: Bir alt bölgeyi silmek için içinde durun. Aksi halde, bu bölgeyi ve tüm alt bölgelerini silmek için /abandontoplevelclaim kullanın.
+  AbandonSuccess: Bölge terk edildi. Artık {0} kullanılabilir bölge blokunuz var.
+  ConfirmAbandonAllClaims: TÜM bölgelerinizi terk etmek istediğinize emin misiniz? Lütfen /abandonallclaims confirm ile onaylayın
+  GrantPermissionNoClaim: İzin vermek istediğiniz bölgenin içinde durun.
+  GrantPermissionConfirmation: '{0} kişisine {1} {2} izni verildi.'
+  ManageUniversalPermissionsInstruction: TÜM bölgelerinizin izinlerini yönetmek için dışında durun.
+  ManageOneClaimPermissionsInstruction: Belirli bir bölgenin izinlerini yönetmek için içinde durun.
+  CollectivePublic: herkes
+  BuildPermission: inşa etme
+  ContainersPermission: sandık ve hayvanlara erişim
+  AccessPermission: düğme ve kolları kullanma
+  PermissionsPermission: izinleri yönetme
+  LocationCurrentClaim: bu bölgede
+  LocationAllClaims: tüm bölgelerinizde
+  PvPImmunityStart: Envanteriniz boş olduğu sürece diğer oyuncuların saldırılarından korunuyorsunuz.
+  DonateItemsInstruction: Elinizdeki eşyayı bağışlamak için sandığa tekrar sol tıklayın.
+  ChestFull: Bu sandık dolu.
+  DonationSuccess: Eşya(lar) sandığa aktarıldı!
+  PlayerTooCloseForFire2: Bir oyuncuya bu kadar yakın ateş yakamazsınız.
+  TooDeepToClaim: Bu sandık korunamaz çünkü çok derinde. Taşımayı düşünün.
+  ChestClaimConfirmation: Bu sandık korunuyor.
+  AutomaticClaimNotification: Bu sandık ve yakındaki bloklar kırılmaya ve hırsızlığa karşı korunuyor.
+  AutomaticClaimOtherClaimTooClose: 'Sandığınız için bölge oluşturulamıyor: başka bir bölge çok yakın!'
+  UnprotectedChestWarning: Bu sandık KORUNMUYOR. Mevcut bir bölgeyi genişletmek veya yeni bir bölge oluşturmak için altın kürek kullanmayı düşünün.
+  ThatPlayerPvPImmune: Savunmasız oyunculara zarar veremezsiniz.
+  CantFightWhileImmune: PvP'den korunurken biriyle savaşamazsınız.
+  NoDamageClaimedEntity: Bu, {0} kişisine ait.
+  ShovelBasicClaimMode: Kürek, temel bölge moduna döndü.
+  RemainingBlocks: En fazla {0} blok daha bölgeleyebilirsiniz.
+  CreativeBasicsVideo2: 'Bölge Yardımı için tıklayın: {0}'
+  SurvivalBasicsVideo2: 'Bölge Yardımı için tıklayın: {0}'
+  TrappedChatKeyword: sıkıştım;kapandım;tuzak
+  TrappedInstructions: Birinin bölgesinde mahsur mu kaldınız? /trapped komutunu deneyin.
+  PvPNoDrop: PvP savaşı sırasında eşya düşüremezsiniz.
+  PvPNoContainers: PvP savaşı sırasında sandıklara erişemezsiniz.
+  PvPImmunityEnd: Artık diğer oyuncularla savaşabilirsiniz.
+  NoBedPermission: '{0} burada uyumana izin vermedi.'
+  NoWildernessBuckets: Kovaları yalnızca bölgenizin içinde veya yeraltında boşaltabilirsiniz.
+  NoLavaNearOtherPlayer: LAV'ı {0} kişisine bu kadar yakın yerleştiremezsiniz.
+  TooFarAway: Bu çok uzakta.
+  BlockNotClaimed: Hiç kimse bu bloğu bölgelememiş.
+  BlockClaimed: Bu blok {0} tarafından bölgelenmiş.
+  NoCreateClaimPermission: Bölge oluşturma izniniz yok.
+  ResizeClaimTooNarrow: Bu yeni boyut çok küçük olur. Bölgeler en az {0} blok genişliğinde olmalıdır.
+  ResizeNeedMoreBlocks: Bu boyut için yeterli blokunuz yok. {0} daha fazla bloka ihtiyacınız var.
+  ClaimResizeSuccess: Bölge yeniden boyutlandırıldı. Kalan {0} kullanılabilir bölge bloku.
+  ResizeFailOverlap: Burada yeniden boyutlandırılamaz çünkü yakındaki başka bir bölgeyle çakışır.
+  ResizeStart: Bölge yeniden boyutlandırılıyor. Bu köşenin yeni konumunda küreğinizi tekrar kullanın.
+  ClaimSelected: "Bölge seçildi. Diğer köşeyi ayarlamak ve yeniden boyutlandırmak için küreğinizi tekrar kullanın.\nNot: Bu bölge seçiliyken /claim abandon komutunu çalıştırabilirsiniz."
+  ClaimSelectedTopLevel: "Bölge seçildi. Diğer köşeyi ayarlamak ve yeniden boyutlandırmak için küreğinizi tekrar kullanın.\nNot: Bu bölge seçiliyken /claim abandon toplevel komutunu çalıştırabilirsiniz."
+  SubdivisionSelected: "Alt bölge seçildi. Bu belirli alan için izinleri yönetebilirsiniz.\n&6Komutları çalıştırabilirsiniz:\n&7- &f/trust&7, &f/untrust\n&7- &f/containertrust&7, &f/accesstrust\n&7- &f/abandonclaim\n&6veya yeniden boyutlandırmak için tekrar sağ tıklayın."
+  ResizeFailOverlapSubdivision: Burada alt bölge oluşturamazsınız çünkü başka bir alt bölgeyle çakışır. Silmek için /abandonclaim kullanın veya bir köşede küreğinizi kullanarak yeniden boyutlandırın.
+  SubdivisionStart: Alt bölge köşesi ayarlandı! Bu yeni alt bölgenin karşı köşesinin konumunda küreğinizi kullanın.
+  CreateSubdivisionOverlap: Seçtiğiniz alan başka bir alt bölgeyle çakışıyor.
+  InnerSubdivisionTooClose: Bu alt bölge, her yönde ana bölgesinin en az bir blok içinde kalmalıdır.
+  SubdivisionSuccess: Alt bölge oluşturuldu! Arkadaşlarınızla paylaşmak için /trust kullanın.
+  CreateClaimFailOverlap: Burada bölge oluşturamazsınız çünkü diğer bölgenizle çakışır. Silmek için /abandonclaim kullanın veya bir köşede küreğinizi kullanarak yeniden boyutlandırın.
+  CreateClaimFailOverlapOtherPlayer: Burada bölge oluşturamazsınız çünkü {0} kullanıcısının bölgesiyle çakışır.
+  ClaimsDisabledWorld: Bu dünyada bölge oluşturma devre dışı.
+  ClaimStart: Bölge köşesi ayarlandı! Dikdörtgen bir alanı bölgelemek için küreği karşı köşede tekrar kullanın. İptal etmek için küreğinizi kaldırın.
+  NewClaimTooNarrow: Bu bölge çok küçük olur. Her bölge en az {0} blok genişliğinde olmalıdır.
+  ResizeClaimInsufficientArea: Bu bölge çok küçük olur. Her bölge en az {0} toplam bölge bloku kullanmalıdır.
+  CreateClaimInsufficientBlocks: Tüm bu alanı bölgelemek için yeterli blokunuz yok. {0} daha fazla bloka ihtiyacınız var.
+  AbandonClaimAdvertisement: Başka bir bölgeyi silmek ve blokları boşaltmak için /abandonclaim kullanın.
+  CreateClaimFailOverlapShort: Seçtiğiniz alan mevcut bir bölgeyle çakışıyor.
+  CreateClaimSuccess: Bölge oluşturuldu! Arkadaşlarınızla paylaşmak için /trust kullanın.
+  RescueAbortedMoved: Hareket ettiniz! Kurtarma iptal edildi.
+  OnlyOwnersModifyClaims: Yalnızca {0} bu bölgeyi değiştirebilir.
+  NoBuildPvP: PvP savaşı sırasında bölgelerde inşa edemezsiniz.
+  NoBuildPermission: Burada inşa etmek için {0} iznine sahip değilsiniz.
+  NoAccessPermission: Bunu kullanmak için {0} iznine sahip değilsiniz.
+  NoContainersPermission: Bunu kullanmak için {0} iznine sahip değilsiniz.
+  OwnerNameForAdminClaims: bir yönetici
+  UnknownPlayerName: birisi
+  ClaimTooSmallForEntities: Bu bölge bunun için yeterince büyük değil. Büyütmeyi deneyin.
+  TooManyEntitiesInClaim: Bu bölgede zaten çok fazla varlık var. Bölgeyi büyütmeyi veya bazı hayvanları, canavarları, resimleri ya da maden arabalarını kaldırmayı deneyin.
+  YouHaveNoClaims: Hiç bölgeniz yok.
+  AutoBanNotify: '{0}({1}) otomatik olarak yasaklandı. Ayrıntılar için günlüklere bakın.'
+  AdjustGroupBlocksSuccess: '{0} iznine sahip oyuncuların bonus bölge blokları {1} olarak ayarlandı. Yeni toplam: {2}.'
+  InvalidPermissionID: Lütfen bir oyuncu adı veya [köşeli parantez] içinde bir izin belirtin.
+  HowToClaimRegex: (^|.*\W)(nasıl|nasil)\W.*\W(korurum|bölgelerim|sahiplenirim|claim)(\W.*|$)
+  NoBuildOutsideClaims: Önce biraz bölge oluşturmadıkça burada inşa edemezsiniz.
+  PlayerOfflineTime: 'Son giriş: {0} gün önce.'
+  BuildingOutsideClaims: Diğer oyuncular da burada inşa edebilir. Çalışmanızı korumak için bir bölge oluşturmayı düşünün!
+  TrappedWontWorkHere: Üzgünüz, sizi ışınlayacak güvenli bir konum bulunamadı. Bir yöneticiyle iletişime geçin.
+  CommandBannedInPvP: PvP savaşı sırasında bu komutu kullanamazsınız.
+  NoTeleportPvPCombat: Başka bir oyuncuyla savaşırken ışınlanamazsınız.
+  NoTNTDamageAboveSeaLevel: 'Uyarı: TNT, deniz seviyesinin üzerindeki blokları yok etmez.'
+  NoTNTDamageClaims: 'Uyarı: TNT, bölgelenmiş blokları yok etmez.'
+  IgnoreClaimsAdvertisement: Bunu geçersiz kılmak için /ignoreclaims kullanın.
+  NoPermissionForCommand: Bunu yapma izniniz yok.
+  ClaimsListNoPermission: Başka bir oyuncunun bölgeleri hakkında bilgi alma izniniz yok.
+  ExplosivesDisabled: Bu bölge artık patlamalara karşı korunuyor. Devre dışı bırakmak için /claimexplosions komutunu tekrar kullanın.
+  ExplosivesEnabled: Bu bölge artık patlamalara karşı savunmasız. Korumaları tekrar etkinleştirmek için /claimexplosions komutunu tekrar kullanın.
+  WitherExplosionsDisabled: Bu bölge artık wither patlamalarına karşı korunuyor. Korumaları devre dışı bırakmak için /witherexplosions komutunu tekrar kullanın.
+  WitherExplosionsEnabled: Bu bölge artık wither patlamalarına karşı savunmasız. Korumaları tekrar etkinleştirmek için /witherexplosions komutunu tekrar kullanın.
+  ClaimExplosivesAdvertisement: Bu bölgede patlayıcıların blokları yok etmesine izin vermek için /claimexplosions kullanın.
+  PlayerInPvPSafeZone: Bu oyuncu bir PvP güvenli bölgesinde.
+  NoPistonsOutsideClaims: 'Uyarı: Pistons, bölgelerin dışındaki blokları hareket ettirmez.'
+  SoftMuted: '{0} sessize alındı.'
+  UnSoftMuted: '{0} sessizden çıkarıldı.'
+  DropUnlockAdvertisement: Diğer oyuncular, /unlockdrops kullanmadıkça düşürdüğünüz eşyaları alamaz.
+  PickupBlockedExplanation: '{0} kişisi /unlockdrops kullanmadıkça bunu alamazsınız.'
+  DropUnlockConfirmation: Düşürdüklerinizin kilidi açıldı. Diğer oyuncular artık onları alabilir (tekrar ölene kadar).
+  DropLockConfirmation: Düşürdükleriniz kilitlendi. Diğer oyuncular artık onları alamaz.
+  DropUnlockOthersConfirmation: '{0} kullanıcısının düşürdüklerinin kilidi açıldı.'
+  AdvertiseACandACB: Kendinize daha fazla bölge bloku vermek için /acb veya ücretsiz bir yönetici bölgesi oluşturmak için /adminclaims kullanabilirsiniz.
+  AdvertiseAdminClaims: Bunun yerine /adminclaims kullanarak diğer yöneticilerle paylaşacağınız bir yönetici bölgesi oluşturabilirsiniz.
+  AdvertiseACB: Kendinize daha fazla bölge bloku vermek için /acb kullanabilirsiniz.
+  NotYourPet: Bu, /givepet ile size verilene kadar {0} kişisine aittir.
+  PetGiveawayConfirmation: Evcil hayvan devredildi.
+  PetTransferCancellation: Evcil hayvan devri iptal edildi.
+  ReadyToTransferPet: Devretmeye hazır! Devretmek istediğiniz evcil hayvana sağ tıklayın veya /givepet cancel ile iptal edin.
+  AvoidGriefClaimLand: Grief'i önleyin! Arazinizi bölgelerseniz, grief'e karşı korunursunuz.
+  BecomeMayor: Arazinizi alt bölgelere ayırın ve bir belediye başkanı olun!
+  ClaimCreationFailedOverClaimCountLimit: Bölge sınırına ulaştınız. Yeni bir tane oluşturmadan önce birini silmek için /abandonclaim kullanın.
+  CreateClaimFailOverlapRegion: Bunların hepsini bölgeleyemezsiniz çünkü burada inşa etme izniniz yok.
+  ResizeFailOverlapRegion: Orada inşa etme izniniz yok, bu nedenle o alanı bölgeleyemezsiniz.
+  ResizeFailSubdivision: 'Bölge yeniden boyutlandırılamıyor: Yeni sınırlar mevcut bir alt bölgeyi dışarıda bırakırdı. Lütfen önce alt bölgeyi kaldırın veya taşıyın.'
+  ResizeFailSubdivisionExceedsParent: 'Yeniden boyutlandırılamadı: Alt bölge her yönde ana bölgenin sınırları içinde tutulmadı, ana bölgede çakışmaya neden oldu.'
+  ShapedClaimInteriorClick: Burada şekilli bir bölge başlatamazsınız. Yeni bir şekilli bölge başlatabilir veya mevcut bölgenizin sınırında segmentler oluşturup bunları genişletebilirsiniz.
+  ShowNearbyClaims: '{0} bölge bulundu.'
+  NoChatUntilMove: Üzgünüz, sohbet edebilmek için biraz daha hareket etmelisiniz. Burada çok fazla spam botu alıyoruz. :)
+  SetClaimBlocksSuccess: Tahakkuk eden bölge blokları güncellendi.
+  IgnoreConfirmation: Artık bu oyuncunun sohbet mesajlarını yok sayıyorsunuz.
+  UnIgnoreConfirmation: Artık bu oyuncunun sohbet mesajlarını yok saymıyorsunuz.
+  NotIgnoringPlayer: Bu oyuncuyu yok saymıyorsunuz.
+  SeparateConfirmation: Bu oyuncular artık sohbette birbirlerini yok sayacak.
+  UnSeparateConfirmation: Bu oyuncular artık sohbette birbirlerini yok saymayacak.
+  NotIgnoringAnyone: Kimseyi yok saymıyorsunuz.
+  TrustListHeader: "Buradaki açık izinler:"
+  Manage: Yönet
+  Build: İnşa Et
+  Containers: Sandıklar
+  Access: Erişim
+  Neighbor: Komşu
+  HasSubclaimRestriction: Bu alt bölge, ana bölgeden izinleri devralmaz
+  StartBlockMath: '{0} blok oyundan + {1} bonus = {2} toplam.'
+  ClaimsListHeader: "Bölgeler:"
+  ContinueBlockMath: ' (-{0} blok)'
+  EndBlockMath: ' = harcanacak {0} blok kaldı'
+  ClaimExpiryHeader: "{0} için bölge süre sonu:"
+  ClaimExpiryLocation: 'Konum: {0}'
+  ClaimExpiryOwnerStatus: 'Sahip: {0} ({1})'
+  ClaimExpiryOwnerOnline: çevrimiçi
+  ClaimExpiryOwnerOffline: çevrimdışı
+  ClaimExpiryLastActive: 'Son görülme: {0} önce'
+  ClaimExpiryLastActiveUnknown: 'Son görülme: bilinmiyor'
+  ClaimExpiryClaimModified: 'Son değiştirilme: {0}'
+  ClaimExpiryExpiresIn: 'Süre sonu: {0} içinde'
+  ClaimExpiryExpired: '{0} önce süresi doldu'
+  ClaimExpiryExempt: 'Bu bölge süre sonundan muaftır: {0}'
+  ClaimExpiryNeverExpires: Bu bölgenin süresi asla dolmaz.
+  ClaimExpiryChestClaim: 'Sandık bölgesi süre sonu: {0}'
+  ClaimExpiryNoClaim: Bir bölgenin içinde durmuyorsunuz.
+  ClaimExpiryPlayerHeading: "{0} için bölge süre sonu:"
+  ClaimExpiryPlayerNoClaims: '{0} kullanıcısının bölgesi yok.'
+  ClaimExpiryPlayerNotFound: '{0} oyuncusu bulunamadı.'
+  ClaimExpiryUnknown: bilinmiyor
+  ClaimExpiryUsage: /checkclaimexpiry [oyuncu]
+  ClaimExpiryListEntry: '- {0}: {1}'
+  NoClaimDuringPvP: PvP savaşı sırasında bölge oluşturamazsınız.
+  UntrustAllOwnerOnly: Yalnızca bölge sahibi tüm izinlerini temizleyebilir.
+  ManagersDontUntrustManagers: Yalnızca bölge sahibi bir yöneticiyi düşürebilir.
+  PlayerNotIgnorable: Bu oyuncuyu yok sayamazsınız.
+  NoEnoughBlocksForChestClaim: Kullanılabilir bölge blokunuz olmadığı için sizin için otomatik bölge oluşturulmadı. Kullanılabilir bölge bloklarınızı izlemek için /claimslist kullanabilirsiniz.
+  MustHoldModificationToolForThat: Bunu yapmak için altın bir kürek tutuyor olmalısınız.
+  StandInClaimToResize: Yeniden boyutlandırmak istediğiniz bölgenin içinde durun.
+  ClaimsExtendToSky: Bölgeler her zaman maksimum inşa yüksekliğine kadar uzanır.
+  ClaimsAutoExtendDownward: Altlarına blok yerleştirdiğinizde bölgeler otomatik olarak daha derine iner.
+  MinimumRadius: Minimum yarıçap {0}'dir.
+  RadiusRequiresGoldenShovel: Yarıçap belirtirken altın bir kürek tutuyor olmalısınız.
+  ClaimTooSmallForActiveBlocks: Bu bölge, aktif blok türlerini (huni, spawner, işaretçi...) destekleyecek kadar büyük değil. Önce bölgeyi büyütün.
+  TooManyActiveBlocksInClaim: Bu bölge, aktif blok türleri (huni, spawner, işaretçi...) için sınırına ulaştı. Ya büyütün ya da önce diğer aktif blokları kaldırın.
+  BookAuthor: BigScary
+  BookTitle: Arazi Nasıl Bölgelenir
+  BookLink: 'Tıkla: {0}'
+  BookIntro: Eşyalarınızı korumak için arazi bölgeleyin! Bölgelemeyi 3 dakikada veya daha kısa sürede öğrenmek için yukarıdaki bağlantıya tıklayın. :)
+  BookTools: Bölge araçlarımız {0} ve {1}'dir.
+  BookDisabledChestClaims: Bu sunucuda, sandık yerleştirmek sizin için bölge oluşturmaz.
+  BookUsefulCommands: "Kullanışlı Komutlar:"
+  NoProfanity: Lütfen dilinize dikkat edin.
+  IsIgnoringYou: Bu oyuncu sizi yok sayıyor.
+  ConsoleOnlyCommand: Bu komut yalnızca sunucu konsolundan çalıştırılabilir.
+  WorldNotFound: Dünya bulunamadı.
+  TooMuchIpOverlap: Üzgünüz, IP adresinizle çok fazla oyuncu giriş yapmış durumda.
+  StandInSubclaim: Kısıtlamak için bir alt bölgenin içinde durmalısınız
+  SubclaimRestricted: Bu alt bölgenin izinleri artık ana bölgeden devralınmayacak
+  SubclaimUnrestricted: Bu alt bölgenin izinleri artık ana bölgeden devralınacak
+  MainClaimSubdivisionInheritDisabled: Bu bölgedeki tüm alt bölgeler izinleri devralmayacak.
+  MainClaimSubdivisionInheritEnabled: Bu bölgedeki tüm alt bölgeler izinleri devralacak.
+  NetherPortalTrapDetectionMessage: Görünüşe göre bir nether portalında sıkışmış olabilirsiniz. Eğer öyleyse, birkaç saniye içinde sizi kurtaracağız!
+  ClaimHelpHeader: "Kullanılabilir /claim komutları:"
+  ClaimHelpLegend: <> - Gerekli, [] - İsteğe bağlı.
+  ClaimHelpEntry: '&e/{0}&7 - &f{1}'
+  ClaimHelpPagination: Sonraki sayfa için /claim help {0} yazın.
+  AClaimHelpHeader: "Kullanılabilir /aclaim komutları:"
+  AClaimHelpLegend: <> - Gerekli, [] - İsteğe bağlı.
+  AClaimHelpEntry: '&e/{0}&7 - &f{1}'
+  AClaimHelpPagination: Sonraki sayfa için /aclaim help {0} yazın.
+  CommandNotFound: 'Bilinmeyen alt komut: {0}'
+  CommandNotImplementedYet: Bu komut henüz uygulanmadı.
+  CommandInvalidMode: 'Geçersiz mod. Geçerli seçenekler: basic, 2d, 3d, shaped'
+  RestoreNatureActivate: Doğayı geri getirmeye hazır! Bir alanı geri getirmek için bir bloğa sağ tıklayın. Çıkmak için /basicclaims kullanın.
+  RestoreNatureAggressiveActivate: Agresif doğa geri getirme modu etkinleştirildi. Bir alanı geri getirmek için bir bloğa sağ tıklayın. Çıkmak için /basicclaims kullanın.
+  FillModeActive: '{0} yarıçapı ile doldurma modu etkinleştirildi. Bir alanı doldurmak için bir bloğa sağ tıklayın. Çıkmak için /basicclaims kullanın.'
+  EconomyDisabled: Ekonomi özellikleri bu sunucuda devre dışı.
+  EconomyBuyBlocksConfirmation: '{0} bölge bloku {1} karşılığında satın alındı. Artık {2} bölge blokunuz var.'
+  EconomySellBlocksConfirmation: '{0} bölge bloku {1} karşılığında satıldı. Artık {2} bölge blokunuz var.'
+  EconomyNotEnoughMoney: 'Yeterli paranız yok. Maliyet: {0}, Bakiyeniz: {1}'
+  EconomyNotEnoughBlocks: 'Satmak için yeterli bölge blokunuz yok. İstenen: {0}, Mevcut: {1}'
+  EconomyBuyBlocksUsage: 'Kullanım: /buyclaimblocks <miktar>'
+  EconomySellBlocksUsage: 'Kullanım: /sellclaimblocks <miktar>'
+  EconomyInvalidAmount: Lütfen geçerli bir pozitif blok sayısı belirtin.
+  EconomyPurchaseCancelled: Satın alma iptal edildi.
+  EconomyNoVault: Ekonomi desteği için Vault eklentisinin kurulu olması gerekir.
+  CommandRequiresPlayer: Bu komut yalnızca oyuncular tarafından kullanılabilir.
+  PistonExploded: '{0} konumundaki piston, {1} konumundaki bölgeye giremediği için patladı'
+  ExternalPistonBoundaryViolation: '&6Uyarı: Bir piston, x:{0} y:{1} z:{2} konumunda bölgenize bir blok itmeye çalıştı!'
+  InternalPistonBoundaryViolation: '&6Uyarı: Bir piston, x:{0} y:{1} z:{2} konumunda bölgenizden bir blok dışarı itmeye çalıştı!'
+  ExternalLiquidBoundaryViolation: '&6Uyarı: Sıvı, x:{0} y:{1} z:{2} konumunda bölgenize akmaya çalıştı!'
+  InternalLiquidBoundaryViolation: '&6Uyarı: Sıvı, x:{0} y:{1} z:{2} konumunda bölgenizden dışarı akmaya çalıştı!'
+  BoundaryViolationBurstSummary: '&6Uyarı: Bölgenizin yakınında x:{2} y:{3} z:{4} konumunda {0} adet {1} ihlali!'
+  PlaceholderTrustLevelUnclaimed: Sahipsiz
+  PlaceholderTrustLevelOwner: Sahip
+  PlaceholderTrustLevelManager: Yönetici
+  PlaceholderTrustLevelBuilder: İnşa Eden
+  PlaceholderTrustLevelAccess: Erişim
+  PlaceholderTrustLevelContainer: Sandık
+  PlaceholderTrustLevelNeighbor: Komşu
+  PlaceholderTrustLevelUntrusted: Güvenilmeyen
+  NeighborPermission: minimum mesafeyi atlama
+  CreateClaimFailTooClose: "Burada bölge oluşturamazsınız çünkü {0} kullanıcısının bölgesine çok yakın. Minimum mesafe {1} bloktur."
+  CreateClaimFailTooCloseNoBypass: "Burada bölge oluşturamazsınız çünkü başka bir bölgeye çok yakın. Minimum mesafe {0} bloktur."
+  MinimumDistance: "Bölgeler arası minimum mesafe: {0} blok."
+  NearbyClaims: "Yakındaki bölgeler: {0}"
+  NeighborTrustGranted: "{0} kişisine komşu güveni verildi. Artık bölgeleriniz için minimum mesafe kontrollerini atlayabilir."
+  NeighborTrustRevoked: "{0} kişisinin komşu güveni iptal edildi."
+  NeighborTrustGrantedAll: "{0} kişisine TÜM bölgeleriniz için komşu güveni verildi."
+  NeighborTrustRevokedAll: "{0} kişisinin komşu güveni TÜM bölgelerinizden iptal edildi."
+  NeighborBypassEnabled: "Tüm oyuncular artık bu bölge için minimum mesafe kontrollerini atlayabilir."
+  NeighborBypassDisabled: "Bu bölge için minimum mesafe kontrolleri artık uygulanıyor."
+  Subdivisions3DDisabled: Bu sunucuda 3D alt bölgeler devre dışı.
+  AdminClaims3DDisabled: Bu sunucuda 3D yönetici bölgeleri devre dışı.
+  DistanceCheckEnabled: Mesafe kontrolü etkinleştirildi. Başkalarına çok yakın bölge oluştururken uyarılacaksınız.
+  DistanceCheckDisabled: Mesafe kontrolü devre dışı bırakıldı.
+  MessagesLoaded: "Mesajlar yüklendi: &a{0}"

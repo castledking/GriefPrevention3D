@@ -20,8 +20,8 @@ public final class MessageLocalization
 
     private static final String DEFAULT_LOCALE = "en";
 
-    private static final String[] BUNDLED_LOCALE_FILES = {"messages_en.yml", "messages_es.yml", "messages_pt_BR.yml"};
-    static final String[] SUPPORTED_LOCALE_CODES = {"en", "es", "pt_BR"};
+    private static final String[] BUNDLED_LOCALE_FILES = {"messages_en.yml", "messages_es.yml", "messages_pt_BR.yml", "messages_fr_FR.yml", "messages_de_DE.yml", "messages_ru_RU.yml", "messages_zh_CN.yml", "messages_ja_JP.yml", "messages_pl_PL.yml", "messages_tr_TR.yml", "messages_uk_UA.yml", "messages_en_PT.yml"};
+    static final String[] SUPPORTED_LOCALE_CODES = {"en", "es", "pt_BR", "fr_FR", "de_DE", "ru_RU", "zh_CN", "ja_JP", "pl_PL", "tr_TR", "uk_UA", "en_PT"};
 
     private MessageLocalization()
     {
