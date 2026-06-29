@@ -2880,14 +2880,29 @@ public abstract class DataStore {
             if (key.equalsIgnoreCase(normalized)) return key;
         }
 
-        // Try by language prefix (first 2 chars)
+        // Try by language prefix (first 2 chars) — prefer exact base locale (e.g. "en") over variants (e.g. "en_PT")
         if (normalized.length() >= 2)
         {
             String langCode = normalized.substring(0, 2);
+            String exactBase = null;
+            String variantMatch = null;
             for (String key : this.messagesByLocale.keySet())
             {
-                if (key.length() >= 2 && key.substring(0, 2).equalsIgnoreCase(langCode)) return key;
+                if (key.length() >= 2 && key.substring(0, 2).equalsIgnoreCase(langCode))
+                {
+                    if (key.equalsIgnoreCase(langCode))
+                    {
+                        exactBase = key;
+                        break;
+                    }
+                    else if (variantMatch == null)
+                    {
+                        variantMatch = key;
+                    }
+                }
             }
+            if (exactBase != null) return exactBase;
+            if (variantMatch != null) return variantMatch;
         }
 
         return GriefPrevention.instance.config_locale;
