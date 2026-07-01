@@ -62,6 +62,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
@@ -401,7 +402,10 @@ public abstract class DataStore {
         }
 
         if (newOwnerData != null) {
-            newOwnerData.getClaims().add(claim);
+            Vector<Claim> newOwnerClaims = newOwnerData.getClaims();
+            if (!newOwnerClaims.contains(claim)) {
+                newOwnerClaims.add(claim);
+            }
         }
     }
 
@@ -469,7 +473,10 @@ public abstract class DataStore {
         // playerData with the new claim
         if (!newClaim.isAdminClaim() && writeToStorage) {
             PlayerData ownerData = this.getPlayerData(newClaim.ownerID);
-            ownerData.getClaims().add(newClaim);
+            Vector<Claim> ownerClaims = ownerData.getClaims();
+            if (!ownerClaims.contains(newClaim)) {
+                ownerClaims.add(newClaim);
+            }
         }
 
         // make sure the claim is saved to disk
