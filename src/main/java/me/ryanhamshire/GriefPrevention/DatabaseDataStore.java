@@ -18,6 +18,8 @@
 
 package me.ryanhamshire.GriefPrevention;
 
+import com.griefprevention.geometry.OrthogonalPoint2i;
+
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
@@ -34,6 +36,7 @@ import java.sql.Statement;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -50,7 +53,7 @@ public class DatabaseDataStore extends DataStore
     private static final String SQL_UPDATE_CLAIM =
             "UPDATE griefprevention_claimdata SET owner = ?, lessercorner = ?, greatercorner = ?, builders = ?, containers = ?, accessors = ?, managers = ?, inheritnothing = ?, inheritnothingfornewsubdivisions = ?, parentid = ?, expiration = ?, explosivesallowed = ?, witherexplosionsallowed = ? WHERE id = ?";
     private static final String SQL_INSERT_CLAIM =
-            "INSERT INTO griefprevention_claimdata (id, owner, lessercorner, greatercorner, builders, containers, accessors, managers, inheritnothing, inheritnothingfornewsubdivisions, parentid, expiration, explosivesallowed, witherexplosionsallowed) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            "INSERT INTO griefprevention_claimdata (id, owner, lessercorner, greatercorner, builders, containers, accessors, managers, inheritnothing, inheritnothingfornewsubdivisions, parentid, expiration, explosivesallowed, witherexplosionsallowed, is3d, shapecorners, modifieddate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     private static final String SQL_DELETE_CLAIM =
             "DELETE FROM griefprevention_claimdata WHERE id = ?";
     private static final String SQL_SELECT_PLAYER_DATA =
@@ -80,6 +83,12 @@ public class DatabaseDataStore extends DataStore
             "ALTER TABLE griefprevention_claimdata ADD COLUMN IF NOT EXISTS explosivesallowed BOOLEAN DEFAULT 0";
     private static final String SQL_UPDATE_SCHEMA_ADD_WITHER_EXPLOSIONS =
             "ALTER TABLE griefprevention_claimdata ADD COLUMN IF NOT EXISTS witherexplosionsallowed BOOLEAN DEFAULT 0";
+    private static final String SQL_UPDATE_SCHEMA_ADD_IS3D =
+            "ALTER TABLE griefprevention_claimdata ADD COLUMN IF NOT EXISTS is3d BOOLEAN DEFAULT 0";
+    private static final String SQL_UPDATE_SCHEMA_ADD_SHAPECORNERS =
+            "ALTER TABLE griefprevention_claimdata ADD COLUMN IF NOT EXISTS shapecorners TEXT DEFAULT ''";
+    private static final String SQL_UPDATE_SCHEMA_ADD_MODIFIEDDATE =
+            "ALTER TABLE griefprevention_claimdata ADD COLUMN IF NOT EXISTS modifieddate BIGINT DEFAULT 0";
 
     private Connection databaseConnection = null;
 
@@ -294,6 +303,24 @@ public class DatabaseDataStore extends DataStore
             statement.execute(SQL_UPDATE_SCHEMA_ADD_WITHER_EXPLOSIONS);
         }
 
+        if (this.getSchemaVersion() <= 7)
+        {
+            statement = this.databaseConnection.createStatement();
+            statement.execute(SQL_UPDATE_SCHEMA_ADD_IS3D);
+        }
+
+        if (this.getSchemaVersion() <= 8)
+        {
+            statement = this.databaseConnection.createStatement();
+            statement.execute(SQL_UPDATE_SCHEMA_ADD_SHAPECORNERS);
+        }
+
+        if (this.getSchemaVersion() <= 9)
+        {
+            statement = this.databaseConnection.createStatement();
+            statement.execute(SQL_UPDATE_SCHEMA_ADD_MODIFIEDDATE);
+        }
+
         //load claims data into memory
 
         results = statement.executeQuery("SELECT * FROM griefprevention_claimdata");
@@ -389,12 +416,17 @@ public class DatabaseDataStore extends DataStore
                 managerNames = this.convertNameListToUUIDList(managerNames);
                 boolean explosivesAllowed = results.getBoolean("explosivesallowed");
                 boolean witherExplosionsAllowed = results.getBoolean("witherexplosionsallowed");
+                boolean is3d = results.getBoolean("is3d");
+                String shapecornersStr = results.getString("shapecorners");
+                long modifiedDate = results.getLong("modifieddate");
 
-                Claim claim = new Claim(lesserBoundaryCorner, greaterBoundaryCorner, ownerID, builderNames, containerNames, accessorNames, managerNames, inheritNothing, claimID, false);
+                Claim claim = new Claim(lesserBoundaryCorner, greaterBoundaryCorner, ownerID, builderNames, containerNames, accessorNames, managerNames, inheritNothing, claimID, is3d);
                 claim.setExpirationDate(expirationDate);
                 claim.areExplosivesAllowed = explosivesAllowed;
                 claim.areWitherExplosionsAllowed = witherExplosionsAllowed;
                 claim.setInheritNothingForNewSubdivisions(inheritNothingForNewSubdivisions);
+                claim.setShapedCorners(parseCornersFromDb(shapecornersStr));
+                if (modifiedDate > 0) claim.modifiedDate = new Date(modifiedDate);
 
                 if (removeClaim)
                 {
@@ -497,6 +529,9 @@ public class DatabaseDataStore extends DataStore
         long expirationDate = claim.getExpirationDate();
         boolean explosivesAllowed = claim.areExplosivesAllowed;
         boolean witherExplosionsAllowed = claim.areWitherExplosionsAllowed;
+        boolean is3d = claim.is3D();
+        String shapecorners = serializeCornersForDb(claim);
+        long modifiedDate = claim.modifiedDate != null ? claim.modifiedDate.getTime() : System.currentTimeMillis();
 
         try (PreparedStatement insertStmt = this.databaseConnection.prepareStatement(SQL_INSERT_CLAIM))
         {
@@ -515,6 +550,9 @@ public class DatabaseDataStore extends DataStore
             insertStmt.setLong(12, expirationDate);
             insertStmt.setBoolean(13, explosivesAllowed);
             insertStmt.setBoolean(14, witherExplosionsAllowed);
+            insertStmt.setBoolean(15, is3d);
+            insertStmt.setString(16, shapecorners);
+            insertStmt.setLong(17, modifiedDate);
             insertStmt.executeUpdate();
         }
         catch (SQLException e)
@@ -766,6 +804,38 @@ public class DatabaseDataStore extends DataStore
             GriefPrevention.AddLogEntry("Unable to set next schema version to " + versionToSet + ".  Details:");
             GriefPrevention.AddLogEntry(e.getMessage());
         }
+    }
+
+    private String serializeCornersForDb(Claim claim)
+    {
+        List<OrthogonalPoint2i> corners = claim.getShapedCorners();
+        if (corners == null || corners.isEmpty())
+        {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (OrthogonalPoint2i corner : corners)
+        {
+            if (sb.length() > 0) sb.append(";");
+            sb.append(corner.x()).append(",").append(corner.z());
+        }
+        return sb.toString();
+    }
+
+    private List<OrthogonalPoint2i> parseCornersFromDb(String serialized)
+    {
+        if (serialized == null || serialized.isEmpty())
+        {
+            return Collections.emptyList();
+        }
+        List<OrthogonalPoint2i> corners = new ArrayList<>();
+        for (String entry : serialized.split(";"))
+        {
+            String[] parts = entry.split(",");
+            if (parts.length != 2) continue;
+            corners.add(new OrthogonalPoint2i(Integer.parseInt(parts[0].trim()), Integer.parseInt(parts[1].trim())));
+        }
+        return corners;
     }
 
     /**

@@ -105,7 +105,7 @@ public abstract class DataStore {
     final static String bannedWordsFilePath = dataLayerFolderPath + File.separator + "bannedWords.txt";
 
     // the latest version of the data schema implemented here
-    protected static final int latestSchemaVersion = 7;
+    protected static final int latestSchemaVersion = 10;
 
     // reading and writing the schema version to the data store
     abstract int getSchemaVersionFromStorage();

@@ -38,6 +38,34 @@ java {
     targetCompatibility = javaVersion
 }
 
+val paperApi by configurations.creating {
+    isCanBeResolved = true
+    isCanBeConsumed = false
+}
+
+val gpFlagsCompatCompileClasspath by configurations.creating {
+    isCanBeResolved = true
+    isCanBeConsumed = false
+}
+
+val gpExpansionCompatCompileClasspath by configurations.creating {
+    isCanBeResolved = true
+    isCanBeConsumed = false
+}
+
+eclipse {
+    classpath {
+        plusConfigurations.add(paperApi)
+        containers.clear()
+        containers.add("org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-21")
+    }
+    jdt {
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
+        javaRuntimeName = "JavaSE-21"
+    }
+}
+
 sourceSets {
     val main by getting
 
@@ -54,21 +82,6 @@ sourceSets {
         compileClasspath += main.output + main.compileClasspath
         runtimeClasspath += output + compileClasspath
     }
-}
-
-val paperApi by configurations.creating {
-    isCanBeResolved = true
-    isCanBeConsumed = false
-}
-
-val gpFlagsCompatCompileClasspath by configurations.creating {
-    isCanBeResolved = true
-    isCanBeConsumed = false
-}
-
-val gpExpansionCompatCompileClasspath by configurations.creating {
-    isCanBeResolved = true
-    isCanBeConsumed = false
 }
 
 configurations {
