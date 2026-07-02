@@ -206,7 +206,7 @@ subcommands:
       enable: true
       commands: [mode]
       standalone: [basicclaims, shapedclaims, shapedclaim]
-      usage: "/claim mode <basic|2d|3d|shaped>"
+      usage: "/claim mode <basic|2d|3d|shaped|merge>"
       description: Change your golden shovel claim mode.
       arguments:
         mode:
@@ -215,6 +215,7 @@ subcommands:
             2d: [2d, subdivide] # Both "2d" and "subdivide" work
             3d: [3d]
             shaped: [shaped]
+            merge: [merge]
 
     # ------------------------------------------------------------------------
     # /claim restrictsubclaim - Toggle subdivision inheritance
@@ -240,6 +241,21 @@ subcommands:
           options:
             on: [on]
             off: [off]
+
+    # ------------------------------------------------------------------------
+    # /claim pvp - Toggle claim PvP
+    # ------------------------------------------------------------------------
+    pvp:
+      enable: true
+      commands: [pvp]
+      standalone: [claimpvp]
+      usage: "/claim pvp <true|false> confirm"
+      description: Toggle whether PvP is enabled in your current claim.
+      arguments:
+        state:
+          options:
+            true: [true]
+            false: [false]
 
     # ------------------------------------------------------------------------
     # /claim buyblocks - Purchase claim blocks

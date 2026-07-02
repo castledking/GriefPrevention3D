@@ -245,6 +245,13 @@ public class GriefPrevention extends JavaPlugin {
     public double config_economy_claimBlocksPurchaseCost; // cost per claim block when buying
     public double config_economy_claimBlocksSellValue; // value per claim block when selling
 
+    // PvP toggle cost configuration
+    public boolean config_pvp_toggleCostClaimEnabled; // whether PvP toggle is enabled for main claims
+    public double config_pvp_toggleCostClaimPrice; // cost to toggle PvP in main claims
+    public boolean config_pvp_toggleCostSubdivisionEnabled; // whether PvP toggle is enabled for subdivisions
+    public double config_pvp_toggleCostSubdivisionPrice; // cost to toggle PvP in subdivisions
+    public String config_pvp_subdivisionPvpState; // PvP state for new subdivisions: INHERIT or DEFAULT
+
     public boolean config_spam_enabled; // whether or not to monitor for spam
     public int config_spam_loginCooldownSeconds; // how long players must wait between logins. combats login spam.
     public int config_spam_loginLogoutNotificationsPerMinute; // how many login/logout notifications to show per minute
@@ -1119,6 +1126,13 @@ public class GriefPrevention extends JavaPlugin {
         this.config_pvp_allowFireNearPlayers_NonPvp = config
                 .getBoolean("GriefPrevention.PvP.AllowFlintAndSteelNearOtherPlayers.NonPvPWorlds", false);
         this.config_pvp_protectPets = config.getBoolean("GriefPrevention.PvP.ProtectPetsOutsideLandClaims", false);
+
+        // PvP toggle cost configuration
+        this.config_pvp_toggleCostClaimEnabled = config.getBoolean("GriefPrevention.Claims.PvPToggle.Claim.Enabled", false);
+        this.config_pvp_toggleCostClaimPrice = config.getDouble("GriefPrevention.Claims.PvPToggle.Claim.Price", 0.0);
+        this.config_pvp_toggleCostSubdivisionEnabled = config.getBoolean("GriefPrevention.Claims.PvPToggle.Subdivision.Enabled", false);
+        this.config_pvp_toggleCostSubdivisionPrice = config.getDouble("GriefPrevention.Claims.PvPToggle.Subdivision.Price", 0.0);
+        this.config_pvp_subdivisionPvpState = config.getString("GriefPrevention.Claims.PvPToggle.Subdivision.DefaultState", "INHERIT");
 
         // optional database settings
         loadDatabaseSettings(config);
@@ -2329,6 +2343,12 @@ public class GriefPrevention extends JavaPlugin {
                 return true;
             }
             return this.handleClaimExplosionsCommand(sender, args);
+        } else if (cmd.getName().equalsIgnoreCase("claimpvp") && player != null) {
+            if (!player.hasPermission("griefprevention.claims")) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+                return true;
+            }
+            return this.handleClaimPvpCommand(sender, args);
         } else if (cmd.getName().equalsIgnoreCase("witherexplosions") && player != null) {
             if (!player.hasPermission("griefprevention.witherexplosions")) {
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
@@ -4888,8 +4908,167 @@ public class GriefPrevention extends JavaPlugin {
         return this.handleClaimExplosionToggleCommand(sender, args, false);
     }
 
+    public boolean handleClaimPvpCommand(CommandSender sender, String[] args) {
+        return this.handlePvpCommand(sender, args);
+    }
+
     public boolean handleWitherExplosionsCommand(CommandSender sender, String[] args) {
         return this.handleClaimExplosionToggleCommand(sender, args, true);
+    }
+
+    public boolean handlePvpCommand(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player)) {
+            sender.sendMessage("This command can only be used by players.");
+            return true;
+        }
+        Player player = (Player) sender;
+
+        // Check permission before anything else
+        if (!player.hasPermission("griefprevention.pvp")) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+            return true;
+        }
+
+        // Check if PvP toggle is enabled at all
+        if (!this.config_pvp_toggleCostClaimEnabled && !this.config_pvp_toggleCostSubdivisionEnabled) {
+            GriefPrevention.sendMessage(player, TextMode.Err, "PvP toggle commands are not enabled.");
+            return true;
+        }
+
+        PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
+        Claim claim = getSelectedOrCurrentClaim(player, playerData, false);
+
+        // Check if there's a selected claim or we're modifying the current claim
+        if (claim == null) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.DeleteClaimMissing);
+            return true;
+        }
+
+        // Check if player has permission to modify this claim
+        if (!claim.hasExplicitPermission(player, ClaimPermission.Edit)) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+            return true;
+        }
+
+        Supplier<String> noBuildReason = claim.checkPermission(player, ClaimPermission.Build, null);
+        if (noBuildReason != null) {
+            GriefPrevention.sendMessage(player, TextMode.Err, noBuildReason.get());
+            return true;
+        }
+
+        // If only one argument, show usage
+        if (args.length == 1) {
+            GriefPrevention.sendMessage(player, TextMode.Err, "Usage: /claim pvp <true|false> <confirm>");
+            return true;
+        }
+
+        // First argument must be true or false
+        boolean toggleTo;
+        if ("true".equalsIgnoreCase(args[0])) {
+            toggleTo = true;
+        } else if ("false".equalsIgnoreCase(args[0])) {
+            toggleTo = false;
+        } else {
+            GriefPrevention.sendMessage(player, TextMode.Err, "Usage: /claim pvp <true|false> <confirm>");
+            return true;
+        }
+
+        // Second argument must be confirm
+        if (args.length != 2 || !"confirm".equalsIgnoreCase(args[1])) {
+            GriefPrevention.sendMessage(player, TextMode.Err, "You must type /claim pvp <true|false> confirm to confirm the change.");
+            return true;
+        }
+
+        // Get the fee for this claim
+        double fee = 0.0;
+        boolean isClaim = false;
+        if (claim.parent == null) {
+            // This is a main claim
+            if (this.config_pvp_toggleCostClaimEnabled) {
+                fee = this.config_pvp_toggleCostClaimPrice;
+            }
+            isClaim = true;
+        } else {
+            // This is a subdivision
+            if (this.config_pvp_toggleCostSubdivisionEnabled) {
+                fee = this.config_pvp_toggleCostSubdivisionPrice;
+            }
+            isClaim = false;
+        }
+
+        // Handle PvP state inheritance for subdivisions
+        if (claim.parent != null && "INHERIT".equalsIgnoreCase(this.config_pvp_subdivisionPvpState)) {
+            // Subdivision inherits PvP state from main claim
+            toggleTo = claim.parent.pvpEnabled;
+        }
+
+        // Save the current PvP state for the confirmation message
+        boolean originalPvpState = claim.pvpEnabled;
+        
+        // Handle payment if there's a fee
+        if (fee > 0.0) {
+            // Check for Vault economy
+            net.milkbowl.vault.economy.Economy economy = null;
+            try {
+                if (this.getServer().getPluginManager().getPlugin("Vault") != null) {
+                    @SuppressWarnings("null")
+                    org.bukkit.plugin.RegisteredServiceProvider<net.milkbowl.vault.economy.Economy> rsp =
+                            this.getServer().getServicesManager().getRegistration(net.milkbowl.vault.economy.Economy.class);
+                    if (rsp != null) {
+                        economy = rsp.getProvider();
+                    }
+                }
+            } catch (NoClassDefFoundError e) {
+                // Vault is not installed
+            }
+
+            if (economy == null) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.EconomyNoVault);
+                return true;
+            }
+
+            // Check if player has enough money
+            double balance = economy.getBalance(player);
+            if (balance < fee) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.EconomyNotEnoughMoney,
+                        String.format("%.2f", fee), String.format("%.2f", balance));
+                return true;
+            }
+
+            // Withdraw the fee
+            net.milkbowl.vault.economy.EconomyResponse withdrawal = economy.withdrawPlayer(player, fee);
+            if (!withdrawal.transactionSuccess()) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.EconomyNotEnoughMoney,
+                        String.format("%.2f", fee), String.format("%.2f", balance));
+                return true;
+            }
+
+            GriefPrevention.AddLogEntry(
+                "Player " + player.getName() + " toggled PvP " + toggleTo +
+                " in " + (isClaim ? "main claim" : "subdivision") + " at " +
+                getfriendlyLocationString(claim.getLesserBoundaryCorner()) +
+                " for fee: " + fee,
+                CustomLogEntryTypes.AdminActivity
+            );
+        }
+
+        // Apply the change
+        claim.pvpEnabled = toggleTo;
+        this.dataStore.saveClaim(claim);
+
+        // Send confirmation message
+        String claimOrSubdivision = isClaim ? "Claim" : "Subdivision";
+        if (fee > 0.0) {
+            String message = this.dataStore.getMessage(Messages.ConfirmPvpToggleWithFee,
+                String.format("%.2f", fee), toggleTo ? "enabled" : "disabled", claimOrSubdivision);
+            GriefPrevention.sendMessage(player, TextMode.Success, message);
+        } else {
+            String message = this.dataStore.getMessage(Messages.ConfirmPvpToggleNoFee,
+                toggleTo ? "enabled" : "disabled", claimOrSubdivision);
+            GriefPrevention.sendMessage(player, TextMode.Success, message);
+        }
+
+        return true;
     }
 
     private boolean handleClaimExplosionToggleCommand(CommandSender sender, String[] args, boolean witherOnly) {

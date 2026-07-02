@@ -51,6 +51,8 @@ Messages:
   DeleteSuccess: Terreno protegido deletado.
   CantDeleteAdminClaim: Você não tem permissão para deletar terrenos administrativos.
   NoAdminClaimsPermission: Voce nao tem permissao para gerenciar terrenos administrativos.
+  ConfirmPvpToggleNoFee: Você quer {0} PvP neste {1}?\nDigite novamente: {2}. (/claim pvp {3} confirm)
+  ConfirmPvpToggleWithFee: Você quer pagar {0} para {1} PvP neste {2}?\nDigite novamente: {3}. (/claim pvp {4} confirm)
   DeleteAllSuccess: Todos os terrenos protegidos de {0} foram deletados.
   NoDeletePermission: Você não tem permissão para deletar terrenos protegidos.
   AllAdminDeleted: Todos os terrenos administrativos foram deletados.

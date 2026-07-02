@@ -52,6 +52,8 @@ Messages:
   DeleteSuccess: Bölge silindi.
   CantDeleteAdminClaim: Yönetici bölgelerini silme izniniz yok.
   NoAdminClaimsPermission: Yönetici bölgelerini yönetme izniniz yok.
+  ConfirmPvpToggleNoFee: "Bu {1} içinde PvP'yi {0} yapmak istiyor musunuz?\nTekrar yazın: {2}. (/claim pvp {3} confirm)"
+  ConfirmPvpToggleWithFee: "Bu {2} içinde PvP'yi {1} yapmak için {0} ödemek istiyor musunuz?\nTekrar yazın: {3}. (/claim pvp {4} confirm)"
   DeleteAllSuccess: '{0} kullanıcısının tüm bölgeleri silindi.'
   NoDeletePermission: Bölgeleri silme izniniz yok.
   AllAdminDeleted: Tüm yönetici bölgeleri silindi.

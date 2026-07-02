@@ -101,8 +101,11 @@ public class Claim
      //ignored even though they may have references floating around
      public boolean inDataStore = false;
  
-     public boolean areExplosivesAllowed = false;
-     public boolean areWitherExplosionsAllowed = false;
+      public boolean areExplosivesAllowed = false;
+      public boolean areWitherExplosionsAllowed = false;
+
+      // PvP toggle for this claim
+      public boolean pvpEnabled = true;
  
      //parent claim
      //only used for claim subdivisions.  top level claims have null here
