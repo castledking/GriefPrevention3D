@@ -51,6 +51,8 @@ Messages:
   DeleteSuccess: Claim deleted.
   CantDeleteAdminClaim: You don't have permission to delete administrative claims.
   NoAdminClaimsPermission: You don't have permission to manage administrative claims.
+  ConfirmPvpToggleNoFee: Do you want to {0} PvP in this {1}?\nType again: {2}. (/claim pvp {3} confirm)
+  ConfirmPvpToggleWithFee: Do you want to pay {0} to {1} PvP in this {2}?\nType again: {3}. (/claim pvp {4} confirm)
   DeleteAllSuccess: Deleted all of {0}'s claims.
   NoDeletePermission: You don''t have permission to delete claims.
   AllAdminDeleted: Deleted all administrative claims.

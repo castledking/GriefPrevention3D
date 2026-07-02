@@ -596,6 +596,7 @@ public class FlatFileDataStore extends DataStore
         // Load explosives allowed setting (default false = protected)
         boolean explosivesAllowed = yaml.getBoolean("Explosives Allowed", false);
         boolean witherExplosionsAllowed = yaml.getBoolean("Wither Explosions Allowed", false);
+        boolean pvpEnabled = yaml.getBoolean("PvP Enabled", true);
 
         //instantiate
         claim = new Claim(lesserBoundaryCorner, greaterBoundaryCorner, ownerID, builders, containers, accessors, managers, inheritNothing, claimID, is3D);
@@ -603,6 +604,7 @@ public class FlatFileDataStore extends DataStore
         claim.id = claimID;
         claim.areExplosivesAllowed = explosivesAllowed;
         claim.areWitherExplosionsAllowed = witherExplosionsAllowed;
+        claim.pvpEnabled = pvpEnabled;
         claim.setInheritNothingForNewSubdivisions(inheritNothingForNewSubdivisions);
         claim.setShapedCorners(parseShapeCorners(yaml.getStringList("Shape Corners")));
 
@@ -662,6 +664,7 @@ public class FlatFileDataStore extends DataStore
         boolean is3D = section.getBoolean("Is3D", false);
         boolean explosivesAllowed = section.getBoolean("Explosives Allowed", false);
         boolean witherExplosionsAllowed = section.getBoolean("Wither Explosions Allowed", false);
+        boolean pvpEnabled = section.getBoolean("PvP Enabled", true);
 
         Long childID = null;
         if (section.contains("Claim ID"))
@@ -682,6 +685,7 @@ public class FlatFileDataStore extends DataStore
         child.inDataStore = true;
         child.areExplosivesAllowed = explosivesAllowed;
         child.areWitherExplosionsAllowed = witherExplosionsAllowed;
+        child.pvpEnabled = pvpEnabled;
 
         if (!child.getSubclaimRestrictions())
         {
@@ -755,6 +759,7 @@ public class FlatFileDataStore extends DataStore
         }
         section.set("Explosives Allowed", claim.areExplosivesAllowed);
         section.set("Wither Explosions Allowed", claim.areWitherExplosionsAllowed);
+        section.set("PvP Enabled", claim.pvpEnabled);
         section.set("Modified Date", claim.modifiedDate != null ? claim.modifiedDate.getTime() : System.currentTimeMillis());
 
         ArrayList<Claim> persistedChildren = new ArrayList<>();

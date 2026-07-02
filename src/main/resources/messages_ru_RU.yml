@@ -53,6 +53,8 @@ Messages:
   DeleteSuccess: "Территория удалена."
   CantDeleteAdminClaim: "У вас нет разрешения на удаление административных территорий."
   NoAdminClaimsPermission: "У вас нет разрешения на управление административными территориями."
+  ConfirmPvpToggleNoFee: "Вы хотите {0} PvP в этом {1}?\nВведите снова: {2}. (/claim pvp {3} confirm)"
+  ConfirmPvpToggleWithFee: "Вы хотите заплатить {0}, чтобы {1} PvP в этом {2}?\nВведите снова: {3}. (/claim pvp {4} confirm)"
   DeleteAllSuccess: "Удалены все территории {0}."
   NoDeletePermission: "У вас нет разрешения на удаление территорий."
   AllAdminDeleted: "Все административные территории удалены."

@@ -51,6 +51,8 @@ Messages:
   DeleteSuccess: クレームを削除しました。
   CantDeleteAdminClaim: 管理用クレームを削除する権限がありません。
   NoAdminClaimsPermission: 管理用クレームを管理する権限がありません。
+  ConfirmPvpToggleNoFee: この {1} で PvP を {0} しますか？\nもう一度入力してください：{2}。(/claim pvp {3} confirm)
+  ConfirmPvpToggleWithFee: この {2} で PvP を {1} するために {0} を支払いますか？\nもう一度入力してください：{3}。(/claim pvp {4} confirm)
   DeleteAllSuccess: '{0} のすべてのクレームを削除しました。'
   NoDeletePermission: クレームを削除する権限がありません。
   AllAdminDeleted: すべての管理用クレームを削除しました。

@@ -53,7 +53,7 @@ public class DatabaseDataStore extends DataStore
     private static final String SQL_UPDATE_CLAIM =
             "UPDATE griefprevention_claimdata SET owner = ?, lessercorner = ?, greatercorner = ?, builders = ?, containers = ?, accessors = ?, managers = ?, inheritnothing = ?, inheritnothingfornewsubdivisions = ?, parentid = ?, expiration = ?, explosivesallowed = ?, witherexplosionsallowed = ? WHERE id = ?";
     private static final String SQL_INSERT_CLAIM =
-            "INSERT INTO griefprevention_claimdata (id, owner, lessercorner, greatercorner, builders, containers, accessors, managers, inheritnothing, inheritnothingfornewsubdivisions, parentid, expiration, explosivesallowed, witherexplosionsallowed, is3d, shapecorners, modifieddate) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            "INSERT INTO griefprevention_claimdata (id, owner, lessercorner, greatercorner, builders, containers, accessors, managers, inheritnothing, inheritnothingfornewsubdivisions, parentid, expiration, explosivesallowed, witherexplosionsallowed, is3d, shapecorners, modifieddate, pvpenabled) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     private static final String SQL_DELETE_CLAIM =
             "DELETE FROM griefprevention_claimdata WHERE id = ?";
     private static final String SQL_SELECT_PLAYER_DATA =
@@ -89,6 +89,8 @@ public class DatabaseDataStore extends DataStore
             "ALTER TABLE griefprevention_claimdata ADD COLUMN IF NOT EXISTS shapecorners TEXT DEFAULT ''";
     private static final String SQL_UPDATE_SCHEMA_ADD_MODIFIEDDATE =
             "ALTER TABLE griefprevention_claimdata ADD COLUMN IF NOT EXISTS modifieddate BIGINT DEFAULT 0";
+    private static final String SQL_UPDATE_SCHEMA_ADD_PVPENABLED =
+            "ALTER TABLE griefprevention_claimdata ADD COLUMN IF NOT EXISTS pvpenabled BOOLEAN DEFAULT 1";
 
     private Connection databaseConnection = null;
 
@@ -321,6 +323,12 @@ public class DatabaseDataStore extends DataStore
             statement.execute(SQL_UPDATE_SCHEMA_ADD_MODIFIEDDATE);
         }
 
+        if (this.getSchemaVersion() <= 10)
+        {
+            statement = this.databaseConnection.createStatement();
+            statement.execute(SQL_UPDATE_SCHEMA_ADD_PVPENABLED);
+        }
+
         //load claims data into memory
 
         results = statement.executeQuery("SELECT * FROM griefprevention_claimdata");
@@ -417,6 +425,12 @@ public class DatabaseDataStore extends DataStore
                 boolean explosivesAllowed = results.getBoolean("explosivesallowed");
                 boolean witherExplosionsAllowed = results.getBoolean("witherexplosionsallowed");
                 boolean is3d = results.getBoolean("is3d");
+                boolean pvpEnabled;
+                try {
+                    pvpEnabled = results.getBoolean("pvpenabled");
+                } catch (SQLException e) {
+                    pvpEnabled = true; // Default if column doesn't exist
+                }
                 String shapecornersStr = results.getString("shapecorners");
                 long modifiedDate = results.getLong("modifieddate");
 
@@ -424,6 +438,7 @@ public class DatabaseDataStore extends DataStore
                 claim.setExpirationDate(expirationDate);
                 claim.areExplosivesAllowed = explosivesAllowed;
                 claim.areWitherExplosionsAllowed = witherExplosionsAllowed;
+                claim.pvpEnabled = pvpEnabled;
                 claim.setInheritNothingForNewSubdivisions(inheritNothingForNewSubdivisions);
                 claim.setShapedCorners(parseCornersFromDb(shapecornersStr));
                 if (modifiedDate > 0) claim.modifiedDate = new Date(modifiedDate);
@@ -530,6 +545,7 @@ public class DatabaseDataStore extends DataStore
         boolean explosivesAllowed = claim.areExplosivesAllowed;
         boolean witherExplosionsAllowed = claim.areWitherExplosionsAllowed;
         boolean is3d = claim.is3D();
+        boolean pvpEnabled = claim.pvpEnabled;
         String shapecorners = serializeCornersForDb(claim);
         long modifiedDate = claim.modifiedDate != null ? claim.modifiedDate.getTime() : System.currentTimeMillis();
 
@@ -553,6 +569,7 @@ public class DatabaseDataStore extends DataStore
             insertStmt.setBoolean(15, is3d);
             insertStmt.setString(16, shapecorners);
             insertStmt.setLong(17, modifiedDate);
+            insertStmt.setBoolean(18, pvpEnabled);
             insertStmt.executeUpdate();
         }
         catch (SQLException e)

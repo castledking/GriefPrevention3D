@@ -54,6 +54,8 @@ Messages:
   DeleteSuccess: "Claim deleted! Walk the plank, ye claim."
   CantDeleteAdminClaim: "Ye don't have permission to delete administrative claims, ye landlubber."
   NoAdminClaimsPermission: "Ye don't have permission to manage administrative claims."
+  ConfirmPvpToggleNoFee: "Do ye want to {0} PvP in this {1}?\nType again: {2}. (/claim pvp {3} confirm)"
+  ConfirmPvpToggleWithFee: "Do ye want to pay {0} to {1} PvP in this {2}?\nType again: {3}. (/claim pvp {4} confirm)"
   DeleteAllSuccess: "Deleted all of {0}'s claims, yarr!"
   NoDeletePermission: "Ye don't have permission to delete claims, ye scallywag."
   AllAdminDeleted: "Deleted all administrative claims, by Davy Jones' locker!"

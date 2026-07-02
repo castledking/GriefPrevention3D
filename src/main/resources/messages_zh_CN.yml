@@ -51,6 +51,8 @@ Messages:
   DeleteSuccess: 领地已删除。
   CantDeleteAdminClaim: 你没有删除管理员领地的权限。
   NoAdminClaimsPermission: 你没有管理管理员领地的权限。
+  ConfirmPvpToggleNoFee: "你想在这个 {1} {0} PvP 吗？\n请再次输入：{2}。(/claim pvp {3} confirm)"
+  ConfirmPvpToggleWithFee: "你想支付 {0} 来在这个 {2} {1} PvP 吗？\n请再次输入：{3}。(/claim pvp {4} confirm)"
   DeleteAllSuccess: 已删除 {0} 的所有领地。
   NoDeletePermission: 你没有删除领地的权限。
   AllAdminDeleted: 已删除所有管理员领地。
