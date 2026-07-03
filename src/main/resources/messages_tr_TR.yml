@@ -309,4 +309,8 @@ Messages:
   AdminClaims3DDisabled: Bu sunucuda 3D yönetici bölgeleri devre dışı.
   DistanceCheckEnabled: Mesafe kontrolü etkinleştirildi. Başkalarına çok yakın bölge oluştururken uyarılacaksınız.
   DistanceCheckDisabled: Mesafe kontrolü devre dışı bırakıldı.
+  AuthorTag: "&7castledking, RoboMWM ve BigScary tarafından"
+  PluginTag: "&6Minecraft sunucuları için self-servis anti-griefing eklentisi &b- Artık tam 3D alt bölgelerle"
+  StartupDetails: "&fBaşlangıç detayları: {0}"
+  BootFinished: "&7Başlangıç tamamlandı: &a{0}"
   MessagesLoaded: "Mesajlar yüklendi: &a{0}"

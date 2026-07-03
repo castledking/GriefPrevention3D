@@ -308,4 +308,8 @@ Messages:
   NeighborTrustRevokedAll: "Довіру сусіда для {0} скасовано зі ВСІХ ваших територій."
   NeighborBypassEnabled: "Усі гравці тепер можуть ігнорувати перевірку мінімальної відстані для цієї території."
   NeighborBypassDisabled: "Перевірка мінімальної відстані тепер активна для цієї території."
+  AuthorTag: "&7від castledking, RoboMWM та BigScary"
+  PluginTag: "&6Самодостатній плагін анти-гріферства для серверів Minecraft &b- Тепер з повними 3D-підрозділами"
+  StartupDetails: "&fДеталі запуску: {0}"
+  BootFinished: "&7Запуск завершено за: &a{0}"
   MessagesLoaded: "Повідомлення завантажено: &a{0}"

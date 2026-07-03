@@ -1273,6 +1273,12 @@ public class GriefPrevention extends JavaPlugin {
                 this.config_pvp_allowFireNearPlayers_NonPvp);
         outConfig.set("GriefPrevention.PvP.ProtectPetsOutsideLandClaims", this.config_pvp_protectPets);
 
+        outConfig.set("GriefPrevention.Claims.PvPToggle.Claim.Enabled", this.config_pvp_toggleCostClaimEnabled);
+        outConfig.set("GriefPrevention.Claims.PvPToggle.Claim.Price", this.config_pvp_toggleCostClaimPrice);
+        outConfig.set("GriefPrevention.Claims.PvPToggle.Subdivision.Enabled", this.config_pvp_toggleCostSubdivisionEnabled);
+        outConfig.set("GriefPrevention.Claims.PvPToggle.Subdivision.Price", this.config_pvp_toggleCostSubdivisionPrice);
+        outConfig.set("GriefPrevention.Claims.PvPToggle.Subdivision.DefaultState", this.config_pvp_subdivisionPvpState);
+
         outConfig.set("GriefPrevention.ProtectItemsDroppedOnDeath.PvPWorlds", this.config_lockDeathDropsInPvpWorlds);
         outConfig.set("GriefPrevention.ProtectItemsDroppedOnDeath.NonPvPWorlds",
                 this.config_lockDeathDropsInNonPvpWorlds);
@@ -1576,10 +1582,7 @@ public class GriefPrevention extends JavaPlugin {
             String message = startupHeader.getRandomHeader();
             if (message == null) return;
 
-            org.bukkit.command.CommandSender console = Bukkit.getConsoleSender();
-            for (String line : message.split("\n")) {
-                console.sendMessage(line);
-            }
+            Bukkit.getConsoleSender().sendMessage(message);
         } catch (Exception e) {
             this.getLogger().warning("Failed to display enabled header: " + e.getMessage());
         }

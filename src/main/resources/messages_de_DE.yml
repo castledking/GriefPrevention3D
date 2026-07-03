@@ -308,4 +308,8 @@ Messages:
   DistanceCheckEnabled: Abstandsprüfung aktiviert. Du wirst gewarnt, wenn du Grundstücke zu nah an anderen erstellst.
   DistanceCheckDisabled: Abstandsprüfung deaktiviert.
   NeighborBypassDisabled: Mindestabstandsprüfungen sind jetzt für dieses Gebiet aktiv.
+  AuthorTag: "&7von castledking, RoboMWM und BigScary"
+  PluginTag: "&6Das Self-Service Anti-Griefing-Plugin für Minecraft-Server &b- Jetzt mit vollständigen 3D-Unterteilungen"
+  StartupDetails: "&fStartdetails: {0}"
+  BootFinished: "&7Start abgeschlossen in: &a{0}"
   MessagesLoaded: "Nachrichten geladen: {0}"

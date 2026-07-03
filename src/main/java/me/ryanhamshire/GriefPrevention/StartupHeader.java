@@ -17,7 +17,9 @@ import java.util.regex.Pattern;
  * Handles parsing and display of localized startup headers from startups.txt.
  *
  * <p>Format: each entry is keyed by {locale}{number}[...content...].
- * For example: en1[...], en2[...], es1[...], etc.</p>
+ * The combined startup text is built from localized messages (AuthorTag,
+ * PluginTag, StartupDetails, BootFinished) and inserted via the
+ * {@code ${startup}} placeholder.</p>
  */
 public class StartupHeader {
 
@@ -45,16 +47,22 @@ public class StartupHeader {
 
         Map<String, List<String>> entries = parseStartups(stream);
 
+        // Try locale-specific entries
         List<String> localeEntries = entries.get(langCode);
         if (localeEntries == null || localeEntries.isEmpty()) {
-            // Try language prefix: pt_BR -> pt
             int underscore = langCode.indexOf('_');
             if (underscore > 0) {
                 localeEntries = entries.get(langCode.substring(0, underscore));
             }
         }
+        // Fall back to any available entry (locale-agnostic ASCII art)
         if (localeEntries == null || localeEntries.isEmpty()) {
-            localeEntries = entries.get("en");
+            for (List<String> list : entries.values()) {
+                if (list != null && !list.isEmpty()) {
+                    localeEntries = list;
+                    break;
+                }
+            }
         }
         if (localeEntries == null || localeEntries.isEmpty()) return null;
 
@@ -104,20 +112,63 @@ public class StartupHeader {
 
     /**
      * Applies all ${...} template replacements to the header content.
-     * Builds the ${details} placeholder block with consistent alignment.
+     * Builds the combined ${startup} placeholder from localized messages.
      */
     private String applyReplacements(String header, String langCode) {
-        String yes = "&aON";
-        String no = "&cOFF";
-
         String version = plugin.getDescription().getVersion();
         header = header.replace("${project.version}", version);
         header = header.replace("${version}", version);
-        header = header.replace("${LANG_CODE}", langCode);
-        header = header.replace("${startup.time}",
-                "&a" + (System.currentTimeMillis() - plugin.startupStartTime) + "ms");
 
-        // Build the detail block with consistent column alignment
+        String startup = buildStartupBlock(langCode);
+        header = header.replace("${startup}", startup);
+
+        return header;
+    }
+
+    /**
+     * Builds the combined startup block from locale messages.
+     * Format: \n + AuthorTag + \n + PluginTag + \n + StartupDetails + \n + details body + \n + BootFinished
+     */
+    private String buildStartupBlock(String langCode) {
+        String authorTag = getMessage(Messages.AuthorTag);
+        String pluginTag = getMessage(Messages.PluginTag);
+        String bootTime = "&a" + (System.currentTimeMillis() - plugin.startupStartTime) + "ms";
+        String bootFinished = getMessage(Messages.BootFinished, bootTime);
+
+        String detailsBody = buildDetailsBody(langCode);
+        String startupDetails = getMessage(Messages.StartupDetails, "");
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("\n&r\n");
+        sb.append(authorTag).append("\n&r\n");
+        sb.append(pluginTag).append("\n&r\n");
+        sb.append(startupDetails).append("\n&r\n");
+        sb.append(detailsBody).append("\n&r\n");
+        sb.append(bootFinished);
+        return sb.toString();
+    }
+
+    /**
+     * Gets a localized message via DataStore, falling back to the Messages enum default.
+     */
+    private String getMessage(Messages message, String... args) {
+        if (plugin.dataStore != null) {
+            return plugin.dataStore.getMessage(message, args);
+        }
+        String value = message.defaultValue;
+        for (int i = 0; i < args.length; i++) {
+            value = value.replace("{" + i + "}", args[i] != null ? args[i] : "");
+        }
+        return value;
+    }
+
+    /**
+     * Builds the startup detail block with platform, features, locale, storage info.
+     */
+    private String buildDetailsBody(String langCode) {
+        String yes = "&aON";
+        String no = "&cOFF";
+
         String storageType = "File";
         if (plugin.dataStore != null) {
             storageType = (plugin.dataStore instanceof FlatFileDataStore) ? "File" : "Database";
@@ -126,7 +177,6 @@ public class StartupHeader {
         String localeInfo = plugin.dataStore != null
                 ? plugin.dataStore.getMessage(Messages.MessagesLoaded, String.valueOf(msgCount))
                 : "Messages loaded: " + msgCount;
-        // Strip any leading label from localeInfo to avoid duplication with column header
         String localeCount = localeInfo.replaceAll("^[^:]*:\\s*", "");
         String claimsLoaded = String.valueOf(plugin.dataStore != null ? plugin.dataStore.getClaims().size() : 0);
 
@@ -135,7 +185,6 @@ public class StartupHeader {
         String nested = plugin.config_claims_allowNestedSubClaims ? yes : no;
         String shaped = plugin.config_claims_allowShapedClaims ? yes : no;
 
-        // Left column: pad entire "label value" to COL_WIDTH so right column aligns
         String platformVersion = PlatformDetection.getServerVersion();
 
         StringBuilder details = new StringBuilder();
@@ -149,17 +198,13 @@ public class StartupHeader {
         details.append("\n");
         details.append(formatLine("Storage:", "&a" + storageType, "Claims Loaded:", "&a" + claimsLoaded));
 
-        header = header.replace("${details}", details.toString());
-
-        return header;
+        return details.toString();
     }
 
     private static final int COL_WIDTH = 26;
 
     /**
      * Formats a two-column detail line with consistent alignment.
-     * Left column (label + value) is padded to {@link #COL_WIDTH} visible chars,
-     * then right column is appended.
      */
     private static String formatLine(String leftLabel, String leftValue,
                                      String rightLabel, String rightValue) {
@@ -175,7 +220,7 @@ public class StartupHeader {
 
     /**
      * Pads a string to the specified width by appending spaces.
-     * Color codes ({@code &[0-9a-f]}, {@code §x}, {@code &#RRGGBB}) are excluded from width calculation.
+     * Color codes are excluded from width calculation.
      */
     private static String pad(String text, int width) {
         String stripped = text.replaceAll("[&§][0-9a-fk-orx]", "")

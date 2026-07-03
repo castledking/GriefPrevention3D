@@ -309,4 +309,8 @@ Messages:
   NeighborTrustRevokedAll: "Revoked {0}'s neighbor trust from ALL yer claims."
   NeighborBypassEnabled: "All players can now bypass minimum distance checks for this claim."
   NeighborBypassDisabled: "Minimum distance checks be now enforced for this claim."
+  AuthorTag: "&7by castledking, RoboMWM and BigScary, arrr!"
+  PluginTag: "&6The self-service anti-griefin' plugin fer Minecraft servers &b- Now with full 3D subdivisions, matey!"
+  StartupDetails: "&fStartup details: {0}"
+  BootFinished: "&7Boot finished in: &a{0}, arrr!"
   MessagesLoaded: "Messages loaded: {0}, arrr!"

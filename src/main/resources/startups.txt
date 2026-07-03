@@ -1,4 +1,5 @@
-en1[
+p1[
+&r
 &3 ▄▄▄▄▄▄▄▄▄▄ ▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄ ▄▄▄▄▄▄▄▄▄▄ 
 &3█&f▄████████&3█ █&f████████▄&3█ █&f█████████&3█ █&f████████▄&3█
 &3█&f▓▓▓&3█▀█&f▓▓▓&3█ █&f▓▓▓▓▓▓▓▓▓&3█ █&f▓▓▓▓▓▓▓▓▓&3█ █&f▓▓▓▓▓▓▓▓▓&3█
@@ -9,19 +10,10 @@ en1[
 &3█&b▓▓▓▓▓▓▓▓▓&3█ █&b▓▓▓&3█▀▀▀▀▀  █&b▓▓▓▓▓▓▓▓▓&3█ █&b▓▓▓▓▓▓▓▓▓&3█
 &3█&9█████████&3█ █&9███&3█       █&9█████████&3█ █&9█████████&3█
 &3▀▀▀▀▀▀▀▀▀▀▀ ▀▀▀▀▀       ▀▀▀▀▀▀▀▀▀▀▀ ▀▀▀▀▀▀▀▀▀▀&7(&6v${version}&7)
-
-&7by castledking, RoboMWM and BigScary
-
-&6The self-service anti-griefing plugin for Minecraft servers
-&b — now with full 3D subdivisions
-
-&fStartup details:
-
-${details}
-
-&7Boot finished in: &a${startup.time}
+${startup}
 ]
-en2[
+p2[
+&r
 &3 ▄████  ▄▄▄▄  ▄▄ ▄▄▄▄▄ ▄▄▄▄▄ 
 &3██  ▄▄▄ ██▄█▄ ██ ██▄▄  ██▄▄  
 &3 ▀███▀  ██ ██ ██ ██▄▄▄ ██    
@@ -30,151 +22,14 @@ en2[
 &3██▄▄█▀ ██▄█▄ ██▄▄  ██▄██ ██▄▄  ███▄██   ██   ██ ██▀██ ███▄██    &6 ▄▄██ ██  ██ 
 &3██     ██ ██ ██▄▄▄  ▀█▀  ██▄▄▄ ██ ▀██   ██   ██ ▀███▀ ██ ▀██    &6▄▄▄█▀ ████▀&7(&6v${version}&7)
 
-&7by castledking, RoboMWM and BigScary
-
-&6The self-service anti-griefing plugin for Minecraft servers
-&b — now with full 3D subdivisions
-
-&fStartup details:
-
-${details}
-
-&7Boot finished in: &a${startup.time}
+${startup}
 ]
-en3[
+p3[
+&r
 &a  ___     _      __ ___                     _   _          &9_______  
 &a / __|_ _(_)___ / _| _ \_ _ _____ _____ _ _| |_(_)___ _ _ &9|__ /   \ 
 &a| (_ | '_| / -_)  _|  _/ '_/ -_) V / -_) ' \  _| / _ \ ' \ &9|_ \ |) |
 &a \___|_| |_\___|_| |_| |_| \___|\_/\___|_||_\__|_\___/_||_&9|___/___/&7(&6v${version}&7)
 
-&7by castledking, RoboMWM and BigScary
-
-&6The self-service anti-griefing plugin for Minecraft servers
-&b — now with full 3D subdivisions
-
-&fStartup details:
-
-${details}
-
-&7Boot finished in: &a${startup.time}
-]
-es1[
-&3 ▄▄▄▄▄▄▄▄▄▄ ▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄ ▄▄▄▄▄▄▄▄▄▄ 
-&3█&f▄████████&3█ █&f████████▄&3█ █&f█████████&3█ █&f████████▄&3█
-&3█&f▓▓▓&3█▀█&f▓▓▓&3█ █&f▓▓▓▓▓▓▓▓▓&3█ █&f▓▓▓▓▓▓▓▓▓&3█ █&f▓▓▓▓▓▓▓▓▓&3█
-&3█&3▒▒▒&3█▄█████ █&3▒▒▒&3█▀█&3▒▒▒&3█ █&3▒▒▒&3█▀█&3▒▒▒&3█ █&3▒▒▒&3█▀█&3▒▒▒&3█
-&3█&7░░░&3█&7░░░░░&3█ █&7░░░&3█▄█&7░░░&3█ ▀▀▀▀█▄█&7░░░&3█ █&7░░░&3█ █&7░░░&3█
-&3█&7░░░&3█▀█&7░░░&3█ █&7░░░░░░░░░&3█ ▄▄▄▄█&7░░░░░&3█ █&7░░░&3█ █&7░░░&3█
-&3█&b▒▒▒&3█▄█&b▒▒▒&3█ █&b▒▒▒▒▒▒▒▒&3▄█ █&b▒▒▒&3███&b▒▒▒&3█ █&b▒▒▒&3█▄█&b▒▒▒&3█
-&3█&b▓▓▓▓▓▓▓▓▓&3█ █&b▓▓▓&3█▀▀▀▀▀  █&b▓▓▓▓▓▓▓▓▓&3█ █&b▓▓▓▓▓▓▓▓▓&3█
-&3█&9█████████&3█ █&9███&3█       █&9█████████&3█ █&9█████████&3█
-&3▀▀▀▀▀▀▀▀▀▀▀ ▀▀▀▀▀       ▀▀▀▀▀▀▀▀▀▀▀ ▀▀▀▀▀▀▀▀▀▀&7(&6v${version}&7)
-
-&7por castledking, RoboMWM y BigScary
-
-&6El plugin de protección contra griefing de autoservicio para servidores de Minecraft
-&b — ahora con subdivisiones 3D completas
-
-&fDetalles de inicio:
-
-${details}
-
-&7Inicio completado en: &a${startup.time}
-]
-es2[
-&3 ▄████  ▄▄▄▄  ▄▄ ▄▄▄▄▄ ▄▄▄▄▄ 
-&3██  ▄▄▄ ██▄█▄ ██ ██▄▄  ██▄▄  
-&3 ▀███▀  ██ ██ ██ ██▄▄▄ ██    
-
-&3█████▄ ▄▄▄▄  ▄▄▄▄▄ ▄▄ ▄▄ ▄▄▄▄▄ ▄▄  ▄▄ ▄▄▄▄▄▄ ▄▄  ▄▄▄  ▄▄  ▄▄    &6████▄ ████▄ 
-&3██▄▄█▀ ██▄█▄ ██▄▄  ██▄██ ██▄▄  ███▄██   ██   ██ ██▀██ ███▄██    &6 ▄▄██ ██  ██ 
-&3██     ██ ██ ██▄▄▄  ▀█▀  ██▄▄▄ ██ ▀██   ██   ██ ▀███▀ ██ ▀██    &6▄▄▄█▀ ████▀&7(&6v${version}&7)
-
-&7por castledking, RoboMWM y BigScary
-
-&6El plugin de protección contra griefing de autoservicio para servidores de Minecraft
-&b — ahora con subdivisiones 3D completas
-
-&fDetalles de inicio:
-
-${details}
-
-&7Inicio completado en: &a${startup.time}
-]
-es3[
-&a  ___     _      __ ___                     _   _          &9_______  
-&a / __|_ _(_)___ / _| _ \_ _ _____ _____ _ _| |_(_)___ _ _ &9|__ /   \ 
-&a| (_ | '_| / -_)  _|  _/ '_/ -_) V / -_) ' \  _| / _ \ ' \ &9|_ \ |) |
-&a \___|_| |_\___|_| |_| |_| \___|\_/\___|_||_\__|_\___/_||_&9|___/___/&7(&6v${version}&7)
-
-&7por castledking, RoboMWM y BigScary
-
-&6El plugin de protección contra griefing de autoservicio para servidores de Minecraft
-&b — ahora con subdivisiones 3D completas
-
-&fDetalles de inicio:
-
-${details}
-
-&7Inicio completado en: &a${startup.time}
-]
-pt1[
-&3 ▄▄▄▄▄▄▄▄▄▄ ▄▄▄▄▄▄▄▄▄▄  ▄▄▄▄▄▄▄▄▄▄▄ ▄▄▄▄▄▄▄▄▄▄ 
-&3█&f▄████████&3█ █&f████████▄&3█ █&f█████████&3█ █&f████████▄&3█
-&3█&f▓▓▓&3█▀█&f▓▓▓&3█ █&f▓▓▓▓▓▓▓▓▓&3█ █&f▓▓▓▓▓▓▓▓▓&3█ █&f▓▓▓▓▓▓▓▓▓&3█
-&3█&3▒▒▒&3█▄█████ █&3▒▒▒&3█▀█&3▒▒▒&3█ █&3▒▒▒&3█▀█&3▒▒▒&3█ █&3▒▒▒&3█▀█&3▒▒▒&3█
-&3█&7░░░&3█&7░░░░░&3█ █&7░░░&3█▄█&7░░░&3█ ▀▀▀▀█▄█&7░░░&3█ █&7░░░&3█ █&7░░░&3█
-&3█&7░░░&3█▀█&7░░░&3█ █&7░░░░░░░░░&3█ ▄▄▄▄█&7░░░░░&3█ █&7░░░&3█ █&7░░░&3█
-&3█&b▒▒▒&3█▄█&b▒▒▒&3█ █&b▒▒▒▒▒▒▒▒&3▄█ █&b▒▒▒&3███&b▒▒▒&3█ █&b▒▒▒&3█▄█&b▒▒▒&3█
-&3█&b▓▓▓▓▓▓▓▓▓&3█ █&b▓▓▓&3█▀▀▀▀▀  █&b▓▓▓▓▓▓▓▓▓&3█ █&b▓▓▓▓▓▓▓▓▓&3█
-&3█&9█████████&3█ █&9███&3█       █&9█████████&3█ █&9█████████&3█
-&3▀▀▀▀▀▀▀▀▀▀▀ ▀▀▀▀▀       ▀▀▀▀▀▀▀▀▀▀▀ ▀▀▀▀▀▀▀▀▀▀&7(&6v${version}&7)
-
-&7por castledking, RoboMWM e BigScary
-
-&6O plugin de proteção contra griefing de autoatendimento para servidores de Minecraft
-&b — agora com subdivisões 3D completas
-
-&fDetalhes da inicialização:
-
-${details}
-
-&7Inicialização concluída em: &a${startup.time}
-]
-pt2[
-&3 ▄████  ▄▄▄▄  ▄▄ ▄▄▄▄▄ ▄▄▄▄▄ 
-&3██  ▄▄▄ ██▄█▄ ██ ██▄▄  ██▄▄  
-&3 ▀███▀  ██ ██ ██ ██▄▄▄ ██    
-
-&3█████▄ ▄▄▄▄  ▄▄▄▄▄ ▄▄ ▄▄ ▄▄▄▄▄ ▄▄  ▄▄ ▄▄▄▄▄▄ ▄▄  ▄▄▄  ▄▄  ▄▄    &6████▄ ████▄ 
-&3██▄▄█▀ ██▄█▄ ██▄▄  ██▄██ ██▄▄  ███▄██   ██   ██ ██▀██ ███▄██    &6 ▄▄██ ██  ██ 
-&3██     ██ ██ ██▄▄▄  ▀█▀  ██▄▄▄ ██ ▀██   ██   ██ ▀███▀ ██ ▀██    &6▄▄▄█▀ ████▀&7(&6v${version}&7)
-
-&7por castledking, RoboMWM e BigScary
-
-&6O plugin de proteção contra griefing de autoatendimento para servidores de Minecraft
-&b — agora com subdivisões 3D completas
-
-&fDetalhes da inicialização:
-
-${details}
-
-&7Inicialização concluída em: &a${startup.time}
-]
-pt3[
-&a  ___     _      __ ___                     _   _          &9_______  
-&a / __|_ _(_)___ / _| _ \_ _ _____ _____ _ _| |_(_)___ _ _ &9|__ /   \ 
-&a| (_ | '_| / -_)  _|  _/ '_/ -_) V / -_) ' \  _| / _ \ ' \ &9|_ \ |) |
-&a \___|_| |_\___|_| |_| |_| \___|\_/\___|_||_\__|_\___/_||_&9|___/___/&7(&6v${version}&7) 
-
-&7por castledking, RoboMWM e BigScary
-
-&6O plugin de proteção contra griefing de autoatendimento para servidores de Minecraft
-&b — agora com subdivisões 3D completas
-
-&fDetalhes da inicialização:
-
-${details}
-
-&7Inicialização concluída em: &a${startup.time}
+${startup}
 ]
