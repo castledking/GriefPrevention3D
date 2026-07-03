@@ -139,7 +139,6 @@ public class StartupHeader {
         String startupDetails = getMessage(Messages.StartupDetails, "");
 
         StringBuilder sb = new StringBuilder();
-        sb.append("\n&r\n");
         sb.append(authorTag).append("\n&r\n");
         sb.append(pluginTag).append("\n&r\n");
         sb.append(startupDetails).append("\n&r\n");

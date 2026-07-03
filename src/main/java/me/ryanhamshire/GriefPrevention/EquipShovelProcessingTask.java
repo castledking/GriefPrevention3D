@@ -52,6 +52,9 @@ class EquipShovelProcessingTask implements Runnable
         playerData.claimResizing = null;
         playerData.claimMerging = null;
         playerData.mergeEdgeIndex = null;
+        playerData.mergeSecondEdgeIndex = null;
+        playerData.mergeFirstDepthPoint = null;
+        playerData.mergeSecondDepthPoint = null;
 
         // shaped mode should persist while the player is actively using the shovel
         if (playerData.shovelMode != ShovelMode.Basic && playerData.shovelMode != ShovelMode.Shaped && playerData.shovelMode != ShovelMode.Merge)

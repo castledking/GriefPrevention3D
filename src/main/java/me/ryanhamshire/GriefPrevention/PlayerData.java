@@ -19,6 +19,7 @@
 package me.ryanhamshire.GriefPrevention;
 
 import com.griefprevention.claims.editor.ClaimEditorSession;
+import com.griefprevention.geometry.OrthogonalPoint2i;
 import com.griefprevention.visualization.BoundaryVisualization;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -97,6 +98,15 @@ public class PlayerData
     //the edge index selected for merging (for shaped claims, the specific nib)
     public Integer mergeEdgeIndex = null;
 
+    //the second claim's edge index for shaped claim merge (player-selected nib)
+    public Integer mergeSecondEdgeIndex = null;
+
+    //player position when first claim merge edge was selected (for nib depth)
+    public @Nullable OrthogonalPoint2i mergeFirstDepthPoint = null;
+
+    //player position when second claim merge edge was selected (for nib depth)
+    public @Nullable OrthogonalPoint2i mergeSecondDepthPoint = null;
+
     //transient in-memory shaped-mode session state for the recode branch
     private transient @Nullable ClaimEditorSession claimEditorSession = null;
 
@@ -141,6 +151,10 @@ public class PlayerData
 
     //safety confirmation for deleting multi-subdivision claims
     public boolean warnedAboutMajorDeletion = false;
+
+    //pending PvP toggle action
+    public Boolean pendingPvpToggle = null;
+    public Long pendingPvpClaimId = null;
 
     public InetAddress ipAddress;
 

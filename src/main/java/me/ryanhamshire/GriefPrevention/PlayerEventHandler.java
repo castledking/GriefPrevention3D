@@ -1803,6 +1803,9 @@ public class PlayerEventHandler implements Listener {
                 playerData.claimResizing = null;
                 playerData.claimMerging = null;
                 playerData.mergeEdgeIndex = null;
+                playerData.mergeSecondEdgeIndex = null;
+                playerData.mergeFirstDepthPoint = null;
+                playerData.mergeSecondDepthPoint = null;
                 playerData.lastShovelLocation = null;
                 playerData.setClaimEditorSession(null);
                 playerData.shapedModeResetBySwitch = true;
@@ -2403,6 +2406,9 @@ public class PlayerEventHandler implements Listener {
                     playerData.claimResizing = null;
                     playerData.claimMerging = null;
                     playerData.mergeEdgeIndex = null;
+                    playerData.mergeSecondEdgeIndex = null;
+                    playerData.mergeFirstDepthPoint = null;
+                    playerData.mergeSecondDepthPoint = null;
                     playerData.lastShovelLocation = null;
                     playerData.setClaimEditorSession(null);
                     GriefPrevention.sendMessage(player, TextMode.Err, Messages.ShapedClaimsDisabled);
@@ -4254,9 +4260,12 @@ public class PlayerEventHandler implements Listener {
                     );
                     return;
                 }
-                playerData.mergeEdgeIndex = edgeMatches.get(0);
+                playerData.mergeSecondEdgeIndex = edgeMatches.get(0);
+                playerData.mergeSecondDepthPoint = new OrthogonalPoint2i(
+                    player.getLocation().getBlockX(), player.getLocation().getBlockZ());
             } else {
-                playerData.mergeEdgeIndex = null;
+                playerData.mergeSecondEdgeIndex = null;
+                playerData.mergeSecondDepthPoint = null;
             }
 
             playerData.claimMerging = clickedClaim;

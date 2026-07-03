@@ -51,8 +51,8 @@ Messages:
   DeleteSuccess: Gebiet gelöscht.
   CantDeleteAdminClaim: "Du hast keine Berechtigung, administrative Gebiete zu löschen."
   NoAdminClaimsPermission: "Du hast keine Berechtigung, administrative Gebiete zu verwalten."
-  ConfirmPvpToggleNoFee: "Möchtest du PvP in diesem {0} {1}?\nGib erneut ein: {2}. (/claim pvp {3} confirm)"
-  ConfirmPvpToggleWithFee: "Möchtest du {0} bezahlen, um PvP in diesem {1} {2} zu aktivieren?\nGib erneut ein: {3}. (/claim pvp {4} confirm)"
+  ConfirmPvpToggleNoFee: "Möchtest du PvP in diesem {0} {1}?"
+  ConfirmPvpToggleWithFee: "Möchtest du {0} bezahlen, um PvP in diesem {1} {2} zu aktivieren?"
   DeleteAllSuccess: "Alle Gebiete von {0} gelöscht."
   NoDeletePermission: "Du hast keine Berechtigung, Gebiete zu löschen."
   AllAdminDeleted: Alle administrativen Gebiete gelöscht.
@@ -309,7 +309,7 @@ Messages:
   DistanceCheckDisabled: Abstandsprüfung deaktiviert.
   NeighborBypassDisabled: Mindestabstandsprüfungen sind jetzt für dieses Gebiet aktiv.
   AuthorTag: "&7von castledking, RoboMWM und BigScary"
-  PluginTag: "&6Das Self-Service Anti-Griefing-Plugin für Minecraft-Server &b- Jetzt mit vollständigen 3D-Unterteilungen"
+  PluginTag: "&6Das Self-Service Anti-Griefing-Plugin für Minecraft-Server \n&b- Jetzt mit vollständigen 3D-Unterteilungen"
   StartupDetails: "&fStartdetails: {0}"
   BootFinished: "&7Start abgeschlossen in: &a{0}"
   MessagesLoaded: "Nachrichten geladen: {0}"

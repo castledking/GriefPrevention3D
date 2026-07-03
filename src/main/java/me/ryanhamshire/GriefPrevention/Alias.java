@@ -208,7 +208,7 @@ public enum Alias {
         "enable: true" + "\n" +
 "commands: [pvp]" + "\n" +
 "standalone: [claimpvp]" + "\n" +
-"usage: \"/claim pvp <true|false> [confirm]\"" + "\n" +
+"usage: \"/claim pvp [true|false] [confirm]\"" + "\n" +
 "description: Toggle PvP in your current claim." + "\n" +
 "permission: griefprevention.pvp" + "\n" +
 "arguments:" + "\n" +
@@ -634,7 +634,7 @@ public enum Alias {
 "      enable: true" + "\n" +
 "      commands: [pvp]" + "\n" +
 "      standalone: [claimpvp]" + "\n" +
-"      usage: \"/claim pvp <true|false> [confirm]\"" + "\n" +
+"      usage: \"/claim pvp [true|false] [confirm]\"" + "\n" +
 "      description: Toggle PvP in your current claim." + "\n" +
 "      permission: griefprevention.pvp" + "\n" +
 "      arguments:" + "\n" +

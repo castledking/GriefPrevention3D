@@ -210,7 +210,11 @@ commands:
     aliases: claimexplosion
   claimpvp:
     description: Toggles whether PvP is enabled in a specific land claim.
-    usage: /<command> <true|false> confirm
+    usage: /<command> [true|false] [confirm]
+    permission: griefprevention.claims
+  claimpvpconfirm:
+    description: Confirms a pending PvP toggle.
+    usage: /<command>
     permission: griefprevention.claims
   witherexplosions:
     description: Toggles whether wither explosions may damage a specific land claim.

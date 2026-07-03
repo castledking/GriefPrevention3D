@@ -51,8 +51,8 @@ Messages:
   DeleteSuccess: 领地已删除。
   CantDeleteAdminClaim: 你没有删除管理员领地的权限。
   NoAdminClaimsPermission: 你没有管理管理员领地的权限。
-  ConfirmPvpToggleNoFee: "你想在这个 {1} {0} PvP 吗？\n请再次输入：{2}。(/claim pvp {3} confirm)"
-  ConfirmPvpToggleWithFee: "你想支付 {0} 来在这个 {2} {1} PvP 吗？\n请再次输入：{3}。(/claim pvp {4} confirm)"
+  ConfirmPvpToggleNoFee: "你想在这个 {1} {0} PvP 吗？"
+  ConfirmPvpToggleWithFee: "你想支付 {0} 来在这个 {2} {1} PvP 吗？"
   DeleteAllSuccess: 已删除 {0} 的所有领地。
   NoDeletePermission: 你没有删除领地的权限。
   AllAdminDeleted: 已删除所有管理员领地。
@@ -309,7 +309,7 @@ Messages:
   DistanceCheckEnabled: 距离检查已启用。创建领地时如果太靠近其他领地将会收到警告。
   DistanceCheckDisabled: 距离检查已禁用。
   AuthorTag: "&7由 castledking、RoboMWM 和 BigScary 制作"
-  PluginTag: "&6Minecraft 服务器的自助防破坏插件 &b- 现已支持完整3D子区域"
+  PluginTag: "&6Minecraft 服务器的自助防破坏插件 \n&b- 现已支持完整3D子区域"
   StartupDetails: "&f启动详情：{0}"
   BootFinished: "&7启动完成用时：&a{0}"
   MessagesLoaded: "消息已加载：&a{0}"

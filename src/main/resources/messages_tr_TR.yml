@@ -52,8 +52,8 @@ Messages:
   DeleteSuccess: Bölge silindi.
   CantDeleteAdminClaim: Yönetici bölgelerini silme izniniz yok.
   NoAdminClaimsPermission: Yönetici bölgelerini yönetme izniniz yok.
-  ConfirmPvpToggleNoFee: "Bu {1} içinde PvP'yi {0} yapmak istiyor musunuz?\nTekrar yazın: {2}. (/claim pvp {3} confirm)"
-  ConfirmPvpToggleWithFee: "Bu {2} içinde PvP'yi {1} yapmak için {0} ödemek istiyor musunuz?\nTekrar yazın: {3}. (/claim pvp {4} confirm)"
+  ConfirmPvpToggleNoFee: "Bu {1} içinde PvP'yi {0} yapmak istiyor musunuz?"
+  ConfirmPvpToggleWithFee: "Bu {2} içinde PvP'yi {1} yapmak için {0} ödemek istiyor musunuz?"
   DeleteAllSuccess: '{0} kullanıcısının tüm bölgeleri silindi.'
   NoDeletePermission: Bölgeleri silme izniniz yok.
   AllAdminDeleted: Tüm yönetici bölgeleri silindi.
@@ -310,7 +310,7 @@ Messages:
   DistanceCheckEnabled: Mesafe kontrolü etkinleştirildi. Başkalarına çok yakın bölge oluştururken uyarılacaksınız.
   DistanceCheckDisabled: Mesafe kontrolü devre dışı bırakıldı.
   AuthorTag: "&7castledking, RoboMWM ve BigScary tarafından"
-  PluginTag: "&6Minecraft sunucuları için self-servis anti-griefing eklentisi &b- Artık tam 3D alt bölgelerle"
+  PluginTag: "&6Minecraft sunucuları için self-servis anti-griefing eklentisi \n&b- Artık tam 3D alt bölgelerle"
   StartupDetails: "&fBaşlangıç detayları: {0}"
   BootFinished: "&7Başlangıç tamamlandı: &a{0}"
   MessagesLoaded: "Mesajlar yüklendi: &a{0}"

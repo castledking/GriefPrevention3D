@@ -51,8 +51,8 @@ Messages:
   DeleteSuccess: Teren usunięty.
   CantDeleteAdminClaim: Nie masz uprawnień do usuwania terenów administracyjnych.
   NoAdminClaimsPermission: Nie masz uprawnień do zarządzania terenami administracyjnymi.
-  ConfirmPvpToggleNoFee: "Czy chcesz {0} PvP w tym {1}?\nWpisz ponownie: {2}. (/claim pvp {3} confirm)"
-  ConfirmPvpToggleWithFee: "Czy chcesz zapłacić {0}, aby {1} PvP w tym {2}?\nWpisz ponownie: {3}. (/claim pvp {4} confirm)"
+  ConfirmPvpToggleNoFee: "Czy chcesz {0} PvP w tym {1}?"
+  ConfirmPvpToggleWithFee: "Czy chcesz zapłacić {0}, aby {1} PvP w tym {2}?"
   DeleteAllSuccess: Usunięto wszystkie tereny {0}.
   NoDeletePermission: Nie masz uprawnień do usuwania terenów.
   AllAdminDeleted: Usunięto wszystkie tereny administracyjne.
@@ -309,7 +309,7 @@ Messages:
   DistanceCheckDisabled: Sprawdzanie odległości wyłączone.
   NeighborBypassDisabled: "Sprawdzanie minimalnej odległości jest teraz wymagane dla tego terenu."
   AuthorTag: "&7autorstwa castledking, RoboMWM i BigScary"
-  PluginTag: "&6Samodzielna wtyczka anty-griefingowa dla serwerów Minecraft &b- Teraz z pełnymi podziałami 3D"
+  PluginTag: "&6Samodzielna wtyczka anty-griefingowa dla serwerów Minecraft \n&b- Teraz z pełnymi podziałami 3D"
   StartupDetails: "&fSzczegóły uruchamiania: {0}"
   BootFinished: "&7Uruchamianie zakończone w: &a{0}"
   MessagesLoaded: "Komunikaty załadowane: &a{0}"

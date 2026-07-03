@@ -51,8 +51,8 @@ Messages:
   DeleteSuccess: クレームを削除しました。
   CantDeleteAdminClaim: 管理用クレームを削除する権限がありません。
   NoAdminClaimsPermission: 管理用クレームを管理する権限がありません。
-  ConfirmPvpToggleNoFee: "この {1} で PvP を {0} しますか？\nもう一度入力してください：{2}。(/claim pvp {3} confirm)"
-  ConfirmPvpToggleWithFee: "この {2} で PvP を {1} するために {0} を支払いますか？\nもう一度入力してください：{3}。(/claim pvp {4} confirm)"
+  ConfirmPvpToggleNoFee: "この {1} で PvP を {0} しますか？"
+  ConfirmPvpToggleWithFee: "この {2} で PvP を {1} するために {0} を支払いますか？"
   DeleteAllSuccess: '{0} のすべてのクレームを削除しました。'
   NoDeletePermission: クレームを削除する権限がありません。
   AllAdminDeleted: すべての管理用クレームを削除しました。
@@ -309,7 +309,7 @@ Messages:
   DistanceCheckDisabled: 距離チェックが無効になりました。
   NeighborBypassDisabled: "このクレームで最小距離チェックが適用されるようになりました。"
   AuthorTag: "&7by castledking, RoboMWM and BigScary"
-  PluginTag: "&6The self-service anti-griefing plugin for Minecraft servers &b- Now with full 3D subdivisions"
+  PluginTag: "&6The self-service anti-griefing plugin for Minecraft servers \n&b- now with full 3D subdivisions"
   StartupDetails: "&f起動詳細：{0}"
   BootFinished: "&7起動完了まで：&a{0}"
   MessagesLoaded: "メッセージを読み込みました：&a{0}"

@@ -51,8 +51,8 @@ Messages:
   DeleteSuccess: Terreno protegido eliminado.
   CantDeleteAdminClaim: No tienes permiso para eliminar terrenos administrativos.
   NoAdminClaimsPermission: No tienes permiso para administrar terrenos administrativos.
-  ConfirmPvpToggleNoFee: "¿Quieres {0} PvP en este {1}?\nEscribe de nuevo: {2}. (/claim pvp {3} confirm)"
-  ConfirmPvpToggleWithFee: "¿Quieres pagar {0} para {1} PvP en este {2}?\nEscribe de nuevo: {3}. (/claim pvp {4} confirm)"
+  ConfirmPvpToggleNoFee: "¿Quieres {0} PvP en este {1}?"
+  ConfirmPvpToggleWithFee: "¿Quieres pagar {0} para {1} PvP en este {2}?"
   DeleteAllSuccess: Se eliminaron todos los terrenos protegidos de {0}.
   NoDeletePermission: No tienes permiso para eliminar terrenos protegidos.
   AllAdminDeleted: Se eliminaron todos los terrenos administrativos.
@@ -305,7 +305,7 @@ Messages:
   NeighborBypassEnabled: "Todos los jugadores pueden ahora omitir las verificaciones de distancia mínima para este terreno."
   NeighborBypassDisabled: "Las verificaciones de distancia mínima están ahora activas para este terreno."
   AuthorTag: "&7por castledking, RoboMWM y BigScary"
-  PluginTag: "&6El plugin de protección contra griefing de autoservicio para servidores de Minecraft &b- ahora con subdivisiones 3D completas"
+  PluginTag: "&6El plugin de protección contra griefing de autoservicio para servidores de Minecraft \n&b- ahora con subdivisiones 3D completas"
   StartupDetails: "&fDetalles de inicio: {0}"
   BootFinished: "&7Inicio completado en: &a{0}"
   MessagesLoaded: "Mensajes cargados: &a{0}"

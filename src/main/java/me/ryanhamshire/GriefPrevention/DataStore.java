@@ -1999,6 +1999,9 @@ public abstract class DataStore {
             GriefPrevention.sendMessage(player, TextMode.Err, "Cannot merge claims in different worlds.");
             playerData.claimMerging = null;
             playerData.mergeEdgeIndex = null;
+            playerData.mergeSecondEdgeIndex = null;
+            playerData.mergeFirstDepthPoint = null;
+            playerData.mergeSecondDepthPoint = null;
             playerData.shovelMode = ShovelMode.Basic;
             return;
         }
@@ -2034,72 +2037,82 @@ public abstract class DataStore {
                 }
             }
 
-            // Fill gaps: find the closest pair of cells between the two polygons
-            // and add cells along that connecting line
+            // Use nib-based global rectangle if shaped claim edge indices are available;
+            // otherwise fall back to Manhattan path between closest cells.
             if (!occupied.isEmpty()) {
-                // Find cells from each polygon
-                Set<OrthogonalPoint2i> firstCells = new HashSet<>();
-                Set<OrthogonalPoint2i> secondCells = new HashSet<>();
-                for (OrthogonalPoint2i pt : occupied) {
-                    if (firstPolygon.containsCell(pt.x(), pt.z())) {
-                        firstCells.add(pt);
-                    }
-                    if (secondPolygon.containsCell(pt.x(), pt.z())) {
-                        secondCells.add(pt);
-                    }
-                }
-
-                // Find the closest pair, constrained to preferred connection cells
-                // if provided. These are the reshape corridor's leading-edge cells
-                // that the player extended toward the marked claim, so the merge
-                // follows the player's intended path rather than a globally-closest
-                // pair that might bypass the corridor entirely.
-                int[] best = null;
-                Set<OrthogonalPoint2i> connectionOrigins;
-                if (preferredConnectionCells != null && !preferredConnectionCells.isEmpty()) {
-                    connectionOrigins = new HashSet<>();
-                    for (OrthogonalPoint2i pc : preferredConnectionCells) {
-                        if (firstCells.contains(pc)) {
-                            connectionOrigins.add(pc);
+                if (mergeEdgeIndex != null
+                        && playerData.mergeSecondEdgeIndex != null
+                        && playerData.mergeFirstDepthPoint != null
+                        && playerData.mergeSecondDepthPoint != null
+                        && mergeEdgeIndex < firstPolygon.edges().size()
+                        && playerData.mergeSecondEdgeIndex < secondPolygon.edges().size()) {
+                    // Build the global nib rectangle that connects both claims
+                    // at the player-selected depths from each edge.
+                    OrthogonalPolygon nibRect = buildNibRectangle(
+                            firstPolygon, mergeEdgeIndex, playerData.mergeFirstDepthPoint,
+                            secondPolygon, playerData.mergeSecondEdgeIndex, playerData.mergeSecondDepthPoint);
+                    for (int x = nibRect.minX(); x <= nibRect.maxX(); x++) {
+                        for (int z = nibRect.minZ(); z <= nibRect.maxZ(); z++) {
+                            occupied.add(new OrthogonalPoint2i(x, z));
                         }
-                    }
-                    if (connectionOrigins.isEmpty()) {
-                        connectionOrigins = firstCells;
                     }
                 } else {
-                    connectionOrigins = firstCells;
-                }
-                for (OrthogonalPoint2i c1 : connectionOrigins) {
-                    for (OrthogonalPoint2i c2 : secondCells) {
-                        int dist = Math.abs(c1.x() - c2.x()) + Math.abs(c1.z() - c2.z());
-                        if (best == null || dist < best[0]) {
-                            best = new int[]{dist, c1.x(), c1.z(), c2.x(), c2.z()};
+                    // Fall back: Manhattan path between closest cells
+                    Set<OrthogonalPoint2i> firstCells = new HashSet<>();
+                    Set<OrthogonalPoint2i> secondCells = new HashSet<>();
+                    for (OrthogonalPoint2i pt : occupied) {
+                        if (firstPolygon.containsCell(pt.x(), pt.z())) {
+                            firstCells.add(pt);
+                        }
+                        if (secondPolygon.containsCell(pt.x(), pt.z())) {
+                            secondCells.add(pt);
                         }
                     }
-                }
 
-                if (best != null) {
-                    // Fill a 2-cell-wide Manhattan path between the closest cells.
-                    // This ensures the contour tracing doesn't fail at diagonal
-                    // convergence points and preserves the original shapes.
-                    int cx = best[1], cz = best[2];
-                    int tx = best[3], tz = best[4];
-                    while (cx != tx || cz != tz) {
-                        occupied.add(new OrthogonalPoint2i(cx, cz));
-                        occupied.add(new OrthogonalPoint2i(cx + 1, cz));
-                        occupied.add(new OrthogonalPoint2i(cx - 1, cz));
-                        occupied.add(new OrthogonalPoint2i(cx, cz + 1));
-                        occupied.add(new OrthogonalPoint2i(cx, cz - 1));
-                        if (cx < tx) cx++;
-                        else if (cx > tx) cx--;
-                        else if (cz < tz) cz++;
-                        else if (cz > tz) cz--;
+                    int[] best = null;
+                    Set<OrthogonalPoint2i> connectionOrigins;
+                    if (preferredConnectionCells != null && !preferredConnectionCells.isEmpty()) {
+                        connectionOrigins = new HashSet<>();
+                        for (OrthogonalPoint2i pc : preferredConnectionCells) {
+                            if (firstCells.contains(pc)) {
+                                connectionOrigins.add(pc);
+                            }
+                        }
+                        if (connectionOrigins.isEmpty()) {
+                            connectionOrigins = firstCells;
+                        }
+                    } else {
+                        connectionOrigins = firstCells;
                     }
-                    occupied.add(new OrthogonalPoint2i(tx, tz));
-                    occupied.add(new OrthogonalPoint2i(tx + 1, tz));
-                    occupied.add(new OrthogonalPoint2i(tx - 1, tz));
-                    occupied.add(new OrthogonalPoint2i(tx, tz + 1));
-                    occupied.add(new OrthogonalPoint2i(tx, tz - 1));
+                    for (OrthogonalPoint2i c1 : connectionOrigins) {
+                        for (OrthogonalPoint2i c2 : secondCells) {
+                            int dist = Math.abs(c1.x() - c2.x()) + Math.abs(c1.z() - c2.z());
+                            if (best == null || dist < best[0]) {
+                                best = new int[]{dist, c1.x(), c1.z(), c2.x(), c2.z()};
+                            }
+                        }
+                    }
+
+                    if (best != null) {
+                        int cx = best[1], cz = best[2];
+                        int tx = best[3], tz = best[4];
+                        while (cx != tx || cz != tz) {
+                            occupied.add(new OrthogonalPoint2i(cx, cz));
+                            occupied.add(new OrthogonalPoint2i(cx + 1, cz));
+                            occupied.add(new OrthogonalPoint2i(cx - 1, cz));
+                            occupied.add(new OrthogonalPoint2i(cx, cz + 1));
+                            occupied.add(new OrthogonalPoint2i(cx, cz - 1));
+                            if (cx < tx) cx++;
+                            else if (cx > tx) cx--;
+                            else if (cz < tz) cz++;
+                            else if (cz > tz) cz--;
+                        }
+                        occupied.add(new OrthogonalPoint2i(tx, tz));
+                        occupied.add(new OrthogonalPoint2i(tx + 1, tz));
+                        occupied.add(new OrthogonalPoint2i(tx - 1, tz));
+                        occupied.add(new OrthogonalPoint2i(tx, tz + 1));
+                        occupied.add(new OrthogonalPoint2i(tx, tz - 1));
+                    }
                 }
             }
 
@@ -2133,6 +2146,9 @@ public abstract class DataStore {
             GriefPrevention.sendMessage(player, TextMode.Err, "Failed to merge claims: invalid resulting shape.");
             playerData.claimMerging = null;
             playerData.mergeEdgeIndex = null;
+            playerData.mergeSecondEdgeIndex = null;
+            playerData.mergeFirstDepthPoint = null;
+            playerData.mergeSecondDepthPoint = null;
             playerData.shovelMode = ShovelMode.Basic;
             return;
         }
@@ -2149,6 +2165,9 @@ public abstract class DataStore {
                     GriefPrevention.sendMessage(player, TextMode.Err, "Not enough claim blocks to merge these claims.");
                     playerData.claimMerging = null;
                     playerData.mergeEdgeIndex = null;
+                    playerData.mergeSecondEdgeIndex = null;
+                    playerData.mergeFirstDepthPoint = null;
+                    playerData.mergeSecondDepthPoint = null;
                     playerData.shovelMode = ShovelMode.Basic;
                     return;
                 }
@@ -2182,6 +2201,9 @@ public abstract class DataStore {
             }
             playerData.claimMerging = null;
             playerData.mergeEdgeIndex = null;
+            playerData.mergeSecondEdgeIndex = null;
+            playerData.mergeFirstDepthPoint = null;
+            playerData.mergeSecondDepthPoint = null;
             playerData.shovelMode = ShovelMode.Basic;
             return;
         }
@@ -2219,6 +2241,9 @@ public abstract class DataStore {
         // merge again without re-running /mergeclaims
         playerData.claimMerging = null;
         playerData.mergeEdgeIndex = null;
+        playerData.mergeSecondEdgeIndex = null;
+        playerData.mergeFirstDepthPoint = null;
+        playerData.mergeSecondDepthPoint = null;
 
         // Re-visualize the merged claim after deleteClaim cleared everything.
         // Use mergeNearbyClaims to ensure the visualization persists alongside
@@ -3035,5 +3060,127 @@ public abstract class DataStore {
                 setPermission(child, identifier, permissionLevel);
             }
         }
+    }
+
+    // ── Nib‑based global rectangle for shaped merge ────────────────────────
+
+    /**
+     * Build the AABB rectangle that connects two shaped claims at the
+     * player‑selected nibs, respecting the depth inward of each nib.
+     *
+     * The rectangle spans from nibA (first claim's edge shifted inward by
+     * depthA) to nibB (second claim's edge shifted inward by depthB).  It
+     * always overlaps both original polygons (at the nib depths), so a
+     * subsequent contour‑trace union produces a single connected shape.
+     */
+    private static @NotNull OrthogonalPolygon buildNibRectangle(
+            @NotNull OrthogonalPolygon firstPolygon,
+            int firstEdgeIndex,
+            @NotNull OrthogonalPoint2i firstPlayerPos,
+            @NotNull OrthogonalPolygon secondPolygon,
+            int secondEdgeIndex,
+            @NotNull OrthogonalPoint2i secondPlayerPos
+    ) {
+        OrthogonalEdge2i edgeA = firstPolygon.edges().get(firstEdgeIndex);
+        OrthogonalEdge2i edgeB = secondPolygon.edges().get(secondEdgeIndex);
+
+        int depthA = computeDepthInward(firstPolygon, firstEdgeIndex, firstPlayerPos);
+        int depthB = computeDepthInward(secondPolygon, secondEdgeIndex, secondPlayerPos);
+
+        OrthogonalPoint2i nibA1 = offsetPointInward(edgeA.start(), edgeA, depthA, firstPolygon);
+        OrthogonalPoint2i nibA2 = offsetPointInward(edgeA.end(), edgeA, depthA, firstPolygon);
+        OrthogonalPoint2i nibB1 = offsetPointInward(edgeB.start(), edgeB, depthB, secondPolygon);
+        OrthogonalPoint2i nibB2 = offsetPointInward(edgeB.end(), edgeB, depthB, secondPolygon);
+
+        int minX = Math.min(Math.min(nibA1.x(), nibA2.x()), Math.min(nibB1.x(), nibB2.x()));
+        int maxX = Math.max(Math.max(nibA1.x(), nibA2.x()), Math.max(nibB1.x(), nibB2.x()));
+        int minZ = Math.min(Math.min(nibA1.z(), nibA2.z()), Math.min(nibB1.z(), nibB2.z()));
+        int maxZ = Math.max(Math.max(nibA1.z(), nibA2.z()), Math.max(nibB1.z(), nibB2.z()));
+
+        return OrthogonalPolygon.fromRectangle(minX, minZ, maxX, maxZ);
+    }
+
+    /**
+     * Perpendicular distance from the player to the selected edge,
+     * measured in the inward (interior) direction.
+     */
+    private static int computeDepthInward(
+            @NotNull OrthogonalPolygon polygon,
+            int edgeIndex,
+            @NotNull OrthogonalPoint2i playerPos
+    ) {
+        OrthogonalEdge2i edge = polygon.edges().get(edgeIndex);
+        if (edge.isHorizontal()) {
+            int edgeZ = edge.start().z();
+            int dz = playerPos.z() - edgeZ;
+            int step = dz >= 0 ? 1 : -1;
+            // Probe which side of the edge is the polygon interior
+            OrthogonalPoint2i probe = new OrthogonalPoint2i(
+                    (edge.start().x() + edge.end().x()) / 2,
+                    edgeZ + step);
+            if (polygon.containsCell(probe.x(), probe.z())) {
+                return Math.abs(dz);
+            }
+            return 0;
+        }
+        // Vertical edge
+        int edgeX = edge.start().x();
+        int dx = playerPos.x() - edgeX;
+        int step = dx >= 0 ? 1 : -1;
+        OrthogonalPoint2i probe = new OrthogonalPoint2i(
+                edgeX + step,
+                (edge.start().z() + edge.end().z()) / 2);
+        if (polygon.containsCell(probe.x(), probe.z())) {
+            return Math.abs(dx);
+        }
+        return 0;
+    }
+
+    /**
+     * Offset a corner point of an edge inward into the polygon by {@code depth}.
+     */
+    private static @NotNull OrthogonalPoint2i offsetPointInward(
+            @NotNull OrthogonalPoint2i point,
+            @NotNull OrthogonalEdge2i edge,
+            int depth,
+            @NotNull OrthogonalPolygon polygon
+    ) {
+        if (depth == 0) return point;
+
+        int dx = edge.end().x() - edge.start().x();
+        int dz = edge.end().z() - edge.start().z();
+
+        // Determine winding
+        long area2 = 0L;
+        List<OrthogonalPoint2i> corners = polygon.corners();
+        for (int i = 0; i < corners.size(); i++) {
+            OrthogonalPoint2i a = corners.get(i);
+            OrthogonalPoint2i b = corners.get((i + 1) % corners.size());
+            area2 += (long) a.x() * b.z() - (long) b.x() * a.z();
+        }
+        boolean ccw = area2 > 0;
+
+        // For CCW polygon, interior is LEFT of edge direction = (-dz, dx)
+        // For CW, interior is RIGHT of edge direction = (dz, -dx)
+        int inwardDx = ccw ? -dz : dz;
+        int inwardDz = ccw ? dx : -dx;
+
+        // Normalise to -1, 0, 1
+        inwardDx = Integer.compare(inwardDx, 0);
+        inwardDz = Integer.compare(inwardDz, 0);
+
+        // Verify by probing one step inward: if the probe lands outside,
+        // flip direction (defensive — should not happen with correct winding).
+        OrthogonalPoint2i probe = new OrthogonalPoint2i(
+                point.x() + inwardDx,
+                point.z() + inwardDz);
+        if (!polygon.containsCell(probe.x(), probe.z())) {
+            inwardDx = -inwardDx;
+            inwardDz = -inwardDz;
+        }
+
+        return new OrthogonalPoint2i(
+                point.x() + inwardDx * depth,
+                point.z() + inwardDz * depth);
     }
 }

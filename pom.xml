@@ -8,10 +8,11 @@
 
     <groupId>com.griefprevention</groupId>
     <artifactId>GriefPrevention3D</artifactId>
-    <version>18.2.3</version>
+    <version>18.2.4</version>
 
     <name>GriefPrevention3D</name>
-    <description>The self-service anti-griefing plugin for Minecraft servers — now with full 3D subdivisions</description>
+    <description
+    >The self-service anti-griefing plugin for Minecraft servers — now with full 3D subdivisions</description>
     <inceptionYear>2011</inceptionYear>
     <packaging>jar</packaging>
 

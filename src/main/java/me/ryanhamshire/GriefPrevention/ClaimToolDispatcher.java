@@ -390,6 +390,9 @@ final class ClaimToolDispatcher
                 playerData.claimResizing = null;
                 playerData.claimMerging = null;
                 playerData.mergeEdgeIndex = null;
+                playerData.mergeSecondEdgeIndex = null;
+                playerData.mergeFirstDepthPoint = null;
+                playerData.mergeSecondDepthPoint = null;
                 playerData.lastShovelLocation = null;
                 playerData.setClaimEditorSession(null);
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.ShapedClaimsDisabled);
@@ -2170,9 +2173,12 @@ final class ClaimToolDispatcher
                     GriefPrevention.sendMessage(player, TextMode.Err, "Click on a claim boundary edge to select it for merging.");
                     return;
                 }
-                playerData.mergeEdgeIndex = edgeMatches.get(0);
+                playerData.mergeSecondEdgeIndex = edgeMatches.get(0);
+                playerData.mergeSecondDepthPoint = new OrthogonalPoint2i(
+                    player.getLocation().getBlockX(), player.getLocation().getBlockZ());
             } else {
-                playerData.mergeEdgeIndex = null;
+                playerData.mergeSecondEdgeIndex = null;
+                playerData.mergeSecondDepthPoint = null;
             }
 
             playerData.claimMerging = clickedClaim;

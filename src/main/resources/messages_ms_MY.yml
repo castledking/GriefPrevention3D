@@ -51,8 +51,8 @@ Messages:
   DeleteSuccess: Kawasan tuntutan telah dipadam.
   CantDeleteAdminClaim: Anda tidak mempunyai kebenaran untuk memadam kawasan tuntutan pentadbiran.
   NoAdminClaimsPermission: Anda tidak mempunyai kebenaran untuk mengurus kawasan tuntutan pentadbiran.
-  ConfirmPvpToggleNoFee: "Adakah anda mahu {0} PvP dalam {1} ini?\nTaip semula: {2}. (/claim pvp {3} confirm)"
-  ConfirmPvpToggleWithFee: "Adakah anda mahu membayar {0} untuk {1} PvP dalam {2} ini?\nTaip semula: {3}. (/claim pvp {4} confirm)"
+  ConfirmPvpToggleNoFee: "Adakah anda mahu {0} PvP dalam {1} ini?"
+  ConfirmPvpToggleWithFee: "Adakah anda mahu membayar {0} untuk {1} PvP dalam {2} ini?"
   DeleteAllSuccess: Semua kawasan tuntutan {0} telah dipadam.
   NoDeletePermission: Anda tidak mempunyai kebenaran untuk memadam kawasan tuntutan.
   AllAdminDeleted: Semua kawasan tuntutan pentadbiran telah dipadam.
@@ -305,7 +305,7 @@ Messages:
   NeighborBypassEnabled: "Semua pemain kini boleh memintas semakan jarak minimum untuk kawasan tuntutan ini."
   NeighborBypassDisabled: "Semakan jarak minimum kini dikuatkuasakan untuk kawasan tuntutan ini."
   AuthorTag: "&7oleh castledking, RoboMWM dan BigScary"
-  PluginTag: "&6Plugin anti-griefing layan diri untuk pelayan Minecraft &b- Kini dengan subbahagian 3D penuh"
+  PluginTag: "&6Plugin anti-griefing layan diri untuk pelayan Minecraft \n&b- Kini dengan subbahagian 3D penuh"
   StartupDetails: "&fButiran permulaan: {0}"
   BootFinished: "&7Permulaan selesai dalam: &a{0}"
   MessagesLoaded: "Mesej dimuatkan: &a{0}"
