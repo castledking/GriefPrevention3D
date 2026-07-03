@@ -308,4 +308,8 @@ Messages:
   AdminClaims3DDisabled: 此服务器上已禁用3D管理员领地。
   DistanceCheckEnabled: 距离检查已启用。创建领地时如果太靠近其他领地将会收到警告。
   DistanceCheckDisabled: 距离检查已禁用。
+  AuthorTag: "&7由 castledking、RoboMWM 和 BigScary 制作"
+  PluginTag: "&6Minecraft 服务器的自助防破坏插件 &b- 现已支持完整3D子区域"
+  StartupDetails: "&f启动详情：{0}"
+  BootFinished: "&7启动完成用时：&a{0}"
   MessagesLoaded: "消息已加载：&a{0}"

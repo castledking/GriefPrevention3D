@@ -304,4 +304,8 @@ Messages:
   NeighborTrustRevokedAll: "Se revocó la confianza de vecino de {0} de TODOS tus terrenos."
   NeighborBypassEnabled: "Todos los jugadores pueden ahora omitir las verificaciones de distancia mínima para este terreno."
   NeighborBypassDisabled: "Las verificaciones de distancia mínima están ahora activas para este terreno."
+  AuthorTag: "&7por castledking, RoboMWM y BigScary"
+  PluginTag: "&6El plugin de protección contra griefing de autoservicio para servidores de Minecraft &b- ahora con subdivisiones 3D completas"
+  StartupDetails: "&fDetalles de inicio: {0}"
+  BootFinished: "&7Inicio completado en: &a{0}"
   MessagesLoaded: "Mensajes cargados: &a{0}"

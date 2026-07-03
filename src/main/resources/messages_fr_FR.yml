@@ -308,4 +308,8 @@ Messages:
   DistanceCheckEnabled: Vérification de distance activée. Vous serez averti lorsque vous créerez des claims trop proches d'autres.
   DistanceCheckDisabled: Vérification de distance désactivée.
   NeighborBypassDisabled: Les vérifications de distance minimale sont maintenant actives pour ce terrain.
+  AuthorTag: "&7par castledking, RoboMWM et BigScary"
+  PluginTag: "&6Le plugin anti-griefing en libre-service pour serveurs Minecraft &b- Maintenant avec subdivisions 3D complètes"
+  StartupDetails: "&fDétails de démarrage : {0}"
+  BootFinished: "&7Démarrage terminé en : &a{0}"
   MessagesLoaded: "Messages chargés : {0}"

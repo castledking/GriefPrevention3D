@@ -1,0 +1,311 @@
+# ============================================================
+# GriefPrevention - Mesej dalam Bahasa Melayu
+# ============================================================
+# Untuk menukar bahasa, salin fail messages_XX.yml yang dikehendaki
+# daripada folder Lang/ ke GriefPreventionData/ dan namakan semula:
+#   plugins/GriefPreventionData/messages.yml
+#
+# Plugin memuatkan mesej mengikut susunan ini:
+#   1. messages.yml (fail tersuai atau fail bahasa anda)
+#   2. messages_{locale}.yml (berdasarkan GriefPrevention.Locale dalam config)
+#   3. messages_en.yml (fallback)
+#
+# Format: guna $ atau & untuk kod warna.
+# Baris baharu: guna \n dalam mesej.
+# ============================================================
+
+Messages:
+  RespectingClaims: Kini menghormati kawasan tuntutan.
+  IgnoringClaims: Kini mengabaikan kawasan tuntutan.
+  NoCreativeUnClaim: Anda tidak boleh membatalkan tuntutan tanah ini. Anda hanya boleh memperbesarkan kawasan tuntutan ini atau mencipta kawasan tuntutan tambahan.
+  SuccessfulAbandon: Kawasan tuntutan telah ditinggalkan. Anda kini mempunyai {0} blok tuntutan yang tersedia.
+  TransferClaimPermission: Arahan itu memerlukan kebenaran kawasan tuntutan pentadbiran.
+  TransferClaimMissing: Tiada kawasan tuntutan di sini. Berdiri di dalam kawasan tuntutan pentadbiran yang ingin anda pindahkan.
+  TransferClaimAdminOnly: Hanya kawasan tuntutan pentadbiran boleh dipindahkan kepada pemain.
+  PlayerNotFound2: Tiada pemain dengan nama itu log masuk baru-baru ini.
+  TransferTopLevel: Hanya kawasan tuntutan peringkat atas (bukan subbahagian) boleh dipindahkan. Berdiri di luar subbahagian dan cuba lagi.
+  TransferSuccess: Kawasan tuntutan telah dipindahkan.
+  ConvertClaimMissing: Tiada kawasan tuntutan di sini.  Berdiri di dalam kawasan tuntutan yang ingin anda tukar.
+  ConvertClaimAlreadyAdmin: Kawasan tuntutan ini sudah menjadi kawasan tuntutan pentadbiran.
+  ConvertClaimAlreadyBasic: Kawasan tuntutan ini sudah menjadi kawasan tuntutan asas.
+  ConvertClaimAdminSuccess: Kawasan tuntutan telah ditukar menjadi kawasan tuntutan pentadbiran.
+  ConvertClaimBasicSuccess: Kawasan tuntutan pentadbiran telah ditukar menjadi kawasan tuntutan asas milik anda.
+  TrustListNoClaim: Berdiri di dalam kawasan tuntutan yang ingin anda ketahui.
+  ClearPermsOwnerOnly: Hanya pemilik kawasan tuntutan boleh mengosongkan semua kebenaran.
+  UntrustIndividualAllClaims: Akses {0} kepada SEMUA kawasan tuntutan anda telah dibatalkan. Untuk menetapkan kebenaran bagi satu kawasan tuntutan sahaja, berdiri di dalamnya.
+  UntrustEveryoneAllClaims: Kebenaran dalam SEMUA kawasan tuntutan anda telah dikosongkan. Untuk menetapkan kebenaran bagi satu kawasan tuntutan sahaja, berdiri di dalamnya.
+  NoPermissionTrust: Anda tidak mempunyai kebenaran {0} untuk mengurus kebenaran di sini.
+  ClearPermissionsOneClaim: Kebenaran dalam kawasan tuntutan ini telah dikosongkan. Untuk menetapkan kebenaran bagi SEMUA kawasan tuntutan anda, berdiri di luarnya.
+  UntrustIndividualSingleClaim: Akses {0} kepada kawasan tuntutan ini telah dibatalkan. Untuk menetapkan kebenaran bagi SEMUA kawasan tuntutan anda, berdiri di luarnya.
+  AdminClaimsMode: Mod kawasan tuntutan pentadbiran aktif. Sebarang kawasan tuntutan yang dicipta adalah percuma dan boleh diedit oleh pentadbir lain.
+  _3DAdminClaimsMode: 'Mod kawasan tuntutan pentadbiran 3D aktif.  Sebarang kawasan tuntutan yang dicipta adalah percuma, terhad ketinggian, dan boleh diedit oleh pentadbir lain.'
+  BasicClaimsMode: Kembali ke mod penciptaan kawasan tuntutan asas.
+  ShapedClaimsMode: Mod kawasan tuntutan berbentuk. Klik kanan untuk meletakkan bucu pada tanah yang belum dituntut atau untuk memulakan dan melanjutkan suntingan berbentuk daripada sempadan kawasan tuntutan. Klik pada sempadan mencipta penanda segmen mengikut keperluan. Gunakan /basicclaims untuk keluar.
+  ShapedClaimsDisabled: Kawasan tuntutan berbentuk dilumpuhkan di pelayan ini.
+  MergeOverlapConflict: Tidak dapat digabungkan; penggabungan yang lengkap akan bertindih dengan kawasan tuntutan lain.
+  SubdivisionMode: Mod subbahagian. Gunakan penyodok anda untuk mencipta subbahagian dalam kawasan tuntutan sedia ada anda. Gunakan /basicclaims untuk keluar.
+  SubdivisionMode3D: 'Mod subbahagian 3D.  Gunakan penyodok anda untuk mencipta subbahagian 3D dalam kawasan tuntutan sedia ada anda.  Gunakan /basicclaims untuk keluar.'
+  SubdivisionVideo2: 'Klik untuk Bantuan Subbahagian: {0}'
+  DeleteClaimMissing: Tiada kawasan tuntutan di sini.
+  DeletionSubdivisionWarning: Kawasan tuntutan ini mengandungi subbahagian. Jika anda pasti mahu memadamkannya, gunakan /deleteclaim sekali lagi.
+  DeleteSuccess: Kawasan tuntutan telah dipadam.
+  CantDeleteAdminClaim: Anda tidak mempunyai kebenaran untuk memadam kawasan tuntutan pentadbiran.
+  NoAdminClaimsPermission: Anda tidak mempunyai kebenaran untuk mengurus kawasan tuntutan pentadbiran.
+  ConfirmPvpToggleNoFee: "Adakah anda mahu {0} PvP dalam {1} ini?\nTaip semula: {2}. (/claim pvp {3} confirm)"
+  ConfirmPvpToggleWithFee: "Adakah anda mahu membayar {0} untuk {1} PvP dalam {2} ini?\nTaip semula: {3}. (/claim pvp {4} confirm)"
+  DeleteAllSuccess: Semua kawasan tuntutan {0} telah dipadam.
+  NoDeletePermission: Anda tidak mempunyai kebenaran untuk memadam kawasan tuntutan.
+  AllAdminDeleted: Semua kawasan tuntutan pentadbiran telah dipadam.
+  AdjustBlocksSuccess: 'Blok tuntutan bonus {0} telah diselaraskan sebanyak {1}. Jumlah blok bonus baharu: {2}.'
+  AdjustBlocksAllSuccess: Blok tuntutan bonus semua pemain dalam talian telah diselaraskan sebanyak {0}.
+  NotTrappedHere: Anda boleh membina di sini. Selamatkan diri anda sendiri.
+  RescuePending: Jika anda kekal diam selama 10 saat, anda akan dipindahkan keluar. Sila tunggu.
+  AbandonClaimMissing: Berdiri di dalam kawasan tuntutan yang ingin anda padam, atau pertimbangkan /abandonallclaims.
+  NotYourClaim: Ini bukan kawasan tuntutan anda.
+  DeleteTopLevelClaim: Untuk memadam subbahagian, berdiri di dalamnya. Jika tidak, gunakan /abandontoplevelclaim untuk memadam kawasan tuntutan ini dan semua subbahagiannya.
+  AbandonSuccess: Kawasan tuntutan telah ditinggalkan. Anda kini mempunyai {0} blok tuntutan yang tersedia.
+  ConfirmAbandonAllClaims: Adakah anda pasti mahu meninggalkan SEMUA kawasan tuntutan anda? Sila sahkan dengan /abandonallclaims confirm
+  GrantPermissionNoClaim: Berdiri di dalam kawasan tuntutan di mana anda mahu memberikan kebenaran.
+  GrantPermissionConfirmation: Kebenaran untuk {1} {2} telah diberikan kepada {0}.
+  ManageUniversalPermissionsInstruction: Untuk mengurus kebenaran bagi SEMUA kawasan tuntutan anda, berdiri di luarnya.
+  ManageOneClaimPermissionsInstruction: Untuk mengurus kebenaran bagi kawasan tuntutan tertentu, berdiri di dalamnya.
+  CollectivePublic: orang ramai
+  BuildPermission: membina
+  ContainersPermission: mengakses bekas dan haiwan
+  AccessPermission: menggunakan butang dan tuil
+  PermissionsPermission: mengurus kebenaran
+  LocationCurrentClaim: dalam kawasan tuntutan ini
+  LocationAllClaims: dalam semua kawasan tuntutan anda
+  PvPImmunityStart: Anda dilindungi daripada serangan pemain lain selagi inventori anda kosong.
+  DonateItemsInstruction: Untuk menderma item di tangan anda, klik kiri peti itu sekali lagi.
+  ChestFull: Peti ini sudah penuh.
+  DonationSuccess: Item telah dipindahkan ke peti!
+  PlayerTooCloseForFire2: Anda tidak boleh menyalakan api sedekat ini dengan pemain lain.
+  TooDeepToClaim: Peti ini tidak boleh dilindungi kerana terlalu jauh di bawah tanah. Pertimbangkan untuk memindahkannya.
+  ChestClaimConfirmation: Peti ini dilindungi.
+  AutomaticClaimNotification: Peti ini dan blok berdekatan dilindungi daripada kerosakan dan kecurian.
+  AutomaticClaimOtherClaimTooClose: Tidak dapat mencipta kawasan tuntutan untuk peti anda, terdapat kawasan tuntutan lain yang terlalu dekat!
+  UnprotectedChestWarning: Peti ini TIDAK dilindungi. Pertimbangkan menggunakan penyodok emas untuk memperluas kawasan tuntutan sedia ada atau mencipta yang baharu.
+  ThatPlayerPvPImmune: Anda tidak boleh mencederakan pemain yang tidak berdaya.
+  CantFightWhileImmune: Anda tidak boleh melawan seseorang semasa anda dilindungi daripada PvP.
+  NoDamageClaimedEntity: Itu kepunyaan {0}.
+  ShovelBasicClaimMode: Penyodok kembali ke mod kawasan tuntutan asas.
+  RemainingBlocks: Anda boleh menuntut sehingga {0} blok lagi.
+  CreativeBasicsVideo2: 'Klik untuk Bantuan Tuntutan Tanah: {0}'
+  SurvivalBasicsVideo2: 'Klik untuk Bantuan Tuntutan Tanah: {0}'
+  TrappedChatKeyword: terperangkap;tersekat
+  TrappedInstructions: Adakah anda terperangkap dalam kawasan tuntutan tanah seseorang? Cuba arahan /trapped.
+  PvPNoDrop: Anda tidak boleh menjatuhkan item semasa dalam pertempuran PvP.
+  PvPNoContainers: Anda tidak boleh mengakses bekas semasa pertempuran PvP.
+  PvPImmunityEnd: Kini anda boleh melawan pemain lain.
+  NoBedPermission: '{0} belum memberikan anda kebenaran untuk tidur di sini.'
+  NoWildernessBuckets: Anda hanya boleh menuang baldi di dalam kawasan tuntutan anda atau di bawah tanah.
+  NoLavaNearOtherPlayer: Anda tidak boleh meletakkan lava sedekat ini dengan {0}.
+  TooFarAway: Itu terlalu jauh.
+  BlockNotClaimed: Tiada sesiapa menuntut blok ini.
+  BlockClaimed: Blok itu telah dituntut oleh {0}.
+  NoCreateClaimPermission: Anda tidak mempunyai kebenaran untuk menuntut tanah.
+  ResizeClaimTooNarrow: Saiz baharu ini terlalu kecil. Kawasan tuntutan mesti sekurang-kurangnya {0} blok lebar.
+  ResizeNeedMoreBlocks: Anda tidak mempunyai cukup blok untuk saiz ini. Anda memerlukan {0} lagi.
+  ClaimResizeSuccess: Saiz kawasan tuntutan telah ditukar. {0} blok tuntutan tersedia yang tinggal.
+  ResizeFailOverlap: Tidak dapat menukar saiz di sini kerana ia akan bertindih dengan kawasan tuntutan berdekatan yang lain.
+  ResizeStart: Menukar saiz kawasan tuntutan. Gunakan penyodok anda sekali lagi di lokasi baharu untuk bucu ini.
+  ClaimSelected: 'Kawasan tuntutan dipilih. Gunakan penyodok anda sekali lagi untuk menetapkan bucu yang satu lagi dan menukar saiz.\nNota: Anda kini boleh menjalankan /claim abandon semasa kawasan tuntutan ini dipilih.'
+  ClaimSelectedTopLevel: 'Kawasan tuntutan dipilih. Gunakan penyodok anda sekali lagi untuk menetapkan bucu yang satu lagi dan menukar saiz.\nNota: Anda kini boleh menjalankan /claim abandon toplevel semasa kawasan tuntutan ini dipilih.'
+  SubdivisionSelected: Subbahagian dipilih. Anda boleh mengurus kebenaran untuk kawasan khusus ini.\n&6Anda boleh menjalankan arahan seperti:\n&7- &f/trust&7, &f/untrust\n&7- &f/containertrust&7, &f/accesstrust\n&7- &f/abandonclaim\n&6atau anda boleh klik kanan sekali lagi untuk menukar saiz.
+  ResizeFailOverlapSubdivision: Anda tidak boleh mencipta subbahagian di sini kerana ia akan bertindih dengan subbahagian lain. Pertimbangkan /abandonclaim untuk memadamkannya, atau gunakan penyodok anda pada bucu untuk menukar saiznya.
+  SubdivisionStart: Bucu subbahagian telah ditetapkan! Gunakan penyodok anda di lokasi bucu bertentangan bagi subbahagian baharu ini.
+  CreateSubdivisionOverlap: Kawasan yang anda pilih bertindih dengan subbahagian lain.
+  InnerSubdivisionTooClose: Subbahagian ini mesti kekal sekurang-kurangnya satu blok di dalam induknya pada semua sisi.
+  SubdivisionSuccess: Subbahagian telah dicipta! Gunakan /trust untuk berkongsinya dengan rakan.
+  CreateClaimFailOverlap: Anda tidak boleh mencipta kawasan tuntutan di sini kerana ia akan bertindih dengan kawasan tuntutan anda yang lain. Gunakan /abandonclaim untuk memadamkannya, atau gunakan penyodok anda pada bucu untuk menukar saiznya.
+  CreateClaimFailOverlapOtherPlayer: Anda tidak boleh mencipta kawasan tuntutan di sini kerana ia akan bertindih dengan kawasan tuntutan {0}.
+  ClaimsDisabledWorld: Tuntutan tanah dilumpuhkan di dunia ini.
+  ClaimStart: Bucu kawasan tuntutan telah ditetapkan! Gunakan penyodok sekali lagi pada bucu bertentangan untuk menuntut sebidang tanah segi empat tepat. Untuk membatalkan, simpan semula penyodok anda.
+  NewClaimTooNarrow: Kawasan tuntutan ini terlalu kecil. Mana-mana kawasan tuntutan mesti sekurang-kurangnya {0} blok lebar.
+  ResizeClaimInsufficientArea: Kawasan tuntutan ini terlalu kecil. Mana-mana kawasan tuntutan mesti menggunakan sekurang-kurangnya {0} jumlah blok tuntutan.
+  CreateClaimInsufficientBlocks: Anda tidak mempunyai cukup blok untuk menuntut keseluruhan kawasan itu. Anda memerlukan {0} blok lagi.
+  AbandonClaimAdvertisement: Untuk memadam kawasan tuntutan lain dan membebaskan beberapa blok, gunakan /abandonclaim.
+  CreateClaimFailOverlapShort: Kawasan yang anda pilih bertindih dengan kawasan tuntutan sedia ada.
+  CreateClaimSuccess: Kawasan tuntutan telah dicipta! Gunakan /trust untuk berkongsinya dengan rakan.
+  RescueAbortedMoved: Anda bergerak! Penyelamatan dibatalkan.
+  OnlyOwnersModifyClaims: Hanya {0} boleh mengubah suai kawasan tuntutan ini.
+  NoBuildPvP: Anda tidak boleh membina dalam kawasan tuntutan semasa pertempuran PvP.
+  NoBuildPermission: Anda tidak mempunyai kebenaran {0} untuk membina di sini.
+  NoAccessPermission: Anda tidak mempunyai kebenaran {0} untuk menggunakan itu.
+  NoContainersPermission: Anda tidak mempunyai kebenaran {0} untuk menggunakan itu.
+  OwnerNameForAdminClaims: seorang pentadbir
+  UnknownPlayerName: seseorang
+  ClaimTooSmallForEntities: Kawasan tuntutan ini tidak cukup besar untuk itu. Cuba perbesarkannya.
+  TooManyEntitiesInClaim: Kawasan tuntutan ini sudah mempunyai terlalu banyak entiti. Cuba perbesarkan kawasan tuntutan atau alihkan beberapa haiwan, makhluk, lukisan, atau troli lombong.
+  YouHaveNoClaims: Anda tidak mempunyai sebarang kawasan tuntutan tanah.
+  AutoBanNotify: '{0}({1}) telah diharamkan secara automatik. Lihat log untuk butiran.'
+  AdjustGroupBlocksSuccess: 'Blok tuntutan bonus untuk pemain dengan kebenaran {0} telah diselaraskan sebanyak {1}. Jumlah baharu: {2}.'
+  InvalidPermissionID: Sila nyatakan nama pemain, atau kebenaran dalam [kurungan].
+  HowToClaimRegex: (^|.*\W)(bagaimana|macam mana)\W.*\W(tuntut|lindung|kunci)(\W.*|$)
+  NoBuildOutsideClaims: Anda tidak boleh membina di sini melainkan anda menuntut sebidang tanah terlebih dahulu.
+  PlayerOfflineTime: ' Log masuk terakhir: {0} hari lalu.'
+  BuildingOutsideClaims: Pemain lain juga boleh membina di sini. Pertimbangkan mencipta kawasan tuntutan tanah untuk melindungi hasil kerja anda!
+  TrappedWontWorkHere: Maaf, tidak dapat mencari lokasi selamat untuk memindahkan anda. Hubungi pentadbir.
+  CommandBannedInPvP: Anda tidak boleh menggunakan arahan itu semasa dalam pertempuran PvP.
+  NoTeleportPvPCombat: Anda tidak boleh berpindah tempat semasa melawan pemain lain.
+  NoTNTDamageAboveSeaLevel: 'Amaran: TNT tidak akan memusnahkan blok di atas paras laut.'
+  NoTNTDamageClaims: 'Amaran: TNT tidak akan memusnahkan blok yang dituntut.'
+  IgnoreClaimsAdvertisement: Untuk mengatasinya, gunakan /ignoreclaims.
+  NoPermissionForCommand: Anda tidak mempunyai kebenaran untuk melakukan itu.
+  ClaimsListNoPermission: Anda tidak mempunyai kebenaran untuk mendapatkan maklumat tentang kawasan tuntutan tanah pemain lain.
+  ExplosivesDisabled: Kawasan tuntutan ini kini dilindungi daripada letupan. Gunakan /claimexplosions sekali lagi untuk melumpuhkannya.
+  ExplosivesEnabled: Kawasan tuntutan ini kini terdedah kepada letupan. Gunakan /claimexplosions sekali lagi untuk mengaktifkan semula perlindungan.
+  WitherExplosionsDisabled: Kawasan tuntutan ini kini dilindungi daripada letupan wither.  Gunakan /witherexplosions sekali lagi untuk melumpuhkan perlindungan.
+  WitherExplosionsEnabled: Kawasan tuntutan ini kini terdedah kepada letupan wither.  Gunakan /witherexplosions sekali lagi untuk mengaktifkan semula perlindungan.
+  ClaimExplosivesAdvertisement: Untuk membenarkan bahan letupan memusnahkan blok dalam kawasan tuntutan tanah ini, gunakan /claimexplosions.
+  PlayerInPvPSafeZone: Pemain itu berada dalam zon selamat PvP.
+  NoPistonsOutsideClaims: 'Amaran: Piston tidak akan menggerakkan blok di luar kawasan tuntutan tanah.'
+  SoftMuted: '{0} telah disenyapkan secara lembut.'
+  UnSoftMuted: Penyenyapan lembut {0} telah dibatalkan.
+  DropUnlockAdvertisement: Pemain lain tidak boleh mengambil item yang anda jatuhkan melainkan anda menggunakan /unlockdrops terlebih dahulu.
+  PickupBlockedExplanation: Anda tidak boleh mengambil ini melainkan {0} menggunakan /unlockdrops.
+  DropUnlockConfirmation: Item jatuhan anda telah dibuka kunci. Pemain lain kini boleh mengambilnya (sehingga anda mati lagi).
+  DropLockConfirmation: Item jatuhan anda telah dikunci.  Pemain lain tidak lagi boleh mengambilnya.
+  DropUnlockOthersConfirmation: Item jatuhan {0} telah dibuka kunci.
+  AdvertiseACandACB: Anda boleh menggunakan /acb untuk memberikan diri anda lebih banyak blok tuntutan, atau /adminclaims untuk mencipta kawasan tuntutan pentadbiran percuma.
+  AdvertiseAdminClaims: Anda boleh mencipta kawasan tuntutan tanah pentadbiran menggunakan /adminclaims, yang akan anda kongsi dengan pentadbir lain.
+  AdvertiseACB: Anda boleh menggunakan /acb untuk memberikan diri anda lebih banyak blok tuntutan.
+  NotYourPet: Itu kepunyaan {0}.
+  PetGiveawayConfirmation: Haiwan peliharaan telah dipindahkan.
+  PetTransferCancellation: Pemberian haiwan peliharaan dibatalkan.
+  ReadyToTransferPet: Sedia untuk memindahkan!  Klik kanan haiwan peliharaan yang ingin anda berikan, atau batalkan dengan /givepet cancel.
+  AvoidGriefClaimLand: Elakkan grief! Jika anda menuntut tanah anda, anda akan kebal daripada grief.
+  BecomeMayor: Subbahagikan kawasan tuntutan tanah anda dan jadilah datuk bandar!
+  ClaimCreationFailedOverClaimCountLimit: Anda telah mencapai had kawasan tuntutan tanah anda. Gunakan /abandonclaim untuk membuang satu sebelum mencipta yang lain.
+  CreateClaimFailOverlapRegion: Anda tidak boleh menuntut semua ini kerana anda tidak dibenarkan membina di sini.
+  ResizeFailOverlapRegion: Anda tidak mempunyai kebenaran untuk membina di sana, jadi anda tidak boleh menuntut kawasan itu.
+  ResizeFailSubdivision: 'Tidak dapat menukar saiz kawasan tuntutan: Sempadan baharu akan mengecualikan subbahagian sedia ada. Sila buang atau pindahkan subbahagian itu dahulu.'
+  ResizeFailSubdivisionExceedsParent: 'Tidak dapat menukar saiz: Subbahagian tidak dikekalkan dalam sempadan induknya pada semua sisi, menyebabkan kemunculan zon konflik pada kawasan tuntutan utama.'
+  ShapedClaimInteriorClick: Anda tidak boleh memulakan kawasan tuntutan berbentuk di sini. Anda boleh sama ada memulakan kawasan tuntutan berbentuk baharu atau membuat segmen pada sempadan kawasan tuntutan semasa anda dan melanjutkannya.
+  ShowNearbyClaims: '{0} kawasan tuntutan tanah ditemui.'
+  NoChatUntilMove: 'Maaf, tetapi anda perlu bergerak sedikit lagi sebelum boleh berbual. Kami menerima banyak bot spam di sini. :)'
+  SetClaimBlocksSuccess: Blok tuntutan terkumpul telah dikemas kini.
+  IgnoreConfirmation: Anda kini mengabaikan mesej sembang daripada pemain itu.
+  UnIgnoreConfirmation: Anda tidak lagi mengabaikan mesej sembang daripada pemain itu.
+  NotIgnoringPlayer: Anda tidak mengabaikan pemain itu.
+  SeparateConfirmation: Pemain-pemain itu kini akan saling mengabaikan dalam sembang.
+  UnSeparateConfirmation: Pemain-pemain itu tidak lagi akan saling mengabaikan dalam sembang.
+  NotIgnoringAnyone: Anda tidak mengabaikan sesiapa.
+  TrustListHeader: "Kebenaran eksplisit di sini:"
+  Manage: Urus
+  Build: Bina
+  Containers: Bekas
+  Access: Akses
+  Neighbor: Jiran
+  HasSubclaimRestriction: Subkawasan ini tidak mewarisi kebenaran daripada induknya
+  StartBlockMath: '{0} blok daripada bermain + {1} bonus = {2} jumlah.'
+  ClaimsListHeader: "Kawasan Tuntutan:"
+  ContinueBlockMath: '(-{0} blok)'
+  EndBlockMath: ' = {0} blok tinggal untuk digunakan'
+  ClaimExpiryHeader: "Tamat tempoh kawasan tuntutan untuk {0}:"
+  ClaimExpiryLocation: 'Lokasi: {0}'
+  ClaimExpiryOwnerStatus: 'Pemilik: {0} ({1})'
+  ClaimExpiryOwnerOnline: dalam talian
+  ClaimExpiryOwnerOffline: luar talian
+  ClaimExpiryLastActive: 'Kali terakhir dilihat: {0} lalu'
+  ClaimExpiryLastActiveUnknown: 'Kali terakhir dilihat: tidak diketahui'
+  ClaimExpiryClaimModified: 'Terakhir diubah suai: {0}'
+  ClaimExpiryExpiresIn: 'Tamat tempoh dalam: {0}'
+  ClaimExpiryExpired: Telah tamat tempoh {0} lalu
+  ClaimExpiryExempt: 'Kawasan tuntutan ini dikecualikan daripada tamat tempoh: {0}'
+  ClaimExpiryNeverExpires: Kawasan tuntutan ini tidak akan pernah tamat tempoh.
+  ClaimExpiryChestClaim: 'Tamat tempoh kawasan tuntutan peti: {0}'
+  ClaimExpiryNoClaim: Anda tidak berdiri di dalam kawasan tuntutan.
+  ClaimExpiryPlayerHeading: "Tamat tempoh kawasan tuntutan untuk {0}:"
+  ClaimExpiryPlayerNoClaims: '{0} tidak mempunyai kawasan tuntutan.'
+  ClaimExpiryPlayerNotFound: Tidak dapat menemui pemain {0}.
+  ClaimExpiryUnknown: tidak diketahui
+  ClaimExpiryUsage: /checkclaimexpiry [pemain]
+  ClaimExpiryListEntry: '- {0}: {1}'
+  NoClaimDuringPvP: Anda tidak boleh menuntut tanah semasa pertempuran PvP.
+  UntrustAllOwnerOnly: Hanya pemilik kawasan tuntutan boleh mengosongkan semua kebenarannya.
+  ManagersDontUntrustManagers: Hanya pemilik kawasan tuntutan boleh menurunkan pangkat pengurus.
+  PlayerNotIgnorable: Anda tidak boleh mengabaikan pemain itu.
+  NoEnoughBlocksForChestClaim: Kerana anda tidak mempunyai sebarang blok tuntutan yang tersedia, tiada kawasan tuntutan tanah automatik dicipta untuk anda. Anda boleh menggunakan /claimslist untuk memantau jumlah blok tuntutan tersedia anda.
+  MustHoldModificationToolForThat: Anda mesti memegang penyodok emas untuk melakukan itu.
+  StandInClaimToResize: Berdiri di dalam kawasan tuntutan tanah yang ingin anda tukar saiznya.
+  ClaimsExtendToSky: Kawasan tuntutan tanah sentiasa memanjang sehingga ketinggian binaan maksimum.
+  ClaimsAutoExtendDownward: Kawasan tuntutan tanah memanjang secara automatik lebih dalam ke tanah apabila anda meletakkan blok di bawahnya.
+  MinimumRadius: Jejari minimum ialah {0}.
+  RadiusRequiresGoldenShovel: Anda mesti memegang penyodok emas apabila menentukan jejari.
+  ClaimTooSmallForActiveBlocks: Kawasan tuntutan ini tidak cukup besar untuk menampung sebarang jenis blok aktif (hopper, penjana, beacon...). Perbesarkan kawasan tuntutan terlebih dahulu.
+  TooManyActiveBlocksInClaim: Kawasan tuntutan ini telah mencapai had bagi jenis blok aktif (hopper, penjana, beacon...). Sama ada perbesarkannya, atau buang blok aktif lain terlebih dahulu.
+  BookAuthor: BigScary
+  BookTitle: Cara Menuntut Tanah
+  BookLink: 'Klik: {0}'
+  BookIntro: 'Tuntut tanah untuk melindungi barang anda! Klik pautan di atas untuk mempelajari kawasan tuntutan tanah dalam masa 3 minit atau kurang. :)'
+  BookTools: Alat tuntutan kami ialah {0} dan {1}.
+  BookDisabledChestClaims: Di pelayan ini, meletakkan peti TIDAK akan menuntut tanah untuk anda.
+  BookUsefulCommands: "Arahan Berguna:"
+  NoProfanity: Sila jaga bahasa anda.
+  IsIgnoringYou: Pemain itu sedang mengabaikan anda.
+  ConsoleOnlyCommand: Arahan itu hanya boleh dijalankan daripada konsol pelayan.
+  WorldNotFound: Dunia tidak ditemui.
+  TooMuchIpOverlap: Maaf, terdapat terlalu ramai pemain log masuk dengan alamat IP anda.
+  StandInSubclaim: Anda perlu berdiri di dalam subkawasan untuk menyekatnya
+  SubclaimRestricted: Kebenaran subkawasan ini tidak lagi akan mewarisi daripada kawasan tuntutan induk
+  SubclaimUnrestricted: Kebenaran subkawasan ini kini akan mewarisi daripada kawasan tuntutan induk
+  MainClaimSubdivisionInheritDisabled: Semua subbahagian dalam kawasan tuntutan ini TIDAK akan mewarisi kebenaran.
+  MainClaimSubdivisionInheritEnabled: Semua subbahagian dalam kawasan tuntutan ini akan mewarisi kebenaran.
+  NetherPortalTrapDetectionMessage: Nampaknya anda mungkin tersekat di dalam portal Nether. Kami akan menyelamatkan anda dalam beberapa saat sekiranya itu berlaku!
+  ClaimHelpHeader: 'Arahan /claim yang tersedia:'
+  ClaimHelpLegend: <> - Diperlukan, [] - Pilihan.
+  ClaimHelpEntry: '&e/{0}&7 - &f{1}'
+  ClaimHelpPagination: Taip /claim help {0} untuk halaman seterusnya.
+  AClaimHelpHeader: 'Arahan /aclaim yang tersedia:'
+  AClaimHelpLegend: <> - Diperlukan, [] - Pilihan.
+  AClaimHelpEntry: '&e/{0}&7 - &f{1}'
+  AClaimHelpPagination: Taip /aclaim help {0} untuk halaman seterusnya.
+  CommandNotFound: 'Subarahan tidak diketahui: {0}'
+  CommandNotImplementedYet: Arahan ini belum dilaksanakan lagi.
+  CommandInvalidMode: 'Mod tidak sah. Pilihan sah: basic, 2d, 3d, shaped'
+  RestoreNatureActivate: Sedia untuk memulihkan alam semula jadi!  Klik kanan pada blok untuk memulihkan kawasan.  Gunakan /basicclaims untuk keluar.
+  RestoreNatureAggressiveActivate: Mod pemulihan alam semula jadi agresif diaktifkan.  Klik kanan pada blok untuk memulihkan kawasan.  Gunakan /basicclaims untuk keluar.
+  FillModeActive: Mod isian diaktifkan dengan jejari {0}.  Klik kanan pada blok untuk mengisi kawasan.  Gunakan /basicclaims untuk keluar.
+  EconomyDisabled: Ciri ekonomi dilumpuhkan di pelayan ini.
+  EconomyBuyBlocksConfirmation: Membeli {0} blok tuntutan dengan harga {1}. Anda kini mempunyai {2} blok tuntutan.
+  EconomySellBlocksConfirmation: Menjual {0} blok tuntutan dengan harga {1}. Anda kini mempunyai {2} blok tuntutan.
+  EconomyNotEnoughMoney: 'Anda tidak mempunyai cukup wang. Kos: {0}, Baki anda: {1}'
+  EconomyNotEnoughBlocks: 'Anda tidak mempunyai cukup blok tuntutan untuk dijual. Diminta: {0}, Tersedia: {1}'
+  EconomyBuyBlocksUsage: 'Penggunaan: /buyclaimblocks <jumlah>'
+  EconomySellBlocksUsage: 'Penggunaan: /sellclaimblocks <jumlah>'
+  EconomyInvalidAmount: Sila nyatakan nombor blok positif yang sah.
+  EconomyPurchaseCancelled: Pembelian dibatalkan.
+  EconomyNoVault: Sokongan ekonomi memerlukan plugin Vault dipasang.
+  CommandRequiresPlayer: Arahan ini hanya boleh digunakan oleh pemain.
+  PistonExploded: Piston di {0} meletup kerana ia tidak dapat memasuki kawasan tuntutan di {1}
+  ExternalPistonBoundaryViolation: '&6Amaran: Satu piston cuba menolak blok ke dalam kawasan tuntutan anda @ x:{0} y:{1} z:{2}!'
+  InternalPistonBoundaryViolation: '&6Amaran: Satu piston cuba menolak blok keluar daripada kawasan tuntutan anda @ x:{0} y:{1} z:{2}!'
+  ExternalLiquidBoundaryViolation: '&6Amaran: Cecair cuba mengalir ke dalam kawasan tuntutan anda @ x:{0} y:{1} z:{2}!'
+  InternalLiquidBoundaryViolation: '&6Amaran: Cecair cuba mengalir keluar daripada kawasan tuntutan anda @ x:{0} y:{1} z:{2}!'
+  BoundaryViolationBurstSummary: '&6Amaran: {0} pelanggaran {1} berhampiran kawasan tuntutan anda @ x:{2} y:{3} z:{4}!'
+  PlaceholderTrustLevelUnclaimed: Tidak Dituntut
+  PlaceholderTrustLevelOwner: Pemilik
+  PlaceholderTrustLevelManager: Pengurus
+  PlaceholderTrustLevelBuilder: Pembina
+  PlaceholderTrustLevelAccess: Akses
+  PlaceholderTrustLevelContainer: Bekas
+  PlaceholderTrustLevelNeighbor: Jiran
+  PlaceholderTrustLevelUntrusted: Tidak Dipercayai
+  NeighborPermission: memintas jarak minimum
+  CreateClaimFailTooClose: "Anda tidak boleh mencipta kawasan tuntutan di sini kerana ia terlalu dekat dengan kawasan tuntutan {0}. Jarak minimum ialah {1} blok."
+  CreateClaimFailTooCloseNoBypass: "Anda tidak boleh mencipta kawasan tuntutan di sini kerana ia terlalu dekat dengan kawasan tuntutan lain. Jarak minimum ialah {0} blok."
+  MinimumDistance: "Jarak minimum antara kawasan tuntutan: {0} blok."
+  NearbyClaims: "Kawasan tuntutan berdekatan: {0}"
+  NeighborTrustGranted: "Kepercayaan jiran telah diberikan kepada {0}. Mereka kini boleh memintas semakan jarak minimum untuk kawasan tuntutan anda."
+  NeighborTrustRevoked: "Kepercayaan jiran {0} telah dibatalkan."
+  NeighborTrustGrantedAll: "Kepercayaan jiran telah diberikan kepada {0} untuk SEMUA kawasan tuntutan anda."
+  NeighborTrustRevokedAll: "Kepercayaan jiran {0} telah dibatalkan daripada SEMUA kawasan tuntutan anda."
+  NeighborBypassEnabled: "Semua pemain kini boleh memintas semakan jarak minimum untuk kawasan tuntutan ini."
+  NeighborBypassDisabled: "Semakan jarak minimum kini dikuatkuasakan untuk kawasan tuntutan ini."
+  AuthorTag: "&7oleh castledking, RoboMWM dan BigScary"
+  PluginTag: "&6Plugin anti-griefing layan diri untuk pelayan Minecraft &b- Kini dengan subbahagian 3D penuh"
+  StartupDetails: "&fButiran permulaan: {0}"
+  BootFinished: "&7Permulaan selesai dalam: &a{0}"
+  MessagesLoaded: "Mesej dimuatkan: &a{0}"

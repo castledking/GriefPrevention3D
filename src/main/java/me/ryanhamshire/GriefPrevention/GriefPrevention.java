@@ -1576,10 +1576,7 @@ public class GriefPrevention extends JavaPlugin {
             String message = startupHeader.getRandomHeader();
             if (message == null) return;
 
-            org.bukkit.command.CommandSender console = Bukkit.getConsoleSender();
-            for (String line : message.split("\n")) {
-                console.sendMessage(line);
-            }
+            Bukkit.getConsoleSender().sendMessage(message);
         } catch (Exception e) {
             this.getLogger().warning("Failed to display enabled header: " + e.getMessage());
         }

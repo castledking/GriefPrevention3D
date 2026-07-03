@@ -318,6 +318,10 @@ public enum Messages
     NeighborTrustRevokedAll("Revoked {0}'s neighbor trust from ALL your claims.", "0: player name"),
     NeighborBypassEnabled("All players can now bypass minimum distance checks for this claim."),
     NeighborBypassDisabled("Minimum distance checks are now enforced for this claim."),
+    AuthorTag("&7by castledking, RoboMWM and BigScary"),
+    PluginTag("&6The self-service anti-griefing plugin for Minecraft servers &b- Now with full 3D subdivisions"),
+    StartupDetails("&fStartup details: {0}", "0: the startup detail block (platform, features, etc.)"),
+    BootFinished("&7Boot finished in: &a{0}", "0: boot time in ms"),
     MessagesLoaded("Messages loaded: {0}", "0: number of messages loaded");
 
     final @NotNull String defaultValue;

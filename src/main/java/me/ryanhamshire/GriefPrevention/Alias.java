@@ -204,6 +204,22 @@ public enum Alias {
         "witherexplosions"
     ),
 
+    ClaimPvp(
+        "enable: true" + "\n" +
+"commands: [pvp]" + "\n" +
+"standalone: [claimpvp]" + "\n" +
+"usage: \"/claim pvp <true|false> [confirm]\"" + "\n" +
+"description: Toggle PvP in your current claim." + "\n" +
+"permission: griefprevention.pvp" + "\n" +
+"arguments:" + "\n" +
+"  state:" + "\n" +
+"    options:" + "\n" +
+"      \"true\": [\"true\"]" + "\n" +
+"      \"false\": [\"false\"]" + "\n" +
+"" + "\n",
+        "claimpvp"
+    ),
+
     ClaimAbandon(
         "enable: true" + "\n" +
 "commands: [abandon]" + "\n" +
@@ -613,6 +629,19 @@ public enum Alias {
 "          options:" + "\n" +
 "            on: [on]" + "\n" +
 "            off: [off]" + "\n" +
+"" + "\n" +
+"    pvp:" + "\n" +
+"      enable: true" + "\n" +
+"      commands: [pvp]" + "\n" +
+"      standalone: [claimpvp]" + "\n" +
+"      usage: \"/claim pvp <true|false> [confirm]\"" + "\n" +
+"      description: Toggle PvP in your current claim." + "\n" +
+"      permission: griefprevention.pvp" + "\n" +
+"      arguments:" + "\n" +
+"        state:" + "\n" +
+"          options:" + "\n" +
+"            \"true\": [\"true\"]" + "\n" +
+"            \"false\": [\"false\"]" + "\n" +
 "" + "\n" +
 "    buyblocks:" + "\n" +
 "      enable: true" + "\n" +
