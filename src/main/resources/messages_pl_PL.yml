@@ -51,8 +51,22 @@ Messages:
   DeleteSuccess: Teren usunięty.
   CantDeleteAdminClaim: Nie masz uprawnień do usuwania terenów administracyjnych.
   NoAdminClaimsPermission: Nie masz uprawnień do zarządzania terenami administracyjnymi.
-  ConfirmPvpToggleNoFee: "Czy chcesz {0} PvP w tym {1}?"
-  ConfirmPvpToggleWithFee: "Czy chcesz zapłacić {0}, aby {1} PvP w tym {2}?"
+  ConfirmPvpToggleEnabledNoFee: "Czy chcesz włączyć PvP w tym {0}?"
+  ConfirmPvpToggleDisabledNoFee: "Czy chcesz wyłączyć PvP w tym {0}?"
+  ConfirmPvpToggleEnabledWithFee: "Czy chcesz zapłacić {0}, aby włączyć PvP w tym {1}?"
+  ConfirmPvpToggleDisabledWithFee: "Czy chcesz zapłacić {0}, aby wyłączyć PvP w tym {1}?"
+  PvPToggleEnabled: "PvP zostało włączone w tym {0}."
+  PvPToggleDisabled: "PvP zostało wyłączone w tym {0}."
+  PvPToggleEnabledWithFee: "PvP zostało włączone w tym {0} za {1}."
+  PvPToggleDisabledWithFee: "PvP zostało wyłączone w tym {0} za {1}."
+  PvpToggleNotEnabled: "Komendy przełączania PvP nie są włączone."
+  PvpToggleNotEnabledForClaimType: "PvP nie może być przełączane w tym typie terenu."
+  NoPendingPvpToggle: "Brak oczekującego przełączenia PvP do potwierdzenia."
+  PendingPvpToggleExpired: "Twoje oczekujące przełączenie PvP wygasło. Spróbuj ponownie."
+  ConfirmPvpToggleInstruction: "Wpisz /claim pvp {0} confirm lub /claimpvpconfirm, aby potwierdzić."
+  PvpToggleUsage: "Użycie: /claim pvp [true|false|on|off] [confirm]"
+  PvpToggleAlreadyEnabled: "PvP jest już włączone w tym {0}."
+  PvpToggleAlreadyDisabled: "PvP jest już wyłączone w tym {0}."
   DeleteAllSuccess: Usunięto wszystkie tereny {0}.
   NoDeletePermission: Nie masz uprawnień do usuwania terenów.
   AllAdminDeleted: Usunięto wszystkie tereny administracyjne.

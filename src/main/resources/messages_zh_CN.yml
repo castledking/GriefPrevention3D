@@ -51,8 +51,22 @@ Messages:
   DeleteSuccess: 领地已删除。
   CantDeleteAdminClaim: 你没有删除管理员领地的权限。
   NoAdminClaimsPermission: 你没有管理管理员领地的权限。
-  ConfirmPvpToggleNoFee: "你想在这个 {1} {0} PvP 吗？"
-  ConfirmPvpToggleWithFee: "你想支付 {0} 来在这个 {2} {1} PvP 吗？"
+  ConfirmPvpToggleEnabledNoFee: "你想在这个 {0} 启用 PvP 吗？"
+  ConfirmPvpToggleDisabledNoFee: "你想在这个 {0} 禁用 PvP 吗？"
+  ConfirmPvpToggleEnabledWithFee: "你想支付 {0} 来在这个 {1} 启用 PvP 吗？"
+  ConfirmPvpToggleDisabledWithFee: "你想支付 {0} 来在这个 {1} 禁用 PvP 吗？"
+  PvPToggleEnabled: "已在这个 {0} 启用 PvP。"
+  PvPToggleDisabled: "已在这个 {0} 禁用 PvP。"
+  PvPToggleEnabledWithFee: "已在这个 {0} 为 {1} 启用 PvP。"
+  PvPToggleDisabledWithFee: "已在这个 {0} 为 {1} 禁用 PvP。"
+  PvpToggleNotEnabled: "PvP 切换命令未启用。"
+  PvpToggleNotEnabledForClaimType: "无法在此类型的领地中切换 PvP。"
+  NoPendingPvpToggle: "没有待确认的 PvP 切换。"
+  PendingPvpToggleExpired: "你待确认的 PvP 切换已过期。请重试。"
+  ConfirmPvpToggleInstruction: "输入 /claim pvp {0} confirm 或 /claimpvpconfirm 以确认。"
+  PvpToggleUsage: "用法: /claim pvp [true|false|on|off] [confirm]"
+  PvpToggleAlreadyEnabled: "此 {0} 中已启用 PvP。"
+  PvpToggleAlreadyDisabled: "此 {0} 中已禁用 PvP。"
   DeleteAllSuccess: 已删除 {0} 的所有领地。
   NoDeletePermission: 你没有删除领地的权限。
   AllAdminDeleted: 已删除所有管理员领地。

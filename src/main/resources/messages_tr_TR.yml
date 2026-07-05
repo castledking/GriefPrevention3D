@@ -52,8 +52,22 @@ Messages:
   DeleteSuccess: Bölge silindi.
   CantDeleteAdminClaim: Yönetici bölgelerini silme izniniz yok.
   NoAdminClaimsPermission: Yönetici bölgelerini yönetme izniniz yok.
-  ConfirmPvpToggleNoFee: "Bu {1} içinde PvP'yi {0} yapmak istiyor musunuz?"
-  ConfirmPvpToggleWithFee: "Bu {2} içinde PvP'yi {1} yapmak için {0} ödemek istiyor musunuz?"
+  ConfirmPvpToggleEnabledNoFee: "Bu {0} içinde PvP'yi etkinleştirmek istiyor musunuz?"
+  ConfirmPvpToggleDisabledNoFee: "Bu {0} içinde PvP'yi devre dışı bırakmak istiyor musunuz?"
+  ConfirmPvpToggleEnabledWithFee: "Bu {1} içinde PvP'yi etkinleştirmek için {0} ödemek istiyor musunuz?"
+  ConfirmPvpToggleDisabledWithFee: "Bu {1} içinde PvP'yi devre dışı bırakmak için {0} ödemek istiyor musunuz?"
+  PvPToggleEnabled: "Bu {0} içinde PvP etkinleştirildi."
+  PvPToggleDisabled: "Bu {0} içinde PvP devre dışı bırakıldı."
+  PvPToggleEnabledWithFee: "Bu {0} içinde PvP {1} karşılığında etkinleştirildi."
+  PvPToggleDisabledWithFee: "Bu {0} içinde PvP {1} karşılığında devre dışı bırakıldı."
+  PvpToggleNotEnabled: "PvP geçiş komutları etkin değil."
+  PvpToggleNotEnabledForClaimType: "Bu tür bölgede PvP geçişi yapılamaz."
+  NoPendingPvpToggle: "Onaylanacak bekleyen PvP geçişi yok."
+  PendingPvpToggleExpired: "Bekleyen PvP geçişinizin süresi doldu. Lütfen tekrar deneyin."
+  ConfirmPvpToggleInstruction: "Onaylamak için /claim pvp {0} confirm veya /claimpvpconfirm yazın."
+  PvpToggleUsage: "Kullanım: /claim pvp [true|false|on|off] [confirm]"
+  PvpToggleAlreadyEnabled: "PvP zaten bu {0} içinde etkinleştirilmiş."
+  PvpToggleAlreadyDisabled: "PvP zaten bu {0} içinde devre dışı bırakılmış."
   DeleteAllSuccess: '{0} kullanıcısının tüm bölgeleri silindi.'
   NoDeletePermission: Bölgeleri silme izniniz yok.
   AllAdminDeleted: Tüm yönetici bölgeleri silindi.

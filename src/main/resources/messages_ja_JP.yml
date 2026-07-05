@@ -51,8 +51,22 @@ Messages:
   DeleteSuccess: クレームを削除しました。
   CantDeleteAdminClaim: 管理用クレームを削除する権限がありません。
   NoAdminClaimsPermission: 管理用クレームを管理する権限がありません。
-  ConfirmPvpToggleNoFee: "この {1} で PvP を {0} しますか？"
-  ConfirmPvpToggleWithFee: "この {2} で PvP を {1} するために {0} を支払いますか？"
+  ConfirmPvpToggleEnabledNoFee: "この {0} で PvP を有効化しますか？"
+  ConfirmPvpToggleDisabledNoFee: "この {0} で PvP を無効化しますか？"
+  ConfirmPvpToggleEnabledWithFee: "この {1} で PvP を有効化するために {0} を支払いますか？"
+  ConfirmPvpToggleDisabledWithFee: "この {1} で PvP を無効化するために {0} を支払いますか？"
+  PvPToggleEnabled: "この {0} で PvP を有効化しました。"
+  PvPToggleDisabled: "この {0} で PvP を無効化しました。"
+  PvPToggleEnabledWithFee: "この {0} で PvP を {1} で有効化しました。"
+  PvPToggleDisabledWithFee: "この {0} で PvP を {1} で無効化しました。"
+  PvpToggleNotEnabled: "PvP 切り替えコマンドは有効になっていません。"
+  PvpToggleNotEnabledForClaimType: "このタイプのクレームでは PvP を切り替えできません。"
+  NoPendingPvpToggle: "確認待ちの PvP 切り替えはありません。"
+  PendingPvpToggleExpired: "保留中の PvP 切り替えの有効期限が切れました。もう一度お試しください。"
+  ConfirmPvpToggleInstruction: "/claim pvp {0} confirm または /claimpvpconfirm と入力して確認してください。"
+  PvpToggleUsage: "使用方法: /claim pvp [true|false|on|off] [confirm]"
+  PvpToggleAlreadyEnabled: "この {0} では PvP は既に有効化されています。"
+  PvpToggleAlreadyDisabled: "この {0} では PvP は既に無効化されています。"
   DeleteAllSuccess: '{0} のすべてのクレームを削除しました。'
   NoDeletePermission: クレームを削除する権限がありません。
   AllAdminDeleted: すべての管理用クレームを削除しました。

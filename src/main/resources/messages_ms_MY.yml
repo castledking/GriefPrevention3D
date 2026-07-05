@@ -51,8 +51,22 @@ Messages:
   DeleteSuccess: Kawasan tuntutan telah dipadam.
   CantDeleteAdminClaim: Anda tidak mempunyai kebenaran untuk memadam kawasan tuntutan pentadbiran.
   NoAdminClaimsPermission: Anda tidak mempunyai kebenaran untuk mengurus kawasan tuntutan pentadbiran.
-  ConfirmPvpToggleNoFee: "Adakah anda mahu {0} PvP dalam {1} ini?"
-  ConfirmPvpToggleWithFee: "Adakah anda mahu membayar {0} untuk {1} PvP dalam {2} ini?"
+  ConfirmPvpToggleEnabledNoFee: "Adakah anda mahu membolehkan PvP dalam {0} ini?"
+  ConfirmPvpToggleDisabledNoFee: "Adakah anda mahu melumpuhkan PvP dalam {0} ini?"
+  ConfirmPvpToggleEnabledWithFee: "Adakah anda mahu membayar {0} untuk membolehkan PvP dalam {1} ini?"
+  ConfirmPvpToggleDisabledWithFee: "Adakah anda mahu membayar {0} untuk melumpuhkan PvP dalam {1} ini?"
+  PvPToggleEnabled: "PvP dibolehkan dalam {0} ini."
+  PvPToggleDisabled: "PvP dilumpuhkan dalam {0} ini."
+  PvPToggleEnabledWithFee: "PvP dibolehkan dalam {0} ini untuk {1}."
+  PvPToggleDisabledWithFee: "PvP dilumpuhkan dalam {0} ini untuk {1}."
+  PvpToggleNotEnabled: "Arahan togol PvP tidak didayakan."
+  PvpToggleNotEnabledForClaimType: "PvP tidak boleh ditogol dalam jenis kawasan tuntutan ini."
+  NoPendingPvpToggle: "Tiada togol PvP yang belum selesai untuk disahkan."
+  PendingPvpToggleExpired: "Togol PvP anda yang belum selesai telah tamat tempoh. Sila cuba lagi."
+  ConfirmPvpToggleInstruction: "Taip /claim pvp {0} confirm atau /claimpvpconfirm untuk mengesahkan."
+  PvpToggleUsage: "Penggunaan: /claim pvp [true|false|on|off] [confirm]"
+  PvpToggleAlreadyEnabled: "PvP sudah didayakan dalam {0} ini."
+  PvpToggleAlreadyDisabled: "PvP sudah dilumpuhkan dalam {0} ini."
   DeleteAllSuccess: Semua kawasan tuntutan {0} telah dipadam.
   NoDeletePermission: Anda tidak mempunyai kebenaran untuk memadam kawasan tuntutan.
   AllAdminDeleted: Semua kawasan tuntutan pentadbiran telah dipadam.

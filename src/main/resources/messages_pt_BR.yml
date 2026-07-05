@@ -51,8 +51,22 @@ Messages:
   DeleteSuccess: Terreno protegido deletado.
   CantDeleteAdminClaim: Você não tem permissão para deletar terrenos administrativos.
   NoAdminClaimsPermission: Voce nao tem permissao para gerenciar terrenos administrativos.
-  ConfirmPvpToggleNoFee: "Você quer {0} PvP neste {1}?"
-  ConfirmPvpToggleWithFee: "Você quer pagar {0} para {1} PvP neste {2}?"
+  ConfirmPvpToggleEnabledNoFee: "Você quer ativar PvP neste {0}?"
+  ConfirmPvpToggleDisabledNoFee: "Você quer desativar PvP neste {0}?"
+  ConfirmPvpToggleEnabledWithFee: "Você quer pagar {0} para ativar PvP neste {1}?"
+  ConfirmPvpToggleDisabledWithFee: "Você quer pagar {0} para desativar PvP neste {1}?"
+  PvPToggleEnabled: "PvP ativado neste {0}."
+  PvPToggleDisabled: "PvP desativado neste {0}."
+  PvPToggleEnabledWithFee: "PvP ativado neste {0} por {1}."
+  PvPToggleDisabledWithFee: "PvP desativado neste {0} por {1}."
+  PvpToggleNotEnabled: "Comandos de alternância de PvP não estão habilitados."
+  PvpToggleNotEnabledForClaimType: "PvP não pode ser alternado neste tipo de terreno."
+  NoPendingPvpToggle: "Nenhuma alternância de PvP pendente para confirmar."
+  PendingPvpToggleExpired: "Sua alternância de PvP pendente expirou. Tente novamente."
+  ConfirmPvpToggleInstruction: "Digite /claim pvp {0} confirm ou /claimpvpconfirm para confirmar."
+  PvpToggleUsage: "Uso: /claim pvp [true|false|on|off] [confirm]"
+  PvpToggleAlreadyEnabled: "PvP já está ativado neste {0}."
+  PvpToggleAlreadyDisabled: "PvP já está desativado neste {0}."
   DeleteAllSuccess: Todos os terrenos protegidos de {0} foram deletados.
   NoDeletePermission: Você não tem permissão para deletar terrenos protegidos.
   AllAdminDeleted: Todos os terrenos administrativos foram deletados.
