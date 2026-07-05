@@ -249,8 +249,9 @@ subcommands:
       enable: true
       commands: [pvp]
       standalone: [claimpvp]
-      usage: "/claim pvp <true|false> confirm"
+      usage: "/claim pvp [true|false|on|off] [confirm]"
       description: Toggle whether PvP is enabled in your current claim.
+      permission: griefprevention.claims
       arguments:
         state:
           options:

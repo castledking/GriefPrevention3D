@@ -1651,6 +1651,10 @@ public abstract class DataStore {
 
         newClaim.parent = parent;
 
+        if (parent != null && "INHERIT".equalsIgnoreCase(GriefPrevention.instance.config_pvp_subdivisionPvpState)) {
+            newClaim.pvpEnabled = parent.pvpEnabled;
+        }
+
         // Never allow nested subdivisions when disabled, regardless of caller path.
         if (parent != null
                 && parent.parent != null

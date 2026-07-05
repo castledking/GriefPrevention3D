@@ -275,7 +275,7 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
             public @Nullable List<String> onTabComplete(@NotNull CommandSender sender,
                     @NotNull org.bukkit.command.Command command, @NotNull String alias, @NotNull String[] args) {
                 if (args.length == 1) {
-                    return java.util.Arrays.asList("true", "false").stream()
+                    return java.util.Arrays.asList("true", "false", "on", "off", "enable", "disable").stream()
                             .filter(option -> option.startsWith(args[0].toLowerCase()))
                             .collect(java.util.stream.Collectors.toList());
                 }

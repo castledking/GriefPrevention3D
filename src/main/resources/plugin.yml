@@ -210,12 +210,12 @@ commands:
     aliases: claimexplosion
   claimpvp:
     description: Toggles whether PvP is enabled in a specific land claim.
-    usage: /<command> [true|false] [confirm]
-    permission: griefprevention.claims
+    usage: /<command> [true|false|on|off] [confirm]
+    permission: griefprevention.claimpvp
   claimpvpconfirm:
     description: Confirms a pending PvP toggle.
     usage: /<command>
-    permission: griefprevention.claims
+    permission: griefprevention.claimpvp
   witherexplosions:
     description: Toggles whether wither explosions may damage a specific land claim.
     usage: /<command> [on|off]
@@ -434,6 +434,7 @@ permissions:
       griefprevention.ignore: true
       griefprevention.abandonallclaims: true
       griefprevention.visualizenearbyclaims: true
+      griefprevention.claimpvp: true
   griefprevention.trust:
     description: Grants permission to use /trust.
     default: true
@@ -524,6 +525,9 @@ permissions:
   griefprevention.premovementchat:
     description: Players with this permission can chat before moving.
     default: false
+  griefprevention.claimpvp:
+    description: Grants permission to use /claimpvp to toggle PvP in a claim.
+    default: true
   griefprevention.buysellclaimblocks:
     description: Grants permission to buy and sell claim blocks.
     default: true

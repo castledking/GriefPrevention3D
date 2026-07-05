@@ -210,7 +210,7 @@ public enum Alias {
 "standalone: [claimpvp]" + "\n" +
 "usage: \"/claim pvp [true|false] [confirm]\"" + "\n" +
 "description: Toggle PvP in your current claim." + "\n" +
-"permission: griefprevention.pvp" + "\n" +
+"permission: griefprevention.claims" + "\n" +
 "arguments:" + "\n" +
 "  state:" + "\n" +
 "    options:" + "\n" +
@@ -636,12 +636,12 @@ public enum Alias {
 "      standalone: [claimpvp]" + "\n" +
 "      usage: \"/claim pvp [true|false] [confirm]\"" + "\n" +
 "      description: Toggle PvP in your current claim." + "\n" +
-"      permission: griefprevention.pvp" + "\n" +
+"      permission: griefprevention.claims" + "\n" +
 "      arguments:" + "\n" +
 "        state:" + "\n" +
 "          options:" + "\n" +
-"            \"true\": [\"true\"]" + "\n" +
-"            \"false\": [\"false\"]" + "\n" +
+"            \"true\": [\"true\", \"on\", \"enable\"]" + "\n" +
+"            \"false\": [\"false\", \"off\", \"disable\"]" + "\n" +
 "" + "\n" +
 "    buyblocks:" + "\n" +
 "      enable: true" + "\n" +
