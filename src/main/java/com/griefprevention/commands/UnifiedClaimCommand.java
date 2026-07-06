@@ -36,6 +36,7 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
         registerSubcommand("siege", this::handleSiege);
         registerSubcommand("trapped", this::handleTrapped);
         registerSubcommand("expand", this::handleExpand);
+        registerSubcommand("alerts", createAlertsTabExecutor());
         registerSubcommand("help", this::handleHelp);
 
         // Register standalone commands from Alias enum
@@ -56,6 +57,7 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
         registerStandaloneCommand(Alias.ClaimTrapped, this::handleTrapped);
         registerStandaloneCommand(Alias.ClaimExpand, this::handleExpand);
         registerStandaloneCommand(Alias.ClaimHelp, this::handleHelp);
+        registerStandaloneCommand(Alias.ClaimAlerts, createAlertsStandaloneTabExecutor());
     }
 
     @Override
@@ -219,6 +221,56 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
 
     private boolean handlePvp(CommandSender sender, String[] args) {
         return plugin.handleClaimPvpCommand(sender, args);
+    }
+
+    private boolean handleAlerts(CommandSender sender, String[] args) {
+        return plugin.handleClaimAlertsCommand(sender, args);
+    }
+
+    private boolean handleAlertsStandalone(CommandSender sender, String[] args) {
+        return plugin.handleClaimToggleAlertsCommand(sender, args);
+    }
+
+    private TabExecutor createAlertsTabExecutor() {
+        return new TabExecutor() {
+            @Override
+            public boolean onCommand(@NotNull CommandSender sender, @NotNull org.bukkit.command.Command command,
+                    @NotNull String alias, @NotNull String[] args) {
+                return handleAlerts(sender, args);
+            }
+
+            @Override
+            public @Nullable List<String> onTabComplete(@NotNull CommandSender sender,
+                    @NotNull org.bukkit.command.Command command, @NotNull String alias, @NotNull String[] args) {
+                if (args.length == 1) {
+                    return java.util.Arrays.asList("on", "off").stream()
+                            .filter(option -> option.startsWith(args[0].toLowerCase()))
+                            .collect(java.util.stream.Collectors.toList());
+                }
+                return java.util.Collections.emptyList();
+            }
+        };
+    }
+
+    private TabExecutor createAlertsStandaloneTabExecutor() {
+        return new TabExecutor() {
+            @Override
+            public boolean onCommand(@NotNull CommandSender sender, @NotNull org.bukkit.command.Command command,
+                    @NotNull String alias, @NotNull String[] args) {
+                return handleAlertsStandalone(sender, args);
+            }
+
+            @Override
+            public @Nullable List<String> onTabComplete(@NotNull CommandSender sender,
+                    @NotNull org.bukkit.command.Command command, @NotNull String alias, @NotNull String[] args) {
+                if (args.length == 1) {
+                    return java.util.Arrays.asList("on", "off").stream()
+                            .filter(option -> option.startsWith(args[0].toLowerCase()))
+                            .collect(java.util.stream.Collectors.toList());
+                }
+                return java.util.Collections.emptyList();
+            }
+        };
     }
 
     private TabExecutor createExplosionsTabExecutor() {

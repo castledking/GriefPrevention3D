@@ -68,6 +68,11 @@ commands:
     usage: /<command>
     aliases: [3dsubdivideclaim, 3dsc, sc3d, subdivide3d, 3dsubdivide]
     permission: griefprevention.3dsubdivideclaims
+  claimtogglealerts:
+    description: Toggle violation alerts for all claims on or off.
+    usage: /<command> [on|off]
+    aliases: [toggleclaimalerts]
+    permission: griefprevention.claims
   3dadminclaims:
     description: Switches the shovel tool to 3D administrative claims mode.
     usage: /<command>

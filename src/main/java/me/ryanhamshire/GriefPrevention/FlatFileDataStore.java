@@ -605,6 +605,7 @@ public class FlatFileDataStore extends DataStore
         claim.areExplosivesAllowed = explosivesAllowed;
         claim.areWitherExplosionsAllowed = witherExplosionsAllowed;
         claim.pvpEnabled = pvpEnabled;
+        claim.alertsEnabled = yaml.getBoolean("Alerts Enabled", true);
         claim.setInheritNothingForNewSubdivisions(inheritNothingForNewSubdivisions);
         claim.setShapedCorners(parseShapeCorners(yaml.getStringList("Shape Corners")));
 
@@ -686,6 +687,7 @@ public class FlatFileDataStore extends DataStore
         child.areExplosivesAllowed = explosivesAllowed;
         child.areWitherExplosionsAllowed = witherExplosionsAllowed;
         child.pvpEnabled = pvpEnabled;
+        child.alertsEnabled = section.getBoolean("Alerts Enabled", true);
 
         if (!child.getSubclaimRestrictions())
         {
@@ -760,6 +762,7 @@ public class FlatFileDataStore extends DataStore
         section.set("Explosives Allowed", claim.areExplosivesAllowed);
         section.set("Wither Explosions Allowed", claim.areWitherExplosionsAllowed);
         section.set("PvP Enabled", claim.pvpEnabled);
+        section.set("Alerts Enabled", claim.alertsEnabled);
         section.set("Modified Date", claim.modifiedDate != null ? claim.modifiedDate.getTime() : System.currentTimeMillis());
 
         ArrayList<Claim> persistedChildren = new ArrayList<>();

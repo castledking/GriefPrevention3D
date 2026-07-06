@@ -145,6 +145,10 @@ public class PlayerData
     //the last claim this player was in, that we know of
     public Claim lastClaim = null;
 
+    //rate limiting for unprotected chest warning
+    public long lastUnprotectedChestWarningTime = 0;
+    public Location lastUnprotectedChestWarningLocation = null;
+
     //pvp
     public long lastPvpTimestamp = 0;
     public String lastPvpPlayer = "";

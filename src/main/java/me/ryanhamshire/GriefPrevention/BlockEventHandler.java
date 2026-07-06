@@ -389,6 +389,34 @@ public class BlockEventHandler implements Listener {
             }
         }
 
+        //FEATURE: limit lava placement near claims when minimum distance is set
+        if (block.getType() == Material.LAVA &&
+            GriefPrevention.instance.config_claims_preventLavaPlaceNearClaims &&
+            GriefPrevention.instance.config_claims_minimumDistance > 0) {
+            Location loc = block.getLocation();
+            int minDistance = GriefPrevention.instance.config_claims_minimumDistance;
+            
+            for (Claim claim : this.dataStore.claims) {
+                if (!claim.inDataStore) continue;
+                if (claim.parent != null) continue;
+                if (!claim.getLesserBoundaryCorner().getWorld().equals(loc.getWorld())) continue;
+                
+                if (claim.isNear(loc, minDistance)) {
+                    // Check if player has neighbor trust with this claim
+                    UUID playerId = player.getUniqueId();
+                    if (claim.getOwnerID() != null && claim.getOwnerID().equals(playerId)) {
+                        continue; // Owner can place lava near their own claim
+                    }
+                    
+                    if (!claim.hasNeighborTrust(playerId.toString())) {
+                        GriefPrevention.sendRateLimitedErrorMessage(player, Messages.NoLavaNearClaim);
+                        placeEvent.setCancelled(true);
+                        return;
+                    }
+                }
+            }
+        }
+
         //don't track in worlds where claims are not enabled
         if (!GriefPrevention.instance.claimsEnabledForWorld(placeEvent.getBlock().getWorld())) return;
 
@@ -583,7 +611,19 @@ public class BlockEventHandler implements Listener {
                 GriefPrevention.instance.config_claims_preventTheft &&
                 this.dataStore.getClaimAt(block.getLocation(), false, playerData.lastClaim) == null
             ) {
-                GriefPrevention.sendMessage(player, TextMode.Warn, Messages.UnprotectedChestWarning);
+                long now = System.currentTimeMillis();
+                int cooldownMs = GriefPrevention.instance.config_claims_unprotectedChestWarningCooldownSeconds * 1000;
+                int distance = GriefPrevention.instance.config_claims_unprotectedChestWarningDistance;
+                Location lastLoc = playerData.lastUnprotectedChestWarningLocation;
+                boolean shouldWarn = lastLoc == null
+                        || now - playerData.lastUnprotectedChestWarningTime >= cooldownMs
+                        || !lastLoc.getWorld().equals(block.getWorld())
+                        || lastLoc.distanceSquared(block.getLocation()) >= distance * distance;
+                if (shouldWarn) {
+                    GriefPrevention.sendMessage(player, TextMode.Warn, Messages.UnprotectedChestWarning);
+                    playerData.lastUnprotectedChestWarningTime = now;
+                    playerData.lastUnprotectedChestWarningLocation = block.getLocation().clone();
+                }
             }
         }
         //FEATURE: limit wilderness tree planting to grass, or dirt with more blocks beneath it

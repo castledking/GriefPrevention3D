@@ -115,6 +115,7 @@ Messages:
   NoBedPermission: '{0} nie dał ci pozwolenia na spanie tutaj.'
   NoWildernessBuckets: Możesz wylewać wiadra tylko w swoim terenie lub pod ziemią.
   NoLavaNearOtherPlayer: Nie możesz stawiać lawy tak blisko {0}.
+  NoLavaNearClaim: Jesteś zbyt blisko terenu, żeby to zrobić!
   TooFarAway: To jest zbyt daleko.
   BlockNotClaimed: Nikt nie oznaczył tego bloku.
   BlockClaimed: Ten blok został oznaczony przez {0}.
@@ -325,5 +326,10 @@ Messages:
   AuthorTag: "&7autorstwa castledking, RoboMWM i BigScary"
   PluginTag: "&6Samodzielna wtyczka anty-griefingowa dla serwerów Minecraft \n&b- Teraz z pełnymi podziałami 3D"
   StartupDetails: "&fSzczegóły uruchamiania: {0}"
+  ClaimAlertsEnabled: Alerty włączone dla tego terenu.
+  ClaimAlertsDisabled: Alerty wyłączone dla tego terenu.
+  ClaimAlertsEnabledGlobal: Alerty włączone dla wszystkich terenów.
+  ClaimAlertsDisabledGlobal: Alerty wyłączone dla wszystkich terenów.
+  ClaimAlertsUsage: Użyj /claimtogglealerts on|off aby przełączyć alerty dla WSZYSTKICH terenów, lub stań w konkretnym terenie i spróbuj ponownie.
   BootFinished: "&7Uruchamianie zakończone w: &a{0}"
   MessagesLoaded: "Komunikaty załadowane: &a{0}"

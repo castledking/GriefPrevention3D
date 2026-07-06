@@ -115,6 +115,7 @@ Messages:
   NoBedPermission: '{0} 没有给你在这里睡觉的权限。'
   NoWildernessBuckets: 你只能在你的领地内或地下倒空桶。
   NoLavaNearOtherPlayer: 你不能在离 {0} 这么近的地方放置岩浆。
+  NoLavaNearClaim: 你离领地太近了，不能那样做！
   TooFarAway: 那太远了。
   BlockNotClaimed: 没有人认领这个方块。
   BlockClaimed: 该方块已被 {0} 认领。
@@ -325,5 +326,10 @@ Messages:
   AuthorTag: "&7由 castledking、RoboMWM 和 BigScary 制作"
   PluginTag: "&6Minecraft 服务器的自助防破坏插件 \n&b- 现已支持完整3D子区域"
   StartupDetails: "&f启动详情：{0}"
+  ClaimAlertsEnabled: 此领地的警报已启用。
+  ClaimAlertsDisabled: 此领地的警报已禁用。
+  ClaimAlertsEnabledGlobal: 所有领地的警报已启用。
+  ClaimAlertsDisabledGlobal: 所有领地的警报已禁用。
+  ClaimAlertsUsage: 使用 /claimtogglealerts on|off 切换所有领地的警报，或站在特定领地中再次尝试。
   BootFinished: "&7启动完成用时：&a{0}"
   MessagesLoaded: "消息已加载：&a{0}"

@@ -118,6 +118,7 @@ Messages:
   NoBedPermission: "{0} не дал вам разрешения спать здесь."
   NoWildernessBuckets: "Вы можете выливать вёдра только внутри своей территории или под землёй."
   NoLavaNearOtherPlayer: "Вы не можете размещать лаву так близко к {0}."
+  NoLavaNearClaim: Вы слишком близко к территории, чтобы это сделать!
   TooFarAway: "Это слишком далеко."
   BlockNotClaimed: "Никто не защитил этот блок."
   BlockClaimed: "Этот блок защищён игроком {0}."
@@ -325,5 +326,10 @@ Messages:
   AuthorTag: "&7от castledking, RoboMWM и BigScary"
   PluginTag: "&6Самостоятельный плагин анти-гриферства для серверов Minecraft \n&b- Теперь с полными 3D-подразделениями"
   StartupDetails: "&fДетали запуска: {0}"
+  ClaimAlertsEnabled: Оповещения включены для этой территории.
+  ClaimAlertsDisabled: Оповещения отключены для этой территории.
+  ClaimAlertsEnabledGlobal: Оповещения включены для всех территорий.
+  ClaimAlertsDisabledGlobal: Оповещения отключены для всех территорий.
+  ClaimAlertsUsage: Используйте /claimtogglealerts on|off для переключения оповещений для ВСЕХ территорий, или встаньте в конкретной территории и попробуйте снова.
   BootFinished: "&7Запуск завершён за: &a{0}"
   MessagesLoaded: "Сообщения загружены: &a{0}"

@@ -106,6 +106,9 @@ public class Claim
 
       // PvP toggle for this claim
       public boolean pvpEnabled = true;
+
+      // per-claim alert toggle
+      public boolean alertsEnabled = true;
  
      //parent claim
      //only used for claim subdivisions.  top level claims have null here

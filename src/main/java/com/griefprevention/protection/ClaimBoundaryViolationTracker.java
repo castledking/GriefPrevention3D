@@ -383,6 +383,14 @@ public class ClaimBoundaryViolationTracker
         Player player = Bukkit.getPlayer(ownerID);
         if (player == null || !player.isOnline()) return;
 
+        //check if alerts are enabled for the claim at the violation location
+        Location violationLocation = new Location(
+                Bukkit.getWorld(burst.worldName()),
+                burst.firstX(), burst.firstY(), burst.firstZ()
+        );
+        me.ryanhamshire.GriefPrevention.Claim claim = GriefPrevention.instance.dataStore.getClaimAt(violationLocation, false, null);
+        if (claim != null && !claim.alertsEnabled) return;
+
         String typeLabel;
         switch (burst.type())
         {
@@ -413,18 +421,21 @@ public class ClaimBoundaryViolationTracker
                         ? Messages.ExternalLiquidBoundaryViolation
                         : Messages.InternalLiquidBoundaryViolation;
             }
-            String message = GriefPrevention.instance.dataStore.getMessage(
+            GriefPrevention.sendMessage(
+                    player,
+                    org.bukkit.ChatColor.RED,
                     messageKey,
                     String.valueOf(burst.firstX()),
                     String.valueOf(burst.firstY()),
                     String.valueOf(burst.firstZ())
             );
-            player.sendMessage(message);
         }
         else
         {
             // Multiple violations condensed into one summary
-            String message = GriefPrevention.instance.dataStore.getMessage(
+            GriefPrevention.sendMessage(
+                    player,
+                    org.bukkit.ChatColor.RED,
                     Messages.BoundaryViolationBurstSummary,
                     String.valueOf(burst.count()),
                     typeLabel,
@@ -432,7 +443,6 @@ public class ClaimBoundaryViolationTracker
                     String.valueOf(burst.firstY()),
                     String.valueOf(burst.firstZ())
             );
-            player.sendMessage(message);
         }
     }
 

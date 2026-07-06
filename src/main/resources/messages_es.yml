@@ -115,6 +115,7 @@ Messages:
   NoBedPermission: '{0} no te ha dado permiso para dormir aquí.'
   NoWildernessBuckets: Solo puedes vaciar cubos dentro de tus terrenos protegidos o bajo tierra.
   NoLavaNearOtherPlayer: No puedes colocar lava tan cerca de {0}.
+  NoLavaNearClaim: ¡Estás demasiado cerca de un terreno protegido para hacer eso!
   TooFarAway: Eso está demasiado lejos.
   BlockNotClaimed: Nadie ha protegido este bloque.
   BlockClaimed: Este bloque fue protegido por {0}.
@@ -321,5 +322,10 @@ Messages:
   AuthorTag: "&7por castledking, RoboMWM y BigScary"
   PluginTag: "&6El plugin de protección contra griefing de autoservicio para servidores de Minecraft \n&b- ahora con subdivisiones 3D completas"
   StartupDetails: "&fDetalles de inicio: {0}"
+  ClaimAlertsEnabled: Alertas activadas para este terreno protegido.
+  ClaimAlertsDisabled: Alertas desactivadas para este terreno protegido.
+  ClaimAlertsEnabledGlobal: Alertas activadas para todos los terrenos protegidos.
+  ClaimAlertsDisabledGlobal: Alertas desactivadas para todos los terrenos protegidos.
+  ClaimAlertsUsage: Usa /claimtogglealerts on|off para alternar alertas para TODOS los terrenos protegidos, o párate en un terreno protegido específico e inténtalo de nuevo.
   BootFinished: "&7Inicio completado en: &a{0}"
   MessagesLoaded: "Mensajes cargados: &a{0}"

@@ -115,6 +115,7 @@ Messages:
   NoBedPermission: "{0} ne vous a pas donné la permission de dormir ici."
   NoWildernessBuckets: Vous ne pouvez vider des seaux que dans vos terrains ou sous terre.
   NoLavaNearOtherPlayer: "Vous ne pouvez pas placer de lave aussi près de {0}."
+  NoLavaNearClaim: Vous êtes trop proche d'un terrain pour faire cela !
   TooFarAway: C'est trop loin.
   BlockNotClaimed: Personne n'a protégé ce bloc.
   BlockClaimed: "Ce bloc a été protégé par {0}."
@@ -325,5 +326,10 @@ Messages:
   AuthorTag: "&7par castledking, RoboMWM et BigScary"
   PluginTag: "&6Le plugin anti-griefing en libre-service pour serveurs Minecraft \n&b- Maintenant avec subdivisions 3D complètes"
   StartupDetails: "&fDétails de démarrage : {0}"
+  ClaimAlertsEnabled: Alertes activées pour ce terrain.
+  ClaimAlertsDisabled: Alertes désactivées pour ce terrain.
+  ClaimAlertsEnabledGlobal: Alertes activées pour tous les terrains.
+  ClaimAlertsDisabledGlobal: Alertes désactivées pour tous les terrains.
+  ClaimAlertsUsage: Utilisez /claimtogglealerts on|off pour activer/désactiver les alertes pour TOUS les terrains, ou tenez-vous dans un terrain spécifique et réessayez.
   BootFinished: "&7Démarrage terminé en : &a{0}"
   MessagesLoaded: "Messages chargés : {0}"

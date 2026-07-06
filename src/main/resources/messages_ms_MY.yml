@@ -115,6 +115,7 @@ Messages:
   NoBedPermission: '{0} belum memberikan anda kebenaran untuk tidur di sini.'
   NoWildernessBuckets: Anda hanya boleh menuang baldi di dalam kawasan tuntutan anda atau di bawah tanah.
   NoLavaNearOtherPlayer: Anda tidak boleh meletakkan lava sedekat ini dengan {0}.
+  NoLavaNearClaim: Anda terlalu dekat dengan kawasan tuntutan untuk melakukan itu!
   TooFarAway: Itu terlalu jauh.
   BlockNotClaimed: Tiada sesiapa menuntut blok ini.
   BlockClaimed: Blok itu telah dituntut oleh {0}.
@@ -321,5 +322,10 @@ Messages:
   AuthorTag: "&7oleh castledking, RoboMWM dan BigScary"
   PluginTag: "&6Plugin anti-griefing layan diri untuk pelayan Minecraft \n&b- Kini dengan subbahagian 3D penuh"
   StartupDetails: "&fButiran permulaan: {0}"
+  ClaimAlertsEnabled: Amaran diaktifkan untuk kawasan tuntutan ini.
+  ClaimAlertsDisabled: Amaran dilumpuhkan untuk kawasan tuntutan ini.
+  ClaimAlertsEnabledGlobal: Amaran diaktifkan untuk semua kawasan tuntutan.
+  ClaimAlertsDisabledGlobal: Amaran dilumpuhkan untuk semua kawasan tuntutan.
+  ClaimAlertsUsage: Gunakan /claimtogglealerts on|off untuk menukar amaran untuk SEMUA kawasan tuntutan, atau berdiri dalam kawasan tuntutan tertentu dan cuba lagi.
   BootFinished: "&7Permulaan selesai dalam: &a{0}"
   MessagesLoaded: "Mesej dimuatkan: &a{0}"

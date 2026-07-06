@@ -130,6 +130,7 @@ public enum Messages
     NoBedPermission("{0} hasn't given you permission to sleep here.", "0: claim owner"),
     NoWildernessBuckets("You may only dump buckets inside your claim(s) or underground."),
     NoLavaNearOtherPlayer("You can't place lava this close to {0}.", "0: nearby player"),
+    NoLavaNearClaim("You are too close to a claim to do that!"),
     TooFarAway("That's too far away."),
     BlockNotClaimed("No one has claimed this block."),
     BlockClaimed("That block has been claimed by {0}.", "0: claim owner"),
@@ -338,7 +339,12 @@ public enum Messages
     PluginTag("&6The self-service anti-griefing plugin for Minecraft servers \n&b- now with full 3D subdivisions"),
     StartupDetails("&fStartup details: {0}", "0: the startup detail block (platform, features, etc.)"),
     BootFinished("&7Boot finished in: &a{0}", "0: boot time in ms"),
-    MessagesLoaded("Messages loaded: {0}", "0: number of messages loaded");
+    MessagesLoaded("Messages loaded: {0}", "0: number of messages loaded"),
+    ClaimAlertsEnabled("Alerts enabled for this claim."),
+    ClaimAlertsDisabled("Alerts disabled for this claim."),
+    ClaimAlertsEnabledGlobal("Alerts enabled for all claims."),
+    ClaimAlertsDisabledGlobal("Alerts disabled for all claims."),
+    ClaimAlertsUsage("Use /claimtogglealerts on|off to toggle alerts for ALL claims, or stand in a specific claim and try again.");
 
     final @NotNull String defaultValue;
     final @Nullable String notes;

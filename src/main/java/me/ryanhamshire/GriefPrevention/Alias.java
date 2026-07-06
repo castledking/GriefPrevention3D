@@ -284,6 +284,21 @@ public enum Alias {
         "claimhelp"
     ),
 
+    ClaimAlerts(
+        "enable: true" + "\n" +
+"commands: [alerts]" + "\n" +
+"standalone: [claimtogglealerts, toggleclaimalerts]" + "\n" +
+"usage: \"/claim alerts [on|off]\"" + "\n" +
+"description: Toggle violation alerts for your current claim." + "\n" +
+"arguments:" + "\n" +
+"  state:" + "\n" +
+"    options:" + "\n" +
+"      on: [on]" + "\n" +
+"      off: [off]" + "\n" +
+"" + "\n",
+        "claimtogglealerts"
+    ),
+
     ClaimDistanceCheck(
         "enable: true" + "\n" +
 "commands: [distance, checkdistance]" + "\n" +

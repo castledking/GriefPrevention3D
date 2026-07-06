@@ -116,6 +116,7 @@ Messages:
   NoBedPermission: '{0} burada uyumana izin vermedi.'
   NoWildernessBuckets: Kovaları yalnızca bölgenizin içinde veya yeraltında boşaltabilirsiniz.
   NoLavaNearOtherPlayer: LAV'ı {0} kişisine bu kadar yakın yerleştiremezsiniz.
+  NoLavaNearClaim: Bir bölgeye çok yakınsınız bunu yapmak için!
   TooFarAway: Bu çok uzakta.
   BlockNotClaimed: Hiç kimse bu bloğu bölgelememiş.
   BlockClaimed: Bu blok {0} tarafından bölgelenmiş.
@@ -326,5 +327,10 @@ Messages:
   AuthorTag: "&7castledking, RoboMWM ve BigScary tarafından"
   PluginTag: "&6Minecraft sunucuları için self-servis anti-griefing eklentisi \n&b- Artık tam 3D alt bölgelerle"
   StartupDetails: "&fBaşlangıç detayları: {0}"
+  ClaimAlertsEnabled: Bu bölge için uyarılar etkinleştirildi.
+  ClaimAlertsDisabled: Bu bölge için uyarılar devre dışı bırakıldı.
+  ClaimAlertsEnabledGlobal: Tüm bölgeler için uyarılar etkinleştirildi.
+  ClaimAlertsDisabledGlobal: Tüm bölgeler için uyarılar devre dışı bırakıldı.
+  ClaimAlertsUsage: TÜM bölgeler için uyarıları açıp kapatmak için /claimtogglealerts on|off kullanın veya belirli bir bölgede durun ve tekrar deneyin.
   BootFinished: "&7Başlangıç tamamlandı: &a{0}"
   MessagesLoaded: "Mesajlar yüklendi: &a{0}"

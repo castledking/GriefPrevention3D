@@ -115,6 +115,7 @@ Messages:
   NoBedPermission: '{0} はここで眠る許可を与えていません。'
   NoWildernessBuckets: バケツの中身を捨てられるのは、自分のクレーム内または地下のみです。
   NoLavaNearOtherPlayer: '{0} の近くに溶岩を配置できません。'
+  NoLavaNearClaim: クレームに近すぎてそれを実行できません！
   TooFarAway: 距離が遠すぎます。
   BlockNotClaimed: 誰もこのブロックをクレームしていません。
   BlockClaimed: そのブロックは {0} がクレームしています。
@@ -325,5 +326,10 @@ Messages:
   AuthorTag: "&7by castledking, RoboMWM and BigScary"
   PluginTag: "&6The self-service anti-griefing plugin for Minecraft servers \n&b- now with full 3D subdivisions"
   StartupDetails: "&f起動詳細：{0}"
+  ClaimAlertsEnabled: このクレームのアラートが有効になりました。
+  ClaimAlertsDisabled: このクレームのアラートが無効になりました。
+  ClaimAlertsEnabledGlobal: すべてのクレームのアラートが有効になりました。
+  ClaimAlertsDisabledGlobal: すべてのクレームのアラートが無効になりました。
+  ClaimAlertsUsage: すべてのクレームのアラートを切り替えるには /claimtogglealerts on|off を使用するか、特定のクレームに立って再度試してください。
   BootFinished: "&7起動完了まで：&a{0}"
   MessagesLoaded: "メッセージを読み込みました：&a{0}"

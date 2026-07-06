@@ -115,6 +115,7 @@ Messages:
   NoBedPermission: "{0} hat dir keine Erlaubnis gegeben, hier zu schlafen."
   NoWildernessBuckets: Du kannst Eimer nur innerhalb deiner Gebiete oder unter der Erde entleeren.
   NoLavaNearOtherPlayer: "Du kannst kein Lava in der Nähe von {0} platzieren."
+  NoLavaNearClaim: Du bist zu nah an einem Gebiet, um das zu tun!
   TooFarAway: Das ist zu weit entfernt.
   BlockNotClaimed: Niemand hat diesen Block beansprucht.
   BlockClaimed: "Dieser Block wurde von {0} beansprucht."
@@ -325,5 +326,10 @@ Messages:
   AuthorTag: "&7von castledking, RoboMWM und BigScary"
   PluginTag: "&6Das Self-Service Anti-Griefing-Plugin für Minecraft-Server \n&b- Jetzt mit vollständigen 3D-Unterteilungen"
   StartupDetails: "&fStartdetails: {0}"
+  ClaimAlertsEnabled: Warnungen für dieses Gebiet aktiviert.
+  ClaimAlertsDisabled: Warnungen für dieses Gebiet deaktiviert.
+  ClaimAlertsEnabledGlobal: Warnungen für alle Gebiete aktiviert.
+  ClaimAlertsDisabledGlobal: Warnungen für alle Gebiete deaktiviert.
+  ClaimAlertsUsage: Verwende /claimtogglealerts on|off um Warnungen für ALLE Gebiete umzuschalten, oder steh in einem bestimmten Gebiet und versuche es erneut.
   BootFinished: "&7Start abgeschlossen in: &a{0}"
   MessagesLoaded: "Nachrichten geladen: {0}"

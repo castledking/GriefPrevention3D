@@ -221,6 +221,7 @@ public class GriefPrevention extends JavaPlugin {
     public boolean config_claims_legacySubdivisionFormat; // whether to use original GP subdivision format (separate files)
     // REQUIRED for GPExpansion compatibility. Default: false
     public int config_claims_minimumDistance; // minimum distance between top-level claims. 0 = disabled.
+    public boolean config_claims_preventLavaPlaceNearClaims; // whether to prevent lava placement near claims when minimum distance is set
 
     public Material config_claims_investigationTool; // which material will be used to investigate claims with a right
     // click
@@ -237,6 +238,9 @@ public class GriefPrevention extends JavaPlugin {
 
     public boolean config_claims_lecternReadingRequiresAccessTrust; // reading lecterns requires access trust
     public boolean config_claims_hoppersRequireBuildTrust; // hoppers require build trust
+    public int config_claims_unprotectedChestWarningCooldownSeconds; // cooldown between unprotected chest warnings
+    public int config_claims_unprotectedChestWarningDistance; // minimum distance before repeating chest warning
+    public List<String> config_claims_actionBarMessages; // message IDs to render in action bar
 
     // Economy settings for buying/selling claim blocks
     public boolean config_economy_claimBlocksEnabled; // whether players can buy/sell claim blocks
@@ -1002,6 +1006,7 @@ public class GriefPrevention extends JavaPlugin {
 
         this.config_claims_minY = config.getInt("GriefPrevention.Claims.MinimumY", Integer.MIN_VALUE);
         this.config_claims_minimumDistance = Math.max(0, config.getInt("GriefPrevention.Claims.MinimumDistance", 0));
+        this.config_claims_preventLavaPlaceNearClaims = config.getBoolean("GriefPrevention.Claims.PreventLavaPlaceNearClaims", true);
         // Warn if MinimumY is set above sea level, as this is likely unintended
         if (this.config_claims_minY != Integer.MIN_VALUE) {
             for (World world : worlds) {
@@ -1112,6 +1117,27 @@ public class GriefPrevention extends JavaPlugin {
             "GriefPrevention.Claims.HoppersRequireBuildTrust",
             false
         );
+
+        this.config_claims_unprotectedChestWarningCooldownSeconds = config.getInt(
+            "GriefPrevention.Claims.UnprotectedChestWarningCooldownSeconds",
+            300
+        );
+        this.config_claims_unprotectedChestWarningDistance = config.getInt(
+            "GriefPrevention.Claims.UnprotectedChestWarningDistance",
+            100
+        );
+
+        List<String> defaultActionBarMessages = Arrays.asList(
+            "UnprotectedChestWarning",
+            "ExternalLiquidBoundaryViolation",
+            "InternalLiquidBoundaryViolation",
+            "ExternalPistonBoundaryViolation",
+            "InternalPistonBoundaryViolation"
+        );
+        this.config_claims_actionBarMessages = config.getStringList("GriefPrevention.ActionBarMessages");
+        if (this.config_claims_actionBarMessages.isEmpty()) {
+            this.config_claims_actionBarMessages = new ArrayList<>(defaultActionBarMessages);
+        }
 
         // Economy settings - disabled by default
         this.config_economy_claimBlocksEnabled = config.getBoolean("GriefPrevention.Economy.ClaimBlocksEnabled", false);
@@ -1421,6 +1447,7 @@ public class GriefPrevention extends JavaPlugin {
         outConfig.set("GriefPrevention.Claims.ShapedMinimumArea", this.config_claims_shapedMinArea);
         outConfig.set("GriefPrevention.Claims.MinimumY", this.config_claims_minY);
         outConfig.set("GriefPrevention.Claims.MinimumDistance", this.config_claims_minimumDistance);
+        outConfig.set("GriefPrevention.Claims.PreventLavaPlaceNearClaims", this.config_claims_preventLavaPlaceNearClaims);
         outConfig.set("GriefPrevention.Claims.InvestigationTool", this.config_claims_investigationTool.name());
         outConfig.set("GriefPrevention.Claims.ModificationTool", this.config_claims_modificationTool.name());
         outConfig.set("GriefPrevention.Claims.Expiration.ChestClaimDays", this.config_claims_chestClaimExpirationDays);
@@ -1459,6 +1486,9 @@ public class GriefPrevention extends JavaPlugin {
             config_claims_lecternReadingRequiresAccessTrust
         );
         outConfig.set("GriefPrevention.Claims.HoppersRequireBuildTrust", this.config_claims_hoppersRequireBuildTrust);
+        outConfig.set("GriefPrevention.Claims.UnprotectedChestWarningCooldownSeconds", this.config_claims_unprotectedChestWarningCooldownSeconds);
+        outConfig.set("GriefPrevention.Claims.UnprotectedChestWarningDistance", this.config_claims_unprotectedChestWarningDistance);
+        outConfig.set("GriefPrevention.ActionBarMessages", this.config_claims_actionBarMessages);
 
         // Economy settings
         outConfig.set("GriefPrevention.Economy.ClaimBlocksEnabled", this.config_economy_claimBlocksEnabled);
@@ -4173,6 +4203,17 @@ public class GriefPrevention extends JavaPlugin {
         @NotNull String @NotNull... args
     ) {
         String message = GriefPrevention.instance.dataStore.getMessage(player, messageID, args);
+        if (player != null && GriefPrevention.instance.isActionBarMessage(messageID)) {
+            try {
+                player.spigot().sendMessage(
+                    net.md_5.bungee.api.ChatMessageType.ACTION_BAR,
+                    net.md_5.bungee.api.chat.TextComponent.fromLegacyText(message)
+                );
+            } catch (NoSuchMethodError ignored) {
+                sendMessage(player, color, message, delayInTicks);
+            }
+            return;
+        }
         sendMessage(player, color, message, delayInTicks);
     }
 
@@ -4193,6 +4234,11 @@ public class GriefPrevention extends JavaPlugin {
         } else {
             task.run();
         }
+    }
+
+    public boolean isActionBarMessage(@NotNull Messages messageID) {
+        String name = messageID.name();
+        return this.config_claims_actionBarMessages != null && this.config_claims_actionBarMessages.contains(name);
     }
 
     public static boolean hasVisibleMessageContent(@Nullable String message) {
@@ -5415,6 +5461,81 @@ public class GriefPrevention extends JavaPlugin {
 
     public boolean handleClaimPvpCommand(CommandSender sender, String[] args) {
         return this.handlePvpCommand(sender, args);
+    }
+
+    public boolean handleClaimAlertsCommand(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player)) {
+            sender.sendMessage(this.dataStore.getMessage(Messages.CommandRequiresPlayer));
+            return true;
+        }
+        Player player = (Player) sender;
+
+        PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
+        Claim claim = getSelectedOrCurrentClaim(player, playerData, false);
+
+        if (claim == null) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.ClaimAlertsUsage);
+            return true;
+        }
+
+        boolean enable;
+        if (args.length > 0) {
+            String arg = args[0].toLowerCase();
+            if (arg.equals("on") || arg.equals("enable") || arg.equals("true")) {
+                enable = true;
+            } else if (arg.equals("off") || arg.equals("disable") || arg.equals("false")) {
+                enable = false;
+            } else {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.ClaimAlertsUsage);
+                return true;
+            }
+        } else {
+            enable = !claim.alertsEnabled;
+        }
+
+        claim.alertsEnabled = enable;
+        this.dataStore.saveClaim(claim);
+
+        GriefPrevention.sendMessage(player, enable ? TextMode.Success : TextMode.Warn,
+            enable ? Messages.ClaimAlertsEnabled : Messages.ClaimAlertsDisabled);
+        return true;
+    }
+
+    public boolean handleClaimToggleAlertsCommand(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player)) {
+            sender.sendMessage(this.dataStore.getMessage(Messages.CommandRequiresPlayer));
+            return true;
+        }
+        Player player = (Player) sender;
+
+        boolean enable;
+        if (args.length > 0) {
+            String arg = args[0].toLowerCase();
+            if (arg.equals("on") || arg.equals("enable") || arg.equals("true")) {
+                enable = true;
+            } else if (arg.equals("off") || arg.equals("disable") || arg.equals("false")) {
+                enable = false;
+            } else {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.ClaimAlertsUsage);
+                return true;
+            }
+        } else {
+            enable = false;
+            Claim currentClaim = this.dataStore.getClaimAt(player.getLocation(), false, null);
+            if (currentClaim != null) {
+                enable = !currentClaim.alertsEnabled;
+            }
+        }
+
+        PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
+        for (Claim claim : playerData.getClaims()) {
+            claim.alertsEnabled = enable;
+            this.dataStore.saveClaim(claim);
+        }
+
+        GriefPrevention.sendMessage(player, enable ? TextMode.Success : TextMode.Warn,
+            enable ? Messages.ClaimAlertsEnabledGlobal : Messages.ClaimAlertsDisabledGlobal);
+        return true;
     }
 
     public boolean handleClaimPvpConfirmCommand(CommandSender sender, String[] args) {
