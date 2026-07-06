@@ -93,12 +93,13 @@ Stop _responding_ to grief and prevent it instead. GriefPrevention stops grief b
   `/witherexplosions`
   Use this command to toggle wither explosions inside your claim.
 ####
-- **Subtle Changes**
+### Subtle Changes
+  - **Per-Player Locale**: Enabled by default. Players with a Spanish or Portuguese client locale receive messages in their language automatically, while others receive English. Disable with `PerPlayerLocale: false` in config.yml.
+  - **Action Bar Messages**: You can now define a list of message keys that should be chosen to be shown in the action bar instead of chat.
   - Resizing a claim now selects it and is accessible using common commands like `/claim abandon` or `/claim trust` during that resize session
   - `/restrictsubclaim` while standing in main claims now instantly restricts all subdivisions inside
   - `/trustlist` now shows inherited permissions
   - Split the `griefprevention.eavesdrop` permission to `griefprevention.eavesdrop.pm` & `griefprevention.eavesdrop.softmute` for more granular permission control
-  - **Per-Player Locale**: Enabled by default. Players with a Spanish or Portuguese client locale receive messages in their language automatically, while others receive English. Disable with `PerPlayerLocale: false` in config.yml.
   - Various bug fixes and quality-of-life improvements
   - Full compatibility with original GriefPrevention features
   - Works with Spigot, Paper, Purpur, and Folia
