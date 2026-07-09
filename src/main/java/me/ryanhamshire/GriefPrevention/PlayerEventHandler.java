@@ -1224,9 +1224,16 @@ public class PlayerEventHandler implements Listener {
                 // 1.8.8: CHORUS_FRUIT doesn't exist
             }
             if (isChorusFruitOrEnderPearl) {
+                // Preserve the player's camera direction (yaw/pitch) when teleporting.
+                // Some server software sets these to match the projectile's direction
+                // instead of preserving the player's original look direction.
+                Location to = event.getTo();
+                to.setYaw(event.getFrom().getYaw());
+                to.setPitch(event.getFrom().getPitch());
+
                 Supplier<String> noAccessReason = ProtectionHelper.checkPermission(
                     player,
-                    event.getTo(),
+                    to,
                     ClaimPermission.Access,
                     event
                 );
@@ -1379,7 +1386,12 @@ public class PlayerEventHandler implements Listener {
                 recentPearlRollbackPlayers.add(playerID);
                 SchedulerUtil.runLaterGlobal(instance, () -> recentPearlRollbackPlayers.remove(playerID), 20L);
                 // Run teleport on player's entity region for fastest possible rollback
-                SchedulerUtil.runLaterEntity(instance, p, () -> teleportFoliaSafe(p, fromLoc), 0L);
+                // Preserve the player's current camera direction so the rollback doesn't
+                // force their yaw/pitch back to the pre-pearl direction.
+                Location rollbackLoc = fromLoc.clone();
+                rollbackLoc.setYaw(p.getLocation().getYaw());
+                rollbackLoc.setPitch(p.getLocation().getPitch());
+                SchedulerUtil.runLaterEntity(instance, p, () -> teleportFoliaSafe(p, rollbackLoc), 0L);
                 if (!refundedEnderPearlEntities.contains(pearlEntityID)) {
                     GriefPrevention.sendMessage(p, TextMode.Err, noAccessReason.get());
                     if (instance.config_claims_refundDeniedEnderPearls) {

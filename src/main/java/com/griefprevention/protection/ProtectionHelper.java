@@ -59,22 +59,30 @@ public final class ProtectionHelper
             ClaimsMode mode = GriefPrevention.instance.config_claims_worldModes.get(world);
             if (mode == ClaimsMode.Creative || mode == ClaimsMode.SurvivalRequiringClaims)
             {
-                // Allow placing chest if it would create an automatic claim.
-                if (trigger instanceof BlockPlaceEvent
-                        && ((BlockPlaceEvent) trigger).getBlock().getType() == Material.CHEST
-                        && playerData.getClaims().isEmpty()
-                        && GriefPrevention.instance.config_claims_automaticClaimsForNewPlayersRadius > -1)
-                    return null;
-
-                // If claims are required, provide relevant information.
-                return () ->
+                // Only block building and container access in wilderness when claims are
+                // required. Access permission (walking, teleporting) should always be
+                // allowed in wilderness so enderpearls and movement are not disrupted.
+                if (permission == ClaimPermission.Build
+                        || permission == ClaimPermission.Container
+                        || permission == ClaimPermission.Inventory)
                 {
-                    String reason = GriefPrevention.instance.dataStore.getMessage(Messages.NoBuildOutsideClaims);
-                    if (player.hasPermission("griefprevention.ignoreclaims"))
-                        reason += "  " + GriefPrevention.instance.dataStore.getMessage(Messages.IgnoreClaimsAdvertisement);
-                    reason += "  " + GriefPrevention.instance.dataStore.getMessage(Messages.CreativeBasicsVideo2, DataStore.CREATIVE_VIDEO_URL);
-                    return reason;
-                };
+                    // Allow placing chest if it would create an automatic claim.
+                    if (trigger instanceof BlockPlaceEvent
+                            && ((BlockPlaceEvent) trigger).getBlock().getType() == Material.CHEST
+                            && playerData.getClaims().isEmpty()
+                            && GriefPrevention.instance.config_claims_automaticClaimsForNewPlayersRadius > -1)
+                        return null;
+
+                    // If claims are required, provide relevant information.
+                    return () ->
+                    {
+                        String reason = GriefPrevention.instance.dataStore.getMessage(Messages.NoBuildOutsideClaims);
+                        if (player.hasPermission("griefprevention.ignoreclaims"))
+                            reason += "  " + GriefPrevention.instance.dataStore.getMessage(Messages.IgnoreClaimsAdvertisement);
+                        reason += "  " + GriefPrevention.instance.dataStore.getMessage(Messages.CreativeBasicsVideo2, DataStore.CREATIVE_VIDEO_URL);
+                        return reason;
+                    };
+                }
             }
 
             // If claims are not required, then the player has permission.
