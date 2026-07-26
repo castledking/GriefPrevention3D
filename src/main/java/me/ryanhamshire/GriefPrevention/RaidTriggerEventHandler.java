@@ -24,7 +24,12 @@ public final class RaidTriggerEventHandler implements Listener {
         Player player = event.getPlayer();
         PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
 
-        Claim claim = this.dataStore.getClaimAt(player.getLocation(), false, playerData.lastClaim);
+        // The raid centers on the village, not the player; checking only the player's
+        // location lets them step outside the claim after gaining Raid Omen to bypass
+        // the protection (GriefPrevention#2622).
+        Claim claim = this.dataStore.getClaimAt(event.getRaid().getLocation(), false, playerData.lastClaim);
+        if (claim == null)
+            claim = this.dataStore.getClaimAt(player.getLocation(), false, playerData.lastClaim);
         if (claim == null)
             return;
 
