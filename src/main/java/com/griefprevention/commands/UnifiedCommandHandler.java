@@ -278,31 +278,40 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
                     subcommandName
                 );
 
-                // Force-register by removing any existing command with this name first
-                try {
-                    Field knownCommandsField = map.getClass().getSuperclass().getDeclaredField("knownCommands");
-                    knownCommandsField.setAccessible(true);
-                    @SuppressWarnings("unchecked")
-                    Map<String, Command> knownCommands = (Map<String, Command>) knownCommandsField.get(map);
+                // Register through CommandMap first. This is required on Paper/Brigadier:
+                // commands injected straight into the knownCommands map never go through the
+                // server's Brigadier registration, so they are missing from the client's
+                // command tree. The client then rejects them with "Unknown or incomplete
+                // command" without ever contacting the server, which produces a broken
+                // command with nothing at all in the console. (Same failure mode already
+                // documented for /shapedclaim in GriefPrevention#syncShapedCommandRegistration.)
+                String prefix = plugin.getName().toLowerCase();
+                boolean registered = map.register(prefix, dynamicCommand);
 
-                    // Remove existing command if present (allows override), but remember it
-                    // so it can be restored later instead of permanently losing the name -
-                    // e.g. a plugin.yml-declared command (like an alias such as "acb") that
-                    // happened to not resolve via plugin.getCommand(...) at this point.
-                    String lowerName = commandName.toLowerCase();
-                    String prefixedName = plugin.getName().toLowerCase() + ":" + lowerName;
-                    Command previous = knownCommands.get(lowerName);
-                    if (previous != null && !(previous instanceof DynamicStandaloneCommand)) {
-                        replacedCommands.put(lowerName, previous);
+                if (!registered) {
+                    // The label was already taken, so CommandMap only registered the
+                    // prefixed form. Force the plain name to point at our command, keeping
+                    // whatever was displaced so it can be restored on unregister instead of
+                    // permanently losing the name - e.g. a plugin.yml-declared command (like
+                    // an alias such as "acb") that did not resolve via plugin.getCommand(...).
+                    Map<String, Command> knownCommands = findKnownCommands(map);
+                    if (knownCommands != null) {
+                        String lowerName = commandName.toLowerCase();
+                        Command previous = knownCommands.get(lowerName);
+                        if (previous != null && !(previous instanceof DynamicStandaloneCommand)) {
+                            replacedCommands.put(lowerName, previous);
+                        }
+                        knownCommands.put(lowerName, dynamicCommand);
+                        debugLog("Force-claimed already-registered command name: " + commandName);
+                    } else {
+                        plugin
+                            .getLogger()
+                            .warning(
+                                "Command name '" + commandName + "' is already taken and the server's " +
+                                    "command map could not be read to override it. It remains available as /" +
+                                    prefix + ":" + commandName + "."
+                            );
                     }
-                    knownCommands.remove(lowerName);
-
-                    // Register our command
-                    knownCommands.put(lowerName, dynamicCommand);
-                    knownCommands.put(prefixedName, dynamicCommand);
-                } catch (Exception e) {
-                    // Fallback to normal registration if reflection fails
-                    map.register(plugin.getName().toLowerCase(), dynamicCommand);
                 }
 
                 // Track for cleanup on reload
@@ -489,14 +498,62 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
 
     private static @Nullable CommandMap getCommandMap() {
         if (commandMap != null) return commandMap;
+
+        // Paper and its forks expose Server#getCommandMap() directly; prefer it so we do
+        // not depend on the server implementation's field layout at all.
         try {
-            Field commandMapField = Bukkit.getServer().getClass().getDeclaredField("commandMap");
-            commandMapField.setAccessible(true);
-            commandMap = (CommandMap) commandMapField.get(Bukkit.getServer());
-            return commandMap;
-        } catch (Exception e) {
-            return null;
+            Object viaApi = Bukkit.getServer().getClass().getMethod("getCommandMap").invoke(Bukkit.getServer());
+            if (viaApi instanceof CommandMap) {
+                commandMap = (CommandMap) viaApi;
+                return commandMap;
+            }
+        } catch (Exception ignored) {
+            // Not available on this server; fall through to field lookup.
         }
+
+        // Walk the server class hierarchy rather than assuming "commandMap" is declared on
+        // the exact runtime class. Server forks (DivineMC, Purpur, etc.) may subclass
+        // CraftServer, which would make a getDeclaredField() call on the leaf class fail.
+        Class<?> clazz = Bukkit.getServer().getClass();
+        while (clazz != null) {
+            try {
+                Field commandMapField = clazz.getDeclaredField("commandMap");
+                commandMapField.setAccessible(true);
+                commandMap = (CommandMap) commandMapField.get(Bukkit.getServer());
+                return commandMap;
+            } catch (NoSuchFieldException e) {
+                clazz = clazz.getSuperclass();
+            } catch (Exception e) {
+                return null;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Resolve SimpleCommandMap's {@code knownCommands} map by walking the command map's
+     * class hierarchy.
+     *
+     * <p>Assuming the field lives exactly one level up ({@code getClass().getSuperclass()})
+     * breaks on server forks that insert their own CommandMap subclass, so the lookup has
+     * to search every ancestor.
+     */
+    private static @Nullable Map<String, Command> findKnownCommands(@NotNull CommandMap map) {
+        Class<?> clazz = map.getClass();
+        while (clazz != null) {
+            try {
+                Field knownCommandsField = clazz.getDeclaredField("knownCommands");
+                knownCommandsField.setAccessible(true);
+                @SuppressWarnings("unchecked")
+                Map<String, Command> known = (Map<String, Command>) knownCommandsField.get(map);
+                return known;
+            } catch (NoSuchFieldException e) {
+                clazz = clazz.getSuperclass();
+            } catch (Exception e) {
+                return null;
+            }
+        }
+        return null;
     }
 
     /**
@@ -523,10 +580,11 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
 
             try {
                 // Get the knownCommands map from SimpleCommandMap
-                Field knownCommandsField = map.getClass().getSuperclass().getDeclaredField("knownCommands");
-                knownCommandsField.setAccessible(true);
-                @SuppressWarnings("unchecked")
-                Map<String, Command> knownCommands = (Map<String, Command>) knownCommandsField.get(map);
+                Map<String, Command> knownCommands = findKnownCommands(map);
+                if (knownCommands == null) {
+                    plugin.getLogger().warning("Could not read the server's command map for command unregistration");
+                    return;
+                }
 
                 for (String cmdName : registeredDynamicCommands) {
                     String lowerName = cmdName.toLowerCase();
@@ -586,19 +644,32 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
                     rootCommandConfig != null ? rootCommandConfig.getPermission() : "griefprevention.claims"
                 );
 
-                // Register using reflection to ensure we can override existing commands
-                try {
-                    Field knownCommandsField = map.getClass().getSuperclass().getDeclaredField("knownCommands");
-                    knownCommandsField.setAccessible(true);
-                    @SuppressWarnings("unchecked")
-                    Map<String, Command> knownCommands = (Map<String, Command>) knownCommandsField.get(map);
+                // Register through CommandMap first so Paper/Brigadier picks the command up
+                // into the client command tree; raw knownCommands puts are invisible to the
+                // client and fail with "Unknown or incomplete command" and no console output.
+                String prefix = plugin.getName().toLowerCase();
+                boolean registered = map.register(prefix, dynamicCommand);
 
-                    String lowerName = commandName.toLowerCase();
-                    knownCommands.put(lowerName, dynamicCommand);
-                    knownCommands.put(plugin.getName().toLowerCase() + ":" + lowerName, dynamicCommand);
-                } catch (Exception e) {
-                    // Fallback to normal registration
-                    map.register(plugin.getName().toLowerCase(), dynamicCommand);
+                if (!registered) {
+                    // Name already taken - force the plain name to our command, remembering
+                    // what was displaced so unregister can put it back.
+                    Map<String, Command> knownCommands = findKnownCommands(map);
+                    if (knownCommands != null) {
+                        String lowerName = commandName.toLowerCase();
+                        Command previous = knownCommands.get(lowerName);
+                        if (previous != null && !(previous instanceof DynamicRootCommand)) {
+                            replacedCommands.put(lowerName, previous);
+                        }
+                        knownCommands.put(lowerName, dynamicCommand);
+                    } else {
+                        plugin
+                            .getLogger()
+                            .warning(
+                                "Root command name '" + commandName + "' is already taken and the server's " +
+                                    "command map could not be read to override it. It remains available as /" +
+                                    prefix + ":" + commandName + "."
+                            );
+                    }
                 }
 
                 registeredDynamicCommands.add(commandName);
