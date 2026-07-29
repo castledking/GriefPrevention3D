@@ -2162,19 +2162,45 @@ public abstract class DataStore {
         int currentArea = firstClaim.getArea() + secondClaim.getArea();
         int areaDifference = newArea - currentArea;
 
-        if (!firstClaim.isAdminClaim() && !secondClaim.isAdminClaim()) {
-            if (player.getUniqueId().equals(firstClaim.ownerID)) {
-                int blocksRemaining = playerData.getRemainingClaimBlocks() - areaDifference;
-                if (blocksRemaining < 0) {
-                    GriefPrevention.sendMessage(player, TextMode.Err, "Not enough claim blocks to merge these claims.");
-                    playerData.claimMerging = null;
-                    playerData.mergeEdgeIndex = null;
-                    playerData.mergeSecondEdgeIndex = null;
-                    playerData.mergeFirstDepthPoint = null;
-                    playerData.mergeSecondDepthPoint = null;
-                    playerData.shovelMode = ShovelMode.Basic;
-                    return;
-                }
+        if (!firstClaim.isAdminClaim() && !secondClaim.isAdminClaim() && firstClaim.ownerID != null) {
+            // Check against the claim owner's blocks, not the acting player's -
+            // a trusted manager (not the owner) can also perform merges.
+            PlayerData ownerData = firstClaim.ownerID.equals(playerData.playerID)
+                    ? playerData
+                    : this.getPlayerData(firstClaim.ownerID);
+            int blocksRemaining = ownerData.getRemainingClaimBlocks() - areaDifference;
+            if (blocksRemaining < 0) {
+                GriefPrevention.sendMessage(player, TextMode.Err, "Not enough claim blocks to merge these claims.");
+                playerData.claimMerging = null;
+                playerData.mergeEdgeIndex = null;
+                playerData.mergeSecondEdgeIndex = null;
+                playerData.mergeFirstDepthPoint = null;
+                playerData.mergeSecondDepthPoint = null;
+                playerData.shovelMode = ShovelMode.Basic;
+                return;
+            }
+        }
+
+        // Validate that the merged shape can actually be represented before mutating
+        // any state. If the union's corners don't form a valid closed polygon,
+        // updateClaimPolygon() would otherwise silently fall back to the full
+        // bounding-box rectangle, which can be larger than the area checked above -
+        // letting a merge slip through that pushes the owner's claim blocks negative.
+        List<OrthogonalPoint2i> mergedCorners = mergedPolygon.corners();
+        if (mergedCorners.size() >= 4) {
+            List<OrthogonalPoint2i> closedPath = new ArrayList<>(mergedCorners);
+            closedPath.add(closedPath.get(0));
+            try {
+                OrthogonalPolygon.fromClosedPath(closedPath);
+            } catch (Exception e) {
+                GriefPrevention.sendMessage(player, TextMode.Err, "Failed to merge claims: invalid resulting shape.");
+                playerData.claimMerging = null;
+                playerData.mergeEdgeIndex = null;
+                playerData.mergeSecondEdgeIndex = null;
+                playerData.mergeFirstDepthPoint = null;
+                playerData.mergeSecondDepthPoint = null;
+                playerData.shovelMode = ShovelMode.Basic;
+                return;
             }
         }
 

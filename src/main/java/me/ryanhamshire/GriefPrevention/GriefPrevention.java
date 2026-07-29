@@ -3624,6 +3624,7 @@ public class GriefPrevention extends JavaPlugin {
             if (
                 this.config_claims_abandonReturnRatio != 1.0D &&
                 claim.parent == null &&
+                claim.ownerID != null &&
                 claim.ownerID.equals(playerData.playerID)
             ) {
                 playerData.setAccruedClaimBlocks(

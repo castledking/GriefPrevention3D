@@ -49,6 +49,9 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
 
     // Track dynamically registered commands for cleanup on reload
     private static final List<String> registeredDynamicCommands = new ArrayList<>();
+    // Commands that were forcibly overwritten by a dynamic registration, so they can be
+    // restored on unregister instead of leaving the name permanently unresolvable.
+    private static final Map<String, Command> replacedCommands = new HashMap<>();
     private static final Object registrationLock = new Object();
 
     protected UnifiedCommandHandler(@NotNull GriefPrevention plugin, String command) {
@@ -282,13 +285,21 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
                     @SuppressWarnings("unchecked")
                     Map<String, Command> knownCommands = (Map<String, Command>) knownCommandsField.get(map);
 
-                    // Remove existing command if present (allows override)
+                    // Remove existing command if present (allows override), but remember it
+                    // so it can be restored later instead of permanently losing the name -
+                    // e.g. a plugin.yml-declared command (like an alias such as "acb") that
+                    // happened to not resolve via plugin.getCommand(...) at this point.
                     String lowerName = commandName.toLowerCase();
+                    String prefixedName = plugin.getName().toLowerCase() + ":" + lowerName;
+                    Command previous = knownCommands.get(lowerName);
+                    if (previous != null && !(previous instanceof DynamicStandaloneCommand)) {
+                        replacedCommands.put(lowerName, previous);
+                    }
                     knownCommands.remove(lowerName);
 
                     // Register our command
                     knownCommands.put(lowerName, dynamicCommand);
-                    knownCommands.put(plugin.getName().toLowerCase() + ":" + lowerName, dynamicCommand);
+                    knownCommands.put(prefixedName, dynamicCommand);
                 } catch (Exception e) {
                     // Fallback to normal registration if reflection fails
                     map.register(plugin.getName().toLowerCase(), dynamicCommand);
@@ -457,6 +468,20 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
             pluginCommand.setExecutor(wrapper);
             pluginCommand.setTabCompleter(wrapper);
             debugLog("Registered legacy standalone command: " + commandName);
+        } else {
+            // Not just a debug note - if this legacy name resolves to null, the command
+            // silently stops working with no console output at all, which is very hard to
+            // diagnose. This happens if some other registration (e.g. a dynamic standalone
+            // command sharing the same alias) has claimed the name first.
+            plugin
+                .getLogger()
+                .warning(
+                    "Could not register legacy standalone command '" +
+                        commandName +
+                        "': plugin.getCommand(...) returned null. It may have been claimed by " +
+                        "another dynamic standalone command registration; check alias.yml for a " +
+                        "standalone entry using the same name."
+                );
         }
     }
 
@@ -504,10 +529,23 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
                 Map<String, Command> knownCommands = (Map<String, Command>) knownCommandsField.get(map);
 
                 for (String cmdName : registeredDynamicCommands) {
-                    // Remove both the plain name and the prefixed version
-                    knownCommands.remove(cmdName.toLowerCase());
-                    knownCommands.remove(plugin.getName().toLowerCase() + ":" + cmdName.toLowerCase());
-                    debugLog(plugin, "Unregistered dynamic command: " + cmdName);
+                    String lowerName = cmdName.toLowerCase();
+                    String prefixedName = plugin.getName().toLowerCase() + ":" + lowerName;
+
+                    // If a real command (e.g. a plugin.yml-declared alias like "acb") was
+                    // overwritten to make room for this dynamic command, restore it instead
+                    // of leaving the name unresolvable - otherwise plugin.getCommand(name)
+                    // returns null forever after, and nothing can ever reclaim the name.
+                    Command previous = replacedCommands.remove(lowerName);
+                    if (previous != null) {
+                        knownCommands.put(lowerName, previous);
+                        knownCommands.put(prefixedName, previous);
+                        debugLog(plugin, "Restored original command overwritten by: " + cmdName);
+                    } else {
+                        knownCommands.remove(lowerName);
+                        knownCommands.remove(prefixedName);
+                        debugLog(plugin, "Unregistered dynamic command: " + cmdName);
+                    }
                 }
 
                 registeredDynamicCommands.clear();
