@@ -1431,6 +1431,8 @@ public abstract class DataStore {
                 if (!otherClaim.inDataStore) continue;
                 if (otherClaim.parent != null) continue;
                 if (otherClaim.id.equals(deletedClaim.id)) continue;
+                // Admin claims have a null owner and can never match the deleted owner.
+                if (otherClaim.getOwnerID() == null) continue;
                 if (!otherClaim.getOwnerID().equals(deletedOwner)) continue;
                 if (!claim.getLesserBoundaryCorner().getWorld().equals(otherClaim.getLesserBoundaryCorner().getWorld())) continue;
 
