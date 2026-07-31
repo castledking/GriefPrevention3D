@@ -39,14 +39,20 @@ import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.IdentityHashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.Collections;
 
@@ -54,6 +60,20 @@ import java.util.Collections;
 public class FlatFileDataStore extends DataStore
 {
     private final Set<Long> claimsNeedingRewrite = new HashSet<>();
+
+    //claim data waiting to be serialized and written to disk, keyed by claim file name.
+    //only the newest data per claim is kept - older, unwritten data for the same claim is simply replaced.
+    private final Map<String, YamlConfiguration> pendingClaimWrites = new ConcurrentHashMap<>();
+
+    //serializing and writing claim files happens here so that saving a claim never blocks a tick
+    //(on Folia, a region) thread.  a single thread keeps writes and deletes for a claim in order.
+    private final ExecutorService claimWriteExecutor = Executors.newSingleThreadExecutor(runnable ->
+    {
+        Thread thread = new Thread(runnable, "GriefPrevention Claim Writer");
+        thread.setDaemon(true);
+        return thread;
+    });
+
     private final static String claimDataFolderPath = dataLayerFolderPath + File.separator + "ClaimData";
     private final static String nextClaimIdFilePath = claimDataFolderPath + File.separator + "_nextClaimID";
     private final static String schemaVersionFilePath = dataLayerFolderPath + File.separator + "_schemaVersion";
@@ -792,29 +812,79 @@ public class FlatFileDataStore extends DataStore
     synchronized void writeClaimToStorage(Claim claim)
     {
         // Subdivisions are stored inside their root parent's YAML file.
-        // If this is a subdivision, find and save the root parent instead.
-        if (claim.parent != null)
+        // If this is a subdivision, save the root parent instead, which includes
+        // this subdivision in its Children section.
+        Claim root = claim;
+        while (root.parent != null)
         {
-            Claim root = claim.parent;
+            root = root.parent;
+        }
+
+        String claimID = String.valueOf(root.id);
+
+        //read the claim data on the calling thread, where it can't change underneath us, but leave
+        //the expensive YAML serialization and the disk write to the writer thread
+        YamlConfiguration yaml = new YamlConfiguration();
+        this.populateYamlForClaim(root, yaml);
+        this.queueClaimWrite(claimID, yaml);
+    }
+
+    //subdivisions live in their root claim's file, so a group of claims only needs one write per root
+    //involved - writing once per claim would re-serialize the same tree over and over.
+    @Override
+    synchronized public void saveClaims(Collection<Claim> claims)
+    {
+        Set<Claim> roots = Collections.newSetFromMap(new IdentityHashMap<>());
+        for (Claim claim : claims)
+        {
+            if (claim == null) continue;
+
+            //subdivisions still need an ID of their own, since it's stored with their data
+            this.assignClaimID(claim);
+
+            Claim root = claim;
             while (root.parent != null)
             {
                 root = root.parent;
             }
-            // Save the root claim which will include this subdivision in its Children section
-            writeClaimToStorage(root);
-            return;
+            roots.add(root);
         }
 
-        String claimID = String.valueOf(claim.id);
+        for (Claim root : roots)
+        {
+            this.saveClaim(root);
+        }
+    }
 
-        String yaml = this.getYamlForClaim(claim);
+    //hands a claim's data to the writer thread, superseding any data for the same claim that hasn't been written yet
+    private void queueClaimWrite(String claimID, YamlConfiguration yaml)
+    {
+        this.pendingClaimWrites.put(claimID, yaml);
+
+        try
+        {
+            this.claimWriteExecutor.execute(() -> this.flushClaimWrite(claimID));
+        }
+        catch (RejectedExecutionException e)
+        {
+            //writer is shut down (server stopping) - write on this thread instead so nothing is lost
+            this.flushClaimWrite(claimID);
+        }
+    }
+
+    private void flushClaimWrite(String claimID)
+    {
+        YamlConfiguration yaml = this.pendingClaimWrites.remove(claimID);
+
+        //an earlier queued write already wrote this claim's newest data, or it was deleted since
+        if (yaml == null) return;
 
         try
         {
             //open the claim's file
             File claimFile = new File(claimDataFolderPath + File.separator + claimID + ".yml");
             claimFile.createNewFile();
-            byte[] yamlBytes = yaml.getBytes(StandardCharsets.UTF_8);
+            byte[] yamlBytes = yaml.saveToString().getBytes(StandardCharsets.UTF_8);
             Files.write(yamlBytes, claimFile);
         }
 
@@ -859,13 +929,33 @@ public class FlatFileDataStore extends DataStore
         // Always try to delete the claim file if it exists
         // (in case it's a top-level claim or the file wasn't properly cleaned up)
         String claimID = String.valueOf(claim.id);
+        boolean isTopLevel = claim.parent == null;
+
+        //drop any data still waiting to be written for this claim so it can't recreate the file
+        this.pendingClaimWrites.remove(claimID);
+
+        Runnable delete = () -> this.deleteClaimFile(claimID, debugEnabled, isTopLevel);
+        try
+        {
+            //queued behind any pending writes so ordering is preserved
+            this.claimWriteExecutor.execute(delete);
+        }
+        catch (RejectedExecutionException e)
+        {
+            //writer is shut down (server stopping) - delete on this thread instead
+            delete.run();
+        }
+    }
+
+    private void deleteClaimFile(String claimID, boolean debugEnabled, boolean isTopLevel)
+    {
         File claimFile = new File(claimDataFolderPath + File.separator + claimID + ".yml");
         if (claimFile.exists())
         {
             if (claimFile.delete())
             {
                 if (debugEnabled) {
-                    GriefPrevention.AddLogEntry("[DEBUG] Storage: Deleted claim file: " + claimFile.getAbsolutePath(), 
+                    GriefPrevention.AddLogEntry("[DEBUG] Storage: Deleted claim file: " + claimFile.getAbsolutePath(),
                         CustomLogEntryTypes.Debug, true);
                 }
             }
@@ -874,9 +964,9 @@ public class FlatFileDataStore extends DataStore
                 GriefPrevention.AddLogEntry("Error: Unable to delete claim file \"" + claimFile.getAbsolutePath() + "\".");
             }
         }
-        else if (debugEnabled && claim.parent == null)
+        else if (debugEnabled && isTopLevel)
         {
-            GriefPrevention.AddLogEntry("[DEBUG] Storage: No file to delete for claim " + claim.id 
+            GriefPrevention.AddLogEntry("[DEBUG] Storage: No file to delete for claim " + claimID
                 + " (file did not exist: " + claimFile.getAbsolutePath() + ")", CustomLogEntryTypes.Debug, true);
         }
     }
@@ -1098,6 +1188,9 @@ public class FlatFileDataStore extends DataStore
 
     synchronized void migrateData(DatabaseDataStore databaseStore)
     {
+        //the claim data folder is renamed at the end of this, so don't leave writes queued against it
+        this.flushPendingClaimWrites();
+
         //migrate claims
         for (Claim claim : this.claims)
         {
@@ -1168,7 +1261,34 @@ public class FlatFileDataStore extends DataStore
     }
 
     @Override
-    synchronized void close() { }
+    synchronized void close()
+    {
+        //let the writer thread finish what's already queued, then make sure nothing is left unwritten
+        this.claimWriteExecutor.shutdown();
+        try
+        {
+            if (!this.claimWriteExecutor.awaitTermination(30, TimeUnit.SECONDS))
+            {
+                this.claimWriteExecutor.shutdownNow();
+            }
+        }
+        catch (InterruptedException e)
+        {
+            this.claimWriteExecutor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+
+        this.flushPendingClaimWrites();
+    }
+
+    //writes any claim data still waiting on the writer thread using the calling thread
+    private void flushPendingClaimWrites()
+    {
+        for (String claimID : new ArrayList<>(this.pendingClaimWrites.keySet()))
+        {
+            this.flushClaimWrite(claimID);
+        }
+    }
 
     @Override
     int getSchemaVersionFromStorage()

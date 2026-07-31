@@ -831,7 +831,17 @@ public abstract class DataStore {
         this.writeClaimToStorage(claim);
     }
 
-    private void assignClaimID(Claim claim) {
+    // saves any changes to a group of claims to secondary storage.
+    // storage implementations that keep several claims in one record can override this to
+    // write each record only once instead of once per claim.
+    synchronized public void saveClaims(Collection<Claim> claims) {
+        for (Claim claim : claims) {
+            if (claim == null) continue;
+            this.saveClaim(claim);
+        }
+    }
+
+    void assignClaimID(Claim claim) {
         // ensure a unique identifier for the claim which will be used to name the file
         // on disk
         if (claim.id == null || claim.id == -1) {

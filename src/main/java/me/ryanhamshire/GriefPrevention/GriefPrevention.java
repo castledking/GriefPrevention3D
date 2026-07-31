@@ -81,6 +81,7 @@ import me.ryanhamshire.GriefPrevention.compat.CompatUtil;
 import me.ryanhamshire.GriefPrevention.compat.LegacyRightClickAirHandler;
 import me.ryanhamshire.GriefPrevention.events.SaveTrappedPlayerEvent;
 import me.ryanhamshire.GriefPrevention.events.TrustChangedEvent;
+import me.ryanhamshire.GriefPrevention.integration.DiscordSRVSoftMuteBridge;
 import me.ryanhamshire.GriefPrevention.integration.PlaceholderAPIExpansion;
 import me.ryanhamshire.GriefPrevention.util.SchedulerUtil;
 import me.ryanhamshire.GriefPrevention.util.TaskHandle;
@@ -452,6 +453,7 @@ public class GriefPrevention extends JavaPlugin {
                     FlatFileDataStore flatFileStore = new FlatFileDataStore();
                     this.dataStore = flatFileStore;
                     flatFileStore.migrateData(databaseStore);
+                    flatFileStore.close();
                     GriefPrevention.AddLogEntry("Data migration process complete.");
                 }
 
@@ -627,6 +629,9 @@ public class GriefPrevention extends JavaPlugin {
             new PlaceholderAPIExpansion(this).register();
             AddLogEntry("Registered PlaceholderAPI expansion.");
         }
+
+        // DiscordSRV soft-mute bridge - prevents soft-muted players' messages from reaching Discord
+        new DiscordSRVSoftMuteBridge(this, this.dataStore).registerIfAvailable();
 
         // cache offline players
         OfflinePlayer[] offlinePlayers = this.getServer().getOfflinePlayers();
@@ -2336,11 +2341,13 @@ public class GriefPrevention extends JavaPlugin {
                         }
                     }
 
-                    // save changes
-                    this.dataStore.saveClaim(claim);
-
                     // Propagate trust removal to child claims that inherit permissions
-                    propagateTrustToChildren(claim, idToDrop, null, false);
+                    List<Claim> modifiedClaims = new ArrayList<>();
+                    modifiedClaims.add(claim);
+                    propagateTrustToChildren(claim, idToDrop, null, false, modifiedClaims);
+
+                    // save changes in one batch so subdivisions aren't written one at a time
+                    this.dataStore.saveClaims(modifiedClaims);
                 }
 
                 // confirmation message
@@ -3676,18 +3683,25 @@ public class GriefPrevention extends JavaPlugin {
     /**
      * Propagates trust changes to child claims that inherit permissions.
      *
+     * <p>Children are only modified in memory and collected into {@code modifiedClaims}, so
+     * that the caller can hand them to the data store in one batch. Saving each child as it
+     * is modified rewrites the entire claim tree once per subdivision on flat file storage,
+     * which stalls the calling (region) thread for seconds on claims with many subdivisions.
+     *
      * @param parentClaim     The parent claim whose trust changes should be
      *                        propagated
      * @param identifier      The player/permission identifier to add/remove trust
      *                        for
      * @param permissionLevel The permission level, or null for manager permissions
      * @param isAddingTrust   true if adding trust, false if removing trust
+     * @param modifiedClaims  Collects every child claim modified here, for the caller to save
      */
     private void propagateTrustToChildren(
         Claim parentClaim,
         String identifier,
         ClaimPermission permissionLevel,
-        boolean isAddingTrust
+        boolean isAddingTrust,
+        List<Claim> modifiedClaims
     ) {
         if (parentClaim.children.isEmpty()) return;
 
@@ -3697,7 +3711,6 @@ public class GriefPrevention extends JavaPlugin {
                 if (isAddingTrust) {
                     // Add trust to child claim
                     childClaim.setPermission(identifier, permissionLevel);
-                    this.dataStore.saveClaim(childClaim);
                 } else {
                     // Remove trust from child claim
                     {
@@ -3721,11 +3734,12 @@ public class GriefPrevention extends JavaPlugin {
                             }
                         }
                     }
-                    this.dataStore.saveClaim(childClaim);
                 }
 
+                modifiedClaims.add(childClaim);
+
                 // Recursively propagate to grandchildren
-                propagateTrustToChildren(childClaim, identifier, permissionLevel, isAddingTrust);
+                propagateTrustToChildren(childClaim, identifier, permissionLevel, isAddingTrust, modifiedClaims);
             }
         }
     }
@@ -3822,10 +3836,14 @@ public class GriefPrevention extends JavaPlugin {
             // apply changes
             for (Claim currentClaim : event.getClaims()) {
                 currentClaim.setPermission(identifierToAdd, permissionLevel);
-                this.dataStore.saveClaim(currentClaim);
 
                 // Propagate trust changes to child claims that inherit permissions
-                propagateTrustToChildren(currentClaim, identifierToAdd, permissionLevel, true);
+                List<Claim> modifiedClaims = new ArrayList<>();
+                modifiedClaims.add(currentClaim);
+                propagateTrustToChildren(currentClaim, identifierToAdd, permissionLevel, true, modifiedClaims);
+
+                // save changes in one batch so subdivisions aren't written one at a time
+                this.dataStore.saveClaims(modifiedClaims);
             }
 
             // notify player
@@ -4695,11 +4713,13 @@ public class GriefPrevention extends JavaPlugin {
                     }
                 }
 
-                // save changes
-                this.dataStore.saveClaim(claim);
-
                 // Propagate trust removal to child claims that inherit permissions
-                propagateTrustToChildren(claim, idToDrop, null, false);
+                List<Claim> modifiedClaims = new ArrayList<>();
+                modifiedClaims.add(claim);
+                propagateTrustToChildren(claim, idToDrop, null, false, modifiedClaims);
+
+                // save changes in one batch so subdivisions aren't written one at a time
+                this.dataStore.saveClaims(modifiedClaims);
             }
 
             // confirmation message

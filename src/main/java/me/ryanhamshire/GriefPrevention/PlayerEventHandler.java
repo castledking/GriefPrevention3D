@@ -234,58 +234,36 @@ public class PlayerEventHandler implements Listener {
 
         String message = event.getMessage();
 
-        // soft muted messages should not be processed by other chat plugins
+        // soft muted messages only go to the sender and other soft muted players
         if (this.dataStore.isSoftMuted(player.getUniqueId())) {
             String notificationMessage = "(Muted " + player.getName() + "): " + message;
-            Set<UUID> recipientsToKeep = new HashSet<>();
-            Set<UUID> eavesdroppers = new HashSet<>();
+            Set<Player> recipients = event.getRecipients();
+            Set<Player> recipientsToKeep = new HashSet<>();
+            Set<Player> eavesdroppers = new HashSet<>();
 
-            for (Player recipient : event.getRecipients()) {
+            for (Player recipient : recipients) {
                 if (recipient == null) continue;
 
                 if (this.dataStore.isSoftMuted(recipient.getUniqueId())) {
-                    recipientsToKeep.add(recipient.getUniqueId());
+                    recipientsToKeep.add(recipient);
                 } else if (recipient.hasPermission("griefprevention.eavesdrop.softmute")) {
-                    eavesdroppers.add(recipient.getUniqueId());
+                    eavesdroppers.add(recipient);
                 }
             }
 
-            // stop normal chat handling and downstream plugin processing
-            event.setCancelled(true);
+            // the sender must always see their own message, otherwise the mute is obvious
+            recipientsToKeep.add(player);
 
-            final String senderName = player.getDisplayName();
-            final String finalMessage = message;
-            final String format = event.getFormat();
+            // trim the audience rather than cancelling the event so the server's chat
+            // plugin still formats the message for the recipients we keep - a manually
+            // re-sent copy would use the vanilla format and give the soft mute away
+            recipients.clear();
+            recipients.addAll(recipientsToKeep);
 
-            String formatted;
-            try {
-                formatted = String.format(format, senderName, finalMessage);
-            } catch (Exception ignored) {
-                formatted = senderName + ": " + finalMessage;
+            // allow admins to see the soft-muted text
+            for (Player eavesdropper : eavesdroppers) {
+                eavesdropper.sendMessage(ChatColor.GRAY + notificationMessage);
             }
-
-            final String formattedFinal = formatted;
-            final String notificationFinal = ChatColor.GRAY + notificationMessage;
-
-            SchedulerUtil.runLaterGlobal(
-                instance,
-                () -> {
-                    for (UUID recipientId : recipientsToKeep) {
-                        Player recipient = Bukkit.getPlayer(recipientId);
-                        if (recipient != null && recipient.isOnline()) {
-                            recipient.sendMessage(formattedFinal);
-                        }
-                    }
-
-                    for (UUID recipientId : eavesdroppers) {
-                        Player recipient = Bukkit.getPlayer(recipientId);
-                        if (recipient != null && recipient.isOnline()) {
-                            recipient.sendMessage(notificationFinal);
-                        }
-                    }
-                },
-                1L
-            );
 
             GriefPrevention.AddLogEntry(notificationMessage, CustomLogEntryTypes.MutedChat, false);
             return;
