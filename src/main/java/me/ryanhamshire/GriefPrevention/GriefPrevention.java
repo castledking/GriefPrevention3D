@@ -4206,9 +4206,11 @@ public class GriefPrevention extends JavaPlugin {
         String message = GriefPrevention.instance.dataStore.getMessage(player, messageID, args);
         if (player != null && GriefPrevention.instance.isActionBarMessage(messageID)) {
             try {
+                // prefix the mode's color just like chat does, so action bar messages are colored
+                // by default. Any color code in the message itself comes after and still wins.
                 player.spigot().sendMessage(
                     net.md_5.bungee.api.ChatMessageType.ACTION_BAR,
-                    net.md_5.bungee.api.chat.TextComponent.fromLegacyText(message)
+                    net.md_5.bungee.api.chat.TextComponent.fromLegacyText(color + message)
                 );
             } catch (NoSuchMethodError ignored) {
                 sendMessage(player, color, message, delayInTicks);

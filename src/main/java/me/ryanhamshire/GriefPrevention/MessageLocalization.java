@@ -1,19 +1,11 @@
 package me.ryanhamshire.GriefPrevention;
 
 import com.griefprevention.compat.Compat;
-import org.bukkit.Bukkit;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.List;
 
 public final class MessageLocalization
 {
@@ -144,149 +136,56 @@ public final class MessageLocalization
             }
         }
 
-        FileConfiguration config;
+        MessageFile config;
         if (activeFile != null)
         {
-            config = YamlConfiguration.loadConfiguration(activeFile);
+            config = MessageFile.load(activeFile);
 
-            try (java.io.InputStream bundledIn = GriefPrevention.instance.getResource(source))
+            MessageFile bundledConfig = loadBundledResource(source);
+            if (bundledConfig != null)
             {
-                if (bundledIn != null)
+                for (String key : bundledConfig.keys())
                 {
-                    BufferedReader reader = new BufferedReader(
-                            new InputStreamReader(bundledIn, StandardCharsets.UTF_8));
-                    FileConfiguration bundledConfig = YamlConfiguration.loadConfiguration(reader);
-                    boolean merged = false;
-                    for (String key : bundledConfig.getKeys(true))
+                    if (!config.contains(key))
                     {
-                        if (!config.contains(key))
-                        {
-                            config.set(key, bundledConfig.get(key));
-                            merged = true;
-                        }
-                    }
-                    if (merged)
-                    {
-                        try
-                        {
-                            config.save(activeFile);
-                            GriefPrevention.AddLogEntry("Merged missing keys from bundled " + source,
-                                    CustomLogEntryTypes.Debug, false);
-                        }
-                        catch (IOException e)
-                        {
-                            GriefPrevention.AddLogEntry("Failed to save merged " + source + ": " + e.getMessage(),
-                                    CustomLogEntryTypes.Debug, false);
-                        }
+                        config.set(key, bundledConfig.getString(key, ""), notesFor(key));
                     }
                 }
-            }
-            catch (IOException e)
-            {
+                if (config.hasPendingAdditions())
+                {
+                    try
+                    {
+                        config.save(activeFile);
+                        GriefPrevention.AddLogEntry("Merged missing keys from bundled " + source,
+                                CustomLogEntryTypes.Debug, false);
+                    }
+                    catch (IOException e)
+                    {
+                        GriefPrevention.AddLogEntry("Failed to save merged " + source + ": " + e.getMessage(),
+                                CustomLogEntryTypes.Debug, false);
+                    }
+                }
             }
         }
         else
         {
-            config = new YamlConfiguration();
+            config = MessageFile.empty();
         }
 
-        for (Messages message : messageIDs)
+        populateMessagesArray(messages, messageIDs, config);
+    }
+
+    // looks up the notes for a "Messages.SomeMessage" key, used as a comment when adding it to a file
+    private static @Nullable String notesFor(@NotNull String key)
+    {
+        if (!key.startsWith("Messages.")) return null;
+
+        String name = key.substring("Messages.".length());
+        for (Messages message : Messages.values())
         {
-            String messagePath = "Messages." + message.name();
-            if (config.isString(messagePath + ".Text"))
-            {
-                messages[message.ordinal()] = config.getString(messagePath + ".Text", message.defaultValue);
-            }
-            else
-            {
-                messages[message.ordinal()] = config.getString(messagePath, message.defaultValue);
-            }
-
-            if (message != Messages.HowToClaimRegex)
-            {
-                boolean hasUserColorCodes = messages[message.ordinal()].contains("$")
-                        || messages[message.ordinal()].contains("&");
-                boolean hasUserNewline = messages[message.ordinal()].contains("\\n");
-                boolean isDisabledMessage = Compat.isBlank(messages[message.ordinal()]);
-
-                if (!hasUserColorCodes && !isDisabledMessage)
-                {
-                    switch (message)
-                    {
-                        case ClaimHelpHeader:
-                        case AClaimHelpHeader:
-                            messages[message.ordinal()] = "&b&l" + messages[message.ordinal()];
-                            break;
-                        case ClaimHelpLegend:
-                        case AClaimHelpLegend:
-                            if (!hasUserNewline)
-                            {
-                                messages[message.ordinal()] = "\\n" + messages[message.ordinal()];
-                            }
-                            messages[message.ordinal()] = messages[message.ordinal()]
-                                    .replace("<>", "&c<>")
-                                    .replace("[]", "&a[]")
-                                    .replace("-", "&7-");
-                            break;
-                        case ClaimHelpPagination:
-                        case AClaimHelpPagination:
-                            if (!hasUserNewline)
-                            {
-                                messages[message.ordinal()] = "\\n" + messages[message.ordinal()];
-                            }
-                            messages[message.ordinal()] = "&7" + messages[message.ordinal()];
-                            break;
-                        default:
-                            break;
-                    }
-                }
-
-                messages[message.ordinal()] = TextColor.translate(messages[message.ordinal()]);
-                messages[message.ordinal()] = messages[message.ordinal()]
-                        .replace("\\n", "\n");
-            }
-
-            if (message.notes != null)
-            {
-                String notesString = config.getString(messagePath + ".Notes", message.notes);
-                try
-                {
-                    List<String> notes = config.getComments(messagePath);
-                    if (notes.isEmpty())
-                    {
-                        notes = Arrays.asList(notesString);
-                    }
-                    config.setComments(messagePath, notes);
-                }
-                catch (NoSuchMethodError e)
-                {
-                }
-            }
+            if (message.name().equals(name)) return message.notes;
         }
-
-        if (messagesFile.exists())
-        {
-            try
-            {
-                try
-                {
-                    config.options().setHeader(Arrays.asList(
-                            "Use a YAML editor like NotepadPlusPlus to edit this file.",
-                            "After editing, back up your changes before reloading the server in case you made a syntax error.",
-                            "Use dollar signs ($) for formatting codes, which are documented here: http://minecraft.wiki/Formatting_codes#Color_codes",
-                            "Use \\n to create newlines in messages."));
-                }
-                catch (NoSuchMethodError e)
-                {
-                }
-                config.save(DataStore.messagesFilePath);
-            }
-            catch (IOException exception)
-            {
-                Bukkit.getLogger()
-                        .info("Unable to write to the configuration file at \"" + DataStore.messagesFilePath + "\"");
-            }
-        }
+        return null;
     }
 
     // loads all supported locale files into the provided map for per-player message support
@@ -325,31 +224,31 @@ public final class MessageLocalization
         File dataFolder = new File(DataStore.languageFolderPath);
         File localeFile = new File(dataFolder, "messages_" + locale + ".yml");
 
-        FileConfiguration config;
+        MessageFile config;
         if (localeFile.exists())
         {
-            config = YamlConfiguration.loadConfiguration(localeFile);
+            config = MessageFile.load(localeFile);
         }
         else
         {
-            config = loadConfigFromBundledResource("messages_" + locale + ".yml");
+            config = loadBundledResource("messages_" + locale + ".yml");
         }
 
         if (config == null)
         {
-            config = new YamlConfiguration();
+            config = MessageFile.empty();
         }
 
         populateMessagesArray(messages, messageIDs, config);
     }
 
-    // populates the messages array from a FileConfiguration
-    private static void populateMessagesArray(@NotNull String[] messages, @NotNull Messages[] messageIDs, @NotNull FileConfiguration config)
+    // populates the messages array from a parsed message file
+    private static void populateMessagesArray(@NotNull String[] messages, @NotNull Messages[] messageIDs, @NotNull MessageFile config)
     {
         for (Messages message : messageIDs)
         {
             String messagePath = "Messages." + message.name();
-            if (config.isString(messagePath + ".Text"))
+            if (config.contains(messagePath + ".Text"))
             {
                 messages[message.ordinal()] = config.getString(messagePath + ".Text", message.defaultValue);
             }
@@ -402,23 +301,19 @@ public final class MessageLocalization
                         .replace("\\n", "\n");
             }
 
-            if (message.notes != null)
-            {
-                // notes are informational only, not needed per-locale
-            }
         }
     }
 
-    // loads a config from a bundled resource file, returns null if not found
-    private static @Nullable FileConfiguration loadConfigFromBundledResource(@NotNull String fileName)
+    // loads a message file bundled in the jar, returns null if not found
+    private static @Nullable MessageFile loadBundledResource(@Nullable String fileName)
     {
+        if (fileName == null) return null;
+
         try (java.io.InputStream in = GriefPrevention.instance.getResource(fileName))
         {
             if (in != null)
             {
-                BufferedReader reader = new BufferedReader(
-                        new InputStreamReader(in, StandardCharsets.UTF_8));
-                return YamlConfiguration.loadConfiguration(reader);
+                return MessageFile.load(in);
             }
         }
         catch (IOException e)
