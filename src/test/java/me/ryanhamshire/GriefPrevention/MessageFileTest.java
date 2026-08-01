@@ -13,6 +13,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -53,6 +54,67 @@ class MessageFileTest {
     }
 
     @Test
+    void joinsValuesWrappedOntoContinuationLines() throws IOException {
+        MessageFile file = parse("Messages:\n"
+                + "  Plain: You don't have permission to do that here, and this message is deliberately\n"
+                + "    long enough to wrap.\n"
+                + "  Quoted: '&aAdjusted {0}''s bonus claim blocks by {1}. New total bonus\n"
+                + "    blocks: {2}.'\n"
+                + "  After: still parsed\n");
+
+        assertEquals("You don't have permission to do that here, and this message is deliberately"
+                + " long enough to wrap.", file.getString("Messages.Plain", "missing"));
+        assertEquals("&aAdjusted {0}'s bonus claim blocks by {1}. New total bonus blocks: {2}.",
+                file.getString("Messages.Quoted", "missing"));
+        assertEquals("still parsed", file.getString("Messages.After", "missing"));
+    }
+
+    @Test
+    void collapsesDoubledApostrophesInUnquotedValues() throws IOException {
+        MessageFile file = parse("Messages:\n"
+                + "  Legacy: You don''t have permission to delete claims.\n"
+                + "  Quoted: 'Revoked {0}''s access to this claim.'\n"
+                + "  Escaped: 'Two in a row: '''' here.'\n");
+
+        assertEquals("You don't have permission to delete claims.", file.getString("Messages.Legacy", "missing"));
+        assertEquals("Revoked {0}'s access to this claim.", file.getString("Messages.Quoted", "missing"));
+        assertEquals("Two in a row: '' here.", file.getString("Messages.Escaped", "missing"));
+    }
+
+    @Test
+    void indentedCommentEndsAValueButNotAWrappedQuotedOne() throws IOException {
+        MessageFile file = parse("Messages:\n"
+                + "  Plain: a plain value\n"
+                + "    # an indented comment\n"
+                + "  Quoted: 'a quoted value that wraps\n"
+                + "    #ff0000 is part of it'\n");
+
+        assertEquals("a plain value", file.getString("Messages.Plain", "missing"));
+        assertEquals("a quoted value that wraps #ff0000 is part of it",
+                file.getString("Messages.Quoted", "missing"));
+    }
+
+    @Test
+    void readsBackEveryValueBukkitWouldHaveWritten(@TempDir File tempDir) throws Exception {
+        // the old loader re-saved message files through Bukkit's YAML, which wraps anything past
+        // ~80 characters onto continuation lines and single-quotes values containing apostrophes
+        MessageFile bundled = MessageFile.load(new File("src/main/resources/messages_en.yml"));
+
+        YamlConfiguration config = new YamlConfiguration();
+        for (String key : bundled.keys()) {
+            config.set(key, bundled.getString(key, ""));
+        }
+
+        File saved = new File(tempDir, "messages.yml");
+        config.save(saved);
+
+        MessageFile reloaded = MessageFile.load(saved);
+        for (String key : bundled.keys()) {
+            assertEquals(bundled.getString(key, ""), reloaded.getString(key, "!missing!"), key);
+        }
+    }
+
+    @Test
     void ignoresCommentsAndBlankLines() throws IOException {
         MessageFile file = parse("# header\n\nMessages:\n  # a note\n  Present: value\n");
 
@@ -90,6 +152,28 @@ class MessageFileTest {
         MessageFile reloaded = MessageFile.load(file);
         assertEquals("&aBrand new message.", reloaded.getString("Messages.Added", "missing"));
         assertEquals("&1Now ignoring claims.", reloaded.getString("Messages.Kept", "missing"));
+    }
+
+    @Test
+    void appendsAfterAValueThatWraps(@TempDir File tempDir) throws IOException {
+        File file = new File(tempDir, "messages.yml");
+        String original = "Messages:\n"
+                + "  Wrapped: You don't have permission to do that here, and this message is\n"
+                + "    deliberately long enough to wrap.\n";
+        Files.write(file.toPath(), original.getBytes(StandardCharsets.UTF_8));
+
+        MessageFile messageFile = MessageFile.load(file);
+        messageFile.set("Messages.Added", "&aBrand new message.", null);
+        messageFile.save(file);
+
+        List<String> lines = Files.readAllLines(file.toPath(), StandardCharsets.UTF_8);
+        assertEquals("    deliberately long enough to wrap.", lines.get(2));
+        assertEquals("  Added: '&aBrand new message.'", lines.get(3));
+
+        MessageFile reloaded = MessageFile.load(file);
+        assertEquals("You don't have permission to do that here, and this message is deliberately"
+                + " long enough to wrap.", reloaded.getString("Messages.Wrapped", "missing"));
+        assertEquals("&aBrand new message.", reloaded.getString("Messages.Added", "missing"));
     }
 
     @Test

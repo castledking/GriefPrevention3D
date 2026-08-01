@@ -180,18 +180,14 @@ final class MessageFile
             else
             {
                 indent = section.indent + 2;
-                insertAt = section.lineIndex + 1;
+                insertAt = section.endLineIndex + 1;
                 for (Entry entry : entries)
                 {
-                    if (entry.lineIndex > section.lineIndex && entry.indent > section.indent)
-                    {
-                        insertAt = entry.lineIndex + 1;
-                        if (entry.indent < indent) indent = entry.indent;
-                    }
-                    else if (entry.lineIndex > section.lineIndex && entry.indent <= section.indent)
-                    {
-                        break;
-                    }
+                    if (entry.lineIndex <= section.lineIndex) continue;
+                    if (entry.indent <= section.indent) break;
+
+                    insertAt = entry.endLineIndex + 1;
+                    if (entry.indent < indent) indent = entry.indent;
                 }
             }
         }
@@ -266,22 +262,105 @@ final class MessageFile
             if (value == null || value.trim().isEmpty())
             {
                 // no value on this line, so it opens a section
-                entries.add(new Entry(i, indent, path.toString(), true, ""));
+                entries.add(new Entry(i, i, indent, path.toString(), true, ""));
                 pathKeys.add(key);
                 pathIndents.add(indent);
             }
             else
             {
-                entries.add(new Entry(i, indent, path.toString(), false, value));
+                // a value can continue onto following, more deeply indented lines - that is how
+                // every YAML writer, Bukkit's included, wraps a message longer than ~80 characters
+                StringBuilder text = new StringBuilder(value);
+                int end = i;
+                int blankLines = 0;
+                for (int next = i + 1; next < lines.size(); next++)
+                {
+                    String continuation = stripTrailingWhitespace(lines.get(next));
+                    if (continuation.isEmpty())
+                    {
+                        blankLines++;
+                        continue;
+                    }
+                    if (indentOf(continuation) <= indent) break;
+                    // inside an unclosed quote a '#' is text; otherwise it starts a comment and,
+                    // like YAML, ends the value
+                    if (continuation.trim().startsWith("#") && !hasUnclosedQuote(text.toString())) break;
+
+                    // a line break inside a wrapped value folds to a space, a blank line to a newline
+                    text.append(blankLines > 0 ? repeat("\\n", blankLines) : " ");
+                    text.append(continuation.trim());
+                    blankLines = 0;
+                    end = next;
+                }
+                entries.add(new Entry(i, end, indent, path.toString(), false, text.toString()));
+                i = end;
             }
         }
 
         return entries;
     }
 
+    // true if the text opens with a quote that has not been closed yet, meaning the value wraps
+    private static boolean hasUnclosedQuote(@NotNull String text)
+    {
+        if (text.isEmpty()) return false;
+
+        char quote = text.charAt(0);
+        if (quote != '\'' && quote != '"') return false;
+
+        for (int i = 1; i < text.length(); i++)
+        {
+            char current = text.charAt(i);
+            if (quote == '\'' && current == '\'')
+            {
+                if (i + 1 < text.length() && text.charAt(i + 1) == '\'')
+                {
+                    i++;
+                    continue;
+                }
+                return false;
+            }
+            if (quote == '"')
+            {
+                if (current == '\\')
+                {
+                    i++;
+                    continue;
+                }
+                if (current == '"') return false;
+            }
+        }
+        return true;
+    }
+
+    private static int indentOf(@NotNull String line)
+    {
+        int indent = 0;
+        while (indent < line.length() && (line.charAt(indent) == ' ' || line.charAt(indent) == '\t'))
+        {
+            indent++;
+        }
+        return indent;
+    }
+
+    private static @NotNull String repeat(@NotNull String value, int times)
+    {
+        StringBuilder builder = new StringBuilder(value.length() * times);
+        for (int i = 0; i < times; i++)
+        {
+            builder.append(value);
+        }
+        return builder.toString();
+    }
+
     /**
      * Strips quotes if the value is wrapped in them, so files written for a YAML parser keep working.
      * Everything else is taken literally - a lone {@code &}, {@code #} or backslash is just text.
+     * <p>
+     * A doubled apostrophe collapses to one either way. Files in the wild are full of them, from
+     * YAML's own single-quote escaping and from upstream's old {@code MessageFormat} strings, and
+     * nothing here uses {@code MessageFormat}, so {@code You don''t} is never what was meant. Write
+     * {@code ''''} if you genuinely want two apostrophes in a row.
      */
     private static @NotNull String unquote(@NotNull String value)
     {
@@ -289,8 +368,10 @@ final class MessageFile
         if (trimmed.length() < 2) return trimmed;
 
         char quote = trimmed.charAt(0);
-        if (quote != '\'' && quote != '"') return trimmed;
-        if (trimmed.charAt(trimmed.length() - 1) != quote) return trimmed;
+        if (quote != '\'' && quote != '"' || trimmed.charAt(trimmed.length() - 1) != quote)
+        {
+            return trimmed.replace("''", "'");
+        }
 
         String inner = trimmed.substring(1, trimmed.length() - 1);
         StringBuilder result = new StringBuilder(inner.length());
@@ -357,14 +438,17 @@ final class MessageFile
     private static final class Entry
     {
         private final int lineIndex;
+        // the last line this entry occupies, which is past lineIndex when the value wraps
+        private final int endLineIndex;
         private final int indent;
         private final String path;
         private final boolean section;
         private final String value;
 
-        private Entry(int lineIndex, int indent, @NotNull String path, boolean section, @NotNull String value)
+        private Entry(int lineIndex, int endLineIndex, int indent, @NotNull String path, boolean section, @NotNull String value)
         {
             this.lineIndex = lineIndex;
+            this.endLineIndex = endLineIndex;
             this.indent = indent;
             this.path = path;
             this.section = section;
