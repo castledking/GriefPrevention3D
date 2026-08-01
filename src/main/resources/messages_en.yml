@@ -36,7 +36,7 @@ Messages:
   UntrustEveryoneAllClaims: Cleared permissions in ALL your claims. To set permissions for a single claim, stand inside it.
   NoManageTrust: You don't have {0}'s permission to manage permissions here.
   ClearPermissionsOneClaim: Cleared permissions in this claim. To set permission for ALL your claims, stand outside them.
-  UntrustIndividualSingleClaim: Revoked {0}''s access to this claim. To set permissions for an ALL your claims, stand outside them.
+  UntrustIndividualSingleClaim: Revoked {0}'s access to this claim. To set permissions for an ALL your claims, stand outside them.
   AdminClaimsMode: Administrative claims mode active. Any claims created will be free and editable by other administrators.
   _3DAdminClaimsMode: '3D Administrative claims mode active.  Any claims created will be free, height-limited, and editable by other administrators.'
   BasicClaimsMode: Returned to basic claim creation mode.
@@ -70,7 +70,7 @@ Messages:
   PvpToggleAlreadyEnabled: PvP is already enabled in this {0}.
   PvpToggleAlreadyDisabled: PvP is already disabled in this {0}.
   DeleteAllSuccess: Deleted all of {0}'s claims.
-  NoDeletePermission: You don''t have permission to delete claims.
+  NoDeletePermission: You don't have permission to delete claims.
   AllAdminDeleted: Deleted all administrative claims.
   AdjustBlocksSuccess: 'Adjusted {0}''s bonus claim blocks by {1}. New total bonus blocks: {2}.'
   AdjustBlocksAllSuccess: Adjusted all online players' bonus claim blocks by {0}.
@@ -111,12 +111,12 @@ Messages:
   SurvivalBasicsVideo2: 'Click for Land Claim Help: {0}'
   TrappedChatKeyword: trapped;stuck
   TrappedInstructions: Are you trapped in someone's land claim? Try the /trapped command.
-  PvPNoDrop: You can''t drop items while in PvP combat.
-  PvPNoContainers: You can''t access containers during PvP combat.
+  PvPNoDrop: You can't drop items while in PvP combat.
+  PvPNoContainers: You can't access containers during PvP combat.
   PvPImmunityEnd: Now you can fight with other players.
   NoBedPermission: '{0} hasn''t given you permission to sleep here.'
   NoWildernessBuckets: You may only dump buckets inside your claim(s) or underground.
-  NoLavaNearOtherPlayer: You can''t place lava this close to {0}.
+  NoLavaNearOtherPlayer: You can't place lava this close to {0}.
   TooFarAway: That's too far away.
   BlockNotClaimed: No one has claimed this block.
   BlockClaimed: That block has been claimed by {0}.
@@ -124,12 +124,12 @@ Messages:
   ResizeClaimTooNarrow: This new size would be too small. Claims must be at least {0} blocks wide.
   ResizeNeedMoreBlocks: You don't have enough blocks for this size. You need {0} more.
   ClaimResizeSuccess: Claim resized. {0} available claim blocks remaining.
-  ResizeFailOverlap: Can''t resize here because it would overlap another nearby claim.
+  ResizeFailOverlap: Can't resize here because it would overlap another nearby claim.
   ResizeStart: Resizing claim. Use your shovel again at the new location for this corner.
   ClaimSelected: 'Claim selected. Use your shovel again to set the other corner and resize.\nNote: You can now run /claim abandon while this claim is selected.'
   ClaimSelectedTopLevel: 'Claim selected. Use your shovel again to set the other corner and resize.\nNote: You can now run /claim abandon toplevel while this claim is selected.'
   SubdivisionSelected: Subdivision selected. You can manage permissions for this specific area.\n&6You can run commands like:\n&7- &f/trust&7, &f/untrust\n&7- &f/containertrust&7, &f/accesstrust\n&7- &f/abandonclaim\n&6or you can right click again to resize.
-  ResizeFailOverlapSubdivision: You can''t create a subdivision here because it would overlap another subdivision. Consider /abandonclaim to delete it, or use your shovel at a corner to resize it.
+  ResizeFailOverlapSubdivision: You can't create a subdivision here because it would overlap another subdivision. Consider /abandonclaim to delete it, or use your shovel at a corner to resize it.
   SubdivisionStart: Subdivision corner set! Use your shovel at the location for the opposite corner of this new subdivision.
   CreateSubdivisionOverlap: Your selected area overlaps another subdivision.
   InnerSubdivisionTooClose: This subdivision must stay at least one block inside its parent on all sides.
@@ -154,22 +154,22 @@ Messages:
   UnknownPlayerName: someone
   ClaimTooSmallForEntities: This claim isn't big enough for that. Try enlarging it.
   TooManyEntitiesInClaim: This claim has too many entities already. Try enlarging the claim or removing some animals, monsters, paintings, or minecarts.
-  YouHaveNoClaims: You don''t have any land claims.
+  YouHaveNoClaims: You don't have any land claims.
   AutoBanNotify: Auto-banned {0}({1}). See logs for details.
   AdjustGroupBlocksSuccess: 'Adjusted bonus claim blocks for players with the {0} permission by {1}. New total: {2}.'
   InvalidPermissionID: Please specify a player name, or a permission in [brackets].
   HowToClaimRegex: (^|.*\W)how\W.*\W(claim|protect|lock)(\W.*|$)
-  NoBuildOutsideClaims: You can''t build here unless you claim some land first.
+  NoBuildOutsideClaims: You can't build here unless you claim some land first.
   PlayerOfflineTime: ' Last login: {0} days ago.'
   BuildingOutsideClaims: Other players can build here, too. Consider creating a land claim to protect your work!
   TrappedWontWorkHere: Sorry, unable to find a safe location to teleport you to. Contact an admin.
-  CommandBannedInPvP: You can''t use that command while in PvP combat.
-  NoTeleportPvPCombat: You can''t teleport while fighting another player.
+  CommandBannedInPvP: You can't use that command while in PvP combat.
+  NoTeleportPvPCombat: You can't teleport while fighting another player.
   NoTNTDamageAboveSeaLevel: 'Warning: TNT will not destroy blocks above sea level.'
   NoTNTDamageClaims: 'Warning: TNT will not destroy claimed blocks.'
   IgnoreClaimsAdvertisement: To override, use /ignoreclaims.
-  NoPermissionForCommand: You don''t have permission to do that.
-  ClaimsListNoPermission: You don''t have permission to get information about another player's land claims.
+  NoPermissionForCommand: You don't have permission to do that.
+  ClaimsListNoPermission: You don't have permission to get information about another player's land claims.
   ExplosivesDisabled: This claim is now protected from explosions. Use /claimexplosions again to disable.
   ExplosivesEnabled: This claim is now vulnerable to explosions. Use /claimexplosions again to re-enable protections.
   WitherExplosionsDisabled: This claim is now protected from wither explosions.  Use /witherexplosions again to disable protections.
@@ -179,7 +179,7 @@ Messages:
   NoPistonsOutsideClaims: 'Warning: Pistons won''t move blocks outside land claims.'
   SoftMuted: Soft-muted {0}.
   UnSoftMuted: Un-soft-muted {0}.
-  DropUnlockAdvertisement: Other players can''t pick up your dropped items unless you /unlockdrops first.
+  DropUnlockAdvertisement: Other players can't pick up your dropped items unless you /unlockdrops first.
   PickupBlockedExplanation: You can't pick this up unless {0} uses /unlockdrops.
   DropUnlockConfirmation: Unlocked your drops. Other players may now pick them up (until you die again).
   DropLockConfirmation: Locked your drops.  Other players can no longer pick them up.
@@ -194,11 +194,11 @@ Messages:
   AvoidGriefClaimLand: Prevent grief! If you claim your land, you will be grief-proof.
   BecomeMayor: Subdivide your land claim and become a mayor!
   ClaimCreationFailedOverClaimCountLimit: You've reached your limit on land claims. Use /abandonclaim to remove one before creating another.
-  CreateClaimFailOverlapRegion: You can''t claim all of this because you're not allowed to build here.
-  ResizeFailOverlapRegion: You don''t have permission to build there, so you can''t claim that area.
+  CreateClaimFailOverlapRegion: You can't claim all of this because you're not allowed to build here.
+  ResizeFailOverlapRegion: You don't have permission to build there, so you can't claim that area.
   ResizeFailSubdivision: 'Cannot resize claim: The new boundaries would exclude an existing subdivision. Please remove or move the subdivision first.'
   ResizeFailSubdivisionExceedsParent: 'Could not resize: Subdivision was not kept within the parent''s confines on all sides causing a conflict zone appearance on the main claim.'
-  ShapedClaimInteriorClick: You can''t start a shaped claim here. You can either start a new shaped claim or make segments on your current claim's boundary and extend those.
+  ShapedClaimInteriorClick: You can't start a shaped claim here. You can either start a new shaped claim or make segments on your current claim's boundary and extend those.
   ShowNearbyClaims: Found {0} land claims.
   NoChatUntilMove: Sorry, but you have to move a little more before you can chat. We get lots of spambots here. :)
   SetClaimBlocksSuccess: Updated accrued claim blocks.
@@ -239,7 +239,7 @@ Messages:
   ClaimExpiryUnknown: unknown
   ClaimExpiryUsage: /checkclaimexpiry [player]
   ClaimExpiryListEntry: '- {0}: {1}'
-  NoClaimDuringPvP: You can''t claim lands during PvP combat.
+  NoClaimDuringPvP: You can't claim lands during PvP combat.
   UntrustAllOwnerOnly: Only the claim owner can clear all its permissions.
   ManagersDontUntrustManagers: Only the claim owner can demote a manager.
   PlayerNotIgnorable: You can't ignore that player.
@@ -295,7 +295,7 @@ Messages:
   EconomyPurchaseCancelled: Purchase cancelled.
   EconomyNoVault: Economy support requires Vault plugin to be installed.
   CommandRequiresPlayer: This command can only be used by players.
-  PistonExploded: The piston at {0} exploded because it couldn''t enter the claim at {1}
+  PistonExploded: The piston at {0} exploded because it couldn't enter the claim at {1}
   ExternalPistonBoundaryViolation: '&6Warning: A piston tried to push a block into your claim @ x:{0} y:{1} z:{2}!'
   InternalPistonBoundaryViolation: '&6Warning: A piston tried to push a block outside your claim @ x:{0} y:{1} z:{2}!'
   ExternalLiquidBoundaryViolation: '&6Warning: Liquid tried to flow into your claim @ x:{0} y:{1} z:{2}!'
