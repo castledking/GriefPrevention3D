@@ -34,7 +34,7 @@ Messages:
   ClearPermsOwnerOnly: 只有领地所有者可以清除所有权限。
   UntrustIndividualAllClaims: 已撤销 {0} 对你所有领地的访问权限。要为单个领地设置权限，请站在该领地内。
   UntrustEveryoneAllClaims: 已清除你所有领地的权限。要为单个领地设置权限，请站在该领地内。
-  NoPermissionTrust: 你没有 {0} 的管理权限来管理这里的权限。
+  NoManageTrust: 你没有 {0} 的管理权限来管理这里的权限。
   ClearPermissionsOneClaim: 已清除此领地的权限。要为你所有领地设置权限，请站在领地外。
   UntrustIndividualSingleClaim: 已撤销 {0} 对此领地的访问权限。要为你所有领地设置权限，请站在领地外。
   AdminClaimsMode: 管理员领地模式已激活。创建的任何领地都将免费并可由其他管理员编辑。
@@ -87,7 +87,7 @@ Messages:
   BuildPermission: 建造
   ContainersPermission: 使用容器和动物
   AccessPermission: 使用按钮和拉杆
-  PermissionsPermission: 管理权限
+  ManagePermission: 管理权限
   LocationCurrentClaim: 在此领地内
   LocationAllClaims: 在你所有领地内
   PvPImmunityStart: 只要你的背包是空的，你就受到保护，免受其他玩家攻击。

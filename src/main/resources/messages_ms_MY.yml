@@ -34,7 +34,7 @@ Messages:
   ClearPermsOwnerOnly: Hanya pemilik kawasan tuntutan boleh mengosongkan semua kebenaran.
   UntrustIndividualAllClaims: Akses {0} kepada SEMUA kawasan tuntutan anda telah dibatalkan. Untuk menetapkan kebenaran bagi satu kawasan tuntutan sahaja, berdiri di dalamnya.
   UntrustEveryoneAllClaims: Kebenaran dalam SEMUA kawasan tuntutan anda telah dikosongkan. Untuk menetapkan kebenaran bagi satu kawasan tuntutan sahaja, berdiri di dalamnya.
-  NoPermissionTrust: Anda tidak mempunyai kebenaran {0} untuk mengurus kebenaran di sini.
+  NoManageTrust: Anda tidak mempunyai kebenaran {0} untuk mengurus kebenaran di sini.
   ClearPermissionsOneClaim: Kebenaran dalam kawasan tuntutan ini telah dikosongkan. Untuk menetapkan kebenaran bagi SEMUA kawasan tuntutan anda, berdiri di luarnya.
   UntrustIndividualSingleClaim: Akses {0} kepada kawasan tuntutan ini telah dibatalkan. Untuk menetapkan kebenaran bagi SEMUA kawasan tuntutan anda, berdiri di luarnya.
   AdminClaimsMode: Mod kawasan tuntutan pentadbiran aktif. Sebarang kawasan tuntutan yang dicipta adalah percuma dan boleh diedit oleh pentadbir lain.
@@ -87,7 +87,7 @@ Messages:
   BuildPermission: membina
   ContainersPermission: mengakses bekas dan haiwan
   AccessPermission: menggunakan butang dan tuil
-  PermissionsPermission: mengurus kebenaran
+  ManagePermission: mengurus kebenaran
   LocationCurrentClaim: dalam kawasan tuntutan ini
   LocationAllClaims: dalam semua kawasan tuntutan anda
   PvPImmunityStart: Anda dilindungi daripada serangan pemain lain selagi inventori anda kosong.

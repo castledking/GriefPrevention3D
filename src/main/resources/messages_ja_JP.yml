@@ -34,7 +34,7 @@ Messages:
   ClearPermsOwnerOnly: クレーム所有者のみがすべての権限をクリアできます。
   UntrustIndividualAllClaims: '{0} のすべてのクレームへのアクセスを取り消しました。単一のクレームの権限を設定するには、その中に立ってください。'
   UntrustEveryoneAllClaims: すべてのクレームの権限をクリアしました。単一のクレームの権限を設定するには、その中に立ってください。
-  NoPermissionTrust: ここで権限を管理するための {0} の許可を持っていません。
+  NoManageTrust: ここで権限を管理するための {0} の許可を持っていません。
   ClearPermissionsOneClaim: このクレームの権限をクリアしました。すべてのクレームの権限を設定するには、クレームの外に立ってください。
   UntrustIndividualSingleClaim: '{0} のこのクレームへのアクセスを取り消しました。すべてのクレームの権限を設定するには、クレームの外に立ってください。'
   AdminClaimsMode: 管理用クレームモードが有効です。作成されたクレームは無料で、他の管理者が編集できます。
@@ -87,7 +87,7 @@ Messages:
   BuildPermission: 建築
   ContainersPermission: コンテナと動物へのアクセス
   AccessPermission: ボタンとレバーの使用
-  PermissionsPermission: 権限の管理
+  ManagePermission: 権限の管理
   LocationCurrentClaim: このクレーム内
   LocationAllClaims: すべてのクレーム内
   PvPImmunityStart: インベントリが空の間、他のプレイヤーからの攻撃から保護されています。

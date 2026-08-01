@@ -77,9 +77,6 @@ public class Claim
      //use getOwnerName() to get a friendly name (will be "an administrator" for admin claims)
      public UUID ownerID;
  
-     //list of players who (beyond the claim owner) have permission to grant permissions in this claim
-     public ArrayList<String> managers = new ArrayList<>();
-
      //list of players who have neighbor trust (can bypass minimum distance checks)
      public ArrayList<String> neighbors = new ArrayList<>();
 
@@ -232,10 +229,7 @@ public class Claim
 
         for (String managerID : managerIDs)
         {
-            if (managerID != null && !managerID.isEmpty())
-            {
-                this.managers.add(managerID);
-            }
+            this.setPermission(managerID, ClaimPermission.Manage);
         }
 
         this.inheritNothing = inheritNothing;
@@ -253,7 +247,6 @@ public class Claim
          this.greaterBoundaryCorner = claim.greaterBoundaryCorner.clone();
          this.id = claim.id;
          this.ownerID = claim.ownerID;
-         this.managers = new ArrayList<>(claim.managers);
          this.neighbors = new ArrayList<>(claim.neighbors);
          this.autoNeighbors = new ArrayList<>(claim.autoNeighbors);
          this.allowAllNeighbors = claim.allowAllNeighbors;
@@ -380,12 +373,17 @@ public class Claim
      public @NotNull ClaimTrustSnapshot getTrustSnapshot()
      {
          Map<String, ClaimTrustLevel> permissions = new HashMap<>();
+         List<String> managers = new ArrayList<>();
          for (Map.Entry<String, ClaimPermission> entry : this.playerIDToClaimPermissionMap.entrySet())
          {
              permissions.put(entry.getKey(), toClaimTrustLevel(entry.getValue()));
+             if (entry.getValue() == ClaimPermission.Manage)
+             {
+                 managers.add(entry.getKey());
+             }
          }
 
-         return new ClaimTrustSnapshot(this.getOwnerID(), permissions, this.managers, this.deniedPermissions);
+         return new ClaimTrustSnapshot(this.getOwnerID(), permissions, managers, this.deniedPermissions);
      }
 
      private static @NotNull ClaimTrustLevel toClaimTrustLevel(@NotNull ClaimPermission permission)
@@ -638,11 +636,6 @@ public class Claim
      {
          if (uuid.equals(this.getOwnerID())) return true;
 
-         if (level == ClaimPermission.Manage) return this.managers.contains(uuid.toString());
-
-         // Managers have Manage, which hierarchically grants Build, Container, Access
-         if (this.managers.contains(uuid.toString())) return level.isGrantedBy(ClaimPermission.Manage);
-
          return level.isGrantedBy(this.playerIDToClaimPermissionMap.get(uuid.toString()));
      }
  
@@ -651,32 +644,16 @@ public class Claim
          // Check explicit ClaimPermission for UUID
          if (this.hasExplicitPermission(player.getUniqueId(), level)) return true;
 
-         // Manage trust must never satisfy owner-only Edit checks.
-         if (level != ClaimPermission.Manage
-                 && level.isGrantedBy(ClaimPermission.Manage)
-                 && this.hasExplicitPermission(player, ClaimPermission.Manage)) return true;
-
-         // Special case managers - a separate list is used.
-         if (level == ClaimPermission.Manage)
-         {
-             for (String node : this.managers)
-             {
-                 // Ensure valid permission format for permissions - [permission.node]
-                 if (node.length() < 3 || node.charAt(0) != '[' || node.charAt(node.length() - 1) != ']') continue;
-                 // Check if player has node
-                 if (this.isPermissionDenied(node)) continue;
-                 if (player.hasPermission(node.substring(1, node.length() - 1))) return true;
-             }
-             return false;
-         }
- 
          // Check permission-based ClaimPermission
          for (Map.Entry<String, ClaimPermission> stringToPermission : this.playerIDToClaimPermissionMap.entrySet())
          {
              String node = stringToPermission.getKey();
              // Ensure valid permission format for permissions - [permission.node]
              if (node.length() < 3 || node.charAt(0) != '[' || node.charAt(node.length() - 1) != ']') continue;
- 
+
+             // Explicitly denied nodes never grant trust
+             if (this.isPermissionDenied(node)) continue;
+
              // Check if level is high enough and player has node
              if (level.isGrantedBy(stringToPermission.getValue())
                      && player.hasPermission(node.substring(1, node.length() - 1)))
@@ -979,8 +956,6 @@ public class Claim
 
         if (permissionLevel == null)
             dropPermission(normalized);
-        else if (permissionLevel == ClaimPermission.Manage)
-            this.managers.add(normalized);
         else
             this.playerIDToClaimPermissionMap.put(normalized, permissionLevel);
     }
@@ -995,7 +970,6 @@ public class Claim
         }
 
         this.playerIDToClaimPermissionMap.remove(normalized);
-        this.managers.remove(normalized);
 
         for (Claim child : this.children)
         {
@@ -1007,7 +981,6 @@ public class Claim
      public void clearPermissions()
      {
          this.playerIDToClaimPermissionMap.clear();
-         this.managers.clear();
          this.neighbors.clear();
          this.autoNeighbors.clear();
          this.allowAllNeighbors = false;
@@ -1034,14 +1007,15 @@ public class Claim
              {
                  containers.add(entry.getKey());
              }
+             else if (entry.getValue() == ClaimPermission.Manage)
+             {
+                 managers.add(entry.getKey());
+             }
              else
              {
                  accessors.add(entry.getKey());
              }
          }
-
-         //managers are handled a little differently
-         managers.addAll(this.managers);
      }
 
      //gets neighbor trust list

@@ -1742,7 +1742,7 @@ public class GriefPrevention extends JavaPlugin {
         getCommand("trust").setTabCompleter(trustTabCompleter);
         getCommand("accesstrust").setTabCompleter(trustTabCompleter);
         getCommand("containertrust").setTabCompleter(trustTabCompleter);
-        getCommand("permissiontrust").setTabCompleter(trustTabCompleter);
+        getCommand("managetrust").setTabCompleter(trustTabCompleter);
         getCommand("untrust").setTabCompleter(trustTabCompleter);
         getCommand("neighbortrust").setTabCompleter(trustTabCompleter);
         getCommand("distancetrust").setTabCompleter(trustTabCompleter);
@@ -2307,7 +2307,6 @@ public class GriefPrevention extends JavaPlugin {
                     // otherwise drop individual permissions
                     else {
                         claim.dropPermission(idToDrop);
-                        claim.managers.remove(idToDrop);
 
                         // Check if this claim has inherited permissions that need to be explicitly
                         // removed
@@ -2336,7 +2335,6 @@ public class GriefPrevention extends JavaPlugin {
                                 // Remove the player from this claim's explicit permissions to override
                                 // inheritance
                                 claim.dropPermission(idToDrop);
-                                claim.managers.remove(idToDrop);
                             }
                         }
                     }
@@ -2359,7 +2357,7 @@ public class GriefPrevention extends JavaPlugin {
             }
             // otherwise, apply changes to only this claim
             else if (claim.checkPermission(player, ClaimPermission.Manage, null) != null) {
-                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionTrust, claim.getOwnerName());
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoManageTrust, claim.getOwnerName());
                 return true;
             } else {
                 // if clearing all
@@ -2387,15 +2385,12 @@ public class GriefPrevention extends JavaPlugin {
                     if (otherPlayer != null) {
                         idToDrop = otherPlayer.getUniqueId().toString();
                     }
-                    boolean targetIsManager = claim.managers.contains(idToDrop);
+                    boolean targetIsManager = claim.getPermission(idToDrop) == ClaimPermission.Manage;
+                    // only claim owners can untrust managers
                     if (
                         targetIsManager &&
-                        claim.checkPermission(player, ClaimPermission.Edit, null) != null // only
-                    ) // claim
-                    // owners
-                    // can
-                    // untrust
-                    // managers
+                        claim.checkPermission(player, ClaimPermission.Edit, null) != null
+                    )
                     {
                         GriefPrevention.sendMessage(
                             player,
@@ -2506,8 +2501,12 @@ public class GriefPrevention extends JavaPlugin {
 
             return true;
         }
-        // permissiontrust <player>
-        else if (cmd.getName().equalsIgnoreCase("permissiontrust") && player != null) {
+        // managetrust <player>
+        else if (
+            (cmd.getName().equalsIgnoreCase("managetrust") ||
+                cmd.getName().equalsIgnoreCase("permissiontrust")) &&
+            player != null
+        ) {
             if (!player.hasPermission("griefprevention.permissiontrust")) {
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
                 return true;
@@ -3712,27 +3711,10 @@ public class GriefPrevention extends JavaPlugin {
                     // Add trust to child claim
                     childClaim.setPermission(identifier, permissionLevel);
                 } else {
-                    // Remove trust from child claim
-                    {
-                        // Only remove if it's explicitly set in the child
-                        // Check if identifier is a UUID string or permission string
-                        if (identifier.startsWith("[") && identifier.endsWith("]")) {
-                            // Permission string - check if it exists in the child's permission map
-                            String permKey = identifier.toLowerCase();
-                            ClaimPermission existingPerm = childClaim.getPermission(permKey);
-                            boolean isManager = childClaim.managers.contains(permKey);
-                            if (existingPerm != null || isManager) {
-                                childClaim.dropPermission(identifier);
-                            }
-                        } else {
-                            // UUID string - check if it exists in the maps
-                            String uuidKey = identifier.toLowerCase();
-                            ClaimPermission existingPerm = childClaim.getPermission(uuidKey);
-                            boolean isManager = childClaim.managers.contains(uuidKey);
-                            if (existingPerm != null || isManager) {
-                                childClaim.dropPermission(identifier);
-                            }
-                        }
+                    // Remove trust from child claim, but only if it's explicitly set there.
+                    // Works for both UUID strings and [permission.node] identifiers.
+                    if (childClaim.getPermission(identifier.toLowerCase()) != null) {
+                        childClaim.dropPermission(identifier);
                     }
                 }
 
@@ -3803,7 +3785,7 @@ public class GriefPrevention extends JavaPlugin {
             } else {
                 // Check permission on the claim where trust will be applied
                 if (claim.checkPermission(player, ClaimPermission.Manage, null) != null) {
-                    GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionTrust, claim.getOwnerName());
+                    GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoManageTrust, claim.getOwnerName());
                     return;
                 }
                 targetClaims.add(claim);
@@ -3850,7 +3832,7 @@ public class GriefPrevention extends JavaPlugin {
             if (recipientName.equals("public")) recipientName = this.dataStore.getMessage(Messages.CollectivePublic);
             String permissionDescription;
             if (permissionLevel == ClaimPermission.Manage) {
-                permissionDescription = this.dataStore.getMessage(Messages.PermissionsPermission);
+                permissionDescription = this.dataStore.getMessage(Messages.ManagePermission);
             } else if (permissionLevel == ClaimPermission.Build) {
                 permissionDescription = this.dataStore.getMessage(Messages.BuildPermission);
             } else if (permissionLevel == ClaimPermission.Access) {
@@ -4688,7 +4670,6 @@ public class GriefPrevention extends JavaPlugin {
                 // otherwise drop individual permissions
                 else {
                     claim.dropPermission(idToDrop);
-                    claim.managers.remove(idToDrop);
 
                     // Check if this claim has inherited permissions that need to be explicitly removed
                     if (claim.parent != null && !claim.getSubclaimRestrictions()) {
@@ -4708,7 +4689,6 @@ public class GriefPrevention extends JavaPlugin {
                         ) {
                             // Remove the player from this claim's explicit permissions to override inheritance
                             claim.dropPermission(idToDrop);
-                            claim.managers.remove(idToDrop);
                         }
                     }
                 }
@@ -4731,7 +4711,7 @@ public class GriefPrevention extends JavaPlugin {
         }
         // otherwise, apply changes to only this claim
         else if (claim.checkPermission(player, ClaimPermission.Manage, null) != null) {
-            GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionTrust, claim.getOwnerName());
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoManageTrust, claim.getOwnerName());
             return true;
         } else {
             // if clearing all
@@ -4759,7 +4739,7 @@ public class GriefPrevention extends JavaPlugin {
                 if (otherPlayer != null) {
                     idToDrop = otherPlayer.getUniqueId().toString();
                 }
-                boolean targetIsManager = claim.managers.contains(idToDrop);
+                boolean targetIsManager = claim.getPermission(idToDrop) == ClaimPermission.Manage;
                 if (targetIsManager && claim.checkPermission(player, ClaimPermission.Edit, null) != null) {
                     // only claim owners can untrust managers
                     GriefPrevention.sendMessage(
@@ -5215,7 +5195,7 @@ public class GriefPrevention extends JavaPlugin {
         } else {
             // Check permission
             if (claim.checkPermission(player, ClaimPermission.Manage, null) != null) {
-                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionTrust, claim.getOwnerName());
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoManageTrust, claim.getOwnerName());
                 return true;
             }
 
@@ -5284,7 +5264,7 @@ public class GriefPrevention extends JavaPlugin {
         } else {
             // Check permission
             if (claim.checkPermission(player, ClaimPermission.Manage, null) != null) {
-                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionTrust, claim.getOwnerName());
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoManageTrust, claim.getOwnerName());
                 return true;
             }
 
@@ -5430,7 +5410,10 @@ public class GriefPrevention extends JavaPlugin {
         claim.getPermissions(currentBuilders, currentContainers, currentAccessors, currentManagers);
 
         for (String manager : parentManagers) {
-            claim.managers.remove(manager.toLowerCase());
+            ClaimPermission childPerm = claim.getPermission(manager.toLowerCase());
+            if (childPerm == ClaimPermission.Manage) {
+                claim.dropPermission(manager);
+            }
         }
 
         for (String builder : parentBuilders) {

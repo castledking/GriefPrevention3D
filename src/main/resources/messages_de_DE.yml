@@ -34,7 +34,7 @@ Messages:
   ClearPermsOwnerOnly: Nur der Gebietsbesitzer kann alle Berechtigungen löschen.
   UntrustIndividualAllClaims: "Zugriff von {0} auf ALLE deine Gebiete entzogen. Um Berechtigungen für ein einzelnes Gebiet zu setzen, stehe darin."
   UntrustEveryoneAllClaims: "Berechtigungen in ALLEN deinen Gebieten gelöscht. Um Berechtigungen für ein einzelnes Gebiet zu setzen, stehe darin."
-  NoPermissionTrust: "Du hast nicht die Berechtigung von {0}, um hier Berechtigungen zu verwalten."
+  NoManageTrust: "Du hast nicht die Berechtigung von {0}, um hier Berechtigungen zu verwalten."
   ClearPermissionsOneClaim: "Berechtigungen in diesem Gebiet gelöscht. Um Berechtigungen für ALLE deine Gebiete zu setzen, stehe außerhalb."
   UntrustIndividualSingleClaim: "Zugriff von {0} auf dieses Gebiet entzogen. Um Berechtigungen für ALLE deine Gebiete zu setzen, stehe außerhalb."
   AdminClaimsMode: Administrativer Modus aktiv. Erstellte Gebiete sind kostenlos und von anderen Administratoren bearbeitbar.
@@ -87,7 +87,7 @@ Messages:
   BuildPermission: bauen
   ContainersPermission: auf Kisten und Tiere zugreifen
   AccessPermission: Knöpfe und Hebel benutzen
-  PermissionsPermission: Berechtigungen verwalten
+  ManagePermission: Berechtigungen verwalten
   LocationCurrentClaim: in diesem Gebiet
   LocationAllClaims: in allen deinen Gebieten
   PvPImmunityStart: "Du bist vor Angriffen anderer Spieler geschützt, solange dein Inventar leer ist."

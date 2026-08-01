@@ -34,7 +34,7 @@ Messages:
   ClearPermsOwnerOnly: Seul le propriétaire du terrain peut effacer toutes les permissions.
   UntrustIndividualAllClaims: "Accès de {0} révoqué sur TOUS vos terrains. Pour définir les permissions d'un seul terrain, placez-vous à l'intérieur."
   UntrustEveryoneAllClaims: "Permissions effacées sur TOUS vos terrains. Pour définir les permissions d'un seul terrain, placez-vous à l'intérieur."
-  NoPermissionTrust: "Vous n'avez pas la permission de {0} pour gérer les permissions ici."
+  NoManageTrust: "Vous n'avez pas la permission de {0} pour gérer les permissions ici."
   ClearPermissionsOneClaim: "Permissions effacées dans ce terrain. Pour définir les permissions sur TOUS vos terrains, placez-vous en dehors."
   UntrustIndividualSingleClaim: "Accès de {0} révoqué sur ce terrain. Pour définir les permissions sur TOUS vos terrains, placez-vous en dehors."
   AdminClaimsMode: Mode administratif activé. Les terrains créés seront gratuits et modifiables par les autres administrateurs.
@@ -87,7 +87,7 @@ Messages:
   BuildPermission: construire
   ContainersPermission: accéder aux coffres et aux animaux
   AccessPermission: utiliser les boutons et leviers
-  PermissionsPermission: gérer les permissions
+  ManagePermission: gérer les permissions
   LocationCurrentClaim: dans ce terrain
   LocationAllClaims: dans tous vos terrains
   PvPImmunityStart: Vous êtes protégé des attaques des autres joueurs tant que votre inventaire est vide.

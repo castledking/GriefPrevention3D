@@ -1915,8 +1915,8 @@ public abstract class DataStore {
         if (parent != null && creatingPlayer != null
                 && !creatingPlayer.getUniqueId().equals(newClaim.getOwnerID())) {
             String creatorId = creatingPlayer.getUniqueId().toString();
-            if (!newClaim.managers.contains(creatorId)) {
-                newClaim.managers.add(creatorId);
+            if (newClaim.getPermission(creatorId) != ClaimPermission.Manage) {
+                newClaim.setPermission(creatorId, ClaimPermission.Manage);
             }
         }
 

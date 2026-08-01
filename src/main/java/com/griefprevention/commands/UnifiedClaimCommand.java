@@ -21,7 +21,7 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
 
         // Register subcommands
         registerSubcommand("create", this.claimCreateAction);
-        registerSubcommand("trust", this::handleTrust, "accesstrust", "containertrust", "permissiontrust");
+        registerSubcommand("trust", this::handleTrust, "accesstrust", "containertrust", "managetrust", "permissiontrust");
         registerSubcommand("untrust", this::handleUntrust);
         registerSubcommand("trustlist", this::handleTrustList);
         registerSubcommand("list", this::handleList);
@@ -117,8 +117,9 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
             case "container":
                 return plugin.getCommand("containertrust").execute(sender, "containertrust",
                         new String[] { recipientName });
+            case "manage":
             case "permission":
-                return plugin.getCommand("permissiontrust").execute(sender, "permissiontrust",
+                return plugin.getCommand("managetrust").execute(sender, "managetrust",
                         new String[] { recipientName });
             default:
                 return false;

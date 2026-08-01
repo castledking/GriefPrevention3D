@@ -35,7 +35,7 @@ Messages:
   ClearPermsOwnerOnly: Yalnızca bölge sahibi tüm izinleri temizleyebilir.
   UntrustIndividualAllClaims: "{0} kişisinin TÜM bölgelerinize erişimi iptal edildi. Tek bir bölge için izin ayarlamak üzere içinde durun."
   UntrustEveryoneAllClaims: TÜM bölgelerinizdeki izinler temizlendi. Tek bir bölge için izin ayarlamak üzere içinde durun.
-  NoPermissionTrust: Burada izinleri yönetmek için {0} iznine sahip değilsiniz.
+  NoManageTrust: Burada izinleri yönetmek için {0} iznine sahip değilsiniz.
   ClearPermissionsOneClaim: Bu bölgedeki izinler temizlendi. TÜM bölgeleriniz için izin ayarlamak üzere dışında durun.
   UntrustIndividualSingleClaim: "{0} kişisinin bu bölgeye erişimi iptal edildi. TÜM bölgeleriniz için izin ayarlamak üzere dışında durun."
   AdminClaimsMode: Yönetici bölgesi modu aktif. Oluşturulan bölgeler ücretsiz olacak ve diğer yöneticiler tarafından düzenlenebilecek.
@@ -88,7 +88,7 @@ Messages:
   BuildPermission: inşa etme
   ContainersPermission: sandık ve hayvanlara erişim
   AccessPermission: düğme ve kolları kullanma
-  PermissionsPermission: izinleri yönetme
+  ManagePermission: izinleri yönetme
   LocationCurrentClaim: bu bölgede
   LocationAllClaims: tüm bölgelerinizde
   PvPImmunityStart: Envanteriniz boş olduğu sürece diğer oyuncuların saldırılarından korunuyorsunuz.

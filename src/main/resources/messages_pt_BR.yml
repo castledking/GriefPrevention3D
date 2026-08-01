@@ -34,7 +34,7 @@ Messages:
   ClearPermsOwnerOnly: Somente o dono do terreno protegido pode limpar todas as permissões.
   UntrustIndividualAllClaims: O acesso de {0} a TODOS os seus terrenos protegidos foi revogado. Para definir permissões em um único terreno protegido, fique dentro dele.
   UntrustEveryoneAllClaims: As permissões de TODOS os seus terrenos protegidos foram limpas. Para definir permissões em um único terreno protegido, fique dentro dele.
-  NoPermissionTrust: Você não tem permissão de {0} para gerenciar permissões aqui.
+  NoManageTrust: Você não tem permissão de {0} para gerenciar permissões aqui.
   ClearPermissionsOneClaim: As permissões deste terreno protegido foram limpas. Para definir permissões em TODOS os seus terrenos protegidos, fique fora deles.
   UntrustIndividualSingleClaim: O acesso de {0} a este terreno protegido foi revogado. Para definir permissões em TODOS os seus terrenos protegidos, fique fora deles.
   AdminClaimsMode: Modo de terrenos administrativos ativado. Qualquer terreno protegido criado será gratuito e editável por outros administradores.
@@ -87,7 +87,7 @@ Messages:
   BuildPermission: construir
   ContainersPermission: acessar contêineres e animais
   AccessPermission: usar botões e alavancas
-  PermissionsPermission: gerenciar permissões
+  ManagePermission: gerenciar permissões
   LocationCurrentClaim: neste terreno protegido
   LocationAllClaims: em todos os seus terrenos protegidos
   PvPImmunityStart: Você está protegido contra ataques de outros jogadores enquanto seu inventário estiver vazio.

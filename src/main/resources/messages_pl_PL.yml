@@ -34,7 +34,7 @@ Messages:
   ClearPermsOwnerOnly: Tylko właściciel terenu może wyczyścić wszystkie uprawnienia.
   UntrustIndividualAllClaims: Odebrano dostępu {0} do WSZYSTKICH twoich terenów. Aby ustawić uprawnienia dla pojedynczego terenu, stań w nim.
   UntrustEveryoneAllClaims: Wyczyszczono uprawnienia we WSZYSTKICH twoich terenach. Aby ustawić uprawnienia dla pojedynczego terenu, stań w nim.
-  NoPermissionTrust: Nie masz uprawnień od {0} do zarządzania tutaj uprawnieniami.
+  NoManageTrust: Nie masz uprawnień od {0} do zarządzania tutaj uprawnieniami.
   ClearPermissionsOneClaim: Wyczyszczono uprawnienia w tym terenie. Aby ustawić uprawnienia dla WSZYSTKICH twoich terenów, stań poza nimi.
   UntrustIndividualSingleClaim: Odebrano dostęp {0} do tego terenu. Aby ustawić uprawnienia dla WSZYSTKICH twoich terenów, stań poza nimi.
   AdminClaimsMode: Tryb terenów administracyjnych aktywny. Wszelkie tworzone tereny będą darmowe i edytowalne przez innych administratorów.
@@ -87,7 +87,7 @@ Messages:
   BuildPermission: budowanie
   ContainersPermission: dostęp do skrzyń i zwierząt
   AccessPermission: używanie przycisków i dźwigni
-  PermissionsPermission: zarządzanie uprawnieniami
+  ManagePermission: zarządzanie uprawnieniami
   LocationCurrentClaim: w tym terenie
   LocationAllClaims: we wszystkich twoich terenach
   PvPImmunityStart: Jesteś chroniony przed atakami innych graczy, dopóki twój ekwipunek jest pusty.
