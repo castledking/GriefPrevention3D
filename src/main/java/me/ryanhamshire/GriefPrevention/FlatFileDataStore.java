@@ -19,7 +19,13 @@
 package me.ryanhamshire.GriefPrevention;
 
 import com.google.common.io.Files;
+import com.griefprevention.claims.ClaimSnapshot;
+import com.griefprevention.claims.ClaimTrustLevel;
+import com.griefprevention.claims.ClaimTrustSnapshot;
 import com.griefprevention.geometry.OrthogonalPoint2i;
+import com.griefprevention.persistence.ClaimDocument;
+import com.griefprevention.persistence.ClaimDocumentCodec;
+import com.griefprevention.persistence.ClaimDocumentFormatException;
 import org.bukkit.Bukkit;
 import org.jetbrains.annotations.NotNull;
 import org.bukkit.Location;
@@ -44,6 +50,7 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -59,11 +66,17 @@ import java.util.Collections;
 //manages data stored in the file system
 public class FlatFileDataStore extends DataStore
 {
+    private static final ClaimDocumentCodec CLAIM_DOCUMENT_CODEC = new ClaimDocumentCodec();
+
     private final Set<Long> claimsNeedingRewrite = new HashSet<>();
+
+    // Documents decoded from disk retain fields which are not part of Bukkit's mutable Claim API.
+    // They are merged back whenever Paper writes the claim, preserving addon-owned data.
+    private final Map<Long, ClaimDocument> loadedClaimDocuments = new ConcurrentHashMap<>();
 
     //claim data waiting to be serialized and written to disk, keyed by claim file name.
     //only the newest data per claim is kept - older, unwritten data for the same claim is simply replaced.
-    private final Map<String, YamlConfiguration> pendingClaimWrites = new ConcurrentHashMap<>();
+    private final Map<String, String> pendingClaimWrites = new ConcurrentHashMap<>();
 
     //serializing and writing claim files happens here so that saving a claim never blocks a tick
     //(on Folia, a region) thread.  a single thread keeps writes and deletes for a claim in order.
@@ -88,7 +101,17 @@ public class FlatFileDataStore extends DataStore
     //initialization!
     FlatFileDataStore() throws Exception
     {
-        this.initialize();
+        this(true);
+    }
+
+    // Test seam for exercising the real claim parser/serializer without touching the process-wide
+    // plugins/GriefPreventionData directory.
+    FlatFileDataStore(boolean initializeStorage) throws Exception
+    {
+        if (initializeStorage)
+        {
+            this.initialize();
+        }
     }
 
     @Override
@@ -620,7 +643,7 @@ public class FlatFileDataStore extends DataStore
 
         //instantiate
         claim = new Claim(lesserBoundaryCorner, greaterBoundaryCorner, ownerID, builders, containers, accessors, managers, inheritNothing, claimID, is3D);
-        claim.modifiedDate = new Date(lastModifiedDate);
+        claim.modifiedDate = new Date(yaml.getLong("Modified Date", lastModifiedDate));
         claim.id = claimID;
         claim.areExplosivesAllowed = explosivesAllowed;
         claim.areWitherExplosionsAllowed = witherExplosionsAllowed;
@@ -644,6 +667,8 @@ public class FlatFileDataStore extends DataStore
                 }
             }
         }
+
+        this.captureClaimDocuments(input, claimID, lastModifiedDate);
 
         if (claim.parent == null && claim.id != null && this.claimsNeedingRewrite.remove(claim.id))
         {
@@ -708,6 +733,9 @@ public class FlatFileDataStore extends DataStore
         child.areWitherExplosionsAllowed = witherExplosionsAllowed;
         child.pvpEnabled = pvpEnabled;
         child.alertsEnabled = section.getBoolean("Alerts Enabled", true);
+        child.setInheritNothingForNewSubdivisions(
+                section.getBoolean("inheritNothingForNewSubdivisions", false)
+        );
 
         if (!child.getSubclaimRestrictions())
         {
@@ -746,9 +774,137 @@ public class FlatFileDataStore extends DataStore
 
     String getYamlForClaim(Claim claim)
     {
+        if (claim.parent == null)
+        {
+            List<ClaimDocument> documents = new ArrayList<>();
+            this.collectClaimDocuments(claim, documents);
+            try
+            {
+                String encoded = CLAIM_DOCUMENT_CODEC.encodeTree(documents.get(0), documents);
+                for (ClaimDocument document : documents)
+                {
+                    Long id = document.snapshot().id();
+                    if (id != null)
+                    {
+                        this.loadedClaimDocuments.put(id, document);
+                    }
+                }
+                return encoded;
+            }
+            catch (ClaimDocumentFormatException exception)
+            {
+                throw new IllegalStateException(
+                        "Refusing to serialize invalid claim graph rooted at " + claim.id + ".",
+                        exception
+                );
+            }
+        }
+
+        // The opt-in legacy subdivision migration intentionally writes a child as a standalone
+        // orphan file. The shared codec only emits complete root trees, so retain the upstream
+        // serializer for that compatibility-only path.
         YamlConfiguration yaml = new YamlConfiguration();
         populateYamlForClaim(claim, yaml);
         return yaml.saveToString();
+    }
+
+    private void captureClaimDocuments(String input, long fallbackClaimId, long fallbackModifiedDate)
+    {
+        try
+        {
+            for (ClaimDocument document : CLAIM_DOCUMENT_CODEC.decodeTree(
+                    input,
+                    fallbackClaimId,
+                    fallbackModifiedDate
+            ))
+            {
+                Long id = document.snapshot().id();
+                if (id != null)
+                {
+                    this.loadedClaimDocuments.put(id, document);
+                }
+            }
+        }
+        catch (ClaimDocumentFormatException ignored)
+        {
+            // Preserve upstream's parser behavior for files outside the shared codec's strict
+            // contract. Supported cross-platform files always take the lossless path above.
+        }
+    }
+
+    private void collectClaimDocuments(Claim claim, List<ClaimDocument> output)
+    {
+        ClaimDocument previous = claim.id == null ? null : this.loadedClaimDocuments.get(claim.id);
+        ClaimTrustSnapshot rawTrust = claim.getTrustSnapshot();
+        Map<String, ClaimTrustLevel> permissions = new LinkedHashMap<>(rawTrust.permissionsByIdentifier());
+        for (String manager : rawTrust.managerIdentifiers())
+        {
+            permissions.remove(ClaimTrustSnapshot.normalizeIdentifier(manager));
+        }
+        ClaimTrustSnapshot trust = new ClaimTrustSnapshot(
+                claim.ownerID,
+                permissions,
+                rawTrust.managerIdentifiers(),
+                rawTrust.deniedIdentifiers()
+        );
+
+        ClaimSnapshot runtimeSnapshot = claim.getSnapshot();
+        ClaimSnapshot persistedSnapshot = new ClaimSnapshot(
+                runtimeSnapshot.id(),
+                runtimeSnapshot.worldKey(),
+                claim.ownerID,
+                runtimeSnapshot.parentId(),
+                runtimeSnapshot.bounds(),
+                runtimeSnapshot.threeDimensional(),
+                runtimeSnapshot.subdivision()
+        );
+
+        List<OrthogonalPoint2i> shapeCorners = claim.getShapedCorners();
+        if (shapeCorners == null)
+        {
+            shapeCorners = Collections.emptyList();
+        }
+        long modifiedDate = claim.modifiedDate == null
+                ? System.currentTimeMillis()
+                : claim.modifiedDate.getTime();
+        ClaimDocument document = new ClaimDocument(
+                persistedSnapshot,
+                trust,
+                shapeCorners,
+                claim.getSubclaimRestrictions(),
+                claim.getInheritNothingForNewSubdivisions(),
+                claim.areExplosivesAllowed,
+                claim.areWitherExplosionsAllowed,
+                claim.pvpEnabled,
+                claim.alertsEnabled,
+                modifiedDate,
+                previous == null ? (claim.id == null ? null : String.valueOf(claim.id)) : previous.storageKey(),
+                previous == null ? Collections.<String, Object>emptyMap() : previous.extraFields()
+        );
+        output.add(document);
+
+        for (Claim child : claim.children)
+        {
+            if (child != null && child.inDataStore)
+            {
+                this.collectClaimDocuments(child, output);
+            }
+        }
+    }
+
+    private void forgetClaimDocuments(Claim claim)
+    {
+        if (claim.id != null)
+        {
+            this.loadedClaimDocuments.remove(claim.id);
+        }
+        for (Claim child : claim.children)
+        {
+            if (child != null)
+            {
+                this.forgetClaimDocuments(child);
+            }
+        }
     }
 
     private void populateYamlForClaim(Claim claim, ConfigurationSection section)
@@ -824,9 +980,7 @@ public class FlatFileDataStore extends DataStore
 
         //read the claim data on the calling thread, where it can't change underneath us, but leave
         //the expensive YAML serialization and the disk write to the writer thread
-        YamlConfiguration yaml = new YamlConfiguration();
-        this.populateYamlForClaim(root, yaml);
-        this.queueClaimWrite(claimID, yaml);
+        this.queueClaimWrite(claimID, this.getYamlForClaim(root));
     }
 
     //subdivisions live in their root claim's file, so a group of claims only needs one write per root
@@ -857,7 +1011,7 @@ public class FlatFileDataStore extends DataStore
     }
 
     //hands a claim's data to the writer thread, superseding any data for the same claim that hasn't been written yet
-    private void queueClaimWrite(String claimID, YamlConfiguration yaml)
+    private void queueClaimWrite(String claimID, String yaml)
     {
         this.pendingClaimWrites.put(claimID, yaml);
 
@@ -874,7 +1028,7 @@ public class FlatFileDataStore extends DataStore
 
     private void flushClaimWrite(String claimID)
     {
-        YamlConfiguration yaml = this.pendingClaimWrites.remove(claimID);
+        String yaml = this.pendingClaimWrites.remove(claimID);
 
         //an earlier queued write already wrote this claim's newest data, or it was deleted since
         if (yaml == null) return;
@@ -884,7 +1038,7 @@ public class FlatFileDataStore extends DataStore
             //open the claim's file
             File claimFile = new File(claimDataFolderPath + File.separator + claimID + ".yml");
             claimFile.createNewFile();
-            byte[] yamlBytes = yaml.saveToString().getBytes(StandardCharsets.UTF_8);
+            byte[] yamlBytes = yaml.getBytes(StandardCharsets.UTF_8);
             Files.write(yamlBytes, claimFile);
         }
 
@@ -901,6 +1055,7 @@ public class FlatFileDataStore extends DataStore
     @Override
     synchronized void deleteClaimFromSecondaryStorage(Claim claim)
     {
+        this.forgetClaimDocuments(claim);
         boolean debugEnabled = GriefPrevention.instance.config_logs_debugEnabled;
         
         // For subclaims, rewrite the parent file

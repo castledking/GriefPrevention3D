@@ -3,6 +3,8 @@ plugins {
     id("fabric-loom") version "1.13-SNAPSHOT"
 }
 
+evaluationDependsOn(":fabric-bootstrap")
+
 group = rootProject.group
 version = rootProject.version
 
@@ -21,8 +23,9 @@ repositories {
 }
 
 dependencies {
+    implementation(project(":fabric-bootstrap"))
     implementation(project(":gp3d-core"))
-    include(project(":gp3d-core"))
+    include(project(path = ":gp3d-core", configuration = "shadowRuntimeElements"))
     minecraft("com.mojang:minecraft:$fabricMinecraftVersion")
     mappings(loom.officialMojangMappings())
     modImplementation("net.fabricmc:fabric-loader:$fabricLoaderVersion")
@@ -57,6 +60,14 @@ tasks {
                 "version" to project.version.toString(),
                 "minecraftVersion" to fabricMinecraftVersion
             )
+        }
+    }
+
+    jar {
+        val bootstrapJar = project(":fabric-bootstrap").tasks.named<Jar>("jar")
+        dependsOn(bootstrapJar)
+        from(bootstrapJar.flatMap { it.archiveFile }.map { zipTree(it.asFile) }) {
+            exclude("META-INF/MANIFEST.MF")
         }
     }
 }

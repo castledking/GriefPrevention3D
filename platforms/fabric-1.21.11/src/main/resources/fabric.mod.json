@@ -17,9 +17,12 @@
   "environment": "*",
   "entrypoints": {
     "main": [
-      "com.griefprevention.fabric.GriefPreventionFabric"
+      "com.griefprevention.fabric.bootstrap.UniversalFabricBootstrap"
     ]
   },
+  "mixins": [
+    "griefprevention3d.mixins.json"
+  ],
   "depends": {
     "fabricloader": ">=0.18.2",
     "fabric-api": "*",

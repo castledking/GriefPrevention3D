@@ -1,19 +1,26 @@
 package com.griefprevention.fabric;
 
-import com.griefprevention.claims.ClaimBounds;
 import com.griefprevention.claims.ClaimSnapshot;
-import com.griefprevention.claims.ClaimTrustLevel;
 import com.griefprevention.claims.ClaimTrustSnapshot;
+import com.griefprevention.persistence.ClaimDataSchema;
+import com.griefprevention.persistence.ClaimDocument;
+import com.griefprevention.persistence.ClaimDocumentCodec;
+import com.griefprevention.persistence.ClaimDocumentFormatException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.DirectoryStream;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
+import java.nio.file.LinkOption;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -25,12 +32,21 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+/**
+ * Fabric adapter for GriefPrevention's flat-file claim datastore.
+ *
+ * <p>All claim semantics are decoded and encoded by {@link ClaimDocumentCodec}. This class owns
+ * filesystem layout, graph validation, migration backups, and atomic ClaimData promotion only.
+ */
 final class FabricClaimFileStore
 {
     private static final String CLAIM_DATA_FOLDER = "ClaimData";
     private static final String PLAYER_DATA_FOLDER = "PlayerData";
     private static final String NEXT_CLAIM_ID_FILE = "_nextClaimID";
+    private static final String SCHEMA_VERSION_FILE = "_schemaVersion";
     private static final String CLAIM_EXTENSION = ".yml";
+    private static final String MIGRATION_BACKUP_FOLDER = "MigrationBackups";
+    private static final ClaimDocumentCodec CODEC = new ClaimDocumentCodec();
 
     private FabricClaimFileStore()
     {
@@ -39,78 +55,716 @@ final class FabricClaimFileStore
     static @NotNull LoadedClaims load(@NotNull Path dataFolder, @NotNull Logger logger)
     {
         Path claimDataFolder = claimDataFolder(dataFolder);
+        Path playerDataFolder = playerDataFolder(dataFolder);
         try
         {
             Files.createDirectories(claimDataFolder);
-            Files.createDirectories(playerDataFolder(dataFolder));
+            Files.createDirectories(playerDataFolder);
 
-            List<ClaimSnapshot> snapshots = new ArrayList<>();
-            Map<Long, ClaimTrustSnapshot> trustByClaimId = new LinkedHashMap<>();
-            List<Path> claimFiles = claimFiles(claimDataFolder);
-            for (Path claimFile : claimFiles)
+            SchemaState schema = readSchemaState(dataFolder);
+            ClaimReadResult readResult = readClaimDocuments(claimDataFolder);
+            List<ClaimDocument> documents = validateAndOrder(readResult.documents());
+            long nextClaimId = nextClaimId(claimDataFolder, documents);
+
+            boolean unversionedData = schema.version() == null
+                    && (!documents.isEmpty()
+                    || Files.isRegularFile(claimDataFolder.resolve(NEXT_CLAIM_ID_FILE))
+                    || hasEntries(playerDataFolder));
+            boolean olderSchema = schema.version() != null
+                    && schema.version() < ClaimDataSchema.CURRENT_VERSION;
+            boolean needsMigration = unversionedData || olderSchema || readResult.needsNormalization();
+            if (needsMigration)
             {
-                Long fileClaimId = claimIdFromFileName(claimFile);
-                List<String> lines = Files.readAllLines(claimFile, StandardCharsets.UTF_8);
-                ParsedClaim parsed = parseClaimSection(lines, 0, 0, fileClaimId, null, logger);
-                if (parsed.record() != null)
+                String source = schema.version() == null ? "unversioned" : "schema-" + schema.version();
+                if (readResult.needsNormalization())
                 {
-                    addLoadedClaim(parsed.record(), snapshots, trustByClaimId, logger);
+                    source += "-claim-layout";
                 }
+                Path backup = createMigrationBackup(dataFolder, source);
+                save(dataFolder, documents, nextClaimId);
+                logger.info(
+                        "Migrated Fabric claim data to schema {} after validation; backup: {}.",
+                        ClaimDataSchema.CURRENT_VERSION,
+                        backup
+                );
             }
 
-            long nextClaimId = Math.max(readNextClaimId(claimDataFolder), highestClaimId(snapshots) + 1L);
-            return new LoadedClaims(snapshots, trustByClaimId, nextClaimId);
+            return new LoadedClaims(documents, nextClaimId);
         }
-        catch (IOException e)
+        catch (IOException | ClaimDocumentFormatException exception)
         {
-            logger.warn("Could not load Fabric claims from {}. Native Fabric protection will start empty.",
-                    dataFolder, e);
-            return LoadedClaims.empty();
+            throw new IllegalStateException(
+                    "Could not safely load GriefPrevention claim data from " + dataFolder
+                            + "; Fabric protection was not started.",
+                    exception
+            );
         }
     }
 
     static void save(
             @NotNull Path dataFolder,
-            @NotNull Collection<ClaimSnapshot> snapshots,
-            @NotNull Map<Long, ClaimTrustSnapshot> trustByClaimId,
-            long nextClaimId)
+            @NotNull Collection<ClaimDocument> sourceDocuments,
+            long requestedNextClaimId)
             throws IOException
     {
-        Path claimDataFolder = claimDataFolder(dataFolder);
-        Files.createDirectories(claimDataFolder);
-        Files.createDirectories(playerDataFolder(dataFolder));
-
-        Map<Long, ClaimSnapshot> snapshotsById = snapshotsById(snapshots);
-        Map<Long, List<ClaimSnapshot>> childrenByParent = childrenByParent(snapshots, snapshotsById);
-        List<ClaimSnapshot> topLevelClaims = topLevelClaims(snapshots, snapshotsById);
-        topLevelClaims.sort(Comparator.comparingLong(snapshot -> snapshot.id() == null ? Long.MAX_VALUE : snapshot.id()));
-
-        Set<String> expectedFiles = new LinkedHashSet<>();
-        for (ClaimSnapshot snapshot : topLevelClaims)
+        final List<ClaimDocument> documents;
+        try
         {
-            Long id = snapshot.id();
-            if (id != null)
-            {
-                expectedFiles.add(id + CLAIM_EXTENSION);
-            }
+            documents = validateAndOrder(sourceDocuments);
+        }
+        catch (ClaimDocumentFormatException exception)
+        {
+            throw new IOException("Refusing to save an invalid claim graph: " + exception.getMessage(), exception);
         }
 
-        deleteStaleClaimFiles(claimDataFolder, expectedFiles);
-        writeAtomically(claimDataFolder.resolve(NEXT_CLAIM_ID_FILE),
-                Math.max(1L, nextClaimId) + System.lineSeparator());
+        Files.createDirectories(dataFolder);
+        Files.createDirectories(playerDataFolder(dataFolder));
 
-        long modifiedDate = System.currentTimeMillis();
-        for (ClaimSnapshot snapshot : topLevelClaims)
+        Map<Long, ClaimDocument> byId = documentsById(documents);
+        Map<Long, List<ClaimDocument>> childrenByParent = childrenByParent(documents);
+        Map<String, String> encodedFiles = new LinkedHashMap<>();
+        for (ClaimDocument document : documents)
         {
-            Long id = snapshot.id();
-            if (id == null)
+            if (document.snapshot().parentId() != null)
             {
                 continue;
             }
 
-            StringBuilder yaml = new StringBuilder();
-            appendClaim(yaml, snapshot, trustByClaimId, childrenByParent, 0, modifiedDate);
-            writeAtomically(claimDataFolder.resolve(id + CLAIM_EXTENSION), yaml.toString());
+            Long rootId = java.util.Objects.requireNonNull(document.snapshot().id());
+            List<ClaimDocument> tree = new ArrayList<>();
+            collectTree(document, childrenByParent, tree);
+            final String encoded;
+            try
+            {
+                encoded = CODEC.encodeTree(document, tree);
+                validateEncodedTree(encoded, rootId, tree);
+            }
+            catch (ClaimDocumentFormatException exception)
+            {
+                throw new IOException("Could not encode claim tree " + rootId + ".", exception);
+            }
+            encodedFiles.put(rootId + CLAIM_EXTENSION, encoded);
+        }
+
+        final long nextClaimId;
+        try
+        {
+            nextClaimId = safeNextClaimId(byId.keySet(), requestedNextClaimId);
+        }
+        catch (ClaimDocumentFormatException exception)
+        {
+            throw new IOException("Refusing to save an invalid next claim id.", exception);
+        }
+        encodedFiles.put(NEXT_CLAIM_ID_FILE, String.valueOf(nextClaimId));
+        promoteClaimDataDirectory(dataFolder, encodedFiles);
+        writeAtomically(
+                dataFolder.resolve(SCHEMA_VERSION_FILE),
+                String.valueOf(ClaimDataSchema.CURRENT_VERSION)
+        );
+    }
+
+    private static @NotNull ClaimReadResult readClaimDocuments(@NotNull Path claimDataFolder)
+            throws IOException, ClaimDocumentFormatException
+    {
+        List<Path> claimFiles = claimFiles(claimDataFolder);
+        List<ClaimDocument> documents = new ArrayList<>();
+        boolean needsNormalization = false;
+        for (Path claimFile : claimFiles)
+        {
+            long fileClaimId = claimIdFromFileName(claimFile);
+            String input = Files.readString(claimFile, StandardCharsets.UTF_8);
+            List<ClaimDocument> decoded = CODEC.decodeTree(
+                    input,
+                    fileClaimId,
+                    Files.getLastModifiedTime(claimFile).toMillis()
+            );
+            if (!decoded.isEmpty() && decoded.get(0).snapshot().parentId() != null)
+            {
+                needsNormalization = true;
+            }
+            documents.addAll(decoded);
+        }
+        return new ClaimReadResult(documents, needsNormalization);
+    }
+
+    private static @NotNull List<Path> claimFiles(@NotNull Path claimDataFolder)
+            throws IOException, ClaimDocumentFormatException
+    {
+        List<Path> result = new ArrayList<>();
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(claimDataFolder))
+        {
+            for (Path entry : stream)
+            {
+                if (!Files.isRegularFile(entry, LinkOption.NOFOLLOW_LINKS))
+                {
+                    continue;
+                }
+
+                String name = entry.getFileName().toString();
+                if (name.startsWith("_") || name.startsWith("."))
+                {
+                    continue;
+                }
+                if (!name.endsWith(CLAIM_EXTENSION))
+                {
+                    throw new ClaimDocumentFormatException(
+                            "Unrecognized claim data file " + name
+                                    + "; refusing to delete or ignore possible legacy data."
+                    );
+                }
+
+                claimIdFromFileName(entry);
+                result.add(entry);
+            }
+        }
+        result.sort(Comparator.comparingLong(path -> {
+            try
+            {
+                return claimIdFromFileName(path);
+            }
+            catch (ClaimDocumentFormatException exception)
+            {
+                throw new IllegalStateException(exception);
+            }
+        }));
+        return result;
+    }
+
+    private static long claimIdFromFileName(@NotNull Path claimFile) throws ClaimDocumentFormatException
+    {
+        String name = claimFile.getFileName().toString();
+        String rawId = name.substring(0, name.length() - CLAIM_EXTENSION.length());
+        try
+        {
+            long id = Long.parseLong(rawId);
+            if (id < 0L)
+            {
+                throw new NumberFormatException("negative id");
+            }
+            return id;
+        }
+        catch (NumberFormatException exception)
+        {
+            throw new ClaimDocumentFormatException(
+                    "Claim filename " + name + " does not contain a valid numeric claim id.",
+                    exception
+            );
+        }
+    }
+
+    private static @NotNull SchemaState readSchemaState(@NotNull Path dataFolder)
+            throws IOException, ClaimDocumentFormatException
+    {
+        Path schemaFile = dataFolder.resolve(SCHEMA_VERSION_FILE);
+        if (!Files.exists(schemaFile))
+        {
+            return new SchemaState(null);
+        }
+        if (!Files.isRegularFile(schemaFile, LinkOption.NOFOLLOW_LINKS))
+        {
+            throw new ClaimDocumentFormatException(SCHEMA_VERSION_FILE + " is not a regular file.");
+        }
+
+        String value = Files.readString(schemaFile, StandardCharsets.UTF_8).trim();
+        final int version;
+        try
+        {
+            version = Integer.parseInt(value);
+        }
+        catch (NumberFormatException exception)
+        {
+            throw new ClaimDocumentFormatException("Invalid datastore schema version '" + value + "'.", exception);
+        }
+        if (version < 0)
+        {
+            throw new ClaimDocumentFormatException("Datastore schema version cannot be negative.");
+        }
+        if (version > ClaimDataSchema.CURRENT_VERSION)
+        {
+            throw new ClaimDocumentFormatException(
+                    "Datastore schema " + version + " is newer than supported schema "
+                            + ClaimDataSchema.CURRENT_VERSION + "."
+            );
+        }
+        return new SchemaState(version);
+    }
+
+    private static long nextClaimId(
+            @NotNull Path claimDataFolder,
+            @NotNull Collection<ClaimDocument> documents)
+            throws IOException, ClaimDocumentFormatException
+    {
+        long stored = 0L;
+        Path nextClaimIdFile = claimDataFolder.resolve(NEXT_CLAIM_ID_FILE);
+        if (Files.exists(nextClaimIdFile))
+        {
+            if (!Files.isRegularFile(nextClaimIdFile, LinkOption.NOFOLLOW_LINKS))
+            {
+                throw new ClaimDocumentFormatException(NEXT_CLAIM_ID_FILE + " is not a regular file.");
+            }
+            String raw = Files.readString(nextClaimIdFile, StandardCharsets.UTF_8).trim();
+            try
+            {
+                stored = Long.parseLong(raw);
+            }
+            catch (NumberFormatException exception)
+            {
+                throw new ClaimDocumentFormatException("Invalid next claim id '" + raw + "'.", exception);
+            }
+            if (stored < 0L)
+            {
+                throw new ClaimDocumentFormatException("Next claim id cannot be negative.");
+            }
+        }
+
+        return safeNextClaimId(documentsById(documents).keySet(), stored);
+    }
+
+    private static long safeNextClaimId(@NotNull Collection<Long> ids, long requested)
+            throws ClaimDocumentFormatException
+    {
+        if (requested < 0L)
+        {
+            throw new ClaimDocumentFormatException("Next claim id cannot be negative.");
+        }
+
+        long highest = -1L;
+        for (Long id : ids)
+        {
+            highest = Math.max(highest, id);
+        }
+        if (highest == Long.MAX_VALUE)
+        {
+            throw new ClaimDocumentFormatException("No claim id remains after " + Long.MAX_VALUE + ".");
+        }
+        return Math.max(requested, highest + 1L);
+    }
+
+    private static @NotNull List<ClaimDocument> validateAndOrder(
+            @NotNull Collection<ClaimDocument> source)
+            throws ClaimDocumentFormatException
+    {
+        Map<Long, ClaimDocument> byId = new LinkedHashMap<>();
+        for (ClaimDocument document : source)
+        {
+            Long id = requireId(document);
+            if (byId.put(id, document) != null)
+            {
+                throw new ClaimDocumentFormatException("Duplicate claim id " + id + ".");
+            }
+            if (document.snapshot().subdivision() != (document.snapshot().parentId() != null))
+            {
+                throw new ClaimDocumentFormatException(
+                        "Claim " + id + " has inconsistent subdivision and parent state."
+                );
+            }
+            if (!java.util.Objects.equals(document.snapshot().ownerId(), document.trust().ownerId()))
+            {
+                throw new ClaimDocumentFormatException("Claim " + id + " has trust for a different owner.");
+            }
+        }
+
+        Map<Long, List<ClaimDocument>> children = new LinkedHashMap<>();
+        List<ClaimDocument> roots = new ArrayList<>();
+        for (ClaimDocument document : byId.values())
+        {
+            Long id = requireId(document);
+            Long parentId = document.snapshot().parentId();
+            if (parentId == null)
+            {
+                roots.add(document);
+                continue;
+            }
+
+            ClaimDocument parent = byId.get(parentId);
+            if (parent == null)
+            {
+                throw new ClaimDocumentFormatException(
+                        "Claim " + id + " references missing parent " + parentId + "."
+                );
+            }
+            if (!document.snapshot().worldKey().equals(parent.snapshot().worldKey()))
+            {
+                throw new ClaimDocumentFormatException(
+                        "Claim " + id + " is in a different world from parent " + parentId + "."
+                );
+            }
+            children.computeIfAbsent(parentId, ignored -> new ArrayList<>()).add(document);
+        }
+
+        Comparator<ClaimDocument> byClaimId = Comparator.comparingLong(document -> {
+            try
+            {
+                return requireId(document);
+            }
+            catch (ClaimDocumentFormatException exception)
+            {
+                throw new IllegalStateException(exception);
+            }
+        });
+        roots.sort(byClaimId);
+        for (List<ClaimDocument> childList : children.values())
+        {
+            childList.sort(byClaimId);
+        }
+
+        List<ClaimDocument> ordered = new ArrayList<>();
+        Set<Long> visiting = new LinkedHashSet<>();
+        Set<Long> visited = new LinkedHashSet<>();
+        for (ClaimDocument root : roots)
+        {
+            appendValidatedTree(root, children, visiting, visited, ordered);
+        }
+        if (visited.size() != byId.size())
+        {
+            Set<Long> unreachable = new LinkedHashSet<>(byId.keySet());
+            unreachable.removeAll(visited);
+            throw new ClaimDocumentFormatException(
+                    "Claim graph contains a cycle or unreachable claims: " + unreachable + "."
+            );
+        }
+        return Collections.unmodifiableList(ordered);
+    }
+
+    private static void appendValidatedTree(
+            @NotNull ClaimDocument document,
+            @NotNull Map<Long, List<ClaimDocument>> children,
+            @NotNull Set<Long> visiting,
+            @NotNull Set<Long> visited,
+            @NotNull List<ClaimDocument> ordered)
+            throws ClaimDocumentFormatException
+    {
+        Long id = requireId(document);
+        if (!visiting.add(id))
+        {
+            throw new ClaimDocumentFormatException("Claim graph contains a cycle at claim " + id + ".");
+        }
+        if (!visited.add(id))
+        {
+            throw new ClaimDocumentFormatException("Claim graph reaches claim " + id + " more than once.");
+        }
+
+        ordered.add(document);
+        for (ClaimDocument child : children.getOrDefault(id, Collections.emptyList()))
+        {
+            appendValidatedTree(child, children, visiting, visited, ordered);
+        }
+        visiting.remove(id);
+    }
+
+    private static @NotNull Long requireId(@NotNull ClaimDocument document)
+            throws ClaimDocumentFormatException
+    {
+        Long id = document.snapshot().id();
+        if (id == null || id < 0L)
+        {
+            throw new ClaimDocumentFormatException("Claim is missing a valid id.");
+        }
+        return id;
+    }
+
+    private static @NotNull Map<Long, ClaimDocument> documentsById(
+            @NotNull Collection<ClaimDocument> documents)
+    {
+        Map<Long, ClaimDocument> result = new LinkedHashMap<>();
+        for (ClaimDocument document : documents)
+        {
+            result.put(document.snapshot().id(), document);
+        }
+        return result;
+    }
+
+    private static @NotNull Map<Long, List<ClaimDocument>> childrenByParent(
+            @NotNull Collection<ClaimDocument> documents)
+    {
+        Map<Long, List<ClaimDocument>> result = new LinkedHashMap<>();
+        for (ClaimDocument document : documents)
+        {
+            Long parentId = document.snapshot().parentId();
+            if (parentId != null)
+            {
+                result.computeIfAbsent(parentId, ignored -> new ArrayList<>()).add(document);
+            }
+        }
+        return result;
+    }
+
+    private static void collectTree(
+            @NotNull ClaimDocument document,
+            @NotNull Map<Long, List<ClaimDocument>> children,
+            @NotNull List<ClaimDocument> output)
+    {
+        output.add(document);
+        Long id = document.snapshot().id();
+        for (ClaimDocument child : children.getOrDefault(id, Collections.emptyList()))
+        {
+            collectTree(child, children, output);
+        }
+    }
+
+    private static void validateEncodedTree(
+            @NotNull String encoded,
+            long rootId,
+            @NotNull Collection<ClaimDocument> expected)
+            throws ClaimDocumentFormatException
+    {
+        List<ClaimDocument> decoded = CODEC.decodeTree(encoded, rootId, 0L);
+        if (!documentsById(decoded).equals(documentsById(expected)))
+        {
+            throw new ClaimDocumentFormatException(
+                    "Claim tree " + rootId + " changed semantics during serialization."
+            );
+        }
+    }
+
+    private static void promoteClaimDataDirectory(
+            @NotNull Path dataFolder,
+            @NotNull Map<String, String> encodedFiles)
+            throws IOException
+    {
+        Path live = claimDataFolder(dataFolder);
+        String token = UUID.randomUUID().toString();
+        Path staged = dataFolder.resolve("." + CLAIM_DATA_FOLDER + ".stage-" + token);
+        Path previous = dataFolder.resolve("." + CLAIM_DATA_FOLDER + ".previous-" + token);
+        boolean liveMoved = false;
+        boolean promoted = false;
+        try
+        {
+            Files.createDirectory(staged);
+            copyPreservedClaimData(live, staged);
+            for (Map.Entry<String, String> entry : encodedFiles.entrySet())
+            {
+                Files.writeString(
+                        staged.resolve(entry.getKey()),
+                        entry.getValue(),
+                        StandardCharsets.UTF_8
+                );
+            }
+
+            if (Files.exists(live))
+            {
+                moveDirectory(live, previous);
+                liveMoved = true;
+            }
+            try
+            {
+                moveDirectory(staged, live);
+                promoted = true;
+            }
+            catch (IOException promotionFailure)
+            {
+                if (liveMoved && !Files.exists(live))
+                {
+                    try
+                    {
+                        moveDirectory(previous, live);
+                        liveMoved = false;
+                    }
+                    catch (IOException restoreFailure)
+                    {
+                        promotionFailure.addSuppressed(restoreFailure);
+                    }
+                }
+                throw promotionFailure;
+            }
+        }
+        finally
+        {
+            if (!promoted)
+            {
+                deleteRecursivelyQuietly(staged);
+            }
+            if (promoted && liveMoved)
+            {
+                deleteRecursivelyQuietly(previous);
+            }
+        }
+    }
+
+    private static void copyPreservedClaimData(@NotNull Path source, @NotNull Path target)
+            throws IOException
+    {
+        if (!Files.isDirectory(source, LinkOption.NOFOLLOW_LINKS))
+        {
+            return;
+        }
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(source))
+        {
+            for (Path entry : stream)
+            {
+                String name = entry.getFileName().toString();
+                boolean generatedClaim = name.endsWith(CLAIM_EXTENSION) && numericClaimFileName(name);
+                if (generatedClaim || NEXT_CLAIM_ID_FILE.equals(name))
+                {
+                    continue;
+                }
+                copyRecursively(entry, target.resolve(name));
+            }
+        }
+    }
+
+    private static boolean numericClaimFileName(@NotNull String name)
+    {
+        try
+        {
+            Long.parseLong(name.substring(0, name.length() - CLAIM_EXTENSION.length()));
+            return true;
+        }
+        catch (NumberFormatException exception)
+        {
+            return false;
+        }
+    }
+
+    private static void moveDirectory(@NotNull Path source, @NotNull Path target) throws IOException
+    {
+        try
+        {
+            Files.move(source, target, StandardCopyOption.ATOMIC_MOVE);
+        }
+        catch (AtomicMoveNotSupportedException exception)
+        {
+            Files.move(source, target);
+        }
+    }
+
+    private static void writeAtomically(@NotNull Path target, @NotNull String contents) throws IOException
+    {
+        Path parent = target.getParent();
+        Files.createDirectories(parent);
+        Path temporary = Files.createTempFile(parent, "." + target.getFileName(), ".tmp");
+        try
+        {
+            Files.writeString(temporary, contents, StandardCharsets.UTF_8);
+            try
+            {
+                Files.move(
+                        temporary,
+                        target,
+                        StandardCopyOption.ATOMIC_MOVE,
+                        StandardCopyOption.REPLACE_EXISTING
+                );
+            }
+            catch (AtomicMoveNotSupportedException exception)
+            {
+                Files.move(temporary, target, StandardCopyOption.REPLACE_EXISTING);
+            }
+        }
+        finally
+        {
+            Files.deleteIfExists(temporary);
+        }
+    }
+
+    private static @NotNull Path createMigrationBackup(
+            @NotNull Path dataFolder,
+            @NotNull String sourceLabel)
+            throws IOException
+    {
+        Path backups = dataFolder.resolve(MIGRATION_BACKUP_FOLDER);
+        Files.createDirectories(backups);
+        String baseName = sourceLabel + "-" + System.currentTimeMillis();
+        Path backup = backups.resolve(baseName);
+        int suffix = 1;
+        while (Files.exists(backup))
+        {
+            backup = backups.resolve(baseName + "-" + suffix++);
+        }
+        Files.createDirectory(backup);
+
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(dataFolder))
+        {
+            for (Path entry : stream)
+            {
+                String name = entry.getFileName().toString();
+                if (MIGRATION_BACKUP_FOLDER.equals(name)
+                        || name.startsWith("." + CLAIM_DATA_FOLDER + ".stage-")
+                        || name.startsWith("." + CLAIM_DATA_FOLDER + ".previous-"))
+                {
+                    continue;
+                }
+                copyRecursively(entry, backup.resolve(name));
+            }
+        }
+        return backup;
+    }
+
+    static void copyRecursively(@NotNull Path source, @NotNull Path target) throws IOException
+    {
+        if (!Files.isDirectory(source, LinkOption.NOFOLLOW_LINKS))
+        {
+            Files.createDirectories(target.getParent());
+            Files.copy(source, target, LinkOption.NOFOLLOW_LINKS, StandardCopyOption.COPY_ATTRIBUTES);
+            return;
+        }
+
+        Files.walkFileTree(source, new SimpleFileVisitor<Path>()
+        {
+            @Override
+            public FileVisitResult preVisitDirectory(Path directory, BasicFileAttributes attributes)
+                    throws IOException
+            {
+                Path relative = source.relativize(directory);
+                Files.createDirectories(target.resolve(relative));
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attributes) throws IOException
+            {
+                Path relative = source.relativize(file);
+                Files.copy(
+                        file,
+                        target.resolve(relative),
+                        LinkOption.NOFOLLOW_LINKS,
+                        StandardCopyOption.COPY_ATTRIBUTES
+                );
+                return FileVisitResult.CONTINUE;
+            }
+        });
+    }
+
+    static void deleteRecursivelyQuietly(@NotNull Path path)
+    {
+        if (!Files.exists(path, LinkOption.NOFOLLOW_LINKS))
+        {
+            return;
+        }
+        try
+        {
+            Files.walkFileTree(path, new SimpleFileVisitor<Path>()
+            {
+                @Override
+                public FileVisitResult visitFile(Path file, BasicFileAttributes attributes) throws IOException
+                {
+                    Files.deleteIfExists(file);
+                    return FileVisitResult.CONTINUE;
+                }
+
+                @Override
+                public FileVisitResult postVisitDirectory(Path directory, IOException exception)
+                        throws IOException
+                {
+                    if (exception != null)
+                    {
+                        throw exception;
+                    }
+                    Files.deleteIfExists(directory);
+                    return FileVisitResult.CONTINUE;
+                }
+            });
+        }
+        catch (IOException ignored)
+        {
+            // A uniquely named previous/staging directory is safe to leave for manual recovery.
+        }
+    }
+
+    private static boolean hasEntries(@NotNull Path directory) throws IOException
+    {
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(directory))
+        {
+            return stream.iterator().hasNext();
         }
     }
 
@@ -124,724 +778,31 @@ final class FabricClaimFileStore
         return dataFolder.resolve(PLAYER_DATA_FOLDER);
     }
 
-    private static @NotNull List<Path> claimFiles(@NotNull Path claimDataFolder) throws IOException
-    {
-        List<Path> claimFiles = new ArrayList<>();
-        try (DirectoryStream<Path> stream = Files.newDirectoryStream(claimDataFolder, "*" + CLAIM_EXTENSION))
-        {
-            for (Path claimFile : stream)
-            {
-                String fileName = claimFile.getFileName().toString();
-                if (!fileName.startsWith("_") && Files.isRegularFile(claimFile))
-                {
-                    claimFiles.add(claimFile);
-                }
-            }
-        }
-        claimFiles.sort(Comparator.comparing(path -> path.getFileName().toString()));
-        return claimFiles;
-    }
-
-    private static @Nullable Long claimIdFromFileName(@NotNull Path claimFile)
-    {
-        String fileName = claimFile.getFileName().toString();
-        if (!fileName.endsWith(CLAIM_EXTENSION))
-        {
-            return null;
-        }
-
-        return parseLong(fileName.substring(0, fileName.length() - CLAIM_EXTENSION.length()));
-    }
-
-    private static long readNextClaimId(@NotNull Path claimDataFolder) throws IOException
-    {
-        Path nextClaimIdFile = claimDataFolder.resolve(NEXT_CLAIM_ID_FILE);
-        if (!Files.isRegularFile(nextClaimIdFile))
-        {
-            return 1L;
-        }
-
-        Long nextClaimId = parseLong(Files.readString(nextClaimIdFile, StandardCharsets.UTF_8).trim());
-        return nextClaimId == null || nextClaimId < 1L ? 1L : nextClaimId;
-    }
-
-    private static long highestClaimId(@NotNull Collection<ClaimSnapshot> snapshots)
-    {
-        long highest = 0L;
-        for (ClaimSnapshot snapshot : snapshots)
-        {
-            Long id = snapshot.id();
-            if (id != null && id > highest)
-            {
-                highest = id;
-            }
-        }
-        return highest;
-    }
-
-    private static @NotNull Map<Long, ClaimSnapshot> snapshotsById(
-            @NotNull Collection<ClaimSnapshot> snapshots)
-    {
-        Map<Long, ClaimSnapshot> snapshotsById = new LinkedHashMap<>();
-        for (ClaimSnapshot snapshot : snapshots)
-        {
-            Long id = snapshot.id();
-            if (id != null)
-            {
-                snapshotsById.put(id, snapshot);
-            }
-        }
-        return snapshotsById;
-    }
-
-    private static @NotNull Map<Long, List<ClaimSnapshot>> childrenByParent(
-            @NotNull Collection<ClaimSnapshot> snapshots,
-            @NotNull Map<Long, ClaimSnapshot> snapshotsById)
-    {
-        Map<Long, List<ClaimSnapshot>> childrenByParent = new LinkedHashMap<>();
-        for (ClaimSnapshot snapshot : snapshots)
-        {
-            Long id = snapshot.id();
-            Long parentId = snapshot.parentId();
-            if (id != null && parentId != null && snapshotsById.containsKey(parentId))
-            {
-                childrenByParent.computeIfAbsent(parentId, ignored -> new ArrayList<>()).add(snapshot);
-            }
-        }
-        for (List<ClaimSnapshot> children : childrenByParent.values())
-        {
-            children.sort(Comparator.comparingLong(snapshot -> snapshot.id() == null ? Long.MAX_VALUE : snapshot.id()));
-        }
-        return childrenByParent;
-    }
-
-    private static @NotNull List<ClaimSnapshot> topLevelClaims(
-            @NotNull Collection<ClaimSnapshot> snapshots,
-            @NotNull Map<Long, ClaimSnapshot> snapshotsById)
-    {
-        List<ClaimSnapshot> topLevelClaims = new ArrayList<>();
-        for (ClaimSnapshot snapshot : snapshots)
-        {
-            Long parentId = snapshot.parentId();
-            if (snapshot.id() != null && (parentId == null || !snapshotsById.containsKey(parentId)))
-            {
-                topLevelClaims.add(snapshot);
-            }
-        }
-        return topLevelClaims;
-    }
-
-    private static void deleteStaleClaimFiles(@NotNull Path claimDataFolder, @NotNull Set<String> expectedFiles)
-            throws IOException
-    {
-        try (DirectoryStream<Path> stream = Files.newDirectoryStream(claimDataFolder, "*" + CLAIM_EXTENSION))
-        {
-            for (Path claimFile : stream)
-            {
-                String fileName = claimFile.getFileName().toString();
-                if (!fileName.startsWith("_") && !expectedFiles.contains(fileName))
-                {
-                    Files.deleteIfExists(claimFile);
-                }
-            }
-        }
-    }
-
-    private static void writeAtomically(@NotNull Path file, @NotNull String contents) throws IOException
-    {
-        Path parent = file.getParent();
-        if (parent != null)
-        {
-            Files.createDirectories(parent);
-        }
-
-        Path tempFile = file.resolveSibling(file.getFileName() + ".tmp");
-        Files.writeString(tempFile, contents, StandardCharsets.UTF_8);
-        try
-        {
-            Files.move(tempFile, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-        }
-        catch (IOException atomicMoveFailure)
-        {
-            Files.move(tempFile, file, StandardCopyOption.REPLACE_EXISTING);
-        }
-    }
-
-    private static @NotNull ParsedClaim parseClaimSection(
-            @NotNull List<String> lines,
-            int startIndex,
-            int indent,
-            @Nullable Long fallbackId,
-            @Nullable Long inheritedParentId,
-            @NotNull Logger logger)
-    {
-        ClaimRecord record = new ClaimRecord();
-        record.id = fallbackId;
-        record.parentId = inheritedParentId;
-
-        int index = startIndex;
-        while (index < lines.size())
-        {
-            String line = lines.get(index);
-            if (isIgnoredLine(line))
-            {
-                index++;
-                continue;
-            }
-
-            int currentIndent = indentation(line);
-            if (currentIndent < indent)
-            {
-                break;
-            }
-            if (currentIndent > indent)
-            {
-                index++;
-                continue;
-            }
-
-            KeyValue keyValue = keyValue(line.trim());
-            if (keyValue == null)
-            {
-                index++;
-                continue;
-            }
-
-            switch (keyValue.key())
-            {
-                case "Claim ID":
-                    record.id = parseLong(unquote(keyValue.value()));
-                    break;
-                case "Lesser Boundary Corner":
-                    record.lesser = parseLocation(keyValue.value(), record.id, logger);
-                    break;
-                case "Greater Boundary Corner":
-                    record.greater = parseLocation(keyValue.value(), record.id, logger);
-                    break;
-                case "Owner":
-                    record.owner = emptyToNull(unquote(keyValue.value()));
-                    break;
-                case "Builders":
-                    ListRead builders = readList(lines, index, indent, keyValue.value());
-                    record.builders = builders.values();
-                    index = builders.nextIndex();
-                    continue;
-                case "Containers":
-                    ListRead containers = readList(lines, index, indent, keyValue.value());
-                    record.containers = containers.values();
-                    index = containers.nextIndex();
-                    continue;
-                case "Accessors":
-                    ListRead accessors = readList(lines, index, indent, keyValue.value());
-                    record.accessors = accessors.values();
-                    index = accessors.nextIndex();
-                    continue;
-                case "Managers":
-                    ListRead managers = readList(lines, index, indent, keyValue.value());
-                    record.managers = managers.values();
-                    index = managers.nextIndex();
-                    continue;
-                case "Parent Claim ID":
-                    record.parentId = parseParentClaimId(keyValue.value());
-                    break;
-                case "Is3D":
-                    record.threeDimensional = Boolean.parseBoolean(unquote(keyValue.value()));
-                    break;
-                case "Children":
-                    ChildrenRead children = readChildren(lines, index + 1, indent + 2, indent + 4,
-                            record.id, logger);
-                    record.children.addAll(children.children());
-                    index = children.nextIndex();
-                    continue;
-                default:
-                    break;
-            }
-
-            index++;
-        }
-
-        return new ParsedClaim(record, index);
-    }
-
-    private static @NotNull ListRead readList(
-            @NotNull List<String> lines,
-            int listKeyIndex,
-            int listKeyIndent,
-            @NotNull String value)
-    {
-        String normalizedValue = value.trim();
-        if (normalizedValue.isEmpty())
-        {
-            List<String> values = new ArrayList<>();
-            int index = listKeyIndex + 1;
-            while (index < lines.size())
-            {
-                String line = lines.get(index);
-                if (isIgnoredLine(line))
-                {
-                    index++;
-                    continue;
-                }
-
-                int currentIndent = indentation(line);
-                String trimmed = line.trim();
-                if (currentIndent < listKeyIndent || (currentIndent == listKeyIndent && !trimmed.startsWith("-")))
-                {
-                    break;
-                }
-                if ((currentIndent == listKeyIndent || currentIndent == listKeyIndent + 2)
-                        && trimmed.startsWith("-"))
-                {
-                    values.add(unquote(trimmed.substring(1).trim()));
-                    index++;
-                    continue;
-                }
-                if (currentIndent <= listKeyIndent)
-                {
-                    break;
-                }
-
-                index++;
-            }
-            return new ListRead(values, index);
-        }
-
-        if ("[]".equals(normalizedValue))
-        {
-            return new ListRead(Collections.emptyList(), listKeyIndex + 1);
-        }
-
-        if (normalizedValue.startsWith("[") && normalizedValue.endsWith("]"))
-        {
-            String inner = normalizedValue.substring(1, normalizedValue.length() - 1).trim();
-            if (inner.isEmpty())
-            {
-                return new ListRead(Collections.emptyList(), listKeyIndex + 1);
-            }
-
-            List<String> values = new ArrayList<>();
-            for (String item : inner.split(","))
-            {
-                values.add(unquote(item.trim()));
-            }
-            return new ListRead(values, listKeyIndex + 1);
-        }
-
-        return new ListRead(List.of(unquote(normalizedValue)), listKeyIndex + 1);
-    }
-
-    private static @NotNull ChildrenRead readChildren(
-            @NotNull List<String> lines,
-            int startIndex,
-            int childKeyIndent,
-            int childSectionIndent,
-            @Nullable Long parentId,
-            @NotNull Logger logger)
-    {
-        List<ClaimRecord> children = new ArrayList<>();
-        int index = startIndex;
-        while (index < lines.size())
-        {
-            String line = lines.get(index);
-            if (isIgnoredLine(line))
-            {
-                index++;
-                continue;
-            }
-
-            int currentIndent = indentation(line);
-            if (currentIndent < childKeyIndent)
-            {
-                break;
-            }
-
-            if (currentIndent == childKeyIndent)
-            {
-                KeyValue childKey = keyValue(line.trim());
-                if (childKey == null)
-                {
-                    index++;
-                    continue;
-                }
-
-                ParsedClaim parsed = parseClaimSection(lines, index + 1, childSectionIndent,
-                        parseLong(unquote(childKey.key())), parentId, logger);
-                children.add(parsed.record());
-                index = parsed.nextIndex();
-                continue;
-            }
-
-            index++;
-        }
-
-        return new ChildrenRead(children, index);
-    }
-
-    private static void addLoadedClaim(
-            @NotNull ClaimRecord record,
-            @NotNull List<ClaimSnapshot> snapshots,
-            @NotNull Map<Long, ClaimTrustSnapshot> trustByClaimId,
-            @NotNull Logger logger)
-    {
-        LoadedClaim loaded = toLoadedClaim(record, logger);
-        if (loaded != null)
-        {
-            snapshots.add(loaded.snapshot());
-            trustByClaimId.put(loaded.snapshot().id(), loaded.trust());
-        }
-
-        for (ClaimRecord child : record.children)
-        {
-            addLoadedClaim(child, snapshots, trustByClaimId, logger);
-        }
-    }
-
-    private static @Nullable LoadedClaim toLoadedClaim(@NotNull ClaimRecord record, @NotNull Logger logger)
-    {
-        if (record.id == null)
-        {
-            logger.warn("Skipping Fabric claim without an id.");
-            return null;
-        }
-
-        if (record.lesser == null || record.greater == null)
-        {
-            logger.warn("Skipping Fabric claim {} without both boundary corners.", record.id);
-            return null;
-        }
-
-        if (!record.lesser.world().equals(record.greater.world()))
-        {
-            logger.warn("Skipping Fabric claim {} with mismatched boundary worlds: {} and {}.",
-                    record.id, record.lesser.world(), record.greater.world());
-            return null;
-        }
-
-        UUID ownerId = parseUuid(record.owner, "owner", record.id, logger);
-        ClaimBounds bounds = ClaimBounds.rectangle(
-                record.lesser.x(),
-                record.lesser.y(),
-                record.lesser.z(),
-                record.greater.x(),
-                record.greater.y(),
-                record.greater.z()
-        );
-        ClaimSnapshot snapshot = new ClaimSnapshot(
-                record.id,
-                record.lesser.world(),
-                ownerId,
-                record.parentId,
-                bounds,
-                record.threeDimensional,
-                record.parentId != null
-        );
-
-        ClaimTrustSnapshot trust = new ClaimTrustSnapshot(
-                ownerId,
-                toTrustMap(record),
-                record.managers,
-                Collections.emptyList()
-        );
-        return new LoadedClaim(snapshot, trust);
-    }
-
-    private static @NotNull Map<String, ClaimTrustLevel> toTrustMap(@NotNull ClaimRecord record)
-    {
-        Map<String, ClaimTrustLevel> trust = new LinkedHashMap<>();
-        putTrust(trust, record.builders, ClaimTrustLevel.BUILD);
-        putTrust(trust, record.containers, ClaimTrustLevel.CONTAINER);
-        putTrust(trust, record.accessors, ClaimTrustLevel.ACCESS);
-        return trust;
-    }
-
-    private static void putTrust(
-            @NotNull Map<String, ClaimTrustLevel> trust,
-            @NotNull Collection<String> identifiers,
-            @NotNull ClaimTrustLevel level)
-    {
-        for (String identifier : identifiers)
-        {
-            String normalized = ClaimTrustSnapshot.normalizeIdentifier(identifier);
-            if (normalized.isEmpty())
-            {
-                continue;
-            }
-
-            ClaimTrustLevel existing = trust.get(normalized);
-            if (existing == null || existing.isGrantedBy(level))
-            {
-                trust.put(normalized, level);
-            }
-        }
-    }
-
-    private static @Nullable UUID parseUuid(
-            @Nullable String value,
-            @NotNull String fieldName,
-            long claimId,
-            @NotNull Logger logger)
-    {
-        if (value == null || value.isBlank())
-        {
-            return null;
-        }
-
-        try
-        {
-            return UUID.fromString(value);
-        }
-        catch (IllegalArgumentException e)
-        {
-            logger.warn("Ignoring invalid {} UUID '{}' in Fabric claim {}.", fieldName, value, claimId);
-            return null;
-        }
-    }
-
-    private static @Nullable BoundaryLocation parseLocation(
-            @NotNull String value,
-            @Nullable Long claimId,
-            @NotNull Logger logger)
-    {
-        String[] parts = unquote(value).split(";");
-        if (parts.length != 4)
-        {
-            logger.warn("Ignoring invalid boundary location '{}' in Fabric claim {}.", value,
-                    claimId == null ? "unknown" : claimId);
-            return null;
-        }
-
-        Integer x = parseInt(parts[1]);
-        Integer y = parseInt(parts[2]);
-        Integer z = parseInt(parts[3]);
-        if (x == null || y == null || z == null || parts[0].isBlank())
-        {
-            logger.warn("Ignoring invalid boundary location '{}' in Fabric claim {}.", value,
-                    claimId == null ? "unknown" : claimId);
-            return null;
-        }
-
-        return new BoundaryLocation(parts[0].trim(), x, y, z);
-    }
-
-    private static @Nullable Long parseParentClaimId(@NotNull String value)
-    {
-        Long parentId = parseLong(unquote(value));
-        return parentId == null || parentId < 0L ? null : parentId;
-    }
-
-    private static @Nullable Long parseLong(@Nullable String value)
-    {
-        if (value == null || value.isBlank())
-        {
-            return null;
-        }
-
-        try
-        {
-            return Long.parseLong(value.trim());
-        }
-        catch (NumberFormatException ignored)
-        {
-            return null;
-        }
-    }
-
-    private static @Nullable Integer parseInt(@Nullable String value)
-    {
-        if (value == null || value.isBlank())
-        {
-            return null;
-        }
-
-        try
-        {
-            return Integer.parseInt(value.trim());
-        }
-        catch (NumberFormatException ignored)
-        {
-            return null;
-        }
-    }
-
-    private static void appendClaim(
-            @NotNull StringBuilder yaml,
-            @NotNull ClaimSnapshot snapshot,
-            @NotNull Map<Long, ClaimTrustSnapshot> trustByClaimId,
-            @NotNull Map<Long, List<ClaimSnapshot>> childrenByParent,
-            int indent,
-            long modifiedDate)
-    {
-        String prefix = " ".repeat(indent);
-        ClaimTrustSnapshot trust = snapshot.id() == null ? null : trustByClaimId.get(snapshot.id());
-        TrustLists trustLists = trustLists(trust);
-
-        yaml.append(prefix).append("Claim ID: '").append(snapshot.id()).append("'\n");
-        yaml.append(prefix).append("Lesser Boundary Corner: ")
-                .append(location(snapshot.worldKey(), snapshot.bounds().minX(), snapshot.bounds().minY(),
-                        snapshot.bounds().minZ()))
-                .append('\n');
-        yaml.append(prefix).append("Greater Boundary Corner: ")
-                .append(location(snapshot.worldKey(), snapshot.bounds().maxX(), snapshot.bounds().maxY(),
-                        snapshot.bounds().maxZ()))
-                .append('\n');
-        yaml.append(prefix).append("Owner: ")
-                .append(snapshot.ownerId() == null ? "''" : snapshot.ownerId())
-                .append('\n');
-        appendList(yaml, "Builders", trustLists.builders(), indent);
-        appendList(yaml, "Containers", trustLists.containers(), indent);
-        appendList(yaml, "Accessors", trustLists.accessors(), indent);
-        appendList(yaml, "Managers", trustLists.managers(), indent);
-        yaml.append(prefix).append("Parent Claim ID: ")
-                .append(snapshot.parentId() == null ? "-1" : snapshot.parentId())
-                .append('\n');
-        yaml.append(prefix).append("inheritNothing: false\n");
-        yaml.append(prefix).append("inheritNothingForNewSubdivisions: false\n");
-        yaml.append(prefix).append("Is3D: ").append(snapshot.threeDimensional()).append('\n');
-        yaml.append(prefix).append("Explosives Allowed: false\n");
-        yaml.append(prefix).append("Wither Explosions Allowed: false\n");
-        yaml.append(prefix).append("Modified Date: ").append(modifiedDate).append('\n');
-
-        List<ClaimSnapshot> children = snapshot.id() == null
-                ? Collections.emptyList()
-                : childrenByParent.getOrDefault(snapshot.id(), Collections.emptyList());
-        if (!children.isEmpty())
-        {
-            yaml.append(prefix).append("Children:\n");
-            for (ClaimSnapshot child : children)
-            {
-                yaml.append(" ".repeat(indent + 2)).append("'").append(child.id()).append("':\n");
-                appendClaim(yaml, child, trustByClaimId, childrenByParent, indent + 4, modifiedDate);
-            }
-        }
-    }
-
-    private static void appendList(
-            @NotNull StringBuilder yaml,
-            @NotNull String key,
-            @NotNull Collection<String> values,
-            int indent)
-    {
-        String prefix = " ".repeat(indent);
-        if (values.isEmpty())
-        {
-            yaml.append(prefix).append(key).append(": []\n");
-            return;
-        }
-
-        yaml.append(prefix).append(key).append(":\n");
-        for (String value : values)
-        {
-            yaml.append(prefix).append("- ").append(value).append('\n');
-        }
-    }
-
-    private static @NotNull String location(@NotNull String worldKey, int x, int y, int z)
-    {
-        return worldKey + ";" + x + ";" + y + ";" + z;
-    }
-
-    private static @NotNull TrustLists trustLists(@Nullable ClaimTrustSnapshot trust)
-    {
-        if (trust == null)
-        {
-            return new TrustLists(
-                    Collections.emptyList(),
-                    Collections.emptyList(),
-                    Collections.emptyList(),
-                    Collections.emptyList()
-            );
-        }
-
-        List<String> builders = new ArrayList<>();
-        List<String> containers = new ArrayList<>();
-        List<String> accessors = new ArrayList<>();
-        List<String> managers = new ArrayList<>(trust.managerIdentifiers());
-        for (Map.Entry<String, ClaimTrustLevel> entry : trust.permissionsByIdentifier().entrySet())
-        {
-            ClaimTrustLevel level = entry.getValue();
-            if (level == ClaimTrustLevel.BUILD)
-            {
-                builders.add(entry.getKey());
-            }
-            else if (level == ClaimTrustLevel.CONTAINER)
-            {
-                containers.add(entry.getKey());
-            }
-            else if (level == ClaimTrustLevel.ACCESS)
-            {
-                accessors.add(entry.getKey());
-            }
-            else if (level == ClaimTrustLevel.MANAGE)
-            {
-                managers.add(entry.getKey());
-            }
-        }
-        return new TrustLists(builders, containers, accessors, managers);
-    }
-
-    private static @Nullable KeyValue keyValue(@NotNull String line)
-    {
-        int colon = line.indexOf(':');
-        if (colon < 0)
-        {
-            return null;
-        }
-
-        return new KeyValue(unquote(line.substring(0, colon).trim()), line.substring(colon + 1).trim());
-    }
-
-    private static boolean isIgnoredLine(@NotNull String line)
-    {
-        String trimmed = line.trim();
-        return trimmed.isEmpty() || trimmed.startsWith("#");
-    }
-
-    private static int indentation(@NotNull String line)
-    {
-        int indentation = 0;
-        while (indentation < line.length() && line.charAt(indentation) == ' ')
-        {
-            indentation++;
-        }
-        return indentation;
-    }
-
-    private static @Nullable String emptyToNull(@Nullable String value)
-    {
-        return value == null || value.isBlank() ? null : value;
-    }
-
-    private static @NotNull String unquote(@NotNull String value)
-    {
-        String trimmed = value.trim();
-        if (trimmed.length() >= 2
-                && ((trimmed.startsWith("'") && trimmed.endsWith("'"))
-                || (trimmed.startsWith("\"") && trimmed.endsWith("\""))))
-        {
-            return trimmed.substring(1, trimmed.length() - 1);
-        }
-        return trimmed;
-    }
-
     static final class LoadedClaims
     {
+        private final @NotNull List<ClaimDocument> documents;
         private final @NotNull List<ClaimSnapshot> snapshots;
         private final @NotNull Map<Long, ClaimTrustSnapshot> trustByClaimId;
         private final long nextClaimId;
 
-        private LoadedClaims(
-                @NotNull List<ClaimSnapshot> snapshots,
-                @NotNull Map<Long, ClaimTrustSnapshot> trustByClaimId,
-                long nextClaimId)
+        private LoadedClaims(@NotNull List<ClaimDocument> documents, long nextClaimId)
         {
-            this.snapshots = Collections.unmodifiableList(new ArrayList<>(snapshots));
-            this.trustByClaimId = Collections.unmodifiableMap(new LinkedHashMap<>(trustByClaimId));
+            this.documents = Collections.unmodifiableList(new ArrayList<>(documents));
+            List<ClaimSnapshot> snapshots = new ArrayList<>();
+            Map<Long, ClaimTrustSnapshot> trust = new LinkedHashMap<>();
+            for (ClaimDocument document : documents)
+            {
+                snapshots.add(document.snapshot());
+                trust.put(document.snapshot().id(), document.trust());
+            }
+            this.snapshots = Collections.unmodifiableList(snapshots);
+            this.trustByClaimId = Collections.unmodifiableMap(trust);
             this.nextClaimId = nextClaimId;
         }
 
-        static @NotNull LoadedClaims empty()
+        @NotNull List<ClaimDocument> documents()
         {
-            return new LoadedClaims(Collections.emptyList(), Collections.emptyMap(), 1L);
+            return this.documents;
         }
 
         @NotNull List<ClaimSnapshot> snapshots()
@@ -860,204 +821,40 @@ final class FabricClaimFileStore
         }
     }
 
-    private static final class ClaimRecord
+    private static final class ClaimReadResult
     {
-        private @Nullable Long id;
-        private @Nullable BoundaryLocation lesser;
-        private @Nullable BoundaryLocation greater;
-        private @Nullable String owner;
-        private @Nullable Long parentId;
-        private boolean threeDimensional;
-        private @NotNull List<String> builders = Collections.emptyList();
-        private @NotNull List<String> containers = Collections.emptyList();
-        private @NotNull List<String> accessors = Collections.emptyList();
-        private @NotNull List<String> managers = Collections.emptyList();
-        private final @NotNull List<ClaimRecord> children = new ArrayList<>();
-    }
+        private final @NotNull List<ClaimDocument> documents;
+        private final boolean needsNormalization;
 
-    private static final class LoadedClaim
-    {
-        private final @NotNull ClaimSnapshot snapshot;
-        private final @NotNull ClaimTrustSnapshot trust;
-
-        private LoadedClaim(@NotNull ClaimSnapshot snapshot, @NotNull ClaimTrustSnapshot trust)
+        private ClaimReadResult(@NotNull List<ClaimDocument> documents, boolean needsNormalization)
         {
-            this.snapshot = snapshot;
-            this.trust = trust;
+            this.documents = documents;
+            this.needsNormalization = needsNormalization;
         }
 
-        private @NotNull ClaimSnapshot snapshot()
+        private @NotNull List<ClaimDocument> documents()
         {
-            return this.snapshot;
+            return this.documents;
         }
 
-        private @NotNull ClaimTrustSnapshot trust()
+        private boolean needsNormalization()
         {
-            return this.trust;
+            return this.needsNormalization;
         }
     }
 
-    private static final class ParsedClaim
+    private static final class SchemaState
     {
-        private final @NotNull ClaimRecord record;
-        private final int nextIndex;
+        private final @Nullable Integer version;
 
-        private ParsedClaim(@NotNull ClaimRecord record, int nextIndex)
+        private SchemaState(@Nullable Integer version)
         {
-            this.record = record;
-            this.nextIndex = nextIndex;
+            this.version = version;
         }
 
-        private @NotNull ClaimRecord record()
+        private @Nullable Integer version()
         {
-            return this.record;
-        }
-
-        private int nextIndex()
-        {
-            return this.nextIndex;
-        }
-    }
-
-    private static final class ListRead
-    {
-        private final @NotNull List<String> values;
-        private final int nextIndex;
-
-        private ListRead(@NotNull List<String> values, int nextIndex)
-        {
-            this.values = values;
-            this.nextIndex = nextIndex;
-        }
-
-        private @NotNull List<String> values()
-        {
-            return this.values;
-        }
-
-        private int nextIndex()
-        {
-            return this.nextIndex;
-        }
-    }
-
-    private static final class ChildrenRead
-    {
-        private final @NotNull List<ClaimRecord> children;
-        private final int nextIndex;
-
-        private ChildrenRead(@NotNull List<ClaimRecord> children, int nextIndex)
-        {
-            this.children = children;
-            this.nextIndex = nextIndex;
-        }
-
-        private @NotNull List<ClaimRecord> children()
-        {
-            return this.children;
-        }
-
-        private int nextIndex()
-        {
-            return this.nextIndex;
-        }
-    }
-
-    private static final class KeyValue
-    {
-        private final @NotNull String key;
-        private final @NotNull String value;
-
-        private KeyValue(@NotNull String key, @NotNull String value)
-        {
-            this.key = key;
-            this.value = value;
-        }
-
-        private @NotNull String key()
-        {
-            return this.key;
-        }
-
-        private @NotNull String value()
-        {
-            return this.value;
-        }
-    }
-
-    private static final class BoundaryLocation
-    {
-        private final @NotNull String world;
-        private final int x;
-        private final int y;
-        private final int z;
-
-        private BoundaryLocation(@NotNull String world, int x, int y, int z)
-        {
-            this.world = world;
-            this.x = x;
-            this.y = y;
-            this.z = z;
-        }
-
-        private @NotNull String world()
-        {
-            return this.world;
-        }
-
-        private int x()
-        {
-            return this.x;
-        }
-
-        private int y()
-        {
-            return this.y;
-        }
-
-        private int z()
-        {
-            return this.z;
-        }
-    }
-
-    private static final class TrustLists
-    {
-        private final @NotNull List<String> builders;
-        private final @NotNull List<String> containers;
-        private final @NotNull List<String> accessors;
-        private final @NotNull List<String> managers;
-
-        private TrustLists(
-                @NotNull List<String> builders,
-                @NotNull List<String> containers,
-                @NotNull List<String> accessors,
-                @NotNull List<String> managers)
-        {
-            this.builders = builders;
-            this.containers = containers;
-            this.accessors = accessors;
-            this.managers = managers;
-        }
-
-        private @NotNull List<String> builders()
-        {
-            return this.builders;
-        }
-
-        private @NotNull List<String> containers()
-        {
-            return this.containers;
-        }
-
-        private @NotNull List<String> accessors()
-        {
-            return this.accessors;
-        }
-
-        private @NotNull List<String> managers()
-        {
-            return this.managers;
+            return this.version;
         }
     }
 }

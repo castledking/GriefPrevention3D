@@ -1,14 +1,14 @@
 package com.griefprevention.fabric;
 
 import com.griefprevention.claims.ClaimRepository;
-import net.fabricmc.api.ModInitializer;
+import com.griefprevention.fabric.bootstrap.FabricPlatformAdapter;
 import net.fabricmc.loader.api.FabricLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.file.Path;
 
-public final class GriefPreventionFabric implements ModInitializer
+public final class GriefPreventionFabric implements FabricPlatformAdapter
 {
     public static final String MOD_ID = "griefprevention3d";
     private static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
@@ -18,11 +18,15 @@ public final class GriefPreventionFabric implements ModInitializer
     @Override
     public void onInitialize()
     {
-        Path dataFolder = FabricLoader.getInstance()
-                .getConfigDir()
-                .resolve("GriefPreventionData");
+        FabricLoader loader = FabricLoader.getInstance();
+        Path dataFolder = FabricDataFolder.resolveSharedDataFolder(
+                loader.getGameDir(),
+                loader.getConfigDir(),
+                LOGGER
+        );
         FabricDataFolder.ensureDefaults(dataFolder, LOGGER);
         FabricClaimRepository claims = new FabricClaimRepository(dataFolder, LOGGER);
+        FabricExplosionProtection.install(dataFolder.resolve("config.yml"), claims);
         claimRepository = claims;
         FabricFakeBlockVisualization visualization = new FabricFakeBlockVisualization();
         visualization.register();

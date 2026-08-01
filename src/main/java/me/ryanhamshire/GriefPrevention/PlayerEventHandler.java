@@ -1541,14 +1541,6 @@ public class PlayerEventHandler implements Listener {
                     }
                 }
             }
-            // world repair code for a now-fixed GP bug
-            else {
-                // ensure this entity can be tamed by players
-                tameable.setOwner(null);
-                if (tameable instanceof InventoryHolder) {
-                    ((InventoryHolder) tameable).getInventory().clear();
-                }
-            }
         }
 
         // don't allow interaction with item frames or armor stands in claimed areas

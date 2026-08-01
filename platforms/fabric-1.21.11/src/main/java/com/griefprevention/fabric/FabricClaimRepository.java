@@ -6,6 +6,7 @@ import com.griefprevention.claims.ClaimSnapshot;
 import com.griefprevention.claims.ClaimSnapshotIndex;
 import com.griefprevention.claims.ClaimTrustLevel;
 import com.griefprevention.claims.ClaimTrustSnapshot;
+import com.griefprevention.persistence.ClaimDocument;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -28,10 +29,10 @@ import java.util.UUID;
 public final class FabricClaimRepository implements ClaimRepository
 {
     private final ClaimSnapshotIndex claimIndex = new ClaimSnapshotIndex();
-    private final Map<Long, ClaimTrustSnapshot> trustByClaimId = new LinkedHashMap<>();
+    private final Map<Long, ClaimDocument> documentsByClaimId = new LinkedHashMap<>();
     private final Path dataFolder;
     private final Logger logger;
-    private long nextClaimId = 1L;
+    private long nextClaimId;
 
     FabricClaimRepository(@NotNull Path dataFolder, @NotNull Logger logger)
     {
@@ -44,8 +45,11 @@ public final class FabricClaimRepository implements ClaimRepository
     {
         FabricClaimFileStore.LoadedClaims loaded = FabricClaimFileStore.load(this.dataFolder, logger);
         this.claimIndex.rebuild(loaded.snapshots());
-        this.trustByClaimId.clear();
-        this.trustByClaimId.putAll(loaded.trustByClaimId());
+        this.documentsByClaimId.clear();
+        for (ClaimDocument document : loaded.documents())
+        {
+            this.documentsByClaimId.put(document.snapshot().id(), document);
+        }
         this.nextClaimId = loaded.nextClaimId();
         logger.info("Loaded {} native Fabric claims from {}.", loaded.snapshots().size(), this.dataFolder);
         return loaded.snapshots().size();
@@ -116,15 +120,13 @@ public final class FabricClaimRepository implements ClaimRepository
             }
         }
 
-        List<ClaimSnapshot> snapshots = mutableSnapshots();
-        Map<Long, ClaimTrustSnapshot> trust = mutableTrust();
-        snapshots.add(snapshot);
-        trust.put(snapshot.id(), ClaimTrustSnapshot.empty(ownerId));
+        List<ClaimDocument> documents = mutableDocuments();
+        documents.add(ClaimDocument.create(snapshot, System.currentTimeMillis()));
         long previousNextClaimId = this.nextClaimId;
         this.nextClaimId = Math.max(this.nextClaimId + 1L, snapshot.id() + 1L);
         try
         {
-            replaceAndSave(snapshots, trust);
+            replaceAndSave(documents);
         }
         catch (IOException e)
         {
@@ -177,17 +179,18 @@ public final class FabricClaimRepository implements ClaimRepository
             }
         }
 
-        List<ClaimSnapshot> snapshots = mutableSnapshots();
-        for (int i = 0; i < snapshots.size(); i++)
+        ClaimDocument existingDocument = this.documentsByClaimId.get(claimId);
+        if (existingDocument == null)
         {
-            if (Long.valueOf(claimId).equals(snapshots.get(i).id()))
-            {
-                snapshots.set(i, updated);
-                break;
-            }
+            return UpdateClaimResult.missingResult();
         }
 
-        replaceAndSave(snapshots, mutableTrust());
+        List<ClaimDocument> documents = mutableDocuments();
+        replaceDocument(
+                documents,
+                existingDocument.withSnapshot(updated, System.currentTimeMillis())
+        );
+        replaceAndSave(documents);
         ClaimModifiedCallback.EVENT.invoker().onClaimModified(existing, updated, player);
         return UpdateClaimResult.updated(updated);
     }
@@ -201,11 +204,10 @@ public final class FabricClaimRepository implements ClaimRepository
             return null;
         }
 
-        List<ClaimSnapshot> snapshots = mutableSnapshots();
-        snapshots.removeIf(snapshot -> claim.id().equals(snapshot.id()));
-        Map<Long, ClaimTrustSnapshot> trust = mutableTrust();
-        trust.remove(claim.id());
-        replaceAndSave(snapshots, trust);
+        List<ClaimDocument> documents = mutableDocuments();
+        Set<Long> deletedIds = descendantIds(claim.id(), documents);
+        documents.removeIf(document -> deletedIds.contains(document.snapshot().id()));
+        replaceAndSave(documents);
         ClaimDeletedCallback.EVENT.invoker().onClaimDeleted(claim, player);
         return claim;
     }
@@ -246,9 +248,16 @@ public final class FabricClaimRepository implements ClaimRepository
         }
         removeDenyEntries(denies, normalized);
 
-        Map<Long, ClaimTrustSnapshot> trust = mutableTrust();
-        trust.put(claim.id(), new ClaimTrustSnapshot(claim.ownerId(), permissions, managers, denies));
-        replaceAndSave(mutableSnapshots(), trust);
+        ClaimDocument document = this.documentsByClaimId.get(claim.id());
+        if (document == null)
+        {
+            return null;
+        }
+        List<ClaimDocument> documents = mutableDocuments();
+        replaceDocument(documents, document.withTrust(
+                new ClaimTrustSnapshot(claim.ownerId(), permissions, managers, denies)
+        ));
+        replaceAndSave(documents);
         return claim;
     }
 
@@ -273,9 +282,16 @@ public final class FabricClaimRepository implements ClaimRepository
         managers.remove(normalized);
         removeDenyEntries(denies, normalized);
 
-        Map<Long, ClaimTrustSnapshot> trust = mutableTrust();
-        trust.put(claim.id(), new ClaimTrustSnapshot(claim.ownerId(), permissions, managers, denies));
-        replaceAndSave(mutableSnapshots(), trust);
+        ClaimDocument document = this.documentsByClaimId.get(claim.id());
+        if (document == null)
+        {
+            return null;
+        }
+        List<ClaimDocument> documents = mutableDocuments();
+        replaceDocument(documents, document.withTrust(
+                new ClaimTrustSnapshot(claim.ownerId(), permissions, managers, denies)
+        ));
+        replaceAndSave(documents);
         return claim;
     }
 
@@ -287,7 +303,13 @@ public final class FabricClaimRepository implements ClaimRepository
     synchronized @Nullable ClaimTrustSnapshot trustFor(@NotNull ClaimSnapshot claim)
     {
         Long id = claim.id();
-        return id == null ? null : this.trustByClaimId.get(id);
+        ClaimDocument document = id == null ? null : this.documentsByClaimId.get(id);
+        return document == null ? null : document.trust();
+    }
+
+    synchronized @Nullable ClaimDocument documentFor(long claimId)
+    {
+        return this.documentsByClaimId.get(claimId);
     }
 
     @NotNull String worldKey(@NotNull ServerLevel level)
@@ -309,25 +331,66 @@ public final class FabricClaimRepository implements ClaimRepository
     }
 
     private void replaceAndSave(
-            @NotNull List<ClaimSnapshot> snapshots,
-            @NotNull Map<Long, ClaimTrustSnapshot> trust)
+            @NotNull List<ClaimDocument> documents)
             throws IOException
     {
-        FabricClaimFileStore.save(this.dataFolder, snapshots, trust, this.nextClaimId);
+        FabricClaimFileStore.save(this.dataFolder, documents, this.nextClaimId);
+        List<ClaimSnapshot> snapshots = new ArrayList<>();
+        Map<Long, ClaimDocument> byId = new LinkedHashMap<>();
+        for (ClaimDocument document : documents)
+        {
+            snapshots.add(document.snapshot());
+            byId.put(document.snapshot().id(), document);
+        }
         this.claimIndex.rebuild(snapshots);
-        this.trustByClaimId.clear();
-        this.trustByClaimId.putAll(trust);
+        this.documentsByClaimId.clear();
+        this.documentsByClaimId.putAll(byId);
         this.logger.info("Saved {} native Fabric claims to {}.", snapshots.size(), this.dataFolder);
     }
 
-    private @NotNull List<ClaimSnapshot> mutableSnapshots()
+    private @NotNull List<ClaimDocument> mutableDocuments()
     {
-        return new ArrayList<>(this.claimIndex.snapshots());
+        return new ArrayList<>(this.documentsByClaimId.values());
     }
 
-    private @NotNull Map<Long, ClaimTrustSnapshot> mutableTrust()
+    private static void replaceDocument(
+            @NotNull List<ClaimDocument> documents,
+            @NotNull ClaimDocument updated)
     {
-        return new LinkedHashMap<>(this.trustByClaimId);
+        Long updatedId = updated.snapshot().id();
+        for (int i = 0; i < documents.size(); i++)
+        {
+            if (updatedId.equals(documents.get(i).snapshot().id()))
+            {
+                documents.set(i, updated);
+                return;
+            }
+        }
+        throw new IllegalStateException("Missing claim document " + updatedId + ".");
+    }
+
+    private static @NotNull Set<Long> descendantIds(
+            @NotNull Long rootId,
+            @NotNull Collection<ClaimDocument> documents)
+    {
+        Set<Long> result = new LinkedHashSet<>();
+        result.add(rootId);
+        boolean changed;
+        do
+        {
+            changed = false;
+            for (ClaimDocument document : documents)
+            {
+                Long parentId = document.snapshot().parentId();
+                Long id = document.snapshot().id();
+                if (parentId != null && result.contains(parentId) && result.add(id))
+                {
+                    changed = true;
+                }
+            }
+        }
+        while (changed);
+        return result;
     }
 
     private @NotNull ClaimTrustSnapshot trustForOrEmpty(@NotNull ClaimSnapshot claim)

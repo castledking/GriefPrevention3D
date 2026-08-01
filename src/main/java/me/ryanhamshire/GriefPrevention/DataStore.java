@@ -18,6 +18,8 @@
 
 package me.ryanhamshire.GriefPrevention;
 
+import com.griefprevention.persistence.ClaimDataSchema;
+
 import com.google.common.io.Files;
 import com.griefprevention.claims.ClaimSnapshot;
 import com.griefprevention.claims.ClaimSnapshotIndex;
@@ -107,7 +109,7 @@ public abstract class DataStore {
     final static String bannedWordsFilePath = dataLayerFolderPath + File.separator + "bannedWords.txt";
 
     // the latest version of the data schema implemented here
-    protected static final int latestSchemaVersion = 11;
+    protected static final int latestSchemaVersion = ClaimDataSchema.CURRENT_VERSION;
 
     // reading and writing the schema version to the data store
     abstract int getSchemaVersionFromStorage();

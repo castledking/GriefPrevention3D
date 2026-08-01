@@ -932,6 +932,27 @@ public final class OrthogonalPolygon
         return compressed;
     }
 
+    @Override
+    public boolean equals(Object other)
+    {
+        if (this == other) return true;
+        if (!(other instanceof OrthogonalPolygon)) return false;
+        OrthogonalPolygon that = (OrthogonalPolygon) other;
+        return this.corners.equals(that.corners);
+    }
+
+    @Override
+    public int hashCode()
+    {
+        return this.corners.hashCode();
+    }
+
+    @Override
+    public String toString()
+    {
+        return "OrthogonalPolygon[corners=" + this.corners + "]";
+    }
+
     private static final class ContourVertex
     {
         private final int x;
