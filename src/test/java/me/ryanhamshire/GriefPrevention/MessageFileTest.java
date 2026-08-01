@@ -82,6 +82,17 @@ class MessageFileTest {
     }
 
     @Test
+    void ignoresExtraSpacesBetweenTheColonAndTheValue() throws IOException {
+        // some hand-edited locale files line their values up in a column
+        MessageFile file = parse("Messages:\n"
+                + "  Padded:   Place a chest to claim land.\n"
+                + "  PaddedQuoted:   '  leading spaces kept inside quotes'\n");
+
+        assertEquals("Place a chest to claim land.", file.getString("Messages.Padded", "missing"));
+        assertEquals("  leading spaces kept inside quotes", file.getString("Messages.PaddedQuoted", "missing"));
+    }
+
+    @Test
     void indentedCommentEndsAValueButNotAWrappedQuotedOne() throws IOException {
         MessageFile file = parse("Messages:\n"
                 + "  Plain: a plain value\n"

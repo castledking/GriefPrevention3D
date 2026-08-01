@@ -244,7 +244,8 @@ final class MessageFile
 
             int indent = matcher.group(1).length();
             String key = matcher.group(2);
-            String value = matcher.group(3);
+            // extra spaces after the colon are separator, not text - YAML drops them too
+            String value = stripLeadingWhitespace(matcher.group(3));
 
             while (!pathIndents.isEmpty() && pathIndents.get(pathIndents.size() - 1) >= indent)
             {
@@ -411,6 +412,18 @@ final class MessageFile
             builder.append(' ');
         }
         return builder.toString();
+    }
+
+    private static @Nullable String stripLeadingWhitespace(@Nullable String value)
+    {
+        if (value == null) return null;
+
+        int start = 0;
+        while (start < value.length() && (value.charAt(start) == ' ' || value.charAt(start) == '\t'))
+        {
+            start++;
+        }
+        return value.substring(start);
     }
 
     private static @NotNull String stripTrailingWhitespace(@NotNull String value)
