@@ -6268,23 +6268,31 @@ public class GriefPrevention extends JavaPlugin {
                 }
 
                 if (playerData.claimMerging != null && !currentClaim.getID().equals(playerData.claimMerging.getID())) {
-                    // Standing in second claim - resolve edge for shaped claims
-                    if (currentClaim.isShaped()) {
-                        Integer secondEdgeIndex = resolveBoundarySegmentForPlayer(
-                            currentClaim.getBoundaryPolygon(),
-                            player.getLocation()
-                        );
-                        if (secondEdgeIndex != null) {
-                            playerData.mergeSecondEdgeIndex = secondEdgeIndex;
-                            playerData.mergeSecondDepthPoint = new OrthogonalPoint2i(
-                                player.getLocation().getBlockX(),
-                                player.getLocation().getBlockZ()
-                            );
-                        }
-                    } else {
-                        playerData.mergeSecondEdgeIndex = null;
-                        playerData.mergeSecondDepthPoint = null;
+                    Supplier<String> noEditReason = currentClaim.checkPermission(player, ClaimPermission.Edit, null);
+                    if (noEditReason != null) {
+                        GriefPrevention.sendMessage(player, TextMode.Err, noEditReason.get());
+                        return true;
                     }
+
+                    // Standing in the second shaped claim: the edge the player faces and how
+                    // deep they stand inside it size the corridor. Rectangles use no nib data.
+                    boolean requiresNib = requiresMergeNib(currentClaim);
+                    Integer secondEdgeIndex = requiresNib
+                        ? resolveBoundarySegmentForPlayer(currentClaim.getBoundaryPolygon(), player.getLocation())
+                        : null;
+                    if (secondEdgeIndex == null && requiresNib) {
+                        GriefPrevention.sendMessage(
+                            player,
+                            TextMode.Err,
+                            "Stand in the shaped section you want to merge and face its boundary."
+                        );
+                        return true;
+                    }
+                    playerData.mergeSecondEdgeIndex = secondEdgeIndex;
+                    playerData.mergeSecondDepthPoint = secondEdgeIndex == null ? null : new OrthogonalPoint2i(
+                        player.getLocation().getBlockX(),
+                        player.getLocation().getBlockZ()
+                    );
                     this.dataStore.mergeClaims(
                         player,
                         playerData,
@@ -6302,28 +6310,23 @@ public class GriefPrevention extends JavaPlugin {
                         GriefPrevention.sendMessage(player, TextMode.Err, noEditReason.get());
                         return true;
                     }
-                    if (currentClaim.isShaped()) {
-                        Integer edgeIndex = resolveBoundarySegmentForPlayer(
-                            currentClaim.getBoundaryPolygon(),
-                            player.getLocation()
+                    boolean requiresNib = requiresMergeNib(currentClaim);
+                    Integer edgeIndex = requiresNib
+                        ? resolveBoundarySegmentForPlayer(currentClaim.getBoundaryPolygon(), player.getLocation())
+                        : null;
+                    if (edgeIndex == null && requiresNib) {
+                        GriefPrevention.sendMessage(
+                            player,
+                            TextMode.Err,
+                            "Stand in the shaped section you want to merge and face its boundary."
                         );
-                        if (edgeIndex == null) {
-                            GriefPrevention.sendMessage(
-                                player,
-                                TextMode.Err,
-                                "Stand in the shaped section you want to merge and face its boundary."
-                            );
-                            return true;
-                        }
-                        playerData.mergeEdgeIndex = edgeIndex;
-                        playerData.mergeFirstDepthPoint = new OrthogonalPoint2i(
-                            player.getLocation().getBlockX(),
-                            player.getLocation().getBlockZ()
-                        );
-                    } else {
-                        playerData.mergeEdgeIndex = null;
-                        playerData.mergeFirstDepthPoint = null;
+                        return true;
                     }
+                    playerData.mergeEdgeIndex = edgeIndex;
+                    playerData.mergeFirstDepthPoint = edgeIndex == null ? null : new OrthogonalPoint2i(
+                        player.getLocation().getBlockX(),
+                        player.getLocation().getBlockZ()
+                    );
                     playerData.mergeSecondEdgeIndex = null;
                     playerData.mergeSecondDepthPoint = null;
                     playerData.claimMerging = currentClaim;
@@ -6377,30 +6380,27 @@ public class GriefPrevention extends JavaPlugin {
                 return true;
             }
 
-            // For shaped claims, detect which edge/nib the player is standing in
-            if (currentClaim.isShaped()) {
-                Integer edgeIndex = resolveBoundarySegmentForPlayer(
-                    currentClaim.getBoundaryPolygon(),
-                    player.getLocation()
+            // Detect which edge/nib the player is standing in for shaped claims. Rectangles
+            // merge from their whole extent and deliberately carry no nib metadata.
+            boolean requiresNib = requiresMergeNib(currentClaim);
+            Integer edgeIndex = requiresNib
+                ? resolveBoundarySegmentForPlayer(currentClaim.getBoundaryPolygon(), player.getLocation())
+                : null;
+            if (edgeIndex == null && requiresNib) {
+                GriefPrevention.sendMessage(
+                    player,
+                    TextMode.Err,
+                    "Stand in the shaped section you want to merge and face its boundary."
                 );
-                if (edgeIndex == null) {
-                    GriefPrevention.sendMessage(
-                        player,
-                        TextMode.Err,
-                        "Stand in the shaped section you want to merge and face its boundary."
-                    );
-                    return true;
-                }
-                playerData.mergeEdgeIndex = edgeIndex;
-                playerData.mergeFirstDepthPoint = new OrthogonalPoint2i(
-                    player.getLocation().getBlockX(),
-                    player.getLocation().getBlockZ()
-                );
-            } else {
-                // For rectangular claims, no specific edge needed
-                playerData.mergeEdgeIndex = null;
-                playerData.mergeFirstDepthPoint = null;
+                return true;
             }
+            playerData.mergeEdgeIndex = edgeIndex;
+            playerData.mergeFirstDepthPoint = edgeIndex == null ? null : new OrthogonalPoint2i(
+                player.getLocation().getBlockX(),
+                player.getLocation().getBlockZ()
+            );
+            playerData.mergeSecondEdgeIndex = null;
+            playerData.mergeSecondDepthPoint = null;
 
             playerData.claimMerging = currentClaim;
             playerData.shovelMode = ShovelMode.Merge;
@@ -6541,6 +6541,10 @@ public class GriefPrevention extends JavaPlugin {
         return direction.getZ() >= 0
             ? nearestHorizontalEdge(polygon, playerLocation.getBlockX(), playerLocation.getZ(), true)
             : nearestHorizontalEdge(polygon, playerLocation.getBlockX(), playerLocation.getZ(), false);
+    }
+
+    private boolean requiresMergeNib(@NotNull Claim claim) {
+        return claim.getBoundaryPolygon().corners().size() != 4;
     }
 
     private @NotNull OrthogonalDirection resolveExpansionDirectionForPlayer(

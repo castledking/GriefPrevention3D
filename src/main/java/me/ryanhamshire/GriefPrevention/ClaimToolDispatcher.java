@@ -2165,21 +2165,22 @@ final class ClaimToolDispatcher
                 return;
             }
 
-            // For shaped claims, detect which edge/nib was clicked
-            if (clickedClaim.isShaped()) {
-                OrthogonalPoint2i point = new OrthogonalPoint2i(clickedBlock.getX(), clickedBlock.getZ());
-                List<Integer> edgeMatches = clickedClaim.getBoundaryPolygon().edgeIndexesContainingInteriorPoint(point);
-                if (edgeMatches.size() != 1) {
-                    GriefPrevention.sendMessage(player, TextMode.Err, "Click on a claim boundary edge to select it for merging.");
-                    return;
-                }
-                playerData.mergeSecondEdgeIndex = edgeMatches.get(0);
-                playerData.mergeSecondDepthPoint = new OrthogonalPoint2i(
-                    player.getLocation().getBlockX(), player.getLocation().getBlockZ());
-            } else {
-                playerData.mergeSecondEdgeIndex = null;
-                playerData.mergeSecondDepthPoint = null;
+            // A shaped claim needs a selected nib. Rectangles deliberately carry no edge
+            // metadata because a rectangle pair always merges to its global bounding box.
+            boolean requiresNib = requiresMergeNib(clickedClaim);
+            Integer edgeIndex = requiresNib
+                    ? resolveClickedEdge(clickedClaim, clickedBlock)
+                    : null;
+            if (edgeIndex == null && requiresNib) {
+                GriefPrevention.sendMessage(player, TextMode.Err, "Click on a claim boundary edge to select it for merging.");
+                return;
             }
+            playerData.mergeEdgeIndex = edgeIndex;
+            playerData.mergeFirstDepthPoint = edgeIndex == null
+                    ? null
+                    : resolveMergeDepthPoint(player, clickedClaim, clickedBlock);
+            playerData.mergeSecondEdgeIndex = null;
+            playerData.mergeSecondDepthPoint = null;
 
             playerData.claimMerging = clickedClaim;
             BoundaryVisualization.visualizeClaim(player, clickedClaim,
@@ -2210,8 +2211,54 @@ final class ClaimToolDispatcher
             return;
         }
 
+        // Record the second shaped claim's nib so the corridor is sized from both ends.
+        boolean requiresNib = requiresMergeNib(clickedClaim);
+        Integer secondEdgeIndex = requiresNib
+                ? resolveClickedEdge(clickedClaim, clickedBlock)
+                : null;
+        if (secondEdgeIndex == null && requiresNib) {
+            GriefPrevention.sendMessage(player, TextMode.Err, "Click on a claim boundary edge to select it for merging.");
+            return;
+        }
+        playerData.mergeSecondEdgeIndex = secondEdgeIndex;
+        playerData.mergeSecondDepthPoint = secondEdgeIndex == null
+                ? null
+                : resolveMergeDepthPoint(player, clickedClaim, clickedBlock);
+
         // Perform the merge
         this.dataStore.mergeClaims(player, playerData, playerData.claimMerging, clickedClaim, playerData.mergeEdgeIndex);
+    }
+
+    /**
+     * The boundary edge a click landed on, or null when the click was on a corner or inside
+     * the claim rather than along one of its edges.
+     */
+    private @Nullable Integer resolveClickedEdge(@NotNull Claim claim, @NotNull Block clickedBlock) {
+        OrthogonalPoint2i point = new OrthogonalPoint2i(clickedBlock.getX(), clickedBlock.getZ());
+        List<Integer> edgeMatches = claim.getBoundaryPolygon().edgeIndexesContainingInteriorPoint(point);
+        return edgeMatches.size() == 1 ? edgeMatches.get(0) : null;
+    }
+
+    private boolean requiresMergeNib(@NotNull Claim claim) {
+        return claim.getBoundaryPolygon().corners().size() != 4;
+    }
+
+    /**
+     * How deep into the claim the merge should reach. The player's own position is the best
+     * signal, but when they are clicking a claim from outside it the clicked block is all we
+     * have to go on.
+     */
+    private @NotNull OrthogonalPoint2i resolveMergeDepthPoint(
+            @NotNull Player player,
+            @NotNull Claim claim,
+            @NotNull Block clickedBlock) {
+        OrthogonalPoint2i playerPoint = new OrthogonalPoint2i(
+                player.getLocation().getBlockX(), player.getLocation().getBlockZ());
+        if (claim.getBoundaryPolygon().containsCell(playerPoint.x(), playerPoint.z())) {
+            return playerPoint;
+        }
+
+        return new OrthogonalPoint2i(clickedBlock.getX(), clickedBlock.getZ());
     }
 
     private void handleShapedModeInteraction(@NotNull Player player, @NotNull PlayerData playerData, @NotNull Block clickedBlock) {

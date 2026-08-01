@@ -21,6 +21,7 @@ package me.ryanhamshire.GriefPrevention;
 import com.google.common.io.Files;
 import com.griefprevention.claims.ClaimSnapshot;
 import com.griefprevention.claims.ClaimSnapshotIndex;
+import com.griefprevention.geometry.MergeCorridor;
 import com.griefprevention.geometry.OrthogonalEdge2i;
 import com.griefprevention.geometry.OrthogonalPoint2i;
 import com.griefprevention.geometry.OrthogonalPolygon;
@@ -2026,122 +2027,25 @@ public abstract class DataStore {
         OrthogonalPolygon firstPolygon = firstPolygonOverride != null ? firstPolygonOverride : firstClaim.getBoundaryPolygon();
         OrthogonalPolygon secondPolygon = secondClaim.getBoundaryPolygon();
 
-        // Try to compute the proper polygon union.
-        // If the polygons are adjacent or overlapping, this will produce the correct merged shape.
-        // If they are disconnected, fall back to a bounding-box merge (which always works).
-        OrthogonalPolygon mergedPolygon = null;
-        try {
-            mergedPolygon = OrthogonalPolygon.union(firstPolygon, secondPolygon);
-        } catch (IllegalArgumentException e) {
-            // Polygons are disconnected (gap between claims after reshape).
-            // Build a combined occupied set from both polygons.
-            // If they are disconnected, also fill cells along the line between them
-            // to create a connected shape. This handles the cross-claim merge case
-            // where the reshape path extends through unclaimed land.
-            Set<OrthogonalPoint2i> occupied = new HashSet<>();
-            int uMinX = Math.min(firstPolygon.minX(), secondPolygon.minX());
-            int uMaxX = Math.max(firstPolygon.maxX(), secondPolygon.maxX());
-            int uMinZ = Math.min(firstPolygon.minZ(), secondPolygon.minZ());
-            int uMaxZ = Math.max(firstPolygon.maxZ(), secondPolygon.maxZ());
+        // A direct /mergeclaims of two rectangles is always their global bounding rectangle.
+        // Shaped claims instead keep their Manhattan route, widened to the depth-selected nibs.
+        OrthogonalPolygon mergedPolygon = buildCorridorMerge(
+                firstPolygon,
+                mergeEdgeIndex,
+                playerData.mergeFirstDepthPoint,
+                secondPolygon,
+                playerData.mergeSecondEdgeIndex,
+                playerData.mergeSecondDepthPoint,
+                preferredConnectionCells);
 
-            for (int x = uMinX; x <= uMaxX; x++) {
-                for (int z = uMinZ; z <= uMaxZ; z++) {
-                    OrthogonalPoint2i pt = new OrthogonalPoint2i(x, z);
-                    if (firstPolygon.containsCell(x, z) || secondPolygon.containsCell(x, z)) {
-                        occupied.add(pt);
-                    }
-                }
-            }
-
-            // Use nib-based global rectangle if shaped claim edge indices are available;
-            // otherwise fall back to Manhattan path between closest cells.
-            if (!occupied.isEmpty()) {
-                if (mergeEdgeIndex != null
-                        && playerData.mergeSecondEdgeIndex != null
-                        && playerData.mergeFirstDepthPoint != null
-                        && playerData.mergeSecondDepthPoint != null
-                        && mergeEdgeIndex < firstPolygon.edges().size()
-                        && playerData.mergeSecondEdgeIndex < secondPolygon.edges().size()) {
-                    // Build the global nib rectangle that connects both claims
-                    // at the player-selected depths from each edge.
-                    OrthogonalPolygon nibRect = buildNibRectangle(
-                            firstPolygon, mergeEdgeIndex, playerData.mergeFirstDepthPoint,
-                            secondPolygon, playerData.mergeSecondEdgeIndex, playerData.mergeSecondDepthPoint);
-                    for (int x = nibRect.minX(); x <= nibRect.maxX(); x++) {
-                        for (int z = nibRect.minZ(); z <= nibRect.maxZ(); z++) {
-                            occupied.add(new OrthogonalPoint2i(x, z));
-                        }
-                    }
-                } else {
-                    // Fall back: Manhattan path between closest cells
-                    Set<OrthogonalPoint2i> firstCells = new HashSet<>();
-                    Set<OrthogonalPoint2i> secondCells = new HashSet<>();
-                    for (OrthogonalPoint2i pt : occupied) {
-                        if (firstPolygon.containsCell(pt.x(), pt.z())) {
-                            firstCells.add(pt);
-                        }
-                        if (secondPolygon.containsCell(pt.x(), pt.z())) {
-                            secondCells.add(pt);
-                        }
-                    }
-
-                    int[] best = null;
-                    Set<OrthogonalPoint2i> connectionOrigins;
-                    if (preferredConnectionCells != null && !preferredConnectionCells.isEmpty()) {
-                        connectionOrigins = new HashSet<>();
-                        for (OrthogonalPoint2i pc : preferredConnectionCells) {
-                            if (firstCells.contains(pc)) {
-                                connectionOrigins.add(pc);
-                            }
-                        }
-                        if (connectionOrigins.isEmpty()) {
-                            connectionOrigins = firstCells;
-                        }
-                    } else {
-                        connectionOrigins = firstCells;
-                    }
-                    for (OrthogonalPoint2i c1 : connectionOrigins) {
-                        for (OrthogonalPoint2i c2 : secondCells) {
-                            int dist = Math.abs(c1.x() - c2.x()) + Math.abs(c1.z() - c2.z());
-                            if (best == null || dist < best[0]) {
-                                best = new int[]{dist, c1.x(), c1.z(), c2.x(), c2.z()};
-                            }
-                        }
-                    }
-
-                    if (best != null) {
-                        int cx = best[1], cz = best[2];
-                        int tx = best[3], tz = best[4];
-                        while (cx != tx || cz != tz) {
-                            occupied.add(new OrthogonalPoint2i(cx, cz));
-                            occupied.add(new OrthogonalPoint2i(cx + 1, cz));
-                            occupied.add(new OrthogonalPoint2i(cx - 1, cz));
-                            occupied.add(new OrthogonalPoint2i(cx, cz + 1));
-                            occupied.add(new OrthogonalPoint2i(cx, cz - 1));
-                            if (cx < tx) cx++;
-                            else if (cx > tx) cx--;
-                            else if (cz < tz) cz++;
-                            else if (cz > tz) cz--;
-                        }
-                        occupied.add(new OrthogonalPoint2i(tx, tz));
-                        occupied.add(new OrthogonalPoint2i(tx + 1, tz));
-                        occupied.add(new OrthogonalPoint2i(tx - 1, tz));
-                        occupied.add(new OrthogonalPoint2i(tx, tz + 1));
-                        occupied.add(new OrthogonalPoint2i(tx, tz - 1));
-                    }
-                }
-            }
-
-            if (!occupied.isEmpty()) {
-                try {
-                    mergedPolygon = OrthogonalPolygon.fromOccupiedPoints(occupied);
-                } catch (IllegalArgumentException e2) {
-                    // Contour tracing failed — fall back to bounding box
-                }
-            }
-
-            if (mergedPolygon == null) {
-                // Final fallback: bounding box
+        // Adjacent claims, reshape-driven merges, and merges without enough nib information use
+        // the existing polygon union behavior.
+        if (mergedPolygon == null) {
+            try {
+                mergedPolygon = OrthogonalPolygon.union(firstPolygon, secondPolygon);
+            } catch (IllegalArgumentException e) {
+                // Contour tracing failed. Fall back to the bounding box of both claims,
+                // which always produces a valid shape.
                 int minX = Math.min(firstClaim.getLesserBoundaryCorner().getBlockX(), secondClaim.getLesserBoundaryCorner().getBlockX());
                 int maxX = Math.max(firstClaim.getGreaterBoundaryCorner().getBlockX(), secondClaim.getGreaterBoundaryCorner().getBlockX());
                 int minZ = Math.min(firstClaim.getLesserBoundaryCorner().getBlockZ(), secondClaim.getLesserBoundaryCorner().getBlockZ());
@@ -2216,24 +2120,14 @@ public abstract class DataStore {
             }
         }
 
-        // Check for overlaps with other claims
-        Set<Claim> nearbyClaims = getNearbyClaims(firstClaim.getLesserBoundaryCorner());
-        List<Claim> overlappingClaims = new ArrayList<>();
-        for (Claim nearby : nearbyClaims) {
-            if (nearby.getID().equals(firstClaim.getID()) || nearby.getID().equals(secondClaim.getID())) {
-                continue;
-            }
-
-            // Check if merged claim would overlap with this nearby claim
-            // Skip if the claim is owned by the same player (they can merge their own claims)
-            if (nearby.getOwnerID() != null && nearby.getOwnerID().equals(firstClaim.getOwnerID())) {
-                continue;
-            }
-
-            if (polygonsOverlap(mergedPolygon, nearby.getBoundaryPolygon())) {
-                overlappingClaims.add(nearby);
-            }
-        }
+        // Check for overlaps with other claims. The merged shape can reach well past either
+        // original claim, so scan everything under the merged shape rather than only the
+        // area around the first claim.
+        List<Claim> overlappingClaims = findMergeConflicts(
+                mergedPolygon,
+                getClaimsUnder(firstClaim.getLesserBoundaryCorner().getWorld(), mergedPolygon),
+                firstClaim,
+                secondClaim);
 
         if (!overlappingClaims.isEmpty()) {
             GriefPrevention.sendMessage(player, TextMode.Err, Messages.MergeOverlapConflict);
@@ -2298,30 +2192,194 @@ public abstract class DataStore {
     }
 
     public OrthogonalPolygon unionPolygons(OrthogonalPolygon first, OrthogonalPolygon second) {
-        // Delegate to OrthogonalPolygon.union which handles all cases correctly,
-        // including disconnected polygons (which throws, handled by caller).
+        // Delegate to OrthogonalPolygon.union, including its existing disconnected-shape route.
         return OrthogonalPolygon.union(first, second);
     }
 
+    /**
+     * Choose the geometry added between claims during a direct merge.
+     * Rectangular pairs always become one global rectangle. Shaped pairs retain a Manhattan
+     * route, with each leg widened to the depth-selected nib at that end.
+     *
+     * @return the direct-merge shape, or null when the existing union/reshape route should handle
+     *         the claims instead
+     */
+    static @Nullable OrthogonalPolygon buildCorridorMerge(
+            @NotNull OrthogonalPolygon firstPolygon,
+            @Nullable Integer firstEdgeIndex,
+            @Nullable OrthogonalPoint2i firstDepthPoint,
+            @NotNull OrthogonalPolygon secondPolygon,
+            @Nullable Integer secondEdgeIndex,
+            @Nullable OrthogonalPoint2i secondDepthPoint,
+            @Nullable Set<OrthogonalPoint2i> preferredConnectionCells) {
+        // A reshape path already describes how the player wants the claims joined.
+        if (preferredConnectionCells != null && !preferredConnectionCells.isEmpty()) {
+            return null;
+        }
 
-    private boolean polygonsOverlap(OrthogonalPolygon polygon1, OrthogonalPolygon polygon2) {
+        // This is deliberately before the connectivity check. Adjacent, staggered rectangles
+        // can otherwise union into an L, but /mergeclaims promises a rectangle for this pair.
+        if (isRectangle(firstPolygon) && isRectangle(secondPolygon)) {
+            return OrthogonalPolygon.fromRectangle(
+                    Math.min(firstPolygon.minX(), secondPolygon.minX()),
+                    Math.min(firstPolygon.minZ(), secondPolygon.minZ()),
+                    Math.max(firstPolygon.maxX(), secondPolygon.maxX()),
+                    Math.max(firstPolygon.maxZ(), secondPolygon.maxZ()));
+        }
+
+        Set<OrthogonalPoint2i> occupied = collectCells(firstPolygon, secondPolygon);
+        if (occupied.isEmpty() || isConnected(occupied)) {
+            return null;
+        }
+
+        List<MergeCorridor.Extent> corridor = MergeCorridor.connect(
+                firstPolygon, firstEdgeIndex, firstDepthPoint,
+                secondPolygon, secondEdgeIndex, secondDepthPoint);
+        if (corridor == null || corridor.isEmpty()) {
+            return null;
+        }
+
+        for (MergeCorridor.Extent leg : corridor) {
+            for (int x = leg.minX(); x <= leg.maxX(); x++) {
+                for (int z = leg.minZ(); z <= leg.maxZ(); z++) {
+                    occupied.add(new OrthogonalPoint2i(x, z));
+                }
+            }
+        }
+
+        try {
+            return OrthogonalPolygon.fromOccupiedPoints(occupied);
+        } catch (IllegalArgumentException e) {
+            // Contour tracing failed - let the caller fall back to a plain union.
+            return null;
+        }
+    }
+
+    private static boolean isRectangle(@NotNull OrthogonalPolygon polygon) {
+        return polygon.corners().size() == 4;
+    }
+
+    private static @NotNull Set<OrthogonalPoint2i> collectCells(
+            @NotNull OrthogonalPolygon first,
+            @NotNull OrthogonalPolygon second) {
+        Set<OrthogonalPoint2i> occupied = new HashSet<>();
+        int minX = Math.min(first.minX(), second.minX());
+        int maxX = Math.max(first.maxX(), second.maxX());
+        int minZ = Math.min(first.minZ(), second.minZ());
+        int maxZ = Math.max(first.maxZ(), second.maxZ());
+
+        for (int x = minX; x <= maxX; x++) {
+            for (int z = minZ; z <= maxZ; z++) {
+                if (first.containsCell(x, z) || second.containsCell(x, z)) {
+                    occupied.add(new OrthogonalPoint2i(x, z));
+                }
+            }
+        }
+
+        return occupied;
+    }
+
+    private static boolean isConnected(@NotNull Set<OrthogonalPoint2i> occupied) {
+        Set<OrthogonalPoint2i> unvisited = new HashSet<>(occupied);
+        java.util.Deque<OrthogonalPoint2i> queue = new java.util.ArrayDeque<>();
+        OrthogonalPoint2i start = unvisited.iterator().next();
+        unvisited.remove(start);
+        queue.add(start);
+
+        while (!queue.isEmpty()) {
+            OrthogonalPoint2i cell = queue.poll();
+            int[][] neighbors = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
+            for (int[] neighbor : neighbors) {
+                OrthogonalPoint2i next = new OrthogonalPoint2i(cell.x() + neighbor[0], cell.z() + neighbor[1]);
+                if (unvisited.remove(next)) {
+                    queue.add(next);
+                }
+            }
+        }
+
+        return unvisited.isEmpty();
+    }
+
+    /**
+     * All top-level claims whose bounding box could touch the given shape.
+     */
+    @NotNull Set<Claim> getClaimsUnder(@Nullable World world, @NotNull OrthogonalPolygon polygon) {
+        if (world == null) return Collections.emptySet();
+
+        // Y is irrelevant here - chunk lookup only uses the horizontal bounds.
+        return getChunkClaims(world, new BoundingBox(
+                polygon.minX(), 0, polygon.minZ(),
+                polygon.maxX(), 0, polygon.maxZ()));
+    }
+
+    /**
+     * Find the claims a merged shape would overlap. Claims belonging to the merging owner count
+     * as conflicts too - swallowing one of the owner's other claims would leave two claims
+     * sitting on the same blocks.
+     *
+     * @param mergedPolygon the shape the merge would produce
+     * @param candidates the claims to test against
+     * @param firstClaim the claim being expanded
+     * @param secondClaim the claim being absorbed
+     * @return the conflicting claims, empty when the merge is clear
+     */
+    static @NotNull List<Claim> findMergeConflicts(
+            @NotNull OrthogonalPolygon mergedPolygon,
+            @NotNull Collection<Claim> candidates,
+            @NotNull Claim firstClaim,
+            @NotNull Claim secondClaim) {
+        List<Claim> conflicts = new ArrayList<>();
+        for (Claim candidate : candidates) {
+            if (candidate.parent != null) {
+                // Subdivisions move with their parent.
+                continue;
+            }
+
+            if (Objects.equals(candidate.getID(), firstClaim.getID())
+                    || Objects.equals(candidate.getID(), secondClaim.getID())) {
+                continue;
+            }
+
+            if (polygonsOverlap(mergedPolygon, candidate.getBoundaryPolygon())) {
+                conflicts.add(candidate);
+            }
+        }
+
+        return conflicts;
+    }
+
+    static boolean polygonsOverlap(OrthogonalPolygon polygon1, OrthogonalPolygon polygon2) {
         // Check if bounding boxes overlap
-        if (polygon1.maxX() < polygon2.minX() || polygon1.minX() > polygon2.maxX() ||
-            polygon1.maxZ() < polygon2.minZ() || polygon1.minZ() > polygon2.maxZ()) {
+        int minX = Math.max(polygon1.minX(), polygon2.minX());
+        int maxX = Math.min(polygon1.maxX(), polygon2.maxX());
+        int minZ = Math.max(polygon1.minZ(), polygon2.minZ());
+        int maxZ = Math.min(polygon1.maxZ(), polygon2.maxZ());
+        if (minX > maxX || minZ > maxZ) {
             return false;
         }
 
-        // Check if any corner of polygon1 is inside polygon2
+        // Check if any corner of either polygon is inside the other. This is cheap and settles
+        // the common cases without walking the whole overlapping region.
         for (OrthogonalPoint2i corner : polygon1.corners()) {
             if (polygon2.contains(corner)) {
                 return true;
             }
         }
 
-        // Check if any corner of polygon2 is inside polygon1
         for (OrthogonalPoint2i corner : polygon2.corners()) {
             if (polygon1.contains(corner)) {
                 return true;
+            }
+        }
+
+        // Shapes can cross without either one's corners landing inside the other - a corridor
+        // laid straight across a narrow claim, for example. Walk the shared region for a cell
+        // that belongs to both.
+        for (int x = minX; x <= maxX; x++) {
+            for (int z = minZ; z <= maxZ; z++) {
+                if (polygon1.containsCell(x, z) && polygon2.containsCell(x, z)) {
+                    return true;
+                }
             }
         }
 
@@ -3104,125 +3162,4 @@ public abstract class DataStore {
         }
     }
 
-    // ── Nib‑based global rectangle for shaped merge ────────────────────────
-
-    /**
-     * Build the AABB rectangle that connects two shaped claims at the
-     * player‑selected nibs, respecting the depth inward of each nib.
-     *
-     * The rectangle spans from nibA (first claim's edge shifted inward by
-     * depthA) to nibB (second claim's edge shifted inward by depthB).  It
-     * always overlaps both original polygons (at the nib depths), so a
-     * subsequent contour‑trace union produces a single connected shape.
-     */
-    private static @NotNull OrthogonalPolygon buildNibRectangle(
-            @NotNull OrthogonalPolygon firstPolygon,
-            int firstEdgeIndex,
-            @NotNull OrthogonalPoint2i firstPlayerPos,
-            @NotNull OrthogonalPolygon secondPolygon,
-            int secondEdgeIndex,
-            @NotNull OrthogonalPoint2i secondPlayerPos
-    ) {
-        OrthogonalEdge2i edgeA = firstPolygon.edges().get(firstEdgeIndex);
-        OrthogonalEdge2i edgeB = secondPolygon.edges().get(secondEdgeIndex);
-
-        int depthA = computeDepthInward(firstPolygon, firstEdgeIndex, firstPlayerPos);
-        int depthB = computeDepthInward(secondPolygon, secondEdgeIndex, secondPlayerPos);
-
-        OrthogonalPoint2i nibA1 = offsetPointInward(edgeA.start(), edgeA, depthA, firstPolygon);
-        OrthogonalPoint2i nibA2 = offsetPointInward(edgeA.end(), edgeA, depthA, firstPolygon);
-        OrthogonalPoint2i nibB1 = offsetPointInward(edgeB.start(), edgeB, depthB, secondPolygon);
-        OrthogonalPoint2i nibB2 = offsetPointInward(edgeB.end(), edgeB, depthB, secondPolygon);
-
-        int minX = Math.min(Math.min(nibA1.x(), nibA2.x()), Math.min(nibB1.x(), nibB2.x()));
-        int maxX = Math.max(Math.max(nibA1.x(), nibA2.x()), Math.max(nibB1.x(), nibB2.x()));
-        int minZ = Math.min(Math.min(nibA1.z(), nibA2.z()), Math.min(nibB1.z(), nibB2.z()));
-        int maxZ = Math.max(Math.max(nibA1.z(), nibA2.z()), Math.max(nibB1.z(), nibB2.z()));
-
-        return OrthogonalPolygon.fromRectangle(minX, minZ, maxX, maxZ);
-    }
-
-    /**
-     * Perpendicular distance from the player to the selected edge,
-     * measured in the inward (interior) direction.
-     */
-    private static int computeDepthInward(
-            @NotNull OrthogonalPolygon polygon,
-            int edgeIndex,
-            @NotNull OrthogonalPoint2i playerPos
-    ) {
-        OrthogonalEdge2i edge = polygon.edges().get(edgeIndex);
-        if (edge.isHorizontal()) {
-            int edgeZ = edge.start().z();
-            int dz = playerPos.z() - edgeZ;
-            int step = dz >= 0 ? 1 : -1;
-            // Probe which side of the edge is the polygon interior
-            OrthogonalPoint2i probe = new OrthogonalPoint2i(
-                    (edge.start().x() + edge.end().x()) / 2,
-                    edgeZ + step);
-            if (polygon.containsCell(probe.x(), probe.z())) {
-                return Math.abs(dz);
-            }
-            return 0;
-        }
-        // Vertical edge
-        int edgeX = edge.start().x();
-        int dx = playerPos.x() - edgeX;
-        int step = dx >= 0 ? 1 : -1;
-        OrthogonalPoint2i probe = new OrthogonalPoint2i(
-                edgeX + step,
-                (edge.start().z() + edge.end().z()) / 2);
-        if (polygon.containsCell(probe.x(), probe.z())) {
-            return Math.abs(dx);
-        }
-        return 0;
-    }
-
-    /**
-     * Offset a corner point of an edge inward into the polygon by {@code depth}.
-     */
-    private static @NotNull OrthogonalPoint2i offsetPointInward(
-            @NotNull OrthogonalPoint2i point,
-            @NotNull OrthogonalEdge2i edge,
-            int depth,
-            @NotNull OrthogonalPolygon polygon
-    ) {
-        if (depth == 0) return point;
-
-        int dx = edge.end().x() - edge.start().x();
-        int dz = edge.end().z() - edge.start().z();
-
-        // Determine winding
-        long area2 = 0L;
-        List<OrthogonalPoint2i> corners = polygon.corners();
-        for (int i = 0; i < corners.size(); i++) {
-            OrthogonalPoint2i a = corners.get(i);
-            OrthogonalPoint2i b = corners.get((i + 1) % corners.size());
-            area2 += (long) a.x() * b.z() - (long) b.x() * a.z();
-        }
-        boolean ccw = area2 > 0;
-
-        // For CCW polygon, interior is LEFT of edge direction = (-dz, dx)
-        // For CW, interior is RIGHT of edge direction = (dz, -dx)
-        int inwardDx = ccw ? -dz : dz;
-        int inwardDz = ccw ? dx : -dx;
-
-        // Normalise to -1, 0, 1
-        inwardDx = Integer.compare(inwardDx, 0);
-        inwardDz = Integer.compare(inwardDz, 0);
-
-        // Verify by probing one step inward: if the probe lands outside,
-        // flip direction (defensive — should not happen with correct winding).
-        OrthogonalPoint2i probe = new OrthogonalPoint2i(
-                point.x() + inwardDx,
-                point.z() + inwardDz);
-        if (!polygon.containsCell(probe.x(), probe.z())) {
-            inwardDx = -inwardDx;
-            inwardDz = -inwardDz;
-        }
-
-        return new OrthogonalPoint2i(
-                point.x() + inwardDx * depth,
-                point.z() + inwardDz * depth);
-    }
 }
