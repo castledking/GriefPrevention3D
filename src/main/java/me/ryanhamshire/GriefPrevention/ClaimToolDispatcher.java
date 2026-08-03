@@ -385,16 +385,7 @@ final class ClaimToolDispatcher
         if (playerData.shovelMode == ShovelMode.Shaped) {
             playerData.setEphemeralBasicShapedSegmentPreview(false);
             if (!GriefPrevention.instance.config_claims_allowShapedClaims) {
-                playerData.shovelMode = ShovelMode.Basic;
-                playerData.claimSubdividing = null;
-                playerData.claimResizing = null;
-                playerData.claimMerging = null;
-                playerData.mergeEdgeIndex = null;
-                playerData.mergeSecondEdgeIndex = null;
-                playerData.mergeFirstDepthPoint = null;
-                playerData.mergeSecondDepthPoint = null;
-                playerData.lastShovelLocation = null;
-                playerData.setClaimEditorSession(null);
+                resetToBasicMode(playerData);
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.ShapedClaimsDisabled);
                 return true;
             }
@@ -402,6 +393,17 @@ final class ClaimToolDispatcher
                 return true;
             }
             handleShapedModeInteraction(player, playerData, clickedBlock);
+            return true;
+        }
+
+        if (playerData.shovelMode == ShovelMode.ShapedSubdivide) {
+            playerData.setEphemeralBasicShapedSegmentPreview(false);
+            if (!GriefPrevention.instance.config_claims_allowShapedSubClaims) {
+                resetToBasicMode(playerData);
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.ShapedSubClaimsDisabled);
+                return true;
+            }
+            handleShapedSubdivideModeInteraction(player, playerData, clickedBlock);
             return true;
         }
 
@@ -1099,7 +1101,7 @@ final class ClaimToolDispatcher
     private boolean tryResizeShapedClaim(@NotNull Player player, @NotNull PlayerData playerData, @NotNull Block clickedBlock)
     {
         Claim claim = playerData.claimResizing;
-        if (claim == null || !claim.inDataStore || !claim.isShaped() || claim.parent != null || claim.is3D())
+        if (claim == null || !claim.inDataStore || !claim.isShaped() || claim.is3D())
         {
             return false;
         }
@@ -2550,6 +2552,505 @@ final class ClaimToolDispatcher
         }
     }
 
+    // ----------------------------------------------------------------------------------------
+    // Shaped subdivisions
+    // ----------------------------------------------------------------------------------------
+
+    private void resetToBasicMode(@NotNull PlayerData playerData)
+    {
+        playerData.shovelMode = ShovelMode.Basic;
+        playerData.claimSubdividing = null;
+        playerData.claimResizing = null;
+        playerData.claimMerging = null;
+        playerData.mergeEdgeIndex = null;
+        playerData.mergeSecondEdgeIndex = null;
+        playerData.mergeFirstDepthPoint = null;
+        playerData.mergeSecondDepthPoint = null;
+        playerData.lastShovelLocation = null;
+        playerData.setClaimEditorSession(null);
+    }
+
+    /**
+     * Shaped subdivision mode. Clicking an existing shaped subdivision's boundary starts a reshape
+     * of that subdivision; clicking anywhere else inside a claim the player can edit starts a
+     * free-form subdivision outline that closes when the player clicks the first corner again.
+     */
+    private void handleShapedSubdivideModeInteraction(
+            @NotNull Player player,
+            @NotNull PlayerData playerData,
+            @NotNull Block clickedBlock)
+    {
+        ClaimEditorSession session = playerData.getClaimEditorSession();
+        if (session.mode() != ClaimEditorMode.SHAPED) {
+            session = session.withMode(ClaimEditorMode.SHAPED, ClaimEditSource.TOOL);
+            playerData.setClaimEditorSession(session);
+        }
+
+        ClaimEditTarget target = session.activeTarget();
+
+        // Mid-reshape of an existing shaped subdivision: keep feeding corners into the open path.
+        if (target != null
+                && target.type() == ClaimEditTargetType.EXISTING_SUBDIVISION_CLAIM
+                && target.claimId() != null
+                && session.openPath() != null) {
+            Claim subdivision = this.dataStore.getClaim(target.claimId());
+            if (subdivision != null && subdivision.inDataStore && subdivision.isShapedSubdivision()) {
+                reshapeShapedSubdivision(player, playerData, subdivision, clickedBlock);
+                return;
+            }
+
+            clearShapedSubdivisionSession(playerData);
+            target = null;
+        }
+
+        // Mid-draw of a new subdivision: every further corner belongs to the same parent claim.
+        if (target != null
+                && target.type() == ClaimEditTargetType.NEW_SUBDIVISION_CLAIM
+                && session.openPath() != null
+                && playerData.claimSubdividing != null
+                && playerData.claimSubdividing.inDataStore) {
+            addNewShapedSubdivisionCorner(player, playerData, playerData.claimSubdividing, clickedBlock);
+            return;
+        }
+
+        Claim parent = resolveShapedSubdivisionParent(player, playerData, clickedBlock);
+        if (parent == null) {
+            return;
+        }
+
+        Claim reshapeTarget = findShapedSubdivisionBoundaryAt(parent, clickedBlock);
+        if (reshapeTarget != null) {
+            Supplier<String> noEditReason = reshapeTarget.checkPermission(player, ClaimPermission.Edit, null);
+            if (noEditReason != null) {
+                GriefPrevention.sendMessage(player, TextMode.Err, noEditReason.get());
+                return;
+            }
+
+            playerData.claimSubdividing = null;
+            playerData.lastClaim = reshapeTarget;
+            playerData.setClaimEditorSession(
+                    loadSubdivisionIntoShapedSession(playerData.getClaimEditorSession(), reshapeTarget));
+            reshapeShapedSubdivision(player, playerData, reshapeTarget, clickedBlock);
+            return;
+        }
+
+        playerData.claimSubdividing = parent;
+        playerData.lastClaim = parent;
+        playerData.setClaimEditorSession(
+                playerData.getClaimEditorSession()
+                        .withTarget(new ClaimEditTarget(ClaimEditTargetType.NEW_SUBDIVISION_CLAIM, null))
+                        .withOpenPath(null)
+                        .withActiveSegment(null)
+                        .withPreview(ClaimEditPreview.empty()));
+        addNewShapedSubdivisionCorner(player, playerData, parent, clickedBlock);
+    }
+
+    private void addNewShapedSubdivisionCorner(
+            @NotNull Player player,
+            @NotNull PlayerData playerData,
+            @NotNull Claim parent,
+            @NotNull Block clickedBlock)
+    {
+        if (!parent.inDataStore) {
+            clearShapedSubdivisionSession(playerData);
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.ShapedSubdivisionNoParent);
+            return;
+        }
+
+        ClaimEditorSession before = playerData.getClaimEditorSession();
+        if (!parent.contains(clickedBlock.getLocation(), true, false)) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.ShapedSubdivisionOutsideParent);
+            visualizeShapedSubdivisionEditState(player, before, parent, clickedBlock.getY());
+            return;
+        }
+
+        ClaimEditResult result = claimEditor.apply(
+                before,
+                new ClaimEditIntent(
+                        ClaimEditIntentType.ADD_CORNER,
+                        ClaimEditSource.TOOL,
+                        null,
+                        parent.getID(),
+                        new OrthogonalPoint2i(clickedBlock.getX(), clickedBlock.getZ()),
+                        null,
+                        true,
+                        Collections.emptyList()
+                )
+        );
+        applyClaimEditResult(player, playerData, result);
+        if (!result.success()) {
+            return;
+        }
+
+        // The editor snaps corners onto the previous corner's axis, so a legal click can still
+        // land the snapped corner outside the parent. Roll back rather than commit an escape.
+        if (draftEscapesParent(parent, result.session())) {
+            playerData.setClaimEditorSession(before);
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.ShapedSubdivisionOutsideParent);
+            visualizeShapedSubdivisionEditState(player, before, parent, clickedBlock.getY());
+            return;
+        }
+
+        OrthogonalPolygon polygon = result.preview().polygon();
+        if (polygon == null) {
+            visualizeShapedSubdivisionEditState(player, result.session(), parent, clickedBlock.getY());
+            return;
+        }
+
+        finalizeShapedSubdivisionCreation(player, playerData, parent, polygon, result, clickedBlock);
+    }
+
+    private void reshapeShapedSubdivision(
+            @NotNull Player player,
+            @NotNull PlayerData playerData,
+            @NotNull Claim subdivision,
+            @NotNull Block clickedBlock)
+    {
+        Claim parent = subdivision.parent;
+        if (parent == null || !parent.inDataStore) {
+            clearShapedSubdivisionSession(playerData);
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.ShapedSubdivisionNoParent);
+            return;
+        }
+
+        ClaimEditorSession before = loadSubdivisionIntoShapedSession(playerData.getClaimEditorSession(), subdivision);
+        playerData.setClaimEditorSession(before);
+
+        if (!parent.contains(clickedBlock.getLocation(), true, false)) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.ShapedSubdivisionOutsideParent);
+            visualizeShapedSubdivisionEditState(player, before, parent, clickedBlock.getY());
+            return;
+        }
+
+        ClaimEditResult result = claimEditor.apply(
+                before,
+                new ClaimEditIntent(
+                        ClaimEditIntentType.ADD_CORNER,
+                        ClaimEditSource.TOOL,
+                        null,
+                        subdivision.getID(),
+                        new OrthogonalPoint2i(clickedBlock.getX(), clickedBlock.getZ()),
+                        null,
+                        true,
+                        Collections.emptyList()
+                )
+        );
+        applyClaimEditResult(player, playerData, result);
+        if (!result.success()) {
+            return;
+        }
+
+        if (draftEscapesParent(parent, result.session())) {
+            playerData.setClaimEditorSession(before);
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.ShapedSubdivisionOutsideParent);
+            visualizeShapedSubdivisionEditState(player, before, parent, clickedBlock.getY());
+            return;
+        }
+
+        if (result.preview().polygon() != null
+                && result.session().openPath() != null
+                && result.session().openPath().closureReady()) {
+            finalizeShapedSubdivisionReshape(player, playerData, subdivision, result, clickedBlock);
+        } else {
+            visualizeShapedSubdivisionEditState(player, result.session(), parent, clickedBlock.getY());
+        }
+    }
+
+    private void finalizeShapedSubdivisionCreation(
+            @NotNull Player player,
+            @NotNull PlayerData playerData,
+            @NotNull Claim parent,
+            @NotNull OrthogonalPolygon closedPolygon,
+            @NotNull ClaimEditResult result,
+            @NotNull Block clickedBlock)
+    {
+        OrthogonalPolygon polygon = closedPolygon;
+        OrthogonalPolygonValidationResult normalizedResult = OrthogonalPolygon.validatePath(polygon.closedPath());
+        if (normalizedResult.isValid() && normalizedResult.polygon() != null) {
+            polygon = normalizedResult.polygon();
+        }
+
+        CreateClaimResult createResult = this.dataStore.createShapedSubdivision(
+                player.getWorld(),
+                polygon,
+                parent,
+                player);
+
+        if (!createResult.succeeded || createResult.claim == null) {
+            if (createResult.denialMessage != null) {
+                GriefPrevention.sendMessage(player, TextMode.Err, createResult.denialMessage.get());
+            } else if (createResult.claim != null) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.CreateSubdivisionOverlap);
+                visualizeConflict(player, playerData, createResult.claim, clickedBlock, createResult.claim.is3D());
+                return;
+            } else {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.CreateClaimFailOverlapRegion);
+            }
+            visualizeShapedSubdivisionEditState(player, result.session(), parent, clickedBlock.getY());
+            return;
+        }
+
+        playerData.claimSubdividing = null;
+        playerData.lastClaim = createResult.claim;
+        playerData.setClaimEditorSession(loadSubdivisionIntoShapedSession(
+                ClaimEditorSession.idle(playerData.playerID).withMode(ClaimEditorMode.SHAPED, ClaimEditSource.TOOL),
+                createResult.claim));
+        GriefPrevention.sendMessage(player, TextMode.Success, Messages.ShapedSubdivisionSuccess);
+        BoundaryVisualization.visualizeClaim(player, createResult.claim, VisualizationType.SUBDIVISION, clickedBlock);
+    }
+
+    private void finalizeShapedSubdivisionReshape(
+            @NotNull Player player,
+            @NotNull PlayerData playerData,
+            @NotNull Claim subdivision,
+            @NotNull ClaimEditResult result,
+            @NotNull Block clickedBlock)
+    {
+        OrthogonalPolygon polygon = result.preview().polygon();
+        if (polygon == null) {
+            return;
+        }
+
+        OrthogonalPolygonValidationResult normalizedResult = OrthogonalPolygon.validatePath(polygon.closedPath());
+        if (normalizedResult.isValid() && normalizedResult.polygon() != null) {
+            polygon = normalizedResult.polygon();
+        }
+
+        Claim parent = subdivision.parent;
+        CreateClaimResult updateResult = this.dataStore.updateShapedClaim(player, playerData, subdivision, polygon);
+        if (!updateResult.succeeded || updateResult.claim == null) {
+            if (updateResult.denialMessage != null) {
+                GriefPrevention.sendMessage(player, TextMode.Err, updateResult.denialMessage.get());
+            } else if (updateResult.claim != null) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.CreateSubdivisionOverlap);
+                visualizeConflict(player, playerData, updateResult.claim, clickedBlock, updateResult.claim.is3D());
+                return;
+            } else {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.CreateClaimFailOverlapRegion);
+            }
+            visualizeShapedSubdivisionEditState(player, result.session(), parent, clickedBlock.getY());
+            return;
+        }
+
+        playerData.lastClaim = updateResult.claim;
+        playerData.setClaimEditorSession(loadSubdivisionIntoShapedSession(
+                ClaimEditorSession.idle(playerData.playerID).withMode(ClaimEditorMode.SHAPED, ClaimEditSource.TOOL),
+                updateResult.claim));
+        GriefPrevention.sendMessage(player, TextMode.Success, Messages.ShapedSubdivisionReshaped);
+        BoundaryVisualization.visualizeClaim(player, updateResult.claim, VisualizationType.SUBDIVISION, clickedBlock);
+    }
+
+    /**
+     * The claim a new shaped subdivision would be created inside, or null when the click can't
+     * start one (the player is told why in that case).
+     */
+    private @Nullable Claim resolveShapedSubdivisionParent(
+            @NotNull Player player,
+            @NotNull PlayerData playerData,
+            @NotNull Block clickedBlock)
+    {
+        Claim resolved = this.dataStore.getClaimAt(clickedBlock.getLocation(), true, playerData.lastClaim);
+        Claim claim = playerEventHandler.findDeepestContainingClaim(resolved, clickedBlock.getLocation());
+        if (claim == null) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.ShapedSubdivisionNoParent);
+            return null;
+        }
+
+        if (!instance.config_claims_allowNestedSubClaims) {
+            while (claim.parent != null) {
+                claim = claim.parent;
+            }
+        }
+
+        if (claim.is3D()) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.ShapedSubdivisionOn3DClaim);
+            return null;
+        }
+
+        Supplier<String> noEditReason = claim.checkPermission(player, ClaimPermission.Edit, null);
+        if (noEditReason != null && claim.checkPermission(player, ClaimPermission.Manage, null) != null) {
+            GriefPrevention.sendMessage(player, TextMode.Err, noEditReason.get());
+            return null;
+        }
+
+        return claim;
+    }
+
+    /**
+     * The shaped subdivision whose boundary the click landed on, searching the whole claim tree so
+     * a click resolves the same way no matter which claim the player was last near.
+     */
+    private @Nullable Claim findShapedSubdivisionBoundaryAt(@NotNull Claim claim, @NotNull Block clickedBlock)
+    {
+        Claim root = claim;
+        while (root.parent != null) {
+            root = root.parent;
+        }
+
+        return findShapedSubdivisionBoundaryAt(root, new OrthogonalPoint2i(clickedBlock.getX(), clickedBlock.getZ()));
+    }
+
+    private @Nullable Claim findShapedSubdivisionBoundaryAt(@NotNull Claim claim, @NotNull OrthogonalPoint2i point)
+    {
+        for (Claim child : claim.children) {
+            if (child == null || !child.inDataStore) {
+                continue;
+            }
+
+            if (child.isShapedSubdivision() && isBoundaryPoint(child.getBoundaryPolygon(), point)) {
+                return child;
+            }
+
+            Claim nested = findShapedSubdivisionBoundaryAt(child, point);
+            if (nested != null) {
+                return nested;
+            }
+        }
+
+        return null;
+    }
+
+    private boolean draftEscapesParent(@NotNull Claim parent, @NotNull ClaimEditorSession session)
+    {
+        if (session.openPath() == null) {
+            return false;
+        }
+
+        World world = parent.getLesserBoundaryCorner().getWorld();
+        if (world == null) {
+            return false;
+        }
+
+        int probeY = parent.getLesserBoundaryCorner().getBlockY();
+        for (OrthogonalPoint2i point : session.openPath().points()) {
+            if (!parent.contains(new Location(world, point.x(), probeY, point.z()), true, false)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private @NotNull ClaimEditorSession loadSubdivisionIntoShapedSession(
+            @NotNull ClaimEditorSession session,
+            @NotNull Claim subdivision)
+    {
+        if (session.activeTarget() != null
+                && session.activeTarget().type() == ClaimEditTargetType.EXISTING_SUBDIVISION_CLAIM
+                && session.activeTarget().claimId() != null
+                && session.activeTarget().claimId().equals(subdivision.getID())
+                && session.preview().polygon() != null) {
+            return session;
+        }
+
+        return session
+                .withTarget(new ClaimEditTarget(ClaimEditTargetType.EXISTING_SUBDIVISION_CLAIM, subdivision.getID()))
+                .withOpenPath(null)
+                .withActiveSegment(null)
+                .withPreview(new ClaimEditPreview(
+                        subdivision.getBoundaryPolygon(),
+                        null,
+                        Collections.emptyList(),
+                        null,
+                        Collections.emptyList(),
+                        Collections.emptyList(),
+                        Collections.emptyList()));
+    }
+
+    private void clearShapedSubdivisionSession(@NotNull PlayerData playerData)
+    {
+        playerData.claimSubdividing = null;
+        playerData.setClaimEditorSession(
+                ClaimEditorSession.idle(playerData.playerID).withMode(ClaimEditorMode.SHAPED, ClaimEditSource.TOOL));
+    }
+
+    /**
+     * Draws the parent claim, its existing subdivisions, and the in-progress outline. The outline
+     * uses subdivision colours (iron corners, white wool sides) while draft corners keep the
+     * initialize-zone marker shared with every other claim tool.
+     */
+    private void visualizeShapedSubdivisionEditState(
+            @NotNull Player player,
+            @NotNull ClaimEditorSession session,
+            @Nullable Claim parent,
+            int y)
+    {
+        Set<Boundary> boundaries = new HashSet<>();
+        World world = player.getWorld();
+        OrthogonalPolygon selectedPolygon = null;
+
+        if (parent != null && parent.inDataStore) {
+            boundaries.add(new Boundary(
+                    parent,
+                    parent.isAdminClaim() ? VisualizationType.ADMIN_CLAIM : VisualizationType.CLAIM));
+            collectSubdivisionBoundaries(parent, boundaries);
+        }
+
+        if (session.activeTarget() != null
+                && session.activeTarget().type() == ClaimEditTargetType.EXISTING_SUBDIVISION_CLAIM
+                && session.activeTarget().claimId() != null) {
+            Claim targetClaim = this.dataStore.getClaim(session.activeTarget().claimId());
+            if (targetClaim != null && targetClaim.inDataStore) {
+                boundaries.add(new Boundary(targetClaim, VisualizationType.SUBDIVISION));
+                selectedPolygon = targetClaim.getBoundaryPolygon();
+            }
+        }
+
+        List<OrthogonalPoint2i> draftPoints = session.preview().draftPoints();
+        for (int i = 0; i < draftPoints.size(); i++) {
+            OrthogonalPoint2i point = draftPoints.get(i);
+            boolean onSelectedBoundary = selectedPolygon != null && isBoundaryPoint(selectedPolygon, point);
+
+            if (i > 0) {
+                OrthogonalPoint2i prevPoint = draftPoints.get(i - 1);
+                Location start = new Location(world, prevPoint.x(), y, prevPoint.z());
+                Location end = new Location(world, point.x(), y, point.z());
+                boundaries.add(new Boundary(new BoundingBox(start, end), VisualizationType.SUBDIVISION));
+            }
+
+            if (!onSelectedBoundary) {
+                boundaries.add(new Boundary(
+                        new BoundingBox(new Location(world, point.x(), y, point.z()),
+                                new Location(world, point.x(), y, point.z())),
+                        VisualizationType.INITIALIZE_ZONE));
+            }
+        }
+
+        if (session.preview().snappedPoint() != null) {
+            OrthogonalPoint2i point = session.preview().snappedPoint();
+            if (selectedPolygon == null || !isBoundaryPoint(selectedPolygon, point)) {
+                boundaries.add(new Boundary(
+                        new BoundingBox(new Location(world, point.x(), y, point.z()),
+                                new Location(world, point.x(), y, point.z())),
+                        VisualizationType.INITIALIZE_ZONE));
+            }
+        }
+
+        for (OrthogonalPoint2i point : session.preview().conflictPoints()) {
+            boundaries.add(new Boundary(
+                    new BoundingBox(new Location(world, point.x(), y, point.z()),
+                            new Location(world, point.x(), y, point.z())),
+                    VisualizationType.CONFLICT_ZONE));
+        }
+
+        if (!boundaries.isEmpty()) {
+            BoundaryVisualization.callAndVisualize(
+                    new BoundaryVisualizationEvent(player, boundaries, player.getEyeLocation().getBlockY()));
+        }
+    }
+
+    private void collectSubdivisionBoundaries(@NotNull Claim claim, @NotNull Set<Boundary> boundaries)
+    {
+        for (Claim child : claim.children) {
+            if (child == null || !child.inDataStore || child.is3D()) {
+                continue;
+            }
+
+            boundaries.add(new Boundary(child, VisualizationType.SUBDIVISION));
+            collectSubdivisionBoundaries(child, boundaries);
+        }
+    }
+
     private @NotNull BoundaryNodeEnsureResult ensureBoundaryNodeForShapedPath(
             @NotNull Player player,
             @NotNull PlayerData playerData,
@@ -3099,6 +3600,9 @@ final class ClaimToolDispatcher
         Set<Boundary> boundaries = new HashSet<>();
         World world = player.getWorld();
         OrthogonalPolygon selectedPolygon = null;
+        // The draft path is drawn in the colours of the claim it belongs to, so pathing out an
+        // admin claim stays pumpkin rather than switching to the player-claim gold.
+        VisualizationType draftType = VisualizationType.CLAIM;
 
         if (session.activeTarget() != null
                 && session.activeTarget().type() == ClaimEditTargetType.EXISTING_PARENT_CLAIM
@@ -3108,6 +3612,7 @@ final class ClaimToolDispatcher
                 VisualizationType type = targetClaim.isAdminClaim() ? VisualizationType.ADMIN_CLAIM : VisualizationType.CLAIM;
                 boundaries.add(new Boundary(targetClaim, type));
                 selectedPolygon = targetClaim.getBoundaryPolygon();
+                draftType = type;
             }
         }
 
@@ -3135,7 +3640,7 @@ final class ClaimToolDispatcher
                 OrthogonalPoint2i prevPoint = draftPoints.get(i - 1);
                 Location start = new Location(world, prevPoint.x(), y, prevPoint.z());
                 Location end = new Location(world, point.x(), y, point.z());
-                boundaries.add(new Boundary(new BoundingBox(start, end), VisualizationType.CLAIM));
+                boundaries.add(new Boundary(new BoundingBox(start, end), draftType));
             }
 
             if (!onSelectedBoundary) {

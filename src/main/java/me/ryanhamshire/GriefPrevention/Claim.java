@@ -121,8 +121,12 @@ public class Claim
      //note subdivisions themselves never have children
      public ArrayList<Claim> children = new ArrayList<>();
 
-     // optional orthogonal X/Z boundary for top-level 2D shaped claims
+     // optional orthogonal X/Z boundary for 2D shaped claims and 2D shaped subdivisions
      private @Nullable List<OrthogonalPoint2i> shapedCorners = null;
+
+     // subdivisions flagged as staff-administered: the parent claim's owner can neither reshape
+     // them, hand out trust inside them, nor abandon the claim containing them
+     private boolean adminSubdivision = false;
 
      // cached boundary polygon; invalidated whenever the shape changes.
      // Avoids rebuilding/validating the polygon on every containsColumn/overlap call.
@@ -262,6 +266,7 @@ public class Claim
          this.is3D = claim.is3D;
          this.expirationDate = claim.expirationDate;
          this.shapedCorners = claim.shapedCorners == null ? null : Collections.unmodifiableList(new ArrayList<>(claim.shapedCorners));
+         this.adminSubdivision = claim.adminSubdivision;
          this.cachedBoundaryPolygon = null;
      }
  
@@ -283,7 +288,52 @@ public class Claim
 
      public boolean isShaped()
      {
-         return this.parent == null && !this.is3D && this.shapedCorners != null && !this.shapedCorners.isEmpty();
+         return !this.is3D && this.shapedCorners != null && !this.shapedCorners.isEmpty();
+     }
+
+     /**
+      * Whether this claim is a shaped subdivision, i.e. a non-rectangular 2D subclaim created with
+      * {@code /shapedsubdivideclaims}.
+      *
+      * @return true if this is a subdivision with a shaped boundary
+      */
+     public boolean isShapedSubdivision()
+     {
+         return this.parent != null && this.isShaped();
+     }
+
+     /**
+      * Whether this subdivision is administered by staff rather than by the owner of the claim it
+      * sits inside. Administrative subdivisions can only be resized, trusted in, or removed by
+      * players holding {@code griefprevention.adminclaims}, and they block the parent claim from
+      * being abandoned.
+      *
+      * @return true if this is an administrative subdivision
+      */
+     public boolean isAdminSubdivision()
+     {
+         return this.parent != null && this.adminSubdivision;
+     }
+
+     public void setAdminSubdivision(boolean adminSubdivision)
+     {
+         this.adminSubdivision = adminSubdivision;
+     }
+
+     /**
+      * Whether this claim or any claim beneath it is an administrative subdivision.
+      *
+      * @return true if an administrative subdivision exists in this claim's subtree
+      */
+     public boolean containsAdminSubdivision()
+     {
+         for (Claim child : this.children)
+         {
+             if (child == null) continue;
+             if (child.isAdminSubdivision() || child.containsAdminSubdivision()) return true;
+         }
+
+         return false;
      }
 
      public @Nullable List<OrthogonalPoint2i> getShapedCorners()
@@ -786,6 +836,20 @@ public class Claim
              @Nullable Event event)
      {
         
+         // Administrative subdivisions are staff space inside someone else's claim.
+         if (this.isAdminSubdivision())
+         {
+             // Staff run them the same way they run an administrative claim.
+             if (player != null && player.hasPermission("griefprevention.adminclaims")) return null;
+
+             // Everyone else keeps whatever build/container/access trust reaches them, but
+             // reshaping the subdivision and handing out trust inside it stays with staff.
+             if (permission == ClaimPermission.Edit || permission == ClaimPermission.Manage)
+             {
+                 return () -> GriefPrevention.instance.dataStore.getMessage(Messages.AdminSubdivisionRestricted);
+             }
+         }
+
          if (player != null)
          {
              // Admin claims need adminclaims permission only.

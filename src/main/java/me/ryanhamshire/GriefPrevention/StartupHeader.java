@@ -183,6 +183,7 @@ public class StartupHeader {
         String admin3d = plugin.config_claims_allow3DAdminClaims ? yes : no;
         String nested = plugin.config_claims_allowNestedSubClaims ? yes : no;
         String shaped = plugin.config_claims_allowShapedClaims ? yes : no;
+        String shapedSub = plugin.config_claims_allowShapedSubClaims ? yes : no;
 
         String platformVersion = PlatformDetection.getServerVersion();
 
@@ -192,6 +193,8 @@ public class StartupHeader {
         details.append(formatLine("3D Subdivisions:", "&a" + sub3d, "3D Admin Claims:", "&a" + admin3d));
         details.append("\n");
         details.append(formatLine("Nested Claims:", "&a" + nested, "Shaped Claims:", "&a" + shaped));
+        details.append("\n");
+        details.append(formatLine("Shaped Subclaims:", "&a" + shapedSub, "", ""));
         details.append("\n");
         details.append(formatLine("Locale:", "&a" + langCode, "Messages loaded:", "&a" + localeCount));
         details.append("\n");

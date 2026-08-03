@@ -269,7 +269,8 @@ class FabricClaimFileStoreTest
 
         assertEquals(2, loaded.documents().size());
         assertEquals(3L, loaded.nextClaimId());
-        assertEquals("11", Files.readString(dataFolder.resolve("_schemaVersion"), StandardCharsets.UTF_8));
+        assertEquals(String.valueOf(ClaimDataSchema.CURRENT_VERSION),
+                Files.readString(dataFolder.resolve("_schemaVersion"), StandardCharsets.UTF_8));
         assertTrue(Files.readString(claimDataFolder.resolve("1.yml"), StandardCharsets.UTF_8)
                 .contains("Children:"));
         assertFalse(Files.exists(claimDataFolder.resolve("2.yml")));

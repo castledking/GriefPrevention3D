@@ -268,10 +268,9 @@ public final class ClaimEditorSkeleton implements ClaimEditor {
             draft = ShapedPathDraft.empty(intent.claimId());
         }
 
-        OrthogonalPolygon basePolygon =
-            session.activeTarget() != null && session.activeTarget().type() == ClaimEditTargetType.EXISTING_PARENT_CLAIM
-                ? session.preview().polygon()
-                : null;
+        OrthogonalPolygon basePolygon = session.activeTarget() != null && isReshapeTarget(session.activeTarget().type())
+            ? session.preview().polygon()
+            : null;
 
         List<OrthogonalPoint2i> points = draft.points();
         if (points.isEmpty()) {
@@ -747,6 +746,14 @@ public final class ClaimEditorSkeleton implements ClaimEditor {
 
     private boolean isOrthogonalStep(@NotNull OrthogonalPoint2i first, @NotNull OrthogonalPoint2i second) {
         return (first.x() == second.x()) ^ (first.z() == second.z());
+    }
+
+    /**
+     * Whether the target is an existing boundary being reshaped (as opposed to a free-form path
+     * for a claim that does not exist yet).
+     */
+    private static boolean isReshapeTarget(@NotNull ClaimEditTargetType type) {
+        return type == ClaimEditTargetType.EXISTING_PARENT_CLAIM || type == ClaimEditTargetType.EXISTING_SUBDIVISION_CLAIM;
     }
 
     /**

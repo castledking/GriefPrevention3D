@@ -68,6 +68,11 @@ commands:
     usage: /<command>
     aliases: [3dsubdivideclaim, 3dsc, sc3d, subdivide3d, 3dsubdivide]
     permission: griefprevention.3dsubdivideclaims
+  shapedsubdivideclaims:
+    description: Switches the shovel tool to shaped subdivision mode, used to draw non-rectangular subdivisions.
+    usage: /<command>
+    aliases: [shapedsubdivideclaim, ssc, shapedsubdivide]
+    permission: griefprevention.shapedsubdivideclaims
   claimtogglealerts:
     description: Toggle violation alerts for all claims on or off.
     usage: /<command> [on|off]
@@ -429,6 +434,7 @@ permissions:
       griefprevention.shapedclaims: true
       griefprevention.mergeclaims: true
       griefprevention.3dsubdivideclaims: true
+      griefprevention.shapedsubdivideclaims: true
       griefprevention.buysellclaimblocks: true
       griefprevention.witherexplosions: true
       griefprevention.unlockdrops: true
@@ -481,6 +487,9 @@ permissions:
     default: true
   griefprevention.subdivideclaims:
     description: Grants permission to use /subdivideclaims.
+    default: true
+  griefprevention.shapedsubdivideclaims:
+    description: Grants permission to use /shapedsubdivideclaims and /claim mode shapedsubdivide.
     default: true
   griefprevention.restrictsubclaim:
     description: Grants permission to use /restrictsubclaim.

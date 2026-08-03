@@ -53,7 +53,7 @@ public class DatabaseDataStore extends DataStore
     private static final String SQL_UPDATE_CLAIM =
             "UPDATE griefprevention_claimdata SET owner = ?, lessercorner = ?, greatercorner = ?, builders = ?, containers = ?, accessors = ?, managers = ?, inheritnothing = ?, inheritnothingfornewsubdivisions = ?, parentid = ?, expiration = ?, explosivesallowed = ?, witherexplosionsallowed = ? WHERE id = ?";
     private static final String SQL_INSERT_CLAIM =
-            "INSERT INTO griefprevention_claimdata (id, owner, lessercorner, greatercorner, builders, containers, accessors, managers, inheritnothing, inheritnothingfornewsubdivisions, parentid, expiration, explosivesallowed, witherexplosionsallowed, is3d, shapecorners, modifieddate, pvpenabled, alertsenabled) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            "INSERT INTO griefprevention_claimdata (id, owner, lessercorner, greatercorner, builders, containers, accessors, managers, inheritnothing, inheritnothingfornewsubdivisions, parentid, expiration, explosivesallowed, witherexplosionsallowed, is3d, shapecorners, modifieddate, pvpenabled, alertsenabled, adminsubdivision) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     private static final String SQL_DELETE_CLAIM =
             "DELETE FROM griefprevention_claimdata WHERE id = ?";
     private static final String SQL_SELECT_PLAYER_DATA =
@@ -93,6 +93,8 @@ public class DatabaseDataStore extends DataStore
             "ALTER TABLE griefprevention_claimdata ADD COLUMN IF NOT EXISTS pvpenabled BOOLEAN DEFAULT 1";
     private static final String SQL_UPDATE_SCHEMA_ADD_ALERTSENABLED =
             "ALTER TABLE griefprevention_claimdata ADD COLUMN IF NOT EXISTS alertsenabled BOOLEAN DEFAULT 1";
+    private static final String SQL_UPDATE_SCHEMA_ADD_ADMINSUBDIVISION =
+            "ALTER TABLE griefprevention_claimdata ADD COLUMN IF NOT EXISTS adminsubdivision BOOLEAN DEFAULT 0";
 
     private Connection databaseConnection = null;
 
@@ -337,6 +339,12 @@ public class DatabaseDataStore extends DataStore
             statement.execute(SQL_UPDATE_SCHEMA_ADD_ALERTSENABLED);
         }
 
+        if (this.getSchemaVersion() <= 12)
+        {
+            statement = this.databaseConnection.createStatement();
+            statement.execute(SQL_UPDATE_SCHEMA_ADD_ADMINSUBDIVISION);
+        }
+
         //load claims data into memory
 
         results = statement.executeQuery("SELECT * FROM griefprevention_claimdata");
@@ -445,6 +453,12 @@ public class DatabaseDataStore extends DataStore
                 } catch (SQLException e) {
                     alertsEnabled = true; // Default if column doesn't exist
                 }
+                boolean adminSubdivision;
+                try {
+                    adminSubdivision = results.getBoolean("adminsubdivision");
+                } catch (SQLException e) {
+                    adminSubdivision = false; // Default if column doesn't exist
+                }
                 String shapecornersStr = results.getString("shapecorners");
                 long modifiedDate = results.getLong("modifieddate");
 
@@ -456,6 +470,7 @@ public class DatabaseDataStore extends DataStore
                 claim.alertsEnabled = alertsEnabled;
                 claim.setInheritNothingForNewSubdivisions(inheritNothingForNewSubdivisions);
                 claim.setShapedCorners(parseCornersFromDb(shapecornersStr));
+                claim.setAdminSubdivision(adminSubdivision);
                 if (modifiedDate > 0) claim.modifiedDate = new Date(modifiedDate);
 
                 if (removeClaim)
@@ -586,6 +601,7 @@ public class DatabaseDataStore extends DataStore
             insertStmt.setLong(17, modifiedDate);
             insertStmt.setBoolean(18, pvpEnabled);
             insertStmt.setBoolean(19, claim.alertsEnabled);
+            insertStmt.setBoolean(20, claim.isAdminSubdivision());
             insertStmt.executeUpdate();
         }
         catch (SQLException e)

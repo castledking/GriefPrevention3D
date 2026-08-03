@@ -1543,6 +1543,133 @@ public abstract class DataStore {
         return result;
     }
 
+    /**
+     * Creates a shaped 2D subdivision inside {@code parent}.
+     *
+     * <p>Like rectangular 2D subdivisions, the result spans the parent's floor up to the world
+     * height limit so it is never treated as a 3D claim. The polygon must lie entirely inside the
+     * parent and must not overlap any sibling.
+     *
+     * @param world the world the parent claim lives in
+     * @param polygon the subdivision outline
+     * @param parent the claim being subdivided
+     * @param creatingPlayer the player drawing the subdivision, if any
+     * @return the creation result; on failure {@code claim} holds the conflicting claim when known
+     */
+    synchronized public CreateClaimResult createShapedSubdivision(
+            @NotNull World world,
+            @NotNull OrthogonalPolygon polygon,
+            @NotNull Claim parent,
+            @Nullable Player creatingPlayer)
+    {
+        CreateClaimResult result = new CreateClaimResult();
+
+        if (parent.is3D())
+        {
+            result.succeeded = false;
+            result.denialMessage = () -> this.getMessage(Messages.ShapedSubdivisionOn3DClaim);
+            return result;
+        }
+
+        if (parent.parent != null && !GriefPrevention.instance.config_claims_allowNestedSubClaims)
+        {
+            result.succeeded = false;
+            result.claim = parent;
+            return result;
+        }
+
+        Supplier<String> minimumFailure = validateShapedCreationMinimums(world, polygon);
+        if (minimumFailure != null)
+        {
+            result.succeeded = false;
+            result.denialMessage = minimumFailure;
+            return result;
+        }
+
+        int minY = parent.getLesserBoundaryCorner().getBlockY();
+        int maxY = GriefPrevention.getWorldMaxY(world);
+        Location lesserBoundaryCorner = new Location(world, polygon.minX(), minY, polygon.minZ());
+        Location greaterBoundaryCorner = new Location(world, polygon.maxX(), maxY, polygon.maxZ());
+
+        Claim newClaim = new Claim(
+                lesserBoundaryCorner,
+                greaterBoundaryCorner,
+                null,
+                new ArrayList<>(),
+                new ArrayList<>(),
+                new ArrayList<>(),
+                new ArrayList<>(),
+                false,
+                null,
+                false);
+        newClaim.parent = parent;
+        newClaim.setShapedCorners(polygon.corners());
+
+        if ("INHERIT".equalsIgnoreCase(GriefPrevention.instance.config_pvp_subdivisionPvpState))
+        {
+            newClaim.pvpEnabled = parent.pvpEnabled;
+        }
+
+        if (!containsChild(parent, newClaim))
+        {
+            result.succeeded = false;
+            result.claim = parent;
+            result.denialMessage = () -> this.getMessage(Messages.ShapedSubdivisionOutsideParent);
+            return result;
+        }
+
+        for (Claim sibling : parent.children)
+        {
+            if (sibling == null || !sibling.inDataStore || sibling == newClaim) continue;
+
+            if (sibling.overlaps(newClaim))
+            {
+                result.succeeded = false;
+                result.claim = sibling;
+                result.denialMessage = () -> this.getMessage(Messages.CreateSubdivisionOverlap);
+                return result;
+            }
+        }
+
+        newClaim.setSubclaimRestrictions(parent.parent != null || parent.getInheritNothingForNewSubdivisions());
+
+        assignClaimID(newClaim);
+        ClaimCreatedEvent event = new ClaimCreatedEvent(newClaim, creatingPlayer);
+        Bukkit.getPluginManager().callEvent(event);
+        if (event.isCancelled())
+        {
+            result.succeeded = false;
+            result.claim = null;
+            return result;
+        }
+
+        this.addClaim(newClaim, true);
+
+        // First-child subdivisions persist a copy of the parent's trust, matching createClaim().
+        if (parent.parent == null)
+        {
+            ArrayList<String> builders = new ArrayList<>();
+            ArrayList<String> containers = new ArrayList<>();
+            ArrayList<String> accessors = new ArrayList<>();
+            ArrayList<String> managers = new ArrayList<>();
+            parent.getPermissions(builders, containers, accessors, managers);
+            for (String identifier : builders) newClaim.setPermission(identifier, ClaimPermission.Build);
+            for (String identifier : containers) newClaim.setPermission(identifier, ClaimPermission.Container);
+            for (String identifier : accessors) newClaim.setPermission(identifier, ClaimPermission.Access);
+            for (String identifier : managers) newClaim.setPermission(identifier, ClaimPermission.Manage);
+        }
+
+        if (creatingPlayer != null && !creatingPlayer.getUniqueId().equals(newClaim.getOwnerID())
+                && newClaim.getPermission(creatingPlayer.getUniqueId().toString()) != ClaimPermission.Manage)
+        {
+            newClaim.setPermission(creatingPlayer.getUniqueId().toString(), ClaimPermission.Manage);
+        }
+
+        result.succeeded = true;
+        result.claim = newClaim;
+        return result;
+    }
+
     // creates a claim.
     // if the new claim would overlap an existing claim, returns a failure along
     // with a reference to the existing claim
@@ -2571,11 +2698,13 @@ public abstract class DataStore {
             @NotNull OrthogonalPolygon polygon) {
         CreateClaimResult result = new CreateClaimResult();
 
-        if (claim.parent != null || claim.is3D()) {
+        if (claim.is3D()) {
             result.succeeded = false;
-            result.denialMessage = () -> "Shaped editing only works on top-level 2D claims.";
+            result.denialMessage = () -> "Shaped editing only works on 2D claims.";
             return result;
         }
+
+        final boolean isSubdivision = claim.parent != null;
 
         World world = Objects.requireNonNull(claim.getLesserBoundaryCorner().getWorld());
         Supplier<String> minimumFailure = validateShapedResizeMinimums(player, claim, world, polygon);
@@ -2593,22 +2722,25 @@ public abstract class DataStore {
         int newy1 = claim.getLesserBoundaryCorner().getBlockY();
         int newy2 = claim.getGreaterBoundaryCorner().getBlockY();
 
-        int newArea = polygonCellArea(world, polygon);
-        int blocksRemainingAfter;
-        try {
-            blocksRemainingAfter = playerData.getRemainingClaimBlocks() + (claim.getArea() - newArea);
-        } catch (ArithmeticException e) {
-            blocksRemainingAfter = Integer.MIN_VALUE + 1;
-        }
+        // Subdivisions carve up land the owner already paid for, so they never move claim blocks.
+        if (!isSubdivision) {
+            int newArea = polygonCellArea(world, polygon);
+            int blocksRemainingAfter;
+            try {
+                blocksRemainingAfter = playerData.getRemainingClaimBlocks() + (claim.getArea() - newArea);
+            } catch (ArithmeticException e) {
+                blocksRemainingAfter = Integer.MIN_VALUE + 1;
+            }
 
-        if (!claim.isAdminClaim() && player.getUniqueId().equals(claim.getOwnerID())) {
-            if (blocksRemainingAfter < 0) {
-                final int blocksNeeded = Math.abs(blocksRemainingAfter);
-                result.succeeded = false;
-                result.denialMessage = () -> this.getMessage(
-                        Messages.ResizeNeedMoreBlocks,
-                        String.valueOf(blocksNeeded));
-                return result;
+            if (!claim.isAdminClaim() && player.getUniqueId().equals(claim.getOwnerID())) {
+                if (blocksRemainingAfter < 0) {
+                    final int blocksNeeded = Math.abs(blocksRemainingAfter);
+                    result.succeeded = false;
+                    result.denialMessage = () -> this.getMessage(
+                            Messages.ResizeNeedMoreBlocks,
+                            String.valueOf(blocksNeeded));
+                    return result;
+                }
             }
         }
 
@@ -2636,22 +2768,47 @@ public abstract class DataStore {
             }
         }
 
-        for (Claim otherClaim : this.claims) {
-            if (!otherClaim.inDataStore || Objects.equals(otherClaim.getID(), claim.getID())) {
-                continue;
+        if (isSubdivision) {
+            Claim parent = Objects.requireNonNull(claim.parent);
+            if (!containsChild(parent, candidate)) {
+                result.succeeded = false;
+                result.claim = parent;
+                result.denialMessage = () -> this.getMessage(Messages.ShapedSubdivisionOutsideParent);
+                return result;
             }
 
-            if (candidate.overlaps(otherClaim)) {
-                // Check if overlapping claim is owned by the same player - if so, return it for merging
-                if (!claim.isAdminClaim() && player.getUniqueId().equals(claim.getOwnerID())
-                        && player.getUniqueId().equals(otherClaim.getOwnerID())) {
+            // A subdivision only ever competes with its siblings; it is meant to sit inside its parent.
+            for (Claim sibling : parent.children) {
+                if (sibling == null || !sibling.inDataStore
+                        || Objects.equals(sibling.getID(), claim.getID())) {
+                    continue;
+                }
+
+                if (candidate.overlaps(sibling)) {
+                    result.succeeded = false;
+                    result.claim = sibling;
+                    result.denialMessage = () -> this.getMessage(Messages.CreateSubdivisionOverlap);
+                    return result;
+                }
+            }
+        } else {
+            for (Claim otherClaim : this.claims) {
+                if (!otherClaim.inDataStore || Objects.equals(otherClaim.getID(), claim.getID())) {
+                    continue;
+                }
+
+                if (candidate.overlaps(otherClaim)) {
+                    // Check if overlapping claim is owned by the same player - if so, return it for merging
+                    if (!claim.isAdminClaim() && player.getUniqueId().equals(claim.getOwnerID())
+                            && player.getUniqueId().equals(otherClaim.getOwnerID())) {
+                        result.succeeded = false;
+                        result.claim = otherClaim;
+                        return result;
+                    }
                     result.succeeded = false;
                     result.claim = otherClaim;
                     return result;
                 }
-                result.succeeded = false;
-                result.claim = otherClaim;
-                return result;
             }
         }
 
@@ -3159,6 +3316,9 @@ public abstract class DataStore {
         // Propagate to children only for non-3D claims
         if (!claim.is3D()) {
             for (Claim child : claim.children) {
+                // Administrative subdivisions are trusted by staff only; parent trust stops here.
+                if (child.isAdminSubdivision()) continue;
+
                 setPermission(child, identifier, permissionLevel);
             }
         }

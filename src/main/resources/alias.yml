@@ -206,7 +206,7 @@ subcommands:
       enable: true
       commands: [mode]
       standalone: [basicclaims, shapedclaims, shapedclaim]
-      usage: "/claim mode <basic|2d|3d|shaped|merge>"
+      usage: "/claim mode <basic|2d|3d|shaped|shapedsubdivide|merge>"
       description: Change your golden shovel claim mode.
       arguments:
         mode:
@@ -215,6 +215,7 @@ subcommands:
             2d: [2d, subdivide] # Both "2d" and "subdivide" work
             3d: [3d]
             shaped: [shaped]
+            shapedsubdivide: [shapedsubdivide, shapedsub]
             merge: [merge]
 
     # ------------------------------------------------------------------------

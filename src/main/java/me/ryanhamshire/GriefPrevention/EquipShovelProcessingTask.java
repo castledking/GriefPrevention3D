@@ -57,7 +57,10 @@ class EquipShovelProcessingTask implements Runnable
         playerData.mergeSecondDepthPoint = null;
 
         // shaped mode should persist while the player is actively using the shovel
-        if (playerData.shovelMode != ShovelMode.Basic && playerData.shovelMode != ShovelMode.Shaped && playerData.shovelMode != ShovelMode.Merge)
+        if (playerData.shovelMode != ShovelMode.Basic
+                && playerData.shovelMode != ShovelMode.Shaped
+                && playerData.shovelMode != ShovelMode.ShapedSubdivide
+                && playerData.shovelMode != ShovelMode.Merge)
         {
             playerData.shovelMode = ShovelMode.Basic;
             GriefPrevention.sendMessage(player, TextMode.Info, Messages.ShovelBasicClaimMode);

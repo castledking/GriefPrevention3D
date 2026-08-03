@@ -30,6 +30,13 @@ Messages:
   ConvertClaimAlreadyBasic: This claim is already a basic claim.
   ConvertClaimAdminSuccess: Claim converted to an administrative claim.
   ConvertClaimBasicSuccess: Administrative claim converted to a basic claim you own.
+  ConvertSubdivisionAdminSuccess: Subdivision converted to an administrative subdivision.  Its owner can no longer resize it, manage trust in it, or abandon the claim around it.
+  ConvertSubdivisionAlreadyAdmin: This subdivision is already an administrative subdivision.
+  ConvertSubdivisionAlreadyBasic: This subdivision is already a normal subdivision.
+  ConvertSubdivisionBasicSuccess: Administrative subdivision returned to a normal subdivision.
+  ConvertSubdivisionSelectFirst: Right-click a corner of the subdivision with your golden shovel to select it, then run that command again.
+  AdminSubdivisionRestricted: That subdivision is administered by staff.  Talk to staff if you need it changed.
+  AbandonBlockedAdminSubdivision: "You can't abandon this claim: it contains an administrator's subdivision.  Talk to staff."
   TrustListNoClaim: Stand inside the claim you're curious about.
   ClearPermsOwnerOnly: Only the claim owner can clear all permissions.
   UntrustIndividualAllClaims: Revoked {0}'s access to ALL your claims. To set permissions for a single claim, stand inside it.
@@ -42,6 +49,13 @@ Messages:
   BasicClaimsMode: Returned to basic claim creation mode.
   ShapedClaimsMode: Shaped claim mode. Right-click to place corners in unclaimed land or to start and extend shaped edits from claim boundaries. Boundary clicks create segment markers as needed. Use /basicclaims to exit.
   ShapedClaimsDisabled: Shaped claims are disabled on this server.
+  ShapedSubClaimsDisabled: Shaped subdivisions are disabled on this server.
+  ShapedSubdivisionMode: Shaped subdivision mode. Right-click inside one of your claims to place corners, then click your first corner again to close the subdivision. Click an existing shaped subdivision's boundary to reshape it. Use /basicclaims to exit.
+  ShapedSubdivisionNoParent: Right-click inside a claim you can edit to start a shaped subdivision.
+  ShapedSubdivisionOn3DClaim: Shaped subdivisions only work inside top-level 2D claims.
+  ShapedSubdivisionOutsideParent: Shaped subdivisions have to stay inside the claim you're subdividing.
+  ShapedSubdivisionReshaped: Shaped subdivision updated.
+  ShapedSubdivisionSuccess: Shaped subdivision created.
   MergeOverlapConflict: Could not merge; the completed merge would overlap other claims.
   SubdivisionMode: Subdivision mode. Use your shovel to create subdivisions in your existing claims. Use /basicclaims to exit.
   SubdivisionMode3D: '3D Subdivision mode.  Use your shovel to create 3D subdivisions in your existing claims.  Use /basicclaims to exit.'

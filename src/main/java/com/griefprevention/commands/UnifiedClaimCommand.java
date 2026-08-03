@@ -198,6 +198,9 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
                     if (plugin.config_claims_allowShapedClaims) {
                         modes = java.util.stream.Stream.concat(modes, java.util.stream.Stream.of("shaped"));
                     }
+                    if (plugin.config_claims_allowShapedSubClaims) {
+                        modes = java.util.stream.Stream.concat(modes, java.util.stream.Stream.of("shapedsubdivide"));
+                    }
                     return modes
                             .filter(mode -> mode.toLowerCase().startsWith(prefix))
                             .collect(java.util.stream.Collectors.toList());

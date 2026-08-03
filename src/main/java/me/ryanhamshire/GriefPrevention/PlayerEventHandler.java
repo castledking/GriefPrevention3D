@@ -1780,8 +1780,13 @@ public class PlayerEventHandler implements Listener {
             }
         } else {
             PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
-            if (playerData.shovelMode == ShovelMode.Shaped || playerData.shovelMode == ShovelMode.Merge) {
+            if (
+                playerData.shovelMode == ShovelMode.Shaped ||
+                playerData.shovelMode == ShovelMode.ShapedSubdivide ||
+                playerData.shovelMode == ShovelMode.Merge
+            ) {
                 playerData.shovelMode = ShovelMode.Basic;
+                playerData.claimSubdividing = null;
                 playerData.claimResizing = null;
                 playerData.claimMerging = null;
                 playerData.mergeEdgeIndex = null;
@@ -5300,6 +5305,9 @@ public class PlayerEventHandler implements Listener {
         Set<Boundary> boundaries = new HashSet<>();
         World world = player.getWorld();
         OrthogonalPolygon selectedPolygon = null;
+        // The draft path is drawn in the colours of the claim it belongs to, so pathing out an
+        // admin claim stays pumpkin rather than switching to the player-claim gold.
+        VisualizationType draftType = VisualizationType.CLAIM;
 
         if (
             session.activeTarget() != null &&
@@ -5313,6 +5321,7 @@ public class PlayerEventHandler implements Listener {
                     : VisualizationType.CLAIM;
                 boundaries.add(new Boundary(targetClaim, type));
                 selectedPolygon = targetClaim.getBoundaryPolygon();
+                draftType = type;
             }
         }
 
@@ -5341,7 +5350,7 @@ public class PlayerEventHandler implements Listener {
                 OrthogonalPoint2i prevPoint = draftPoints.get(i - 1);
                 Location start = new Location(world, prevPoint.x(), y, prevPoint.z());
                 Location end = new Location(world, point.x(), y, point.z());
-                boundaries.add(new Boundary(new BoundingBox(start, end), VisualizationType.CLAIM));
+                boundaries.add(new Boundary(new BoundingBox(start, end), draftType));
             }
 
             if (!onSelectedBoundary) {

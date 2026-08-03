@@ -554,6 +554,10 @@ public class FlatFileDataStore extends DataStore
         return this.loadClaim(builder.toString(), out_parentID, file.lastModified(), claimID, Bukkit.getServer().getWorlds());
     }
 
+    // Carried through the shared claim codec as an unknown field so subdivision admin status
+    // survives round trips without changing the cross-platform document schema.
+    private static final String ADMIN_SUBDIVISION_FIELD = "Admin Subdivision";
+
     private List<String> serializeShapeCorners(@NotNull Claim claim)
     {
         List<OrthogonalPoint2i> corners = claim.getShapedCorners();
@@ -736,6 +740,8 @@ public class FlatFileDataStore extends DataStore
         child.setInheritNothingForNewSubdivisions(
                 section.getBoolean("inheritNothingForNewSubdivisions", false)
         );
+        child.setShapedCorners(parseShapeCorners(section.getStringList("Shape Corners")));
+        child.setAdminSubdivision(section.getBoolean(ADMIN_SUBDIVISION_FIELD, false));
 
         if (!child.getSubclaimRestrictions())
         {
@@ -867,6 +873,17 @@ public class FlatFileDataStore extends DataStore
         long modifiedDate = claim.modifiedDate == null
                 ? System.currentTimeMillis()
                 : claim.modifiedDate.getTime();
+        Map<String, Object> extraFields = new LinkedHashMap<>(
+                previous == null ? Collections.<String, Object>emptyMap() : previous.extraFields()
+        );
+        if (claim.isAdminSubdivision())
+        {
+            extraFields.put(ADMIN_SUBDIVISION_FIELD, Boolean.TRUE);
+        }
+        else
+        {
+            extraFields.remove(ADMIN_SUBDIVISION_FIELD);
+        }
         ClaimDocument document = new ClaimDocument(
                 persistedSnapshot,
                 trust,
@@ -879,7 +896,7 @@ public class FlatFileDataStore extends DataStore
                 claim.alertsEnabled,
                 modifiedDate,
                 previous == null ? (claim.id == null ? null : String.valueOf(claim.id)) : previous.storageKey(),
-                previous == null ? Collections.<String, Object>emptyMap() : previous.extraFields()
+                extraFields
         );
         output.add(document);
 
@@ -934,6 +951,10 @@ public class FlatFileDataStore extends DataStore
         if (claim.isShaped())
         {
             section.set("Shape Corners", serializeShapeCorners(claim));
+        }
+        if (claim.isAdminSubdivision())
+        {
+            section.set(ADMIN_SUBDIVISION_FIELD, true);
         }
         section.set("Explosives Allowed", claim.areExplosivesAllowed);
         section.set("Wither Explosions Allowed", claim.areWitherExplosionsAllowed);

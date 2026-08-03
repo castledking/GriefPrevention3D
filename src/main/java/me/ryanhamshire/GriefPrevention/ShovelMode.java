@@ -23,6 +23,7 @@ public enum ShovelMode
 {
     Basic,
     Shaped,
+    ShapedSubdivide,
     Merge,
     Admin,
     Admin3D,

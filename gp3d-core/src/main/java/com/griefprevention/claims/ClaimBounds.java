@@ -180,7 +180,13 @@ public final class ClaimBounds
             return false;
         }
 
-        if (ignoreY && (this.isShaped() || other.isShaped()))
+        // Exact X/Z polygon intersection is required whenever a shaped claim is involved,
+        // regardless of how the Y-axis is treated. When ignoreY is false the Y overlap was
+        // already confirmed by intersects(); otherwise the Y-axis is intentionally ignored.
+        // Without this, a 3D claim (e.g. a 3D subdivision) would be rejected for overlapping
+        // the rectangular bounding box of a shaped 2D claim even when it only sits in a
+        // cavity (concave notch) that the shaped claim does not actually cover.
+        if (this.isShaped() || other.isShaped())
         {
             return intersectsColumns(other);
         }

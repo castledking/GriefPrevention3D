@@ -215,6 +215,7 @@ public class GriefPrevention extends JavaPlugin {
     public boolean config_claims_allowNestedSubClaims; // whether nested subdivisions may be created inside other
     // subdivisions
     public boolean config_claims_allowShapedClaims; // whether shaped claim creation and editing tools are enabled
+    public boolean config_claims_allowShapedSubClaims; // whether shaped 2D subdivisions may be created inside claims
     public boolean config_claims_allow3DSubdivisions; // whether 3D height-limited subdivisions are enabled
     public boolean config_claims_allow3DAdminClaims; // whether 3D height-limited admin claims are enabled
     public boolean config_claims_useClaimSelectSessions; // whether selected resize corners become command targets
@@ -1075,6 +1076,10 @@ public class GriefPrevention extends JavaPlugin {
             false
         );
         this.config_claims_allowShapedClaims = config.getBoolean("GriefPrevention.Claims.AllowShapedClaims", false);
+        this.config_claims_allowShapedSubClaims = config.getBoolean(
+            "GriefPrevention.Claims.AllowShapedSubClaims",
+            false
+        );
         this.config_claims_allow3DSubdivisions = config.getBoolean("GriefPrevention.Claims.Allow3DSubdivisions", true);
         this.config_claims_allow3DAdminClaims = config.getBoolean("GriefPrevention.Claims.Allow3DAdminClaims", true);
         this.config_claims_useClaimSelectSessions = config.getBoolean(
@@ -1468,6 +1473,7 @@ public class GriefPrevention extends JavaPlugin {
         outConfig.set("GriefPrevention.Claims.AllowTrappedInAdminClaims", this.config_claims_allowTrappedInAdminClaims);
         outConfig.set("GriefPrevention.Claims.AllowNestedSubClaims", this.config_claims_allowNestedSubClaims);
         outConfig.set("GriefPrevention.Claims.AllowShapedClaims", this.config_claims_allowShapedClaims);
+        outConfig.set("GriefPrevention.Claims.AllowShapedSubClaims", this.config_claims_allowShapedSubClaims);
         outConfig.set("GriefPrevention.Claims.UseClaimSelectSessions", this.config_claims_useClaimSelectSessions);
         outConfig.set("GriefPrevention.Claims.UseClaimSelectedMessages", this.config_claims_useClaimSelectedMessages);
         outConfig.set("GriefPrevention.Claims.LegacySubdivisionFormat", this.config_claims_legacySubdivisionFormat);
@@ -1800,35 +1806,17 @@ public class GriefPrevention extends JavaPlugin {
                 return;
             }
 
-            org.bukkit.command.PluginCommand shapedClaims = this.getCommand("shapedclaims");
-            if (shapedClaims == null) {
-                return;
-            }
-
             String prefix = this.getName().toLowerCase(Locale.ROOT);
+            java.util.Map<String, org.bukkit.command.Command> knownCommands = findKnownCommandsMap(commandMap);
 
-            if (this.config_claims_allowShapedClaims) {
-                // Use CommandMap.register() so the implementation (Paper/Brigadier) stays consistent with plugin.yml
-                // aliases. Raw knownCommands.put() can leave /shapedclaim broken after toggling AllowShapedClaims and
-                // running /gpreload.
-                commandMap.register(prefix, shapedClaims);
-            } else {
-                java.util.Map<String, org.bukkit.command.Command> knownCommands = findKnownCommandsMap(commandMap);
-                if (knownCommands == null) {
-                    return;
-                }
-                java.util.List<String> commandNames = new java.util.ArrayList<>();
-                commandNames.add(shapedClaims.getName().toLowerCase(Locale.ROOT));
-                for (String alias : shapedClaims.getAliases()) {
-                    if (alias != null && !Compat.isBlank(alias)) {
-                        commandNames.add(alias.toLowerCase(Locale.ROOT));
-                    }
-                }
-                for (String name : commandNames) {
-                    knownCommands.remove(name);
-                    knownCommands.remove(prefix + ":" + name);
-                }
-            }
+            syncOptionalCommand(commandMap, knownCommands, prefix, "shapedclaims", this.config_claims_allowShapedClaims);
+            syncOptionalCommand(
+                commandMap,
+                knownCommands,
+                prefix,
+                "shapedsubdivideclaims",
+                this.config_claims_allowShapedSubClaims
+            );
         } catch (Exception e) {
             this.getLogger().warning("Failed to sync shaped claim commands: " + e.getMessage());
         }
@@ -1843,50 +1831,112 @@ public class GriefPrevention extends JavaPlugin {
 
             String prefix = this.getName().toLowerCase(Locale.ROOT);
             java.util.Map<String, org.bukkit.command.Command> knownCommands = findKnownCommandsMap(commandMap);
-            if (knownCommands == null) {
-                return;
-            }
 
-            // 3D Subdivisions
-            org.bukkit.command.PluginCommand subdivide3D = this.getCommand("3dsubdivideclaims");
-            if (subdivide3D != null) {
-                if (this.config_claims_allow3DSubdivisions) {
-                    commandMap.register(prefix, subdivide3D);
-                } else {
-                    removeCommandFromMap(knownCommands, prefix, subdivide3D);
-                }
-            }
-
-            // 3D Admin Claims
-            org.bukkit.command.PluginCommand admin3D = this.getCommand("3dadminclaims");
-            if (admin3D != null) {
-                if (this.config_claims_allow3DAdminClaims) {
-                    commandMap.register(prefix, admin3D);
-                } else {
-                    removeCommandFromMap(knownCommands, prefix, admin3D);
-                }
-            }
+            syncOptionalCommand(
+                commandMap,
+                knownCommands,
+                prefix,
+                "3dsubdivideclaims",
+                this.config_claims_allow3DSubdivisions
+            );
+            syncOptionalCommand(
+                commandMap,
+                knownCommands,
+                prefix,
+                "3dadminclaims",
+                this.config_claims_allow3DAdminClaims
+            );
         } catch (Exception e) {
             this.getLogger().warning("Failed to sync 3D claim commands: " + e.getMessage());
         }
     }
 
-    private void removeCommandFromMap(
+    /**
+     * Adds or removes a config-gated command and every one of its plugin.yml aliases from the live
+     * command map, so toggling the option and running {@code /gpreload} takes effect immediately.
+     *
+     * @param commandMap the server command map
+     * @param knownCommands the command map's backing label lookup, or null if it couldn't be reached
+     * @param prefix this plugin's command namespace
+     * @param commandName the plugin.yml command name
+     * @param enabled whether the feature backing the command is currently on
+     */
+    private void syncOptionalCommand(
+        CommandMap commandMap,
         java.util.Map<String, org.bukkit.command.Command> knownCommands,
         String prefix,
-        org.bukkit.command.PluginCommand command
+        String commandName,
+        boolean enabled
     ) {
-        java.util.List<String> commandNames = new java.util.ArrayList<>();
-        commandNames.add(command.getName().toLowerCase(Locale.ROOT));
+        org.bukkit.command.PluginCommand command = this.getCommand(commandName);
+        if (command == null) {
+            return;
+        }
+
+        // Snapshot the labels before touching the command map: SimpleCommandMap.register() drops any
+        // alias it considers a conflict from Command#getAliases(), and the plugin loader's own
+        // registration always looks like one. Reading the aliases afterwards would come back empty
+        // and leave the aliases live after the feature is switched off.
+        java.util.List<String> labels = commandLabels(command);
+
+        if (enabled) {
+            // Register through the command map so the implementation (Paper/Brigadier) stays
+            // consistent with plugin.yml, then put back the labels it declined to re-add.
+            commandMap.register(prefix, command);
+            if (knownCommands == null) {
+                return;
+            }
+
+            for (String label : labels) {
+                org.bukkit.command.Command existing = knownCommands.get(label);
+                if (existing == null || existing == command) {
+                    knownCommands.put(label, command);
+                }
+                knownCommands.put(prefix + ":" + label, command);
+            }
+
+            return;
+        }
+
+        if (knownCommands == null) {
+            return;
+        }
+
+        for (String label : labels) {
+            if (knownCommands.get(label) == command) {
+                knownCommands.remove(label);
+            }
+            knownCommands.remove(prefix + ":" + label);
+        }
+    }
+
+    // plugin.yml label sets (command name plus aliases), captured the first time each command is
+    // synced and reused from then on. See syncOptionalCommand for why they can't be re-read later.
+    private final java.util.Map<String, java.util.List<String>> commandLabelsByName = new java.util.HashMap<>();
+
+    private java.util.List<String> commandLabels(org.bukkit.command.PluginCommand command) {
+        String name = command.getName().toLowerCase(Locale.ROOT);
+        java.util.List<String> cached = this.commandLabelsByName.get(name);
+        if (cached != null) {
+            return cached;
+        }
+
+        java.util.List<String> labels = new java.util.ArrayList<>();
+        labels.add(name);
         for (String alias : command.getAliases()) {
-            if (alias != null && !Compat.isBlank(alias)) {
-                commandNames.add(alias.toLowerCase(Locale.ROOT));
+            if (alias == null || Compat.isBlank(alias)) {
+                continue;
+            }
+
+            String normalized = alias.toLowerCase(Locale.ROOT);
+            if (!labels.contains(normalized)) {
+                labels.add(normalized);
             }
         }
-        for (String name : commandNames) {
-            knownCommands.remove(name);
-            knownCommands.remove(prefix + ":" + name);
-        }
+
+        labels = java.util.Collections.unmodifiableList(labels);
+        this.commandLabelsByName.put(name, labels);
+        return labels;
     }
 
     private void displayEnabledHeader() {
@@ -2009,6 +2059,20 @@ public class GriefPrevention extends JavaPlugin {
             if (originalClaimCount == 0) {
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.YouHaveNoClaims);
                 return true;
+            }
+
+            // a single staff-administered subdivision anywhere pins the whole batch
+            if (!player.hasPermission("griefprevention.adminclaims")) {
+                for (Claim claim : playerData.getClaims()) {
+                    if (claim.containsAdminSubdivision()) {
+                        GriefPrevention.sendMessage(
+                            player,
+                            TextMode.Err,
+                            Messages.AbandonBlockedAdminSubdivision
+                        );
+                        return true;
+                    }
+                }
             }
 
             if (this.config_claims_abandonReturnRatio != 1.0D) {
@@ -2625,6 +2689,24 @@ public class GriefPrevention extends JavaPlugin {
                 Messages.SubdivisionVideo2,
                 DataStore.SUBDIVISION_VIDEO_URL
             );
+
+            return true;
+        }
+        // shapedsubdivideclaims
+        else if (
+            (cmd.getName().equalsIgnoreCase("shapedsubdivideclaims") ||
+                cmd.getName().equalsIgnoreCase("shapedsubdivideclaim")) &&
+            player != null
+        ) {
+            if (!this.config_claims_allowShapedSubClaims) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.ShapedSubClaimsDisabled);
+                return true;
+            }
+            if (!player.hasPermission("griefprevention.shapedsubdivideclaims")) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+                return true;
+            }
+            this.enterShapedSubdivideMode(player);
 
             return true;
         }
@@ -3606,6 +3688,15 @@ public class GriefPrevention extends JavaPlugin {
             return true;
         }
 
+        // an administrative subdivision anywhere below this claim pins the whole claim in place
+        if (
+            !player.hasPermission("griefprevention.adminclaims") &&
+            (claim.isAdminSubdivision() || claim.containsAdminSubdivision())
+        ) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.AbandonBlockedAdminSubdivision);
+            return true;
+        }
+
         // warn if has children and we're not explicitly deleting a top level claim
         if (!claim.children.isEmpty() && !deleteTopLevelClaim) {
             GriefPrevention.sendMessage(player, TextMode.Instr, Messages.DeleteTopLevelClaim);
@@ -3680,6 +3771,31 @@ public class GriefPrevention extends JavaPlugin {
     }
 
     /**
+     * The claim a player explicitly selected by right-clicking one of its corners with the golden
+     * shovel, ignoring whatever claim they happen to be standing in.
+     *
+     * <p>Commands that must not act on a claim by accident — converting a subdivision to and from
+     * administrative ownership, for instance — use this instead of {@link
+     * #getSelectedOrCurrentClaim(Player, boolean)}.
+     *
+     * @param player the player
+     * @return the selected claim, or null when nothing is selected
+     */
+    public @Nullable Claim getSelectedClaim(@NotNull Player player) {
+        PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
+        if (
+            this.config_claims_useClaimSelectSessions &&
+            playerData.claimSelectionActive &&
+            playerData.claimResizing != null &&
+            playerData.claimResizing.inDataStore
+        ) {
+            return playerData.claimResizing;
+        }
+
+        return null;
+    }
+
+    /**
      * Propagates trust changes to child claims that inherit permissions.
      *
      * <p>Children are only modified in memory and collected into {@code modifiedClaims}, so
@@ -3705,6 +3821,10 @@ public class GriefPrevention extends JavaPlugin {
         if (parentClaim.children.isEmpty()) return;
 
         for (Claim childClaim : parentClaim.children) {
+            // Administrative subdivisions are trusted by staff only, so parent-level trust changes
+            // must not reach into them or anything nested below them.
+            if (childClaim.isAdminSubdivision()) continue;
+
             // Only propagate to children that inherit permissions (inheritNothing = false)
             if (!childClaim.getSubclaimRestrictions()) {
                 if (isAddingTrust) {
@@ -5053,6 +5173,21 @@ public class GriefPrevention extends JavaPlugin {
                 playerData.setClaimEditorSession(null);
                 GriefPrevention.sendMessage(player, TextMode.Instr, Messages.ShapedClaimsMode);
                 break;
+            case "shapedsubdivide":
+            case "shapedsub":
+                if (!this.config_claims_allowShapedSubClaims) {
+                    GriefPrevention.sendMessage(player, TextMode.Err, Messages.ShapedSubClaimsDisabled);
+                    return true;
+                }
+                if (
+                    !player.hasPermission("griefprevention.shapedsubdivideclaims") ||
+                    !player.hasPermission("griefprevention.claims")
+                ) {
+                    GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+                    return true;
+                }
+                this.enterShapedSubdivideMode(player);
+                break;
             case "2d":
                 playerData.shovelMode = ShovelMode.Subdivide;
                 playerData.claimSubdividing = null;
@@ -5091,6 +5226,30 @@ public class GriefPrevention extends JavaPlugin {
         }
 
         return true;
+    }
+
+    /**
+     * Puts a player into shaped subdivision mode and shows the claims they can subdivide, so the
+     * boundaries they have to stay inside are visible before the first corner goes down.
+     */
+    private void enterShapedSubdivideMode(@NotNull Player player) {
+        PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
+        playerData.shovelMode = ShovelMode.ShapedSubdivide;
+        playerData.claimSubdividing = null;
+        playerData.claimResizing = null;
+        playerData.claimMerging = null;
+        playerData.mergeEdgeIndex = null;
+        playerData.mergeSecondEdgeIndex = null;
+        playerData.mergeFirstDepthPoint = null;
+        playerData.mergeSecondDepthPoint = null;
+        playerData.lastShovelLocation = null;
+        playerData.setClaimEditorSession(null);
+
+        Set<Claim> claims = this.dataStore.getNearbyClaims(player.getLocation());
+        if (!claims.isEmpty()) {
+            BoundaryVisualization.mergeNearbyClaims(player, claims);
+        }
+        GriefPrevention.sendMessage(player, TextMode.Instr, Messages.ShapedSubdivisionMode);
     }
 
     public boolean handleRestrictSubclaimCommand(CommandSender sender, String[] args) {
@@ -5140,6 +5299,13 @@ public class GriefPrevention extends JavaPlugin {
                 GriefPrevention.sendMessage(player, TextMode.Success, Messages.MainClaimSubdivisionInheritDisabled);
             }
             this.dataStore.saveClaim(claim);
+            return true;
+        }
+
+        // Trust inheritance in an administrative subdivision is staff's call, not the surrounding
+        // claim owner's.
+        if (claim.isAdminSubdivision() && !player.hasPermission("griefprevention.adminclaims")) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.AdminSubdivisionRestricted);
             return true;
         }
 

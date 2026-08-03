@@ -699,6 +699,10 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
             return true;
         }
 
+        if (claim.parent != null) {
+            return convertSubdivision(player, claim, true);
+        }
+
         if (claim.isAdminClaim()) {
             GriefPrevention.sendMessage(player, TextMode.Instr, Messages.ConvertClaimAlreadyAdmin);
             return true;
@@ -744,6 +748,10 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
             return true;
         }
 
+        if (claim.parent != null) {
+            return convertSubdivision(player, claim, false);
+        }
+
         if (!claim.isAdminClaim()) {
             GriefPrevention.sendMessage(player, TextMode.Instr, Messages.ConvertClaimAlreadyBasic);
             return true;
@@ -762,6 +770,52 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
                 " converted administrative claim at " +
                 GriefPrevention.getfriendlyLocationString(claim.getLesserBoundaryCorner()) +
                 " to a basic claim they own.",
+            CustomLogEntryTypes.AdminActivity
+        );
+        return true;
+    }
+
+    /**
+     * Flags a subdivision as staff-administered, or hands it back to the surrounding claim's owner.
+     *
+     * <p>The subdivision has to be selected by right-clicking one of its corners with the golden
+     * shovel. Resolving it from the player's location would silently target a subdivision whenever
+     * they happened to be standing in one, which is exactly the mistake that would cost a player
+     * control of their own subclaim.
+     *
+     * @param player the staff member running the command
+     * @param claim the subdivision resolved for the command
+     * @param makeAdmin true to convert to an administrative subdivision, false to convert back
+     * @return true, the command is always considered handled
+     */
+    private boolean convertSubdivision(Player player, Claim claim, boolean makeAdmin) {
+        if (plugin.getSelectedClaim(player) != claim) {
+            GriefPrevention.sendMessage(player, TextMode.Instr, Messages.ConvertSubdivisionSelectFirst);
+            return true;
+        }
+
+        if (claim.isAdminSubdivision() == makeAdmin) {
+            GriefPrevention.sendMessage(
+                player,
+                TextMode.Instr,
+                makeAdmin ? Messages.ConvertSubdivisionAlreadyAdmin : Messages.ConvertSubdivisionAlreadyBasic
+            );
+            return true;
+        }
+
+        claim.setAdminSubdivision(makeAdmin);
+        plugin.dataStore.saveClaim(claim);
+
+        GriefPrevention.sendMessage(
+            player,
+            TextMode.Success,
+            makeAdmin ? Messages.ConvertSubdivisionAdminSuccess : Messages.ConvertSubdivisionBasicSuccess
+        );
+        GriefPrevention.AddLogEntry(
+            player.getName() +
+                (makeAdmin ? " converted the subdivision at " : " released the administrative subdivision at ") +
+                GriefPrevention.getfriendlyLocationString(claim.getLesserBoundaryCorner()) +
+                (makeAdmin ? " to an administrative subdivision." : " back to a normal subdivision."),
             CustomLogEntryTypes.AdminActivity
         );
         return true;
