@@ -3,7 +3,7 @@ prefix: GriefPrevention3D
 main: me.ryanhamshire.GriefPrevention.GriefPrevention
 provides: [GriefPrevention]
 softdepend:
-  [Multiverse-Core, My_Worlds, MystCraft, Transporter, RoyalCommands, MultiWorld, Denizen, CommandHelper, Iris, PlaceholderAPI, Vault]
+  [Multiverse-Core, MyCommand, My_Worlds, MystCraft, Transporter, RoyalCommands, MultiWorld, Denizen, CommandHelper, Iris, PlaceholderAPI, Vault]
 dev-url: https://github.com/castledking/GriefPrevention3D
 version: "${project.version}"
 description: The self-service anti-griefing plugin for Minecraft servers — now with full 3D subdivisions
