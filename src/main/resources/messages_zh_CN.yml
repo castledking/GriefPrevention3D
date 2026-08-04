@@ -30,6 +30,13 @@ Messages:
   ConvertClaimAlreadyBasic: 该领地已经是基础领地。
   ConvertClaimAdminSuccess: 领地已转换为管理员领地。
   ConvertClaimBasicSuccess: 管理员领地已转换为你拥有的基础领地。
+  ConvertSubdivisionAdminSuccess: 子领地已转换为管理员子领地。其所有者将无法再调整其大小、管理其中的信任关系，或放弃其周围的领地。
+  ConvertSubdivisionAlreadyAdmin: 此子领地已经是管理员子领地。
+  ConvertSubdivisionAlreadyBasic: 此子领地已经是普通子领地。
+  ConvertSubdivisionBasicSuccess: 管理员子领地已恢复为普通子领地。
+  ConvertSubdivisionSelectFirst: 用你的金铲子右键单击子领地的一个角落以选中它，然后再次执行该命令。
+  AdminSubdivisionRestricted: 该子领地由管理团队管理。如需更改，请联系管理团队。
+  AbandonBlockedAdminSubdivision: "你无法放弃此领地：它包含一个管理员子领地。请联系管理团队。"
   TrustListNoClaim: 请站在你想查看的领地内。
   ClearPermsOwnerOnly: 只有领地所有者可以清除所有权限。
   UntrustIndividualAllClaims: 已撤销 {0} 对你所有领地的访问权限。要为单个领地设置权限，请站在该领地内。
@@ -42,6 +49,13 @@ Messages:
   BasicClaimsMode: 已返回到基础领地创建模式。
   ShapedClaimsMode: 自定义形状领地模式。在未认领的土地上右键单击放置角落，或在领地边界上开始和扩展形状编辑。边界点击会根据需要创建分段标记。使用 /basicclaims 退出。
   ShapedClaimsDisabled: 此服务器上已禁用自定义形状领地。
+  ShapedSubClaimsDisabled: 此服务器已禁用自定义形状子领地。
+  ShapedSubdivisionMode: 自定义形状子领地模式。在你的某个领地内右键单击放置角落，然后再次点击第一个角落以闭合子领地。点击现有自定义形状子领地的边界可对其重新塑形。使用 /basicclaims 退出。
+  ShapedSubdivisionNoParent: 在你可以编辑的领地内右键单击以开始创建自定义形状子领地。
+  ShapedSubdivisionOn3DClaim: 自定义形状子领地仅在顶层 2D 领地内有效。
+  ShapedSubdivisionOutsideParent: 自定义形状子领地必须保持在你正在划分的领地内。
+  ShapedSubdivisionReshaped: 自定义形状子领地已更新。
+  ShapedSubdivisionSuccess: 自定义形状子领地已创建。
   MergeOverlapConflict: 无法合并；合并完成后会与其他领地重叠。
   SubdivisionMode: 子领地模式。使用你的铲子在现有领地中创建子领地。使用 /basicclaims 退出。
   SubdivisionMode3D: 3D 子领地模式。使用你的铲子在现有领地中创建 3D 子领地。使用 /basicclaims 退出。
@@ -51,6 +65,8 @@ Messages:
   DeleteSuccess: 领地已删除。
   CantDeleteAdminClaim: 你没有删除管理员领地的权限。
   NoAdminClaimsPermission: 你没有管理管理员领地的权限。
+  ClaimLabel: 领地
+  SubdivisionLabel: 子领地
   ConfirmPvpToggleEnabledNoFee: "你想在这个 {0} 启用 PvP 吗？"
   ConfirmPvpToggleDisabledNoFee: "你想在这个 {0} 禁用 PvP 吗？"
   ConfirmPvpToggleEnabledWithFee: "你想支付 {0} 来在这个 {1} 启用 PvP 吗？"
@@ -319,10 +335,6 @@ Messages:
   NeighborTrustRevokedAll: "已撤销 {0} 对你所有领地的邻居信任。"
   NeighborBypassEnabled: "所有玩家现在都可以绕过此领地的最小距离检查。"
   NeighborBypassDisabled: "此领地现在强制执行最小距离检查。"
-  Subdivisions3DDisabled: 此服务器上已禁用3D子区域。
-  AdminClaims3DDisabled: 此服务器上已禁用3D管理员领地。
-  DistanceCheckEnabled: 距离检查已启用。创建领地时如果太靠近其他领地将会收到警告。
-  DistanceCheckDisabled: 距离检查已禁用。
   AuthorTag: "&7由 castledking、RoboMWM 和 BigScary 制作"
   PluginTag: "&6Minecraft 服务器的自助防破坏插件 \n&b- 现已支持完整3D子区域"
   StartupDetails: "&f启动详情：{0}"
@@ -333,3 +345,7 @@ Messages:
   ClaimAlertsUsage: 使用 /claimtogglealerts on|off 切换所有领地的警报，或站在特定领地中再次尝试。
   BootFinished: "&7启动完成用时：&a{0}"
   MessagesLoaded: "消息已加载：&a{0}"
+  Subdivisions3DDisabled: 此服务器上已禁用3D子区域。
+  AdminClaims3DDisabled: 此服务器上已禁用3D管理员领地。
+  DistanceCheckEnabled: 距离检查已启用。创建领地时如果太靠近其他领地将会收到警告。
+  DistanceCheckDisabled: 距离检查已禁用。

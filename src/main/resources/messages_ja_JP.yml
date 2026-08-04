@@ -30,6 +30,13 @@ Messages:
   ConvertClaimAlreadyBasic: このクレームはすでに基本クレームです。
   ConvertClaimAdminSuccess: クレームを管理用クレームに変換しました。
   ConvertClaimBasicSuccess: 管理用クレームをあなたが所有する基本クレームに変換しました。
+  ConvertSubdivisionAdminSuccess: サブディビジョンを管理用サブディビジョンに変換しました。所有者はもうサイズ変更、信頼の管理、周囲のクレームの放棄ができません。
+  ConvertSubdivisionAlreadyAdmin: このサブディビジョンは既に管理用サブディビジョンです。
+  ConvertSubdivisionAlreadyBasic: このサブディビジョンは既に通常のサブディビジョンです。
+  ConvertSubdivisionBasicSuccess: 管理用サブディビジョンを通常のサブディビジョンに戻しました。
+  ConvertSubdivisionSelectFirst: 金のシャベルでサブディビジョンのコーナーを右クリックして選択し、もう一度そのコマンドを実行してください。
+  AdminSubdivisionRestricted: そのサブディビジョンは運営によって管理されています。変更が必要な場合は運営に相談してください。
+  AbandonBlockedAdminSubdivision: "このクレームは放棄できません：管理者のサブディビジョンが含まれています。運営に相談してください。"
   TrustListNoClaim: 確認したいクレームの中に立ってください。
   ClearPermsOwnerOnly: クレーム所有者のみがすべての権限をクリアできます。
   UntrustIndividualAllClaims: '{0} のすべてのクレームへのアクセスを取り消しました。単一のクレームの権限を設定するには、その中に立ってください。'
@@ -42,6 +49,13 @@ Messages:
   BasicClaimsMode: 基本クレーム作成モードに戻りました。
   ShapedClaimsMode: 形状クレームモード。未クレームの土地で右クリックしてコーナーを配置するか、クレーム境界から形状編集を開始・拡張します。境界クリックで必要に応じてセグメントマーカーを作成します。/basicclaims で終了します。
   ShapedClaimsDisabled: このサーバーでは形状クレームは無効です。
+  ShapedSubClaimsDisabled: このサーバーでは形状サブディビジョンが無効になっています。
+  ShapedSubdivisionMode: 形状サブディビジョンモード。自分のクレーム内で右クリックしてコーナーを配置し、最初のコーナーを再度クリックしてサブディビジョンを閉じます。既存の形状サブディビジョンの境界をクリックすると、その形を変更できます。/basicclaims で終了します。
+  ShapedSubdivisionNoParent: 編集可能なクレーム内で右クリックして、形状サブディビジョンを開始してください。
+  ShapedSubdivisionOn3DClaim: 形状サブディビジョンは最上位の2Dクレーム内でのみ機能します。
+  ShapedSubdivisionOutsideParent: 形状サブディビジョンは、分割元のクレーム内に収まっている必要があります。
+  ShapedSubdivisionReshaped: 形状サブディビジョンを更新しました。
+  ShapedSubdivisionSuccess: 形状サブディビジョンを作成しました。
   MergeOverlapConflict: マージできませんでした。完了したマージが他のクレームと重なります。
   SubdivisionMode: サブディビジョンモード。シャベルを使用して既存のクレーム内にサブディビジョンを作成します。/basicclaims で終了します。
   SubdivisionMode3D: 3Dサブディビジョンモード。シャベルを使用して既存のクレーム内に3Dサブディビジョンを作成します。/basicclaims で終了します。
@@ -51,6 +65,8 @@ Messages:
   DeleteSuccess: クレームを削除しました。
   CantDeleteAdminClaim: 管理用クレームを削除する権限がありません。
   NoAdminClaimsPermission: 管理用クレームを管理する権限がありません。
+  ClaimLabel: クレーム
+  SubdivisionLabel: サブディビジョン
   ConfirmPvpToggleEnabledNoFee: "この {0} で PvP を有効化しますか？"
   ConfirmPvpToggleDisabledNoFee: "この {0} で PvP を無効化しますか？"
   ConfirmPvpToggleEnabledWithFee: "この {1} で PvP を有効化するために {0} を支払いますか？"
@@ -318,10 +334,6 @@ Messages:
   NeighborTrustGrantedAll: "{0} にすべてのクレームの隣接者信頼を付与しました。"
   NeighborTrustRevokedAll: "{0} の隣接者信頼をすべてのクレームから取り消しました。"
   NeighborBypassEnabled: "すべてのプレイヤーがこのクレームの最小距離チェックをバイパスできるようになりました。"
-  Subdivisions3DDisabled: このサーバーでは3Dサブディビジョンは無効です。
-  AdminClaims3DDisabled: このサーバーでは3D管理用クレームは無効です。
-  DistanceCheckEnabled: 距離チェックが有効になりました。他のクレームに近すぎる場所にクレームを作成しようとすると警告されます。
-  DistanceCheckDisabled: 距離チェックが無効になりました。
   NeighborBypassDisabled: "このクレームで最小距離チェックが適用されるようになりました。"
   AuthorTag: "&7by castledking, RoboMWM and BigScary"
   PluginTag: "&6The self-service anti-griefing plugin for Minecraft servers \n&b- now with full 3D subdivisions"
@@ -333,3 +345,7 @@ Messages:
   ClaimAlertsUsage: すべてのクレームのアラートを切り替えるには /claimtogglealerts on|off を使用するか、特定のクレームに立って再度試してください。
   BootFinished: "&7起動完了まで：&a{0}"
   MessagesLoaded: "メッセージを読み込みました：&a{0}"
+  Subdivisions3DDisabled: このサーバーでは3Dサブディビジョンは無効です。
+  AdminClaims3DDisabled: このサーバーでは3D管理用クレームは無効です。
+  DistanceCheckEnabled: 距離チェックが有効になりました。他のクレームに近すぎる場所にクレームを作成しようとすると警告されます。
+  DistanceCheckDisabled: 距離チェックが無効になりました。

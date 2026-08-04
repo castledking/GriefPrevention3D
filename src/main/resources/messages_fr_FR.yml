@@ -30,6 +30,13 @@ Messages:
   ConvertClaimAlreadyBasic: Ce terrain est déjà un terrain basique.
   ConvertClaimAdminSuccess: Terrain converti en terrain administratif.
   ConvertClaimBasicSuccess: Terrain administratif converti en terrain basique que vous possédez.
+  ConvertSubdivisionAdminSuccess: "Subdivision convertie en subdivision administrative. Son propriétaire ne peut plus la redimensionner, gérer la confiance qui y est accordée, ni abandonner le terrain qui l'entoure."
+  ConvertSubdivisionAlreadyAdmin: Cette subdivision est déjà une subdivision administrative.
+  ConvertSubdivisionAlreadyBasic: Cette subdivision est déjà une subdivision normale.
+  ConvertSubdivisionBasicSuccess: Subdivision administrative retransformée en subdivision normale.
+  ConvertSubdivisionSelectFirst: Faites un clic droit sur un coin de la subdivision avec votre pelle en or pour la sélectionner, puis relancez cette commande.
+  AdminSubdivisionRestricted: Cette subdivision est administrée par le staff. Parlez au staff si vous avez besoin d'un changement.
+  AbandonBlockedAdminSubdivision: "Vous ne pouvez pas abandonner ce terrain : il contient une subdivision administrative. Parlez au staff."
   TrustListNoClaim: "Placez-vous dans le terrain qui vous intéresse."
   ClearPermsOwnerOnly: Seul le propriétaire du terrain peut effacer toutes les permissions.
   UntrustIndividualAllClaims: "Accès de {0} révoqué sur TOUS vos terrains. Pour définir les permissions d'un seul terrain, placez-vous à l'intérieur."
@@ -42,6 +49,13 @@ Messages:
   BasicClaimsMode: Retour au mode de création basique.
   ShapedClaimsMode: Mode terrain personnalisé. Faites un clic droit pour placer des coins dans une zone non protégée ou pour commencer et étendre des formes depuis les limites du terrain. Les clics sur les limites créent des marqueurs de segment. Utilisez /basicclaims pour quitter.
   ShapedClaimsDisabled: Les terrains personnalisés sont désactivés sur ce serveur.
+  ShapedSubClaimsDisabled: Les subdivisions personnalisées sont désactivées sur ce serveur.
+  ShapedSubdivisionMode: Mode subdivision personnalisée. Faites un clic droit à l'intérieur d'un de vos terrains pour placer des coins, puis cliquez à nouveau sur votre premier coin pour fermer la subdivision. Cliquez sur la limite d'une subdivision personnalisée existante pour la remodeler. Utilisez /basicclaims pour quitter.
+  ShapedSubdivisionNoParent: Faites un clic droit à l'intérieur d'un terrain que vous pouvez modifier pour démarrer une subdivision personnalisée.
+  ShapedSubdivisionOn3DClaim: Les subdivisions personnalisées ne fonctionnent qu'à l'intérieur des terrains 2D de premier niveau.
+  ShapedSubdivisionOutsideParent: Les subdivisions personnalisées doivent rester à l'intérieur du terrain que vous subdivisez.
+  ShapedSubdivisionReshaped: Subdivision personnalisée mise à jour.
+  ShapedSubdivisionSuccess: Subdivision personnalisée créée.
   MergeOverlapConflict: Impossible de fusionner ; la fusion terminée chevaucherait d'autres terrains.
   SubdivisionMode: Mode subdivision. Utilisez votre pelle pour créer des subdivisions dans vos terrains existants. Utilisez /basicclaims pour quitter.
   SubdivisionMode3D: Mode subdivision 3D. Utilisez votre pelle pour créer des subdivisions 3D dans vos terrains existants. Utilisez /basicclaims pour quitter.
@@ -51,6 +65,8 @@ Messages:
   DeleteSuccess: Terrain supprimé.
   CantDeleteAdminClaim: Vous n'avez pas la permission de supprimer des terrains administratifs.
   NoAdminClaimsPermission: Vous n'avez pas la permission de gérer des terrains administratifs.
+  ClaimLabel: terrain
+  SubdivisionLabel: subdivision
   ConfirmPvpToggleEnabledNoFee: "Voulez-vous activer le PvP dans ce {0} ?"
   ConfirmPvpToggleDisabledNoFee: "Voulez-vous désactiver le PvP dans ce {0} ?"
   ConfirmPvpToggleEnabledWithFee: "Voulez-vous payer {0} pour activer le PvP dans ce {1} ?"
@@ -318,10 +334,6 @@ Messages:
   NeighborTrustGrantedAll: "Confiance de voisin accordée à {0} pour TOUS vos terrains."
   NeighborTrustRevokedAll: "Confiance de voisin de {0} révoquée de TOUS vos terrains."
   NeighborBypassEnabled: Tous les joueurs peuvent maintenant ignorer les vérifications de distance minimale pour ce terrain.
-  Subdivisions3DDisabled: Les subdivisions 3D sont désactivées sur ce serveur.
-  AdminClaims3DDisabled: Les claims admin 3D sont désactivés sur ce serveur.
-  DistanceCheckEnabled: Vérification de distance activée. Vous serez averti lorsque vous créerez des claims trop proches d'autres.
-  DistanceCheckDisabled: Vérification de distance désactivée.
   NeighborBypassDisabled: Les vérifications de distance minimale sont maintenant actives pour ce terrain.
   AuthorTag: "&7par castledking, RoboMWM et BigScary"
   PluginTag: "&6Le plugin anti-griefing en libre-service pour serveurs Minecraft \n&b- Maintenant avec subdivisions 3D complètes"
@@ -333,3 +345,7 @@ Messages:
   ClaimAlertsUsage: Utilisez /claimtogglealerts on|off pour activer/désactiver les alertes pour TOUS les terrains, ou tenez-vous dans un terrain spécifique et réessayez.
   BootFinished: "&7Démarrage terminé en : &a{0}"
   MessagesLoaded: "Messages chargés : {0}"
+  Subdivisions3DDisabled: Les subdivisions 3D sont désactivées sur ce serveur.
+  AdminClaims3DDisabled: Les claims admin 3D sont désactivés sur ce serveur.
+  DistanceCheckEnabled: Vérification de distance activée. Vous serez averti lorsque vous créerez des claims trop proches d'autres.
+  DistanceCheckDisabled: Vérification de distance désactivée.

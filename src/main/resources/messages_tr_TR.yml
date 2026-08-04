@@ -31,6 +31,13 @@ Messages:
   ConvertClaimAlreadyBasic: Bu bölge zaten temel bir bölge.
   ConvertClaimAdminSuccess: Bölge, yönetici bölgesine dönüştürüldü.
   ConvertClaimBasicSuccess: Yönetici bölgesi, size ait temel bir bölgeye dönüştürüldü.
+  ConvertSubdivisionAdminSuccess: Alt bölge, yönetici alt bölgesine dönüştürüldü. Sahibi artık onu yeniden boyutlandıramaz, içindeki güveni yönetemez veya çevresindeki bölgeyi terk edemez.
+  ConvertSubdivisionAlreadyAdmin: Bu alt bölge zaten bir yönetici alt bölgesi.
+  ConvertSubdivisionAlreadyBasic: Bu alt bölge zaten normal bir alt bölge.
+  ConvertSubdivisionBasicSuccess: Yönetici alt bölgesi normal bir alt bölgeye döndürüldü.
+  ConvertSubdivisionSelectFirst: Seçmek için altın küreğinizle alt bölgenin bir köşesine sağ tıklayın, ardından bu komutu tekrar çalıştırın.
+  AdminSubdivisionRestricted: Bu alt bölge yetkililer tarafından yönetiliyor. Değiştirilmesi gerekiyorsa yetkililerle konuşun.
+  AbandonBlockedAdminSubdivision: "Bu bölgeyi terk edemezsiniz: içinde bir yönetici alt bölgesi var. Yetkililerle konuşun."
   TrustListNoClaim: Merak ettiğiniz bölgenin içinde durun.
   ClearPermsOwnerOnly: Yalnızca bölge sahibi tüm izinleri temizleyebilir.
   UntrustIndividualAllClaims: "{0} kişisinin TÜM bölgelerinize erişimi iptal edildi. Tek bir bölge için izin ayarlamak üzere içinde durun."
@@ -43,6 +50,13 @@ Messages:
   BasicClaimsMode: Temel bölge oluşturma moduna dönüldü.
   ShapedClaimsMode: Şekilli bölge modu. Sahipsiz arazide köşe yerleştirmek için sağ tıklayın veya bölge sınırlarından şekilli düzenlemeler başlatıp genişletin. Sınır tıklamaları gerektiğinde segment işaretçileri oluşturur. Çıkmak için /basicclaims kullanın.
   ShapedClaimsDisabled: Şekilli bölgeler bu sunucuda devre dışı.
+  ShapedSubClaimsDisabled: Şekilli alt bölgeler bu sunucuda devre dışı.
+  ShapedSubdivisionMode: Şekilli alt bölge modu. Köşe yerleştirmek için bölgelerinizden birinin içine sağ tıklayın, ardından alt bölgeyi kapatmak için ilk köşenize tekrar tıklayın. Mevcut bir şekilli alt bölgenin sınırına tıklayarak yeniden şekillendirin. Çıkmak için /basicclaims kullanın.
+  ShapedSubdivisionNoParent: Şekilli bir alt bölge başlatmak için düzenleyebileceğiniz bir bölgenin içine sağ tıklayın.
+  ShapedSubdivisionOn3DClaim: Şekilli alt bölgeler yalnızca üst düzey 2D bölgeler içinde çalışır.
+  ShapedSubdivisionOutsideParent: Şekilli alt bölgeler, böldüğünüz bölgenin içinde kalmalıdır.
+  ShapedSubdivisionReshaped: Şekilli alt bölge güncellendi.
+  ShapedSubdivisionSuccess: Şekilli alt bölge oluşturuldu.
   MergeOverlapConflict: Birleştirilemedi; tamamlanan birleştirme diğer bölgelerle çakışırdı.
   SubdivisionMode: Alt bölge modu. Mevcut bölgelerinizde alt bölgeler oluşturmak için küreğinizi kullanın. Çıkmak için /basicclaims kullanın.
   SubdivisionMode3D: 3D Alt bölge modu. Mevcut bölgelerinizde 3D alt bölgeler oluşturmak için küreğinizi kullanın. Çıkmak için /basicclaims kullanın.
@@ -52,6 +66,8 @@ Messages:
   DeleteSuccess: Bölge silindi.
   CantDeleteAdminClaim: Yönetici bölgelerini silme izniniz yok.
   NoAdminClaimsPermission: Yönetici bölgelerini yönetme izniniz yok.
+  ClaimLabel: bölge
+  SubdivisionLabel: alt bölge
   ConfirmPvpToggleEnabledNoFee: "Bu {0} içinde PvP'yi etkinleştirmek istiyor musunuz?"
   ConfirmPvpToggleDisabledNoFee: "Bu {0} içinde PvP'yi devre dışı bırakmak istiyor musunuz?"
   ConfirmPvpToggleEnabledWithFee: "Bu {1} içinde PvP'yi etkinleştirmek için {0} ödemek istiyor musunuz?"
@@ -320,10 +336,6 @@ Messages:
   NeighborTrustRevokedAll: "{0} kişisinin komşu güveni TÜM bölgelerinizden iptal edildi."
   NeighborBypassEnabled: "Tüm oyuncular artık bu bölge için minimum mesafe kontrollerini atlayabilir."
   NeighborBypassDisabled: "Bu bölge için minimum mesafe kontrolleri artık uygulanıyor."
-  Subdivisions3DDisabled: Bu sunucuda 3D alt bölgeler devre dışı.
-  AdminClaims3DDisabled: Bu sunucuda 3D yönetici bölgeleri devre dışı.
-  DistanceCheckEnabled: Mesafe kontrolü etkinleştirildi. Başkalarına çok yakın bölge oluştururken uyarılacaksınız.
-  DistanceCheckDisabled: Mesafe kontrolü devre dışı bırakıldı.
   AuthorTag: "&7castledking, RoboMWM ve BigScary tarafından"
   PluginTag: "&6Minecraft sunucuları için self-servis anti-griefing eklentisi \n&b- Artık tam 3D alt bölgelerle"
   StartupDetails: "&fBaşlangıç detayları: {0}"
@@ -334,3 +346,7 @@ Messages:
   ClaimAlertsUsage: TÜM bölgeler için uyarıları açıp kapatmak için /claimtogglealerts on|off kullanın veya belirli bir bölgede durun ve tekrar deneyin.
   BootFinished: "&7Başlangıç tamamlandı: &a{0}"
   MessagesLoaded: "Mesajlar yüklendi: &a{0}"
+  Subdivisions3DDisabled: Bu sunucuda 3D alt bölgeler devre dışı.
+  AdminClaims3DDisabled: Bu sunucuda 3D yönetici bölgeleri devre dışı.
+  DistanceCheckEnabled: Mesafe kontrolü etkinleştirildi. Başkalarına çok yakın bölge oluştururken uyarılacaksınız.
+  DistanceCheckDisabled: Mesafe kontrolü devre dışı bırakıldı.

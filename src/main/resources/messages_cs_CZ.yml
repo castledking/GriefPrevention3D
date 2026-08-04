@@ -1,0 +1,347 @@
+# ============================================================
+# GriefPrevention - Zprávy v češtině
+# ============================================================
+# Chcete-li změnit jazyk, zkopírujte požadovaný soubor messages_XX.yml
+# ze složky Lang/ do GriefPreventionData/ a přejmenujte jej:
+#   plugins/GriefPreventionData/messages.yml
+#
+# Plugin načítá zprávy v tomto pořadí:
+#   1. messages.yml (váš vlastní nebo lokalizovaný soubor)
+#   2. messages_{locale}.yml (podle GriefPrevention.Locale v configu)
+#   3. messages_en.yml (záložní)
+#
+# Formátování: použij $ nebo & pro barevné kódy.
+# Nové řádky: použij \n ve zprávách.
+# ============================================================
+
+Messages:
+  RespectingClaims: Nyní respektuješ claimy.
+  IgnoringClaims: Nyní ignoruješ claimy.
+  NoCreativeUnClaim: Tuto půdu nemůžeš odclaimovat. Můžeš pouze tento claim zvětšit nebo vytvořit další.
+  SuccessfulAbandon: Claimy opuštěny. Nyní máš {0} dostupných bloků claimu.
+  TransferClaimPermission: Tento příkaz vyžaduje oprávnění pro správu administrativních claimů.
+  TransferClaimMissing: Zde není žádný claim. Stůj v administrativním claimu, který chceš převést.
+  TransferClaimAdminOnly: Na hráče lze převést pouze administrativní claimy.
+  PlayerNotFound2: Žádný hráč s tímto jménem se v poslední době nepřihlásil.
+  TransferTopLevel: Převést lze pouze claimy nejvyšší úrovně (ne subdivize). Stůj mimo subdivizi a zkus to znovu.
+  TransferSuccess: Claim převeden.
+  ConvertClaimMissing: Zde není žádný claim. Stůj v claimu, který chceš převést.
+  ConvertClaimAlreadyAdmin: Tento claim je již administrativní claim.
+  ConvertClaimAlreadyBasic: Tento claim je již běžný claim.
+  ConvertClaimAdminSuccess: Claim převeden na administrativní claim.
+  ConvertClaimBasicSuccess: Administrativní claim převeden na běžný claim, který nyní vlastníš.
+  ConvertSubdivisionAdminSuccess: "Subsidiár úspěšně převeden na administrativní. Vlastník ji nemůže rozšířit, spravovat oprávnění ani opustit tímto obsahem."
+  ConvertSubdivisionAlreadyAdmin: "Tento subsidiár je již administrativní."
+  ConvertSubdivisionAlreadyBasic: "Tento subsidiár je již běžný (normální)."
+  ConvertSubdivisionBasicSuccess: "Administrativní subsidiár vrácen zpátky jako normální subsidiár."
+  ConvertSubdivisionSelectFirst: "Klikni do levého horního rohu subsidiáře zlatým šrotím, potom zadej tento příkaz znovu."
+  AdminSubdivisionRestricted: "Tento subsidiár je spravován personálem. Pokud potřebuješ změnu, obrať se na personál."
+  AbandonBlockedAdminSubdivision: "Nemůžeš tento claim opustit: obsahuje administrativní subsidiár. Obrať se na personál."
+  TrustListNoClaim: Stůj uvnitř claimu, o který se zajímáš.
+  ClearPermsOwnerOnly: Pouze vlastník claimu může vymazat všechna oprávnění.
+  UntrustIndividualAllClaims: Hráči {0} bylo odebráno oprávnění ve VŠECH tvých claimech. Chceš-li nastavit oprávnění pro jeden claim, stůj v něm.
+  UntrustEveryoneAllClaims: Oprávnění byla vymazána ve VŠECH tvých claimech. Chceš-li nastavit oprávnění pro jeden claim, stůj v něm.
+  NoManageTrust: Nemáš oprávnění od {0} spravovat zde oprávnění.
+  ClearPermissionsOneClaim: Oprávnění v tomto claimu byla vymazána. Chceš-li nastavit oprávnění pro VŠECHNY tvé claimy, stůj mimo ně.
+  UntrustIndividualSingleClaim: Hráči {0} bylo odebráno oprávnění k tomuto claimu. Chceš-li nastavit oprávnění pro VŠECHNY tvé claimy, stůj mimo ně.
+  AdminClaimsMode: Režim administrativních claimů aktivní. Vytvořené claimy budou zdarma a upravitelné ostatními administrátory.
+  _3DAdminClaimsMode: "Režim 3D administrativních claimů aktivní. Vytvořené claimy budou zdarma, výškově omezené a upravitelné ostatními administrátory."
+  BasicClaimsMode: Vráceno do základního režimu vytváření claimů.
+  ShapedClaimsMode: Režim tvarovaného claimu. Klikni pravým tlačítkem pro umístění rohů na neclaimnuté půdě nebo pro zahájení a rozšíření tvarovaných úprav z hranic claimu. Kliknutí na hranici podle potřeby vytváří segmentové značky. Použij /basicclaims pro ukončení.
+  ShapedClaimsDisabled: Tvarované claimy jsou na tomto serveru zakázány.
+  ShapedSubClaimsDisabled: "Tvarované subdivize jsou na tomto serveru zakázány."
+  ShapedSubdivisionMode: "Režim tvarovaného subdivize. Klikni do jedné z tvých ploch a nakresli roh, pak klikni na první roh znovu, aby se uzavřel. Klikni na hranici existujícího tvarovaného subdivize, abys ho změnil. Použij /basicclaims ke znovu zapnutí základního režimu."
+  ShapedSubdivisionNoParent: "Klikni do plochy, kterou můžeš editovat, abys začal tvarovaný subsidiar."
+  ShapedSubdivisionOn3DClaim: "Tvarované subdivize fungují jen u 2D ploch. Tento claim je 3D."
+  ShapedSubdivisionOutsideParent: "Tvarované subdivize musí zůstat uvnitř plochy, kterou subdividuješ."
+  ShapedSubdivisionReshaped: "Tvarovaný subsidiar byl aktualizován."
+  ShapedSubdivisionSuccess: "Tvarovaný subsidiar byl vytvořen."
+  MergeOverlapConflict: Nelze sloučit; dokončené sloučení by se překrývalo s jiným claimem.
+  SubdivisionMode: Režim subdivize. Použij svou lopatu k vytváření subdivizí ve svých existujících claimech. Použij /basicclaims pro ukončení.
+  SubdivisionMode3D: "Režim 3D subdivize. Použij svou lopatu k vytváření 3D subdivizí ve svých existujících claimech. Použij /basicclaims pro ukončení."
+  SubdivisionVideo2: "Klikni pro nápovědu k subdivizím: {0}"
+  DeleteClaimMissing: Zde není žádný claim.
+  DeletionSubdivisionWarning: Tento claim obsahuje subdivize. Pokud jej opravdu chceš smazat, použij /deleteclaim znovu.
+  DeleteSuccess: Claim smazán.
+  CantDeleteAdminClaim: Nemáš oprávnění mazat administrativní claimy.
+  NoAdminClaimsPermission: Nemáš oprávnění spravovat administrativní claimy.
+  ClaimLabel: claim
+  SubdivisionLabel: subdivize
+  ConfirmPvpToggleEnabledNoFee: "Chceš zapnout PvP v tomto {0}?"
+  ConfirmPvpToggleDisabledNoFee: "Chceš vypnout PvP v tomto {0}?"
+  ConfirmPvpToggleEnabledWithFee: "Chceš zaplatit {0} za zapnutí PvP v tomto {1}?"
+  ConfirmPvpToggleDisabledWithFee: "Chceš zaplatit {0} za vypnutí PvP v tomto {1}?"
+  PvPToggleEnabled: "PvP v tomto {0} zapnuto."
+  PvPToggleDisabled: "PvP v tomto {0} vypnuto."
+  PvPToggleEnabledWithFee: "PvP v tomto {0} zapnuto za {1}."
+  PvPToggleDisabledWithFee: "PvP v tomto {0} vypnuto za {1}."
+  PvpToggleNotEnabled: "Příkazy pro přepínání PvP nejsou povoleny."
+  PvpToggleNotEnabledForClaimType: "V tomto typu claimu nelze PvP přepínat."
+  NoPendingPvpToggle: "Není zde žádné čekající přepnutí PvP k potvrzení."
+  PendingPvpToggleExpired: "Tvému čekajícímu přepnutí PvP vypršela platnost. Zkus to znovu."
+  ConfirmPvpToggleInstruction: "Napiš /claim pvp {0} confirm nebo /claimpvpconfirm pro potvrzení."
+  PvpToggleUsage: "Použití: /claim pvp [true|false|on|off] [confirm]"
+  PvpToggleAlreadyEnabled: "PvP je v tomto {0} již zapnuto."
+  PvpToggleAlreadyDisabled: "PvP je v tomto {0} již vypnuto."
+  DeleteAllSuccess: Smazány všechny claimy hráče {0}.
+  NoDeletePermission: Nemáš oprávnění mazat claimy.
+  AllAdminDeleted: Všechny administrativní claimy smazány.
+  AdjustBlocksSuccess: "Bonusové claim bloky hráče {0} upraveny o {1}. Nový celkový počet bonusových bloků: {2}."
+  AdjustBlocksAllSuccess: Bonusové claim bloky všech online hráčů upraveny o {0}.
+  NotTrappedHere: Zde můžeš stavět. Zachraň se sám.
+  RescuePending: Pokud zůstaneš na místě 10 sekund, budeš teleportován ven. Počkej prosím.
+  AbandonClaimMissing: Stůj v claimu, který chceš smazat, nebo zvaž /abandonallclaims.
+  NotYourClaim: Toto není tvůj claim.
+  DeleteTopLevelClaim: Pro smazání subdivize stůj uvnitř ní. Jinak použij /abandontoplevelclaim pro smazání tohoto claimu a všech subdivizí.
+  AbandonSuccess: Claim opuštěn. Nyní máš {0} dostupných bloků claimu.
+  ConfirmAbandonAllClaims: Opravdu chceš opustit VŠECHNY své claimy? Potvrď příkazem /abandonallclaims confirm
+  GrantPermissionNoClaim: Stůj v claimu, kde chceš udělit oprávnění.
+  GrantPermissionConfirmation: Hráči {0} uděleno oprávnění {1} {2}.
+  ManageUniversalPermissionsInstruction: Chceš-li spravovat oprávnění pro VŠECHNY své claimy, stůj mimo ně.
+  ManageOneClaimPermissionsInstruction: Chceš-li spravovat oprávnění pro konkrétní claim, stůj uvnitř něj.
+  CollectivePublic: veřejnost
+  BuildPermission: stavět
+  ContainersPermission: přístup k truhlám a zvířatům
+  AccessPermission: používat tlačítka a páky
+  ManagePermission: spravovat oprávnění
+  LocationCurrentClaim: v tomto claimu
+  LocationAllClaims: ve všech tvých claimech
+  PvPImmunityStart: Jsi chráněn před útoky ostatních hráčů, dokud je tvůj inventář prázdný.
+  DonateItemsInstruction: Chceš-li darovat předmět(y) ve své ruce, klikni na truhlu znovu levým tlačítkem.
+  ChestFull: Tato truhla je plná.
+  DonationSuccess: Předmět(y) přesunuty do truhly!
+  PlayerTooCloseForFire2: Nemůžeš zakládat oheň tak blízko jinému hráči.
+  TooDeepToClaim: Tuto truhlu nelze chránit, protože je příliš hluboko pod zemí. Zvaž její přesunutí.
+  ChestClaimConfirmation: Tato truhla je chráněna.
+  AutomaticClaimNotification: Tato truhla a okolní bloky jsou chráněny před zničením a krádeží.
+  AutomaticClaimOtherClaimTooClose: Nelze vytvořit claim pro tvou truhlu, jiný claim je příliš blízko!
+  UnprotectedChestWarning: Tato truhla NENÍ chráněna. Zvaž použití zlaté lopaty k rozšíření existujícího claimu nebo vytvoření nového.
+  ThatPlayerPvPImmune: Nemůžeš zranit bezbranné hráče.
+  CantFightWhileImmune: Nemůžeš s někým bojovat, když jsi chráněn před PvP.
+  NoDamageClaimedEntity: To patří hráči {0}.
+  ShovelBasicClaimMode: Lopata vrácena do základního režimu claimů.
+  RemainingBlocks: Můžeš zabrat až {0} dalších bloků.
+  CreativeBasicsVideo2: "Klikni pro nápovědu k claimování půdy: {0}"
+  SurvivalBasicsVideo2: "Klikni pro nápovědu k claimování půdy: {0}"
+  TrappedChatKeyword: uvízl;zaseknutý
+  TrappedInstructions: Uvízl jsi v cizím claimu? Zkus příkaz /trapped.
+  PvPNoDrop: Během PvP souboje nemůžeš odhazovat předměty.
+  PvPNoContainers: Během PvP souboje nemáš přístup k truhlám.
+  PvPImmunityEnd: Nyní můžeš bojovat s ostatními hráči.
+  NoBedPermission: "{0} ti zde nedal oprávnění spát."
+  NoWildernessBuckets: Vylévat kbelíky můžeš pouze uvnitř svých claimů nebo pod zemí.
+  NoLavaNearOtherPlayer: Nemůžeš pokládat lávu tak blízko hráči {0}.
+  NoLavaNearClaim: Jsi příliš blízko claimu na to, abys to udělal!
+  TooFarAway: To je příliš daleko.
+  BlockNotClaimed: Tento blok nikdo neclaimnul.
+  BlockClaimed: Tento blok je claimnutý hráčem {0}.
+  NoCreateClaimPermission: Nemáš oprávnění claimovat půdu.
+  ResizeClaimTooNarrow: Tato nová velikost by byla příliš malá. Claimy musí být široké alespoň {0} bloků.
+  ResizeNeedMoreBlocks: Nemáš dostatek bloků pro tuto velikost. Potřebuješ jich ještě {0}.
+  ClaimResizeSuccess: Velikost claimu změněna. Zbývá {0} dostupných bloků claimu.
+  ResizeFailOverlap: Zde nelze změnit velikost, protože by se to překrývalo s jiným blízkým claimem.
+  ResizeStart: Měníš velikost claimu. Použij svou lopatu znovu na novém místě tohoto rohu.
+  ClaimSelected: "Claim vybrán. Použij svou lopatu znovu pro nastavení druhého rohu a změnu velikosti.\nPoznámka: Nyní můžeš spustit /claim abandon, dokud je tento claim vybraný."
+  ClaimSelectedTopLevel: "Claim vybrán. Použij svou lopatu znovu pro nastavení druhého rohu a změnu velikosti.\nPoznámka: Nyní můžeš spustit /claim abandon toplevel, dokud je tento claim vybraný."
+  SubdivisionSelected: "Subdivize vybrána. Můžeš spravovat oprávnění pro tuto konkrétní oblast.\n&6Můžeš použít příkazy jako:\n&7- &f/trust&7, &f/untrust\n&7- &f/containertrust&7, &f/accesstrust\n&7- &f/abandonclaim\n&6nebo znovu klikni pravým tlačítkem pro změnu velikosti."
+  ResizeFailOverlapSubdivision: Zde nemůžeš vytvořit subdivizi, protože by se překrývala s jinou subdivizí. Zvaž /abandonclaim pro její smazání, nebo použij lopatu v rohu pro změnu velikosti.
+  SubdivisionStart: Roh subdivize nastaven! Použij lopatu na místě protilehlého rohu této nové subdivize.
+  CreateSubdivisionOverlap: Tvá vybraná oblast se překrývá s jinou subdivizí.
+  InnerSubdivisionTooClose: Tato subdivize musí zůstat alespoň jeden blok uvnitř svého nadřazeného claimu ze všech stran.
+  SubdivisionSuccess: Subdivize vytvořena! Použij /trust pro sdílení s přáteli.
+  CreateClaimFailOverlap: Zde nemůžeš vytvořit claim, protože by se překrýval s tvým jiným claimem. Použij /abandonclaim pro jeho smazání, nebo použij lopatu v rohu pro změnu velikosti.
+  CreateClaimFailOverlapOtherPlayer: Zde nemůžeš vytvořit claim, protože by se překrýval s claimem hráče {0}.
+  ClaimsDisabledWorld: Claimování půdy je v tomto světě zakázáno.
+  ClaimStart: Roh claimu nastaven! Použij lopatu znovu na protilehlém rohu pro claimnutí obdélníku půdy. Pro zrušení lopatu schovej.
+  NewClaimTooNarrow: Tento claim by byl příliš malý. Každý claim musí být široký alespoň {0} bloků.
+  ResizeClaimInsufficientArea: Tento claim by byl příliš malý. Každý claim musí využívat alespoň {0} bloků claimu celkem.
+  CreateClaimInsufficientBlocks: Nemáš dostatek bloků na claimnutí celé této oblasti. Potřebuješ ještě {0} bloků.
+  AbandonClaimAdvertisement: Chceš-li smazat jiný claim a uvolnit bloky, použij /abandonclaim.
+  CreateClaimFailOverlapShort: Tvá vybraná oblast se překrývá s existujícím claimem.
+  CreateClaimSuccess: Claim vytvořen! Použij /trust pro sdílení s přáteli.
+  RescueAbortedMoved: Pohnul ses! Záchrana zrušena.
+  OnlyOwnersModifyClaims: Pouze {0} může upravovat tento claim.
+  NoBuildPvP: Během PvP souboje nemůžeš stavět v claimech.
+  NoBuildPermission: Nemáš oprávnění od {0} zde stavět.
+  NoAccessPermission: Nemáš oprávnění od {0} to použít.
+  NoContainersPermission: Nemáš oprávnění od {0} to použít.
+  OwnerNameForAdminClaims: administrátor
+  UnknownPlayerName: někdo
+  ClaimTooSmallForEntities: Tento claim na to není dostatečně velký. Zkus jej zvětšit.
+  TooManyEntitiesInClaim: Tento claim má již příliš mnoho entit. Zkus claim zvětšit nebo odstranit nějaká zvířata, monstra, obrazy nebo vozíky.
+  YouHaveNoClaims: Nemáš žádné claimy.
+  AutoBanNotify: Automaticky zabanován {0}({1}). Podrobnosti viz logy.
+  AdjustGroupBlocksSuccess: "Bonusové claim bloky hráčů s oprávněním {0} upraveny o {1}. Nový celkový počet: {2}."
+  InvalidPermissionID: Zadej prosím jméno hráče nebo oprávnění v [hranatých závorkách].
+  HowToClaimRegex: (^|.*\W)jak\W.*\W(claim|chránit|zamknout)(\W.*|$)
+  NoBuildOutsideClaims: Zde nemůžeš stavět, dokud si nejprve neclaimneš nějakou půdu.
+  PlayerOfflineTime: " Poslední přihlášení: před {0} dny."
+  BuildingOutsideClaims: Zde mohou stavět i ostatní hráči. Zvaž vytvoření claimu k ochraně své práce!
+  TrappedWontWorkHere: Bohužel se nepodařilo najít bezpečné místo pro tvůj teleport. Kontaktuj administrátora.
+  CommandBannedInPvP: Tento příkaz nemůžeš použít během PvP souboje.
+  NoTeleportPvPCombat: Nemůžeš se teleportovat, když bojuješ s jiným hráčem.
+  NoTNTDamageAboveSeaLevel: "Varování: TNT nezničí bloky nad úrovní moře."
+  NoTNTDamageClaims: "Varování: TNT nezničí claimnuté bloky."
+  IgnoreClaimsAdvertisement: Pro obejití použij /ignoreclaims.
+  NoPermissionForCommand: Nemáš oprávnění to udělat.
+  ClaimsListNoPermission: Nemáš oprávnění získávat informace o claimech jiného hráče.
+  ExplosivesDisabled: Tento claim je nyní chráněn před explozemi. Použij /claimexplosions znovu pro vypnutí.
+  ExplosivesEnabled: Tento claim je nyní zranitelný explozemi. Použij /claimexplosions znovu pro opětovné zapnutí ochrany.
+  WitherExplosionsDisabled: Tento claim je nyní chráněn před explozemi withera. Použij /witherexplosions znovu pro vypnutí ochrany.
+  WitherExplosionsEnabled: Tento claim je nyní zranitelný explozemi withera. Použij /witherexplosions znovu pro opětovné zapnutí ochrany.
+  ClaimExplosivesAdvertisement: Chceš-li v tomto claimu povolit ničení bloků výbušninami, použij /claimexplosions.
+  PlayerInPvPSafeZone: Tento hráč je v bezpečné PvP zóně.
+  NoPistonsOutsideClaims: "Varování: Písty nebudou posouvat bloky mimo claimy."
+  SoftMuted: Hráč {0} byl umlčen (soft-mute).
+  UnSoftMuted: Umlčení hráče {0} zrušeno.
+  DropUnlockAdvertisement: Ostatní hráči nemohou sebrat tvé odhozené předměty, dokud nepoužiješ /unlockdrops.
+  PickupBlockedExplanation: Toto nemůžeš sebrat, dokud {0} nepoužije /unlockdrops.
+  DropUnlockConfirmation: Tvé odhozené předměty byly odemčeny. Ostatní hráči je nyní mohou sebrat (dokud znovu nezemřeš).
+  DropLockConfirmation: Tvé odhozené předměty byly uzamčeny. Ostatní hráči je již nemohou sebrat.
+  DropUnlockOthersConfirmation: Odhozené předměty hráče {0} odemčeny.
+  AdvertiseACandACB: Můžeš použít /acb pro získání více claim bloků, nebo /adminclaims pro vytvoření volného administrativního claimu.
+  AdvertiseAdminClaims: Místo toho bys mohl vytvořit administrativní claim pomocí /adminclaims, o který by ses dělil s ostatními administrátory.
+  AdvertiseACB: Můžeš použít /acb pro získání více claim bloků.
+  NotYourPet: To patří hráči {0}.
+  PetGiveawayConfirmation: Mazlíček předán.
+  PetTransferCancellation: Předání mazlíčka zrušeno.
+  ReadyToTransferPet: Připraven k předání! Klikni pravým tlačítkem na mazlíčka, kterého chceš darovat, nebo zruš pomocí /givepet cancel.
+  AvoidGriefClaimLand: Zabraň griefingu! Pokud si zaclaimuješ svou půdu, budeš chráněn.
+  BecomeMayor: Rozděl svůj claim na subdivize a staň se starostou!
+  ClaimCreationFailedOverClaimCountLimit: Dosáhl jsi svého limitu claimů. Před vytvořením dalšího použij /abandonclaim k odstranění jednoho.
+  CreateClaimFailOverlapRegion: Nemůžeš zaclaimovat celou tuto oblast, protože zde nemáš povoleno stavět.
+  ResizeFailOverlapRegion: Nemáš oprávnění tam stavět, takže tuto oblast nemůžeš zaclaimovat.
+  ResizeFailSubdivision: "Nelze změnit velikost claimu: nové hranice by vyloučily existující subdivizi. Nejprve prosím subdivizi odstraň nebo přesuň."
+  ResizeFailSubdivisionExceedsParent: "Nepodařilo se změnit velikost: subdivize nezůstala ve všech stranách uvnitř hranic nadřazeného claimu, což způsobilo konfliktní zónu na hlavním claimu."
+  ShapedClaimInteriorClick: Zde nemůžeš začít tvarovaný claim. Můžeš buď začít nový tvarovaný claim, nebo vytvořit segmenty na hranici tvého současného claimu a ty rozšířit.
+  ShowNearbyClaims: Nalezeno {0} claimů.
+  NoChatUntilMove: Promiň, ale než budeš moci chatovat, musíš se trochu pohnout. Máme tu spoustu spambotů. :)
+  SetClaimBlocksSuccess: Nastřádané claim bloky aktualizovány.
+  IgnoreConfirmation: Nyní ignoruješ chatové zprávy od tohoto hráče.
+  UnIgnoreConfirmation: Již neignoruješ chatové zprávy od tohoto hráče.
+  NotIgnoringPlayer: Tohoto hráče neignoruješ.
+  SeparateConfirmation: Tito hráči se nyní budou v chatu navzájem ignorovat.
+  UnSeparateConfirmation: Tito hráči se již nebudou v chatu navzájem ignorovat.
+  NotIgnoringAnyone: Nikoho neignoruješ.
+  TrustListHeader: "Explicitní oprávnění zde:"
+  Manage: Spravovat
+  Build: Stavět
+  Containers: Truhly
+  Access: Přístup
+  Neighbor: Soused
+  HasSubclaimRestriction: Tato subdivize nedědí oprávnění od nadřazeného claimu
+  StartBlockMath: "{0} bloků ze hry + {1} bonusových = {2} celkem."
+  ClaimsListHeader: "Claimy:"
+  ContinueBlockMath: "(-{0} bloků)"
+  EndBlockMath: " = {0} bloků zbývá k utracení"
+  ClaimExpiryHeader: "Vypršení claimu pro {0}:"
+  ClaimExpiryLocation: "Poloha: {0}"
+  ClaimExpiryOwnerStatus: "Vlastník: {0} ({1})"
+  ClaimExpiryOwnerOnline: online
+  ClaimExpiryOwnerOffline: offline
+  ClaimExpiryLastActive: "Naposledy viděn: před {0}"
+  ClaimExpiryLastActiveUnknown: "Naposledy viděn: neznámo"
+  ClaimExpiryClaimModified: "Naposledy upraveno: {0}"
+  ClaimExpiryExpiresIn: "Vyprší za: {0}"
+  ClaimExpiryExpired: Vypršel před {0}
+  ClaimExpiryExempt: "Tento claim je osvobozen od vypršení: {0}"
+  ClaimExpiryNeverExpires: Tento claim nikdy nevyprší.
+  ClaimExpiryChestClaim: "Vypršení truhlového claimu: {0}"
+  ClaimExpiryNoClaim: Nestojíš v žádném claimu.
+  ClaimExpiryPlayerHeading: "Vypršení claimu pro {0}:"
+  ClaimExpiryPlayerNoClaims: "{0} nemá žádné claimy."
+  ClaimExpiryPlayerNotFound: Hráče {0} se nepodařilo najít.
+  ClaimExpiryUnknown: neznámo
+  ClaimExpiryUsage: /checkclaimexpiry [hráč]
+  ClaimExpiryListEntry: "- {0}: {1}"
+  NoClaimDuringPvP: Během PvP souboje nemůžeš claimovat půdu.
+  UntrustAllOwnerOnly: Pouze vlastník claimu může vymazat všechna jeho oprávnění.
+  ManagersDontUntrustManagers: Pouze vlastník claimu může degradovat správce.
+  PlayerNotIgnorable: Tohoto hráče nemůžeš ignorovat.
+  NoEnoughBlocksForChestClaim: Protože nemáš k dispozici žádné claim bloky, nebyl pro tebe automaticky vytvořen claim. Můžeš použít /claimslist pro sledování dostupného počtu claim bloků.
+  MustHoldModificationToolForThat: K provedení tohoto musíš držet zlatou lopatu.
+  StandInClaimToResize: Stůj uvnitř claimu, jehož velikost chceš změnit.
+  ClaimsExtendToSky: Claimy vždy sahají až po maximální výšku stavby.
+  ClaimsAutoExtendDownward: Claimy se automaticky rozšiřují hlouběji do země, když pod nimi umístíš bloky.
+  MinimumRadius: Minimální poloměr je {0}.
+  RadiusRequiresGoldenShovel: Při zadávání poloměru musíš držet zlatou lopatu.
+  ClaimTooSmallForActiveBlocks: Tento claim není dostatečně velký na podporu žádných aktivních typů bloků (trychtýře, spawnery, majáky...). Nejprve claim zvětši.
+  TooManyActiveBlocksInClaim: Tento claim dosáhl limitu pro aktivní typy bloků (trychtýře, spawnery, majáky...). Buď jej zvětši, nebo nejprve odstraň jiné aktivní bloky.
+  BookAuthor: BigScary
+  BookTitle: Jak claimovat půdu
+  BookLink: "Klikni: {0}"
+  BookIntro: Zaclaimuj si půdu a chraň své věci! Klikni na odkaz výše a nauč se claimovat půdu za 3 minuty nebo méně. :)
+  BookTools: Naše nástroje pro claimy jsou {0} a {1}.
+  BookDisabledChestClaims: Na tomto serveru ti umístění truhly NEZaclaimuje půdu.
+  BookUsefulCommands: "Užitečné příkazy:"
+  NoProfanity: Prosím, mírni svůj jazyk.
+  IsIgnoringYou: Tento hráč tě ignoruje.
+  ConsoleOnlyCommand: Tento příkaz lze spustit pouze z konzole serveru.
+  WorldNotFound: Svět nenalezen.
+  TooMuchIpOverlap: Promiň, s tvou IP adresou je přihlášeno příliš mnoho hráčů.
+  StandInSubclaim: Musíš stát v subdivizi, abys ji omezil
+  SubclaimRestricted: Oprávnění této subdivize již nebudou dědit od nadřazeného claimu
+  SubclaimUnrestricted: Oprávnění této subdivize nyní budou dědit od nadřazeného claimu
+  MainClaimSubdivisionInheritDisabled: Všechny subdivize v tomto claimu NEBUDOU dědit oprávnění.
+  MainClaimSubdivisionInheritEnabled: Všechny subdivize v tomto claimu budou dědit oprávnění.
+  NetherPortalTrapDetectionMessage: Vypadá to, že jsi uvízl uvnitř nether portálu. Pokud je to tak, za pár sekund tě zachráníme!
+  ClaimHelpHeader: "Dostupné příkazy /claim:"
+  ClaimHelpLegend: <> - Povinné, [] - Volitelné.
+  ClaimHelpEntry: "&e/{0}&7 - &f{1}"
+  ClaimHelpPagination: Napiš /claim help {0} pro další stránku.
+  AClaimHelpHeader: "Dostupné příkazy /aclaim:"
+  AClaimHelpLegend: <> - Povinné, [] - Volitelné.
+  AClaimHelpEntry: "&e/{0}&7 - &f{1}"
+  AClaimHelpPagination: Napiš /aclaim help {0} pro další stránku.
+  CommandNotFound: "Neznámý podpříkaz: {0}"
+  CommandNotImplementedYet: Tento příkaz ještě není implementován.
+  CommandInvalidMode: "Neplatný režim. Platné možnosti: basic, 2d, 3d, shaped"
+  RestoreNatureActivate: Připraven obnovit přírodu! Klikni pravým tlačítkem na blok pro obnovení oblasti. Použij /basicclaims pro ukončení.
+  RestoreNatureAggressiveActivate: Aktivován agresivní režim obnovy přírody. Klikni pravým tlačítkem na blok pro obnovení oblasti. Použij /basicclaims pro ukončení.
+  FillModeActive: Režim vyplňování aktivován s poloměrem {0}. Klikni pravým tlačítkem na blok pro vyplnění oblasti. Použij /basicclaims pro ukončení.
+  EconomyDisabled: Ekonomické funkce jsou na tomto serveru zakázány.
+  EconomyBuyBlocksConfirmation: Zakoupeno {0} claim bloků za {1}. Nyní máš {2} claim bloků.
+  EconomySellBlocksConfirmation: Prodáno {0} claim bloků za {1}. Nyní máš {2} claim bloků.
+  EconomyNotEnoughMoney: "Nemáš dostatek peněz. Cena: {0}, tvůj zůstatek: {1}"
+  EconomyNotEnoughBlocks: "Nemáš dostatek claim bloků k prodeji. Požadováno: {0}, dostupné: {1}"
+  EconomyBuyBlocksUsage: "Použití: /buyclaimblocks <množství>"
+  EconomySellBlocksUsage: "Použití: /sellclaimblocks <množství>"
+  EconomyInvalidAmount: Zadej prosím platné kladné číslo bloků.
+  EconomyPurchaseCancelled: Nákup zrušen.
+  EconomyNoVault: Podpora ekonomiky vyžaduje nainstalovaný plugin Vault.
+  CommandRequiresPlayer: Tento příkaz mohou používat pouze hráči.
+  PistonExploded: Píst na {0} explodoval, protože se nemohl dostat do claimu na {1}
+  ExternalPistonBoundaryViolation: "&6Varování: Píst se pokusil zatlačit blok do tvého claimu na x:{0} y:{1} z:{2}!"
+  InternalPistonBoundaryViolation: "&6Varování: Píst se pokusil vytlačit blok z tvého claimu na x:{0} y:{1} z:{2}!"
+  ExternalLiquidBoundaryViolation: "&6Varování: Kapalina se pokusila vtéct do tvého claimu na x:{0} y:{1} z:{2}!"
+  InternalLiquidBoundaryViolation: "&6Varování: Kapalina se pokusila vytéct z tvého claimu na x:{0} y:{1} z:{2}!"
+  BoundaryViolationBurstSummary: "&6Varování: {0} porušení typu {1} v blízkosti tvého claimu na x:{2} y:{3} z:{4}!"
+  PlaceholderTrustLevelUnclaimed: Neclaimnuto
+  PlaceholderTrustLevelOwner: Vlastník
+  PlaceholderTrustLevelManager: Správce
+  PlaceholderTrustLevelBuilder: Stavitel
+  PlaceholderTrustLevelAccess: Přístup
+  PlaceholderTrustLevelContainer: Truhly
+  PlaceholderTrustLevelNeighbor: Soused
+  PlaceholderTrustLevelUntrusted: Bez oprávnění
+  NeighborPermission: obejít minimální vzdálenost
+  CreateClaimFailTooClose: "Zde nemůžeš vytvořit claim, protože je příliš blízko claimu hráče {0}. Minimální vzdálenost je {1} bloků."
+  CreateClaimFailTooCloseNoBypass: "Zde nemůžeš vytvořit claim, protože je příliš blízko jinému claimu. Minimální vzdálenost je {0} bloků."
+  MinimumDistance: "Minimální vzdálenost mezi claimy: {0} bloků."
+  NearbyClaims: "Blízké claimy: {0}"
+  NeighborTrustGranted: "Hráči {0} uděleno sousedské oprávnění. Nyní může obejít kontroly minimální vzdálenosti pro tvé claimy."
+  NeighborTrustRevoked: "Sousedské oprávnění hráče {0} odebráno."
+  NeighborTrustGrantedAll: "Hráči {0} uděleno sousedské oprávnění pro VŠECHNY tvé claimy."
+  NeighborTrustRevokedAll: "Sousedské oprávnění hráče {0} odebráno ze VŠECH tvých claimů."
+  NeighborBypassEnabled: Všichni hráči nyní mohou obejít kontroly minimální vzdálenosti pro tento claim.
+  NeighborBypassDisabled: Kontroly minimální vzdálenosti jsou pro tento claim nyní vynucovány.
+  AuthorTag: "&7od castledking, RoboMWM a BigScary"
+  PluginTag: "&6Samoobslužný plugin proti griefingu pro Minecraft servery \n&b- nyní s plnými 3D subdivizemi"
+  StartupDetails: "&fDetaily spuštění: {0}"
+  ClaimAlertsEnabled: "Upozornění pro tento claim zapnuta."
+  ClaimAlertsDisabled: "Upozornění pro tento claim vypnuta."
+  ClaimAlertsEnabledGlobal: "Upozornění pro všechny claimy zapnuta."
+  ClaimAlertsDisabledGlobal: "Upozornění pro všechny claimy vypnuta."
+  ClaimAlertsUsage: "Použij /claimtogglealerts on|off pro přepnutí upozornění pro VŠECHNY claimy, nebo stůj v konkrétním claimu a zkus to znovu."
+  BootFinished: "&7Spuštění dokončeno za: &a{0}"
+  MessagesLoaded: "Zprávy načteny: &a{0}"

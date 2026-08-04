@@ -31,6 +31,13 @@ Messages:
   ConvertClaimAlreadyBasic: "This claim be already a basic claim, ye scallywag."
   ConvertClaimAdminSuccess: "Claim converted to an administrative claim, cap'n."
   ConvertClaimBasicSuccess: "Administrative claim converted to a basic claim ye own, matey."
+  ConvertSubdivisionAdminSuccess: "Subdivision converted to an administrative subdivision, arrr. Its owner can no longer resize it, manage trust in it, nor abandon the claim around it."
+  ConvertSubdivisionAlreadyAdmin: This subdivision be already an administrative subdivision.
+  ConvertSubdivisionAlreadyBasic: This subdivision be already a normal subdivision.
+  ConvertSubdivisionBasicSuccess: Administrative subdivision returned to a normal subdivision, arrr.
+  ConvertSubdivisionSelectFirst: "Right-click a corner of the subdivision with yer golden shovel to select it, then run that command again, ye scallywag."
+  AdminSubdivisionRestricted: That subdivision be administered by the admirals. Talk to the admirals if ye need it changed.
+  AbandonBlockedAdminSubdivision: "Ye can't abandon this claim: it contains an administrator's subdivision. Talk to the admirals."
   TrustListNoClaim: "Stand inside the claim ye be curious about, or shiver me timbers!"
   ClearPermsOwnerOnly: "Only the claim owner can clear all permissions, ye scurvy dog."
   UntrustIndividualAllClaims: "Revoked {0}'s access to ALL yer claims. To set permissions for a single claim, stand inside it."
@@ -43,9 +50,14 @@ Messages:
   BasicClaimsMode: "Returned to basic claim creation mode, ye sea dog."
   ShapedClaimsMode: "Shaped claim mode, arrr. Right-click to place corners in unclaimed land or to start and extend shaped edits from claim boundaries. Boundary clicks create segment markers as needed. Use /basicclaims to exit."
   ShapedClaimsDisabled: "Shaped claims be disabled on this server, matey."
+  ShapedSubClaimsDisabled: Shaped subdivisions be disabled on this server.
+  ShapedSubdivisionMode: "Shaped subdivision mode, arrr. Right-click inside one o' yer claims to place corners, then click yer first corner again to close the subdivision. Click an existing shaped subdivision's boundary to reshape it. Use /basicclaims to exit."
+  ShapedSubdivisionNoParent: Right-click inside a claim ye can edit to start a shaped subdivision.
+  ShapedSubdivisionOn3DClaim: Shaped subdivisions only work inside top-level 2D claims, arrr.
+  ShapedSubdivisionOutsideParent: Shaped subdivisions have to stay inside the claim ye be subdividing.
+  ShapedSubdivisionReshaped: Shaped subdivision updated, arrr.
+  ShapedSubdivisionSuccess: Shaped subdivision created, arrr.
   MergeOverlapConflict: "Could not merge; the completed merge would overlap other claims, by Blackbeard's beard!"
-  Subdivisions3DDisabled: "3D subdivisions be disabled on this server."
-  AdminClaims3DDisabled: "3D admin claims be disabled on this server."
   SubdivisionMode: "Subdivision mode, arrr. Use yer shovel to create subdivisions in yer existing claims. Use /basicclaims to exit."
   SubdivisionMode3D: "3D Subdivision mode. Use yer shovel to create 3D subdivisions in yer existing claims. Use /basicclaims to exit."
   SubdivisionVideo2: "Click for Subdivision Help: {0}"
@@ -54,6 +66,8 @@ Messages:
   DeleteSuccess: "Claim deleted! Walk the plank, ye claim."
   CantDeleteAdminClaim: "Ye don't have permission to delete administrative claims, ye landlubber."
   NoAdminClaimsPermission: "Ye don't have permission to manage administrative claims."
+  ClaimLabel: claim
+  SubdivisionLabel: subdivision
   ConfirmPvpToggleEnabledNoFee: "Do ye want to enable PvP in this {0}?"
   ConfirmPvpToggleDisabledNoFee: "Do ye want to disable PvP in this {0}?"
   ConfirmPvpToggleEnabledWithFee: "Do ye want to pay {0} to enable PvP in this {1}?"
@@ -91,7 +105,6 @@ Messages:
   ContainersPermission: "access containers and animals"
   AccessPermission: "use buttons and levers"
   ManagePermission: "manage permissions"
-  NeighborPermission: "bypass minimum distance"
   LocationCurrentClaim: "in this claim"
   LocationAllClaims: "in all yer claims"
   PvPImmunityStart: "Ye be protected from attack by other players as long as yer inventory be empty."
@@ -312,12 +325,11 @@ Messages:
   PlaceholderTrustLevelContainer: "Container"
   PlaceholderTrustLevelNeighbor: "Neighbor"
   PlaceholderTrustLevelUntrusted: "Untrusted"
+  NeighborPermission: "bypass minimum distance"
   CreateClaimFailTooClose: "Ye can't create a claim here 'cause it be too close to {0}'s claim. Minimum distance be {1} blocks."
   CreateClaimFailTooCloseNoBypass: "Ye can't create a claim here 'cause it be too close to another claim. Minimum distance be {0} blocks."
   MinimumDistance: "Minimum distance between claims: {0} blocks."
   NearbyClaims: "Nearby claims: {0}"
-  DistanceCheckEnabled: "Distance check enabled. Ye will be warned when creatin' claims too close to others."
-  DistanceCheckDisabled: "Distance check disabled."
   NeighborTrustGranted: "Granted {0} neighbor trust. They can now bypass minimum distance checks for yer claims."
   NeighborTrustRevoked: "Revoked {0}'s neighbor trust."
   NeighborTrustGrantedAll: "Granted {0} neighbor trust for ALL yer claims."
@@ -334,3 +346,7 @@ Messages:
   ClaimAlertsUsage: "Use /claimtogglealerts on|off to be togglin' alerts fer ALL claims, or stand in a specific claim an' try again, arrr!"
   BootFinished: "&7Boot finished in: &a{0}, arrr!"
   MessagesLoaded: "Messages loaded: {0}, arrr!"
+  Subdivisions3DDisabled: "3D subdivisions be disabled on this server."
+  AdminClaims3DDisabled: "3D admin claims be disabled on this server."
+  DistanceCheckEnabled: "Distance check enabled. Ye will be warned when creatin' claims too close to others."
+  DistanceCheckDisabled: "Distance check disabled."

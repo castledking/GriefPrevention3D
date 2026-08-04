@@ -30,6 +30,13 @@ Messages:
   ConvertClaimAlreadyBasic: Kawasan tuntutan ini sudah menjadi kawasan tuntutan asas.
   ConvertClaimAdminSuccess: Kawasan tuntutan telah ditukar menjadi kawasan tuntutan pentadbiran.
   ConvertClaimBasicSuccess: Kawasan tuntutan pentadbiran telah ditukar menjadi kawasan tuntutan asas milik anda.
+  ConvertSubdivisionAdminSuccess: Subbahagian ditukar menjadi subbahagian pentadbiran. Pemiliknya tidak lagi boleh mengubah saiznya, menguruskan kepercayaan di dalamnya, atau melepaskan kawasan tuntutan di sekelilingnya.
+  ConvertSubdivisionAlreadyAdmin: Subbahagian ini sudah menjadi subbahagian pentadbiran.
+  ConvertSubdivisionAlreadyBasic: Subbahagian ini sudah menjadi subbahagian biasa.
+  ConvertSubdivisionBasicSuccess: Subbahagian pentadbiran dikembalikan kepada subbahagian biasa.
+  ConvertSubdivisionSelectFirst: Klik kanan pada bucu subbahagian dengan penyodok emas anda untuk memilihnya, kemudian jalankan arahan itu semula.
+  AdminSubdivisionRestricted: Subbahagian itu ditadbir oleh kakitangan. Berbincang dengan kakitangan jika anda memerlukan perubahan.
+  AbandonBlockedAdminSubdivision: "Anda tidak boleh melepaskan kawasan tuntutan ini: ia mengandungi subbahagian pentadbir. Berbincang dengan kakitangan."
   TrustListNoClaim: Berdiri di dalam kawasan tuntutan yang ingin anda ketahui.
   ClearPermsOwnerOnly: Hanya pemilik kawasan tuntutan boleh mengosongkan semua kebenaran.
   UntrustIndividualAllClaims: Akses {0} kepada SEMUA kawasan tuntutan anda telah dibatalkan. Untuk menetapkan kebenaran bagi satu kawasan tuntutan sahaja, berdiri di dalamnya.
@@ -42,6 +49,13 @@ Messages:
   BasicClaimsMode: Kembali ke mod penciptaan kawasan tuntutan asas.
   ShapedClaimsMode: Mod kawasan tuntutan berbentuk. Klik kanan untuk meletakkan bucu pada tanah yang belum dituntut atau untuk memulakan dan melanjutkan suntingan berbentuk daripada sempadan kawasan tuntutan. Klik pada sempadan mencipta penanda segmen mengikut keperluan. Gunakan /basicclaims untuk keluar.
   ShapedClaimsDisabled: Kawasan tuntutan berbentuk dilumpuhkan di pelayan ini.
+  ShapedSubClaimsDisabled: Subbahagian berbentuk dilumpuhkan di pelayan ini.
+  ShapedSubdivisionMode: Mod subbahagian berbentuk. Klik kanan di dalam salah satu kawasan tuntutan anda untuk meletakkan bucu, kemudian klik semula bucu pertama anda untuk menutup subbahagian itu. Klik pada sempadan subbahagian berbentuk sedia ada untuk membentuknya semula. Gunakan /basicclaims untuk keluar.
+  ShapedSubdivisionNoParent: Klik kanan di dalam kawasan tuntutan yang anda boleh edit untuk memulakan subbahagian berbentuk.
+  ShapedSubdivisionOn3DClaim: Subbahagian berbentuk hanya berfungsi di dalam kawasan tuntutan 2D peringkat tertinggi.
+  ShapedSubdivisionOutsideParent: Subbahagian berbentuk perlu kekal di dalam kawasan tuntutan yang anda sedang bahagikan.
+  ShapedSubdivisionReshaped: Subbahagian berbentuk dikemas kini.
+  ShapedSubdivisionSuccess: Subbahagian berbentuk dicipta.
   MergeOverlapConflict: Tidak dapat digabungkan; penggabungan yang lengkap akan bertindih dengan kawasan tuntutan lain.
   SubdivisionMode: Mod subbahagian. Gunakan penyodok anda untuk mencipta subbahagian dalam kawasan tuntutan sedia ada anda. Gunakan /basicclaims untuk keluar.
   SubdivisionMode3D: 'Mod subbahagian 3D.  Gunakan penyodok anda untuk mencipta subbahagian 3D dalam kawasan tuntutan sedia ada anda.  Gunakan /basicclaims untuk keluar.'
@@ -51,6 +65,8 @@ Messages:
   DeleteSuccess: Kawasan tuntutan telah dipadam.
   CantDeleteAdminClaim: Anda tidak mempunyai kebenaran untuk memadam kawasan tuntutan pentadbiran.
   NoAdminClaimsPermission: Anda tidak mempunyai kebenaran untuk mengurus kawasan tuntutan pentadbiran.
+  ClaimLabel: kawasan tuntutan
+  SubdivisionLabel: subbahagian
   ConfirmPvpToggleEnabledNoFee: "Adakah anda mahu membolehkan PvP dalam {0} ini?"
   ConfirmPvpToggleDisabledNoFee: "Adakah anda mahu melumpuhkan PvP dalam {0} ini?"
   ConfirmPvpToggleEnabledWithFee: "Adakah anda mahu membayar {0} untuk membolehkan PvP dalam {1} ini?"

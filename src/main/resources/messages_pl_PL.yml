@@ -30,6 +30,13 @@ Messages:
   ConvertClaimAlreadyBasic: Ten teren jest już podstawowym terenem.
   ConvertClaimAdminSuccess: Teren przekonwertowany na administracyjny.
   ConvertClaimBasicSuccess: Teren administracyjny przekonwertowany na podstawowy, który posiadasz.
+  ConvertSubdivisionAdminSuccess: Podział przekonwertowany na podział administracyjny. Jego właściciel nie może już zmieniać jego rozmiaru, zarządzać zaufaniem w nim ani porzucić terenu wokół niego.
+  ConvertSubdivisionAlreadyAdmin: Ten podział jest już podziałem administracyjnym.
+  ConvertSubdivisionAlreadyBasic: Ten podział jest już zwykłym podziałem.
+  ConvertSubdivisionBasicSuccess: Administracyjny podział przywrócony do zwykłego podziału.
+  ConvertSubdivisionSelectFirst: Kliknij prawym przyciskiem narożnik podziału złotą łopatą, aby go zaznaczyć, a następnie uruchom tę komendę ponownie.
+  AdminSubdivisionRestricted: Ten podział jest zarządzany przez personel. Porozmawiaj z personelem, jeśli chcesz go zmienić.
+  AbandonBlockedAdminSubdivision: "Nie możesz porzucić tego terenu: zawiera on administracyjny podział. Porozmawiaj z personelem."
   TrustListNoClaim: Stań w terenie, który cię interesuje.
   ClearPermsOwnerOnly: Tylko właściciel terenu może wyczyścić wszystkie uprawnienia.
   UntrustIndividualAllClaims: Odebrano dostępu {0} do WSZYSTKICH twoich terenów. Aby ustawić uprawnienia dla pojedynczego terenu, stań w nim.
@@ -42,6 +49,13 @@ Messages:
   BasicClaimsMode: Powrócono do podstawowego trybu tworzenia terenów.
   ShapedClaimsMode: Tryb terenu o dowolnym kształcie. Kliknij prawym, aby umieścić narożniki na niezagospodarowanym terenie lub rozpocząć i rozszerzyć edycje kształtu z granic terenu. Kliknięcia na granicach tworzą znaczniki segmentów w razie potrzeby. Użyj /basicclaims, aby wyjść.
   ShapedClaimsDisabled: Tereny o dowolnym kształcie są wyłączone na tym serwerze.
+  ShapedSubClaimsDisabled: Podziały o dowolnym kształcie są wyłączone na tym serwerze.
+  ShapedSubdivisionMode: Tryb podziału o dowolnym kształcie. Kliknij prawym przyciskiem wewnątrz jednego ze swoich terenów, aby umieścić narożniki, a następnie kliknij ponownie pierwszy narożnik, aby zamknąć podział. Kliknij granicę istniejącego podziału o dowolnym kształcie, aby zmienić jego kształt. Użyj /basicclaims, aby wyjść.
+  ShapedSubdivisionNoParent: Kliknij prawym przyciskiem wewnątrz terenu, który możesz edytować, aby rozpocząć podział o dowolnym kształcie.
+  ShapedSubdivisionOn3DClaim: Podziały o dowolnym kształcie działają tylko wewnątrz terenów 2D najwyższego poziomu.
+  ShapedSubdivisionOutsideParent: Podziały o dowolnym kształcie muszą pozostać wewnątrz terenu, który dzielisz.
+  ShapedSubdivisionReshaped: Podział o dowolnym kształcie zaktualizowany.
+  ShapedSubdivisionSuccess: Podział o dowolnym kształcie utworzony.
   MergeOverlapConflict: Nie można połączyć; scalony teren nachodziłby na inne tereny.
   SubdivisionMode: Tryb podziału. Użyj łopaty, aby tworzyć podziały w istniejących terenach. Użyj /basicclaims, aby wyjść.
   SubdivisionMode3D: Tryb podziału 3D. Użyj łopaty, aby tworzyć podziały 3D w istniejących terenach. Użyj /basicclaims, aby wyjść.
@@ -51,6 +65,8 @@ Messages:
   DeleteSuccess: Teren usunięty.
   CantDeleteAdminClaim: Nie masz uprawnień do usuwania terenów administracyjnych.
   NoAdminClaimsPermission: Nie masz uprawnień do zarządzania terenami administracyjnymi.
+  ClaimLabel: teren
+  SubdivisionLabel: podział
   ConfirmPvpToggleEnabledNoFee: "Czy chcesz włączyć PvP w tym {0}?"
   ConfirmPvpToggleDisabledNoFee: "Czy chcesz wyłączyć PvP w tym {0}?"
   ConfirmPvpToggleEnabledWithFee: "Czy chcesz zapłacić {0}, aby włączyć PvP w tym {1}?"
@@ -318,10 +334,6 @@ Messages:
   NeighborTrustGrantedAll: "Nadano {0} zaufanie sąsiedzkie dla WSZYSTKICH twoich terenów."
   NeighborTrustRevokedAll: "Odebrano zaufanie sąsiedzkie {0} ze WSZYSTKICH twoich terenów."
   NeighborBypassEnabled: "Wszyscy gracze mogą teraz pomijać sprawdzanie minimalnej odległości dla tego terenu."
-  Subdivisions3DDisabled: Poddziały 3D są wyłączone na tym serwerze.
-  AdminClaims3DDisabled: Działki administracyjne 3D są wyłączone na tym serwerze.
-  DistanceCheckEnabled: Sprawdzanie odległości włączone. Otrzymasz ostrzeżenie podczas tworzenia działki zbyt blisko innych.
-  DistanceCheckDisabled: Sprawdzanie odległości wyłączone.
   NeighborBypassDisabled: "Sprawdzanie minimalnej odległości jest teraz wymagane dla tego terenu."
   AuthorTag: "&7autorstwa castledking, RoboMWM i BigScary"
   PluginTag: "&6Samodzielna wtyczka anty-griefingowa dla serwerów Minecraft \n&b- Teraz z pełnymi podziałami 3D"
@@ -333,3 +345,7 @@ Messages:
   ClaimAlertsUsage: Użyj /claimtogglealerts on|off aby przełączyć alerty dla WSZYSTKICH terenów, lub stań w konkretnym terenie i spróbuj ponownie.
   BootFinished: "&7Uruchamianie zakończone w: &a{0}"
   MessagesLoaded: "Komunikaty załadowane: &a{0}"
+  Subdivisions3DDisabled: Poddziały 3D są wyłączone na tym serwerze.
+  AdminClaims3DDisabled: Działki administracyjne 3D są wyłączone na tym serwerze.
+  DistanceCheckEnabled: Sprawdzanie odległości włączone. Otrzymasz ostrzeżenie podczas tworzenia działki zbyt blisko innych.
+  DistanceCheckDisabled: Sprawdzanie odległości wyłączone.

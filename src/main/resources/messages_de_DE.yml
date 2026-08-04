@@ -30,6 +30,13 @@ Messages:
   ConvertClaimAlreadyBasic: Dieses Gebiet ist bereits ein Basisgebiet.
   ConvertClaimAdminSuccess: Gebiet in ein administratives Gebiet umgewandelt.
   ConvertClaimBasicSuccess: "Administratives Gebiet in ein Basisgebiet umgewandelt, das dir gehört."
+  ConvertSubdivisionAdminSuccess: "Unterteilung erfolgreich in administrativ umgewandelt. Der Besitzer kann sie nicht mehr vergrößern, Vertrauen in sie verwalten oder das Gebiet um es herum aufgeben."
+  ConvertSubdivisionAlreadyAdmin: "Diese Unterteilung ist bereits ein administratives Unterteil."
+  ConvertSubdivisionAlreadyBasic: "Diese Unterteilung ist bereits ein normales Unterteil."
+  ConvertSubdivisionBasicSuccess: "Administratives Unterteil zurück in ein normales Unterteil umgewandelt."
+  ConvertSubdivisionSelectFirst: "Rechtsklicke auf einen Eckpunkt der Unterteilung mit deiner goldenen Schaufel, um sie auszuwählen, und führe den Befehl erneut aus."
+  AdminSubdivisionRestricted: "Diese Unterteilung wird von Personal verwaltet. Kontaktiere das Personal, wenn du eine Änderung benötigst."
+  AbandonBlockedAdminSubdivision: "Du kannst dieses Gebiet nicht aufgeben: Es enthält ein administratives Unterteil. Kontaktiere das Personal."
   TrustListNoClaim: "Stehe in dem Gebiet, über das du Informationen möchtest."
   ClearPermsOwnerOnly: Nur der Gebietsbesitzer kann alle Berechtigungen löschen.
   UntrustIndividualAllClaims: "Zugriff von {0} auf ALLE deine Gebiete entzogen. Um Berechtigungen für ein einzelnes Gebiet zu setzen, stehe darin."
@@ -42,6 +49,13 @@ Messages:
   BasicClaimsMode: "Zurück zum Basis-Modus für Gebietserstellung."
   ShapedClaimsMode: "Formgebiets-Modus. Rechtsklick, um Ecken in unbeanspruchtem Land zu setzen oder um Formbearbeitungen von Gebietsgrenzen aus zu starten und zu erweitern. Grenzklicks erstellen bei Bedarf Segmentmarkierungen. Verwende /basicclaims zum Beenden."
   ShapedClaimsDisabled: Formgebiete sind auf diesem Server deaktiviert.
+  ShapedSubClaimsDisabled: "Formgebiete sind auf diesem Server deaktiviert."
+  ShapedSubdivisionMode: "Formgebiet-Modus. Rechtsklicke innerhalb eines deiner Gebiete, um Eckpunkte zu platzieren, dann klicke auf den ersten Eckpunkt erneut, um das Gebiet zu schließen. Klicke auf die Grenze eines bestehenden Formgebietes, um es umzugestalten. Verwende /basicclaims, um den Modus zu beenden."
+  ShapedSubdivisionNoParent: "Rechtsklicke innerhalb eines Gebietes, das du editieren kannst, um ein Formgebiet zu starten."
+  ShapedSubdivisionOn3DClaim: "Formgebiete funktionieren nur innerhalb von 2D-Gebieten der obersten Ebene."
+  ShapedSubdivisionOutsideParent: "Formgebiete müssen innerhalb des Gebietes bleiben, das du teilst."
+  ShapedSubdivisionReshaped: "Formgebiet aktualisiert."
+  ShapedSubdivisionSuccess: "Formgebiet erstellt."
   MergeOverlapConflict: Konnte nicht zusammenführen; die fertige Zusammenführung würde andere Gebiete überlappen.
   SubdivisionMode: "Unterteilungs-Modus. Verwende deine Schaufel, um Unterteilungen in bestehenden Gebieten zu erstellen. Verwende /basicclaims zum Beenden."
   SubdivisionMode3D: "3D-Unterteilungs-Modus. Verwende deine Schaufel, um 3D-Unterteilungen in bestehenden Gebieten zu erstellen. Verwende /basicclaims zum Beenden."
@@ -51,6 +65,8 @@ Messages:
   DeleteSuccess: Gebiet gelöscht.
   CantDeleteAdminClaim: "Du hast keine Berechtigung, administrative Gebiete zu löschen."
   NoAdminClaimsPermission: "Du hast keine Berechtigung, administrative Gebiete zu verwalten."
+  ClaimLabel: Gebiet
+  SubdivisionLabel: Unterteilung
   ConfirmPvpToggleEnabledNoFee: "Möchtest du PvP in diesem {0} aktivieren?"
   ConfirmPvpToggleDisabledNoFee: "Möchtest du PvP in diesem {0} deaktivieren?"
   ConfirmPvpToggleEnabledWithFee: "Möchtest du {0} bezahlen, um PvP in diesem {1} zu aktivieren?"
@@ -318,10 +334,6 @@ Messages:
   NeighborTrustGrantedAll: "Nachbarvertrauen für {0} für ALLE deine Gebiete gewährt."
   NeighborTrustRevokedAll: "Nachbarvertrauen von {0} für ALLE deine Gebiete entzogen."
   NeighborBypassEnabled: Alle Spieler können jetzt die Mindestabstandsprüfungen für dieses Gebiet umgehen.
-  Subdivisions3DDisabled: 3D-Unterteilungen sind auf diesem Server deaktiviert.
-  AdminClaims3DDisabled: 3D-Admin-Grundstücke sind auf diesem Server deaktiviert.
-  DistanceCheckEnabled: Abstandsprüfung aktiviert. Du wirst gewarnt, wenn du Grundstücke zu nah an anderen erstellst.
-  DistanceCheckDisabled: Abstandsprüfung deaktiviert.
   NeighborBypassDisabled: Mindestabstandsprüfungen sind jetzt für dieses Gebiet aktiv.
   AuthorTag: "&7von castledking, RoboMWM und BigScary"
   PluginTag: "&6Das Self-Service Anti-Griefing-Plugin für Minecraft-Server \n&b- Jetzt mit vollständigen 3D-Unterteilungen"
@@ -333,3 +345,7 @@ Messages:
   ClaimAlertsUsage: Verwende /claimtogglealerts on|off um Warnungen für ALLE Gebiete umzuschalten, oder steh in einem bestimmten Gebiet und versuche es erneut.
   BootFinished: "&7Start abgeschlossen in: &a{0}"
   MessagesLoaded: "Nachrichten geladen: {0}"
+  Subdivisions3DDisabled: 3D-Unterteilungen sind auf diesem Server deaktiviert.
+  AdminClaims3DDisabled: 3D-Admin-Grundstücke sind auf diesem Server deaktiviert.
+  DistanceCheckEnabled: Abstandsprüfung aktiviert. Du wirst gewarnt, wenn du Grundstücke zu nah an anderen erstellst.
+  DistanceCheckDisabled: Abstandsprüfung deaktiviert.

@@ -30,6 +30,13 @@ Messages:
   ConvertClaimAlreadyBasic: Este terreno ja e um terreno basico.
   ConvertClaimAdminSuccess: Terreno convertido para terreno administrativo.
   ConvertClaimBasicSuccess: Terreno administrativo convertido para um terreno basico que voce possui.
+  ConvertSubdivisionAdminSuccess: Subdivisão convertida em subdivisão administrativa. O dono não pode mais redimensioná-la, gerenciar a confiança nela ou abandonar o terreno ao seu redor.
+  ConvertSubdivisionAlreadyAdmin: Esta subdivisão já é uma subdivisão administrativa.
+  ConvertSubdivisionAlreadyBasic: Esta subdivisão já é uma subdivisão normal.
+  ConvertSubdivisionBasicSuccess: Subdivisão administrativa retornada a uma subdivisão normal.
+  ConvertSubdivisionSelectFirst: Clique com o botão direito em um canto da subdivisão com sua pá de ouro para selecioná-la, depois execute esse comando novamente.
+  AdminSubdivisionRestricted: Essa subdivisão é administrada pela equipe. Fale com a equipe se precisar que ela seja alterada.
+  AbandonBlockedAdminSubdivision: "Você não pode abandonar este terreno: ele contém uma subdivisão administrativa. Fale com a equipe."
   TrustListNoClaim: Fique dentro do terreno protegido que você quer consultar.
   ClearPermsOwnerOnly: Somente o dono do terreno protegido pode limpar todas as permissões.
   UntrustIndividualAllClaims: O acesso de {0} a TODOS os seus terrenos protegidos foi revogado. Para definir permissões em um único terreno protegido, fique dentro dele.
@@ -42,6 +49,13 @@ Messages:
   BasicClaimsMode: Retornou ao modo básico de criação de terrenos protegidos.
   ShapedClaimsMode: Modo de terreno com forma. Clique com o botao direito para colocar cantos em terra desprotegida ou para iniciar e extender edicoes com forma a partir das bordas de terrenos. Cliques nas bordas criam marcadores de segmentos conforme necessario. Use /basicclaims para sair.
   ShapedClaimsDisabled: Terrenos com forma estao desativados neste servidor.
+  ShapedSubClaimsDisabled: Subdivisões com forma estão desativadas neste servidor.
+  ShapedSubdivisionMode: Modo de subdivisão com forma. Clique com o botão direito dentro de um dos seus terrenos para colocar cantos, depois clique novamente no primeiro canto para fechar a subdivisão. Clique na borda de uma subdivisão com forma existente para remodelá-la. Use /basicclaims para sair.
+  ShapedSubdivisionNoParent: Clique com o botão direito dentro de um terreno que você pode editar para iniciar uma subdivisão com forma.
+  ShapedSubdivisionOn3DClaim: Subdivisões com forma só funcionam dentro de terrenos 2D de nível superior.
+  ShapedSubdivisionOutsideParent: Subdivisões com forma precisam permanecer dentro do terreno que você está subdividindo.
+  ShapedSubdivisionReshaped: Subdivisão com forma atualizada.
+  ShapedSubdivisionSuccess: Subdivisão com forma criada.
   MergeOverlapConflict: Não foi possível mesclar; a mesclagem concluída sobreporia outros terrenos.
   SubdivisionMode: Modo de subdivisão. Use sua pá para criar subdivisões nos seus terrenos protegidos existentes. Use /basicclaims para sair.
   SubdivisionMode3D: Modo de subdivisao 3D. Use sua pá para criar subdivisoes 3D nos seus terrenos existentes. Use /basicclaims para sair.
@@ -51,6 +65,8 @@ Messages:
   DeleteSuccess: Terreno protegido deletado.
   CantDeleteAdminClaim: Você não tem permissão para deletar terrenos administrativos.
   NoAdminClaimsPermission: Voce nao tem permissao para gerenciar terrenos administrativos.
+  ClaimLabel: terreno
+  SubdivisionLabel: subdivisão
   ConfirmPvpToggleEnabledNoFee: "Você quer ativar PvP neste {0}?"
   ConfirmPvpToggleDisabledNoFee: "Você quer desativar PvP neste {0}?"
   ConfirmPvpToggleEnabledWithFee: "Você quer pagar {0} para ativar PvP neste {1}?"
