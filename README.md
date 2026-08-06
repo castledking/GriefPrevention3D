@@ -37,12 +37,14 @@ Stop _responding_ to grief and prevent it instead. GriefPrevention stops grief b
   Use this command or `/aclaim mode admin3d` to switch to 3D admin claim mode.
   Requires the `griefprevention.adminclaims` permission.
 ####
-- **Shaped Claims**
+- **Shaped Claims / SubClaims**
   ```
   AllowShapedClaims: false
+  AllowShapedSubClaims: false
   ```
-  Set to **true** to enable non-rectangular claims.
+  Set to **true** to enable non-rectangular claims & subdivisions.
   `/shapedclaims`
+  `/shapedsubdivideclaims`
   Use this command to switch to the shaped claims mode.
 ####
 - **Merge Claims**
