@@ -34,13 +34,21 @@ public class SpigotKnockbackProtectionHandler extends KnockbackProtectionHandler
         Entity sourceEntity = event.getSourceEntity();
         Entity knockedEntity = event.getEntity();
 
+        debug("EntityKnockbackByEntityEvent cause=" + event.getCause()
+                + " entity=" + describe(knockedEntity)
+                + " sourceEntity=" + describe(sourceEntity));
+
         Player attacker;
 
         // Handle projectiles (wind charges, etc.) - must extract shooter
         if (sourceEntity instanceof Projectile)
         {
             Projectile projectile = (Projectile) sourceEntity;
-            if (!(projectile.getShooter() instanceof Player)) return;
+            if (!(projectile.getShooter() instanceof Player))
+            {
+                debug("ignored: projectile was not shot by a player");
+                return;
+            }
             attacker = (Player) projectile.getShooter();
         }
         // Handle direct player knockback (melee, shield block, etc.)
@@ -50,6 +58,7 @@ public class SpigotKnockbackProtectionHandler extends KnockbackProtectionHandler
         }
         else
         {
+            debug("ignored: source is not a player or player-shot projectile");
             return;
         }
 

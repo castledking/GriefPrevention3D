@@ -558,19 +558,6 @@ public class GriefPrevention extends JavaPlugin {
         // knockback protection - handles melee, projectile, and other player-caused knockback in claims
         new KnockbackProtectionListener(this.dataStore, this).register(this);
 
-        // Register knockback handler - use Paper's event if available, otherwise use Spigot's (wind charge protection)
-        if (isClassPresent("io.papermc.paper.event.entity.EntityPushedByEntityAttackEvent")) {
-            pluginManager.registerEvents(new PaperKnockbackHandler(this.dataStore, this), this);
-            AddLogEntry("[GP Debug] Using Paper knockback handler for wind charge protection.");
-        } else if (isClassPresent("org.bukkit.event.entity.EntityKnockbackByEntityEvent")) {
-            pluginManager.registerEvents(new SpigotKnockbackHandler(this.dataStore, this), this);
-            AddLogEntry("[GP Debug] Using Spigot knockback handler for wind charge protection.");
-        } else {
-            AddLogEntry(
-                "[GP Debug] No knockback handler available on this server (legacy API). Wind-charge protection disabled."
-            );
-        }
-
         // special interaction-related events
         pluginManager.registerEvents(new InteractionProtectionHandler(), this);
 

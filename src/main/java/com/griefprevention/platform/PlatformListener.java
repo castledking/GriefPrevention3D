@@ -1,5 +1,6 @@
 package com.griefprevention.platform;
 
+import me.ryanhamshire.GriefPrevention.GriefPrevention;
 import org.bukkit.event.Listener;
 import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.Nullable;
@@ -43,13 +44,21 @@ public interface PlatformListener
      */
     default void register(Plugin plugin)
     {
-        if (isSupported())
+        if (!isSupported())
         {
-            Listener listener = create();
-            if (listener != null)
-            {
-                plugin.getServer().getPluginManager().registerEvents(listener, plugin);
-            }
+            GriefPrevention.AddLogEntry("[GP Debug] " + getClass().getSimpleName() + " is not supported on "
+                    + PlatformDetection.getServerVersion() + " (detected platform: "
+                    + PlatformDetection.getPlatform() + ") - not registered.");
+            return;
+        }
+
+        Listener listener = create();
+        if (listener != null)
+        {
+            plugin.getServer().getPluginManager().registerEvents(listener, plugin);
+            GriefPrevention.AddLogEntry("[GP Debug] Registered " + listener.getClass().getSimpleName()
+                    + " on " + PlatformDetection.getServerVersion() + " (detected platform: "
+                    + PlatformDetection.getPlatform() + ").");
         }
     }
 

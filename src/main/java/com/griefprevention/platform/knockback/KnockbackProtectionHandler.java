@@ -45,6 +45,30 @@ public abstract class KnockbackProtectionHandler implements Listener
     }
 
     /**
+     * Logs a knockback trace line. Only written when debug logging is enabled
+     * ({@code /gpdebug on}), so this is safe to leave in place on production servers.
+     *
+     * @param message the trace message
+     */
+    protected static void debug(@NotNull String message)
+    {
+        GriefPrevention.AddLogEntry("[GP Debug] [knockback] " + message);
+    }
+
+    /**
+     * Renders an entity for debug output: player name, or entity type for anything else.
+     *
+     * @param entity the entity, may be null
+     * @return a short human-readable description
+     */
+    protected static @NotNull String describe(Entity entity)
+    {
+        if (entity == null) return "null";
+        if (entity instanceof Player) return "Player(" + entity.getName() + ")";
+        return entity.getType().name();
+    }
+
+    /**
      * Handle player-caused knockback against other players. Applies GP PvP protections
      * (safe zones, fresh spawn immunity) when GP PvP rules are enabled for the world.
      *
@@ -60,12 +84,20 @@ public abstract class KnockbackProtectionHandler implements Listener
             @NotNull Player defender)
     {
         // Always allow self-knockback for mobility.
-        if (attacker.equals(defender)) return;
+        if (attacker.equals(defender))
+        {
+            debug("allow: self-knockback (" + describe(defender) + ")");
+            return;
+        }
 
         PlayerData defenderData = this.dataStore.getPlayerData(defender.getUniqueId());
         PlayerData attackerData = this.dataStore.getPlayerData(attacker.getUniqueId());
 
-        if (attackerData.ignoreClaims) return;
+        if (attackerData.ignoreClaims)
+        {
+            debug("allow: attacker " + attacker.getName() + " has ignoreClaims on");
+            return;
+        }
 
         // Check if defender is in a claim where attacker has trust.
         Claim defenderClaim = this.dataStore.getClaimAt(defender.getLocation(), false, defenderData.lastClaim);
@@ -76,6 +108,8 @@ public abstract class KnockbackProtectionHandler implements Listener
             // If the attacker has access trust, allow the knockback.
             if (defenderClaim.checkPermission(attacker, ClaimPermission.Access, null) == null)
             {
+                debug("allow: attacker " + attacker.getName() + " has Access trust in defender's claim "
+                        + defenderClaim.getID());
                 return;
             }
         }
@@ -84,6 +118,7 @@ public abstract class KnockbackProtectionHandler implements Listener
         // Allow knockback without further GP PvP checks (safe zones, fresh spawn, etc.).
         if (!instance.pvpRulesApply(defender.getWorld()))
         {
+            debug("allow: GP PvP rules are disabled in world " + defender.getWorld().getName());
             return;
         }
 
@@ -92,6 +127,8 @@ public abstract class KnockbackProtectionHandler implements Listener
         {
             if (attackerData.pvpImmune || defenderData.pvpImmune)
             {
+                debug("CANCEL: fresh-spawn PvP immunity (attackerImmune=" + attackerData.pvpImmune
+                        + ", defenderImmune=" + defenderData.pvpImmune + ")");
                 event.setCancelled(true);
                 GriefPrevention.sendMessage(
                         attacker,
@@ -108,8 +145,15 @@ public abstract class KnockbackProtectionHandler implements Listener
             Bukkit.getPluginManager().callEvent(pvpEvent);
             if (!pvpEvent.isCancelled())
             {
+                debug("CANCEL: defender " + defender.getName() + " is in PvP-safe claim " + defenderClaim.getID()
+                        + " (see PvP.ProtectPlayersInLandClaims in config.yml)");
                 event.setCancelled(true);
                 GriefPrevention.sendMessage(attacker, TextMode.Err, Messages.PlayerInPvPSafeZone);
+            }
+            else
+            {
+                debug("allow: another plugin cancelled PreventPvPEvent for defender's claim "
+                        + defenderClaim.getID());
             }
             return;
         }
@@ -125,11 +169,17 @@ public abstract class KnockbackProtectionHandler implements Listener
                 Bukkit.getPluginManager().callEvent(pvpEvent);
                 if (!pvpEvent.isCancelled())
                 {
+                    debug("CANCEL: attacker " + attacker.getName() + " is standing in PvP-safe claim "
+                            + attackerClaim.getID()
+                            + " (see PvP.ProtectPlayersInLandClaims in config.yml)");
                     event.setCancelled(true);
                     GriefPrevention.sendMessage(attacker, TextMode.Err, Messages.CantFightWhileImmune);
                 }
+                return;
             }
         }
+
+        debug("allow: no GP rule matched (" + attacker.getName() + " -> " + defender.getName() + ")");
     }
 
     /**

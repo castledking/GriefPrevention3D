@@ -223,11 +223,6 @@ public class EntityDamageHandler implements Listener {
         this.handleEntityDamageEvent(new EntityDamageInstance(event), false);
     }
 
-    // Wind charge knockback handling has been moved to separate classes:
-    // - PaperKnockbackHandler: Used on Paper servers (uses non-deprecated Paper event)
-    // - SpigotKnockbackHandler: Used on non-Paper servers (uses Bukkit event)
-    // See GriefPrevention.onEnable() for conditional registration.
-
     private void handleEntityDamageEvent(@NotNull EntityDamageInstance event, boolean sendMessages) {
         // monsters are never protected
         if (isHostile(event.damaged()))

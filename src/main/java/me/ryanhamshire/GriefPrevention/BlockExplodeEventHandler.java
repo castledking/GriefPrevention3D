@@ -7,7 +7,6 @@ import org.bukkit.block.Block;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
-import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.block.BlockExplodeEvent;
@@ -17,6 +16,7 @@ import org.bukkit.projectiles.ProjectileSource;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 
@@ -40,24 +40,45 @@ public final class BlockExplodeEventHandler implements Listener {
         }
         else
         {
-            handleExplosion(explodeEvent.getBlock().getLocation(), null, explodeEvent.blockList(), explodeEvent);
+            handleExplosion(explodeEvent.getBlock().getLocation(), null, explodeEvent.blockList());
         }
     }
 
-    private void handleExplosion(@NotNull Location location, @Nullable Entity entity, @NotNull List<Block> blocks, BlockExplodeEvent explodeEvent)
+    private void handleExplosion(@NotNull Location location, @Nullable Entity entity, @NotNull List<Block> blocks)
     {
         World world = location.getWorld();
         if (world == null || !GriefPrevention.instance.claimsEnabledForWorld(world)) return;
 
+        // Protect claimed blocks by removing them from the explosion, never by cancelling the
+        // event. Cancelling a BlockExplodeEvent suppresses the whole explosion - including the
+        // knockback the server delivers to players - which silently broke effects like the
+        // mace's Wind Burst self-launch inside claims. This mirrors
+        // EntityEventHandler#handleExplosion.
+        List<Block> explodedBlocks = new ArrayList<>();
+        Claim cachedClaim = null;
+
         for (Block block : blocks)
         {
-            Claim claim = this.dataStore.getClaimAt(block.getLocation(), false, null);
-            if (claim != null)
+            Claim claim = this.dataStore.getClaimAt(block.getLocation(), false, cachedClaim);
+
+            if (claim == null)
             {
-                explodeEvent.setCancelled(true);
-                return;
+                explodedBlocks.add(block);
+                continue;
+            }
+
+            cachedClaim = claim;
+
+            // Respect the same explosion permissions as entity-caused explosions, so
+            // /claimexplosions works here too.
+            if (!GriefPrevention.instance.config_blockClaimExplosions || claim.areExplosivesAllowed)
+            {
+                explodedBlocks.add(block);
             }
         }
+
+        blocks.clear();
+        blocks.addAll(explodedBlocks);
     }
 
     private void handleExplodeInteract(@NotNull Location location, @Nullable Entity entity, @NotNull List<Block> blocks, @NotNull Event event)
@@ -78,32 +99,36 @@ public final class BlockExplodeEventHandler implements Listener {
             }
         }
 
+        // As above: strip protected blocks rather than cancelling, so non-block effects of the
+        // explosion (notably player knockback) still happen. Mirrors
+        // EntityEventHandler#handleExplodeInteract.
+        List<Block> removed = new ArrayList<>();
+        Claim cachedClaim = playerData == null ? null : playerData.lastClaim;
+
         for (Block block : blocks)
         {
-            Claim claim = this.dataStore.getClaimAt(block.getLocation(), false, playerData == null ? null : playerData.lastClaim);
-            if (claim != null)
+            Claim claim = this.dataStore.getClaimAt(block.getLocation(), false, cachedClaim);
+            if (claim == null) continue;
+
+            cachedClaim = claim;
+
+            // With no known player, nothing can be authorised - protect the block.
+            if (player == null)
             {
-                if (player != null)
-                {
-                    Supplier<String> noBuildReason = claim.checkPermission(player, ClaimPermission.Build, event);
-                    if (noBuildReason != null)
-                    {
-                        if (event instanceof Cancellable)
-                        {
-                            ((Cancellable) event).setCancelled(true);
-                        }
-                        return;
-                    }
-                }
-                else
-                {
-                    if (event instanceof Cancellable)
-                    {
-                        ((Cancellable) event).setCancelled(true);
-                    }
-                    return;
-                }
+                removed.add(block);
+                continue;
+            }
+
+            Supplier<String> noBuildReason = claim.checkPermission(player, ClaimPermission.Build, event);
+            if (noBuildReason != null)
+            {
+                removed.add(block);
             }
         }
+
+        if (playerData != null && cachedClaim != null)
+            playerData.lastClaim = cachedClaim;
+
+        blocks.removeAll(removed);
     }
 }
