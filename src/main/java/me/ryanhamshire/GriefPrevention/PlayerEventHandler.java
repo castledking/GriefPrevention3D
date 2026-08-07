@@ -2188,6 +2188,7 @@ public class PlayerEventHandler implements Listener {
             }
             if (
                 itemInHand != null &&
+                !isShelf(clickedBlockType) &&
                 (itemInHand.getType() == instance.config_claims_modificationTool ||
                     itemInHand.getType() == instance.config_claims_investigationTool)
             ) {
@@ -2422,6 +2423,7 @@ public class PlayerEventHandler implements Listener {
             // Only call claim tool dispatcher if player is holding a claim tool
             if (
                 itemInHand != null &&
+                !isShelf(clickedBlockType) &&
                 (itemInHand.getType() == instance.config_claims_modificationTool ||
                     itemInHand.getType() == instance.config_claims_investigationTool)
             ) {
@@ -5730,6 +5732,27 @@ public class PlayerEventHandler implements Listener {
     // determines whether a block type is an inventory holder. uses a caching
     // strategy to save cpu time
     private final ConcurrentHashMap<Material, Boolean> inventoryHolderCache = new ConcurrentHashMap<>();
+
+    /**
+     * Returns true for shelf blocks, which accept the held item on right-click.
+     * <p>
+     * The claim tools normally intercept a right-click to show claim boundaries, but a shelf's
+     * vanilla behaviour is to store whatever the player is holding — so intercepting makes the
+     * tool impossible to place on a shelf. Item frames already behave correctly because they are
+     * entities and never reach this handler.
+     * <p>
+     * Shelves are {@code BlockInventoryHolder}s, so they remain protected by the container trust
+     * check either way; this only decides whether the claim tools consume the interaction.
+     * <p>
+     * Matched by name so the plugin still compiles and runs on versions predating shelves.
+     *
+     * @param material the clicked block's material, may be null
+     * @return true if the block is a shelf
+     */
+    private static boolean isShelf(Material material) {
+        // Excludes BOOKSHELF and CHISELED_BOOKSHELF, which are not item-accepting shelves.
+        return material != null && material.name().endsWith("_SHELF");
+    }
 
     private boolean isInventoryHolder(Block clickedBlock) {
         Material cacheKey = clickedBlock.getType();
