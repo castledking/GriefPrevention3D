@@ -30,6 +30,7 @@ dependencies {
     mappings(loom.officialMojangMappings())
     modImplementation("net.fabricmc:fabric-loader:$fabricLoaderVersion")
     modImplementation("net.fabricmc.fabric-api:fabric-api:$fabricApiVersion")
+    compileOnly("net.luckperms:api:5.5")
     compileOnly("org.jetbrains:annotations:26.0.2")
     testImplementation("org.junit.jupiter:junit-jupiter:5.12.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.12.1")

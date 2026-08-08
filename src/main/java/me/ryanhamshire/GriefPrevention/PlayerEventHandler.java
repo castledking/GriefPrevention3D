@@ -193,6 +193,7 @@ public class PlayerEventHandler implements Listener {
     // Definitions for specific material groups that do not have a tag
     private final Set<Material> spawnEggs;
     private final Set<Material> dyes;
+    private final Set<Material> mobBuckets;
 
     // typical constructor, yawn
     PlayerEventHandler(DataStore dataStore, GriefPrevention plugin) {
@@ -209,9 +210,20 @@ public class PlayerEventHandler implements Listener {
 
         spawnEggs = new HashSet<>();
         dyes = new HashSet<>();
+        mobBuckets = new HashSet<>();
         for (Material material : Material.values()) {
-            if (material.name().endsWith("_SPAWN_EGG")) spawnEggs.add(material);
-            else if (material.name().endsWith("_DYE")) dyes.add(material);
+            String name = material.name();
+            if (name.endsWith("_SPAWN_EGG")) spawnEggs.add(material);
+            else if (name.endsWith("_DYE")) dyes.add(material);
+            else if (
+                name.endsWith("_BUCKET") &&
+                !name.startsWith("LEGACY_") &&
+                // fluids are covered by PlayerBucketEmptyEvent, powder snow by BlockPlaceEvent
+                !name.equals("WATER_BUCKET") &&
+                !name.equals("LAVA_BUCKET") &&
+                !name.equals("MILK_BUCKET") &&
+                !name.equals("POWDER_SNOW_BUCKET")
+            ) mobBuckets.add(material);
         }
 
         reload();
@@ -1413,14 +1425,7 @@ public class PlayerEventHandler implements Listener {
 
     /** Folia/Canvas: use teleportAsync when in region threading. */
     private static void teleportFoliaSafe(Player player, Location location) {
-        try {
-            player
-                .getClass()
-                .getMethod("teleportAsync", Location.class)
-                .invoke(player, location);
-        } catch (Exception e) {
-            player.teleport(location);
-        }
+        CompatUtil.teleportSafely(player, location);
     }
 
     // Canvas fallback: PlayerTeleportEvent may not fire for ender pearls. Run rollback at tick+1
@@ -2143,6 +2148,34 @@ public class PlayerEventHandler implements Listener {
                 }
             } catch (IllegalArgumentException e) {
                 // 1.8.8: BRUSH doesn't exist
+            }
+        }
+
+        // Mob buckets place a live entity in the world, so they need build trust.
+        // Fish, axolotl and tadpole buckets carry water and are caught by
+        // onPlayerBucketEmpty, but the sulfur cube bucket (Minecraft 26.2+) carries no
+        // fluid: MobBucketItem short-circuits emptyContents() for empty-fluid buckets and
+        // never reaches the code that fires PlayerBucketEmptyEvent, so the cube gets
+        // spawned with no event to cancel. Checking the interact covers every mob bucket.
+        // This runs ahead of the block-type branches below because shift-right-clicking
+        // suppresses block use and empties the bucket instead.
+        if (
+            clickedBlock != null &&
+            action == Action.RIGHT_CLICK_BLOCK &&
+            mobBuckets.contains(event.getMaterial())
+        ) {
+            // the mob spawns in the block adjacent to the clicked face, not in the block itself
+            Block spawnBlock = clickedBlock.getRelative(event.getBlockFace());
+            Supplier<String> noBuildReason = ProtectionHelper.checkPermission(
+                player,
+                spawnBlock.getLocation(),
+                ClaimPermission.Build,
+                event
+            );
+            if (noBuildReason != null) {
+                GriefPrevention.sendRateLimitedErrorMessage(player, noBuildReason.get());
+                event.setCancelled(true);
+                return;
             }
         }
 

@@ -2,6 +2,7 @@ package me.ryanhamshire.GriefPrevention.compat;
 
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.Statistic;
 import org.bukkit.WorldBorder;
@@ -12,6 +13,8 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerTeleportEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
+
+import java.lang.reflect.Method;
 
 /**
  * Compatibility utility for bridging API differences between Minecraft versions.
@@ -356,5 +359,35 @@ public class CompatUtil {
         } catch (ClassNotFoundException | NoSuchFieldException | IllegalAccessException e) {
             return false;
         }
+    }
+
+    private static final Method TELEPORT_ASYNC = resolveTeleportAsync();
+
+    private static Method resolveTeleportAsync() {
+        try {
+            return Entity.class.getMethod("teleportAsync", Location.class);
+        } catch (NoSuchMethodException | LinkageError e) {
+            // Spigot and pre-1.19 Paper: teleportAsync doesn't exist
+            return null;
+        }
+    }
+
+    /**
+     * Teleport an entity in a way that is safe under region threading (Folia, Canvas).
+     * Those servers throw UnsupportedOperationException from Entity#teleport and require
+     * Entity#teleportAsync instead. Falls back to the blocking call on Spigot/Paper, where
+     * teleportAsync may not exist.
+     */
+    public static void teleportSafely(Entity entity, Location location) {
+        if (TELEPORT_ASYNC != null) {
+            try {
+                TELEPORT_ASYNC.invoke(entity, location);
+                return;
+            } catch (ReflectiveOperationException | LinkageError e) {
+                // Fall through to the blocking teleport
+            }
+        }
+
+        entity.teleport(location);
     }
 }

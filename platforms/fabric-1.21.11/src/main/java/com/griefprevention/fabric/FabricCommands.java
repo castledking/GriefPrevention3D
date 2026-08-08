@@ -1,6 +1,7 @@
 package com.griefprevention.fabric;
 
 import com.griefprevention.claims.ClaimBounds;
+import com.griefprevention.claims.ClaimBlockBalance;
 import com.griefprevention.claims.ClaimSnapshot;
 import com.griefprevention.claims.ClaimTrustLevel;
 import com.mojang.brigadier.Command;
@@ -49,6 +50,8 @@ final class FabricCommands
                                                         context.getSource(),
                                                         claims,
                                                         IntegerArgumentType.getInteger(context, "radius")))))
+                                .then(Commands.literal("blocks")
+                                        .executes(context -> claimBlocks(context.getSource(), claims)))
                                 .then(Commands.literal("list")
                                         .executes(context -> listClaims(context.getSource(), claims)))
                                 .then(Commands.literal("abandon")
@@ -113,6 +116,15 @@ final class FabricCommands
                     radius,
                     player
             );
+            if (result.hasInsufficientClaimBlocks())
+            {
+                source.sendFailure(Component.literal(
+                        "You don't have enough blocks to claim that entire area. You need "
+                                + result.blocksNeeded()
+                                + " more blocks."
+                ));
+                return 0;
+            }
             if (!result.created())
             {
                 ClaimSnapshot overlap = result.overlappingClaim();
@@ -124,12 +136,42 @@ final class FabricCommands
 
             ClaimSnapshot created = result.createdClaim();
             source.sendSuccess(() -> Component.literal("Created GriefPrevention3D Fabric "
-                    + formatClaim(created)), true);
+                    + formatClaim(created)
+                    + (result.remainingBlocks() == null
+                    ? ""
+                    : "; " + result.remainingBlocks() + " claim blocks remaining")), true);
             return Command.SINGLE_SUCCESS;
         }
         catch (IOException e)
         {
             source.sendFailure(Component.literal("Could not save Fabric claim: " + e.getMessage()));
+            return 0;
+        }
+    }
+
+    private static int claimBlocks(
+            @NotNull CommandSourceStack source,
+            @NotNull FabricClaimRepository claims)
+            throws com.mojang.brigadier.exceptions.CommandSyntaxException
+    {
+        ServerPlayer player = source.getPlayerOrException();
+        try
+        {
+            ClaimBlockBalance balance = claims.claimBlockBalance(player.getUUID());
+            source.sendSuccess(() -> Component.literal("Claim blocks: "
+                    + balance.totalEntitlement()
+                    + " total - "
+                    + balance.claimedArea()
+                    + " claimed = "
+                    + balance.remaining()
+                    + " remaining."), false);
+            return balance.remaining();
+        }
+        catch (IOException exception)
+        {
+            source.sendFailure(Component.literal(
+                    "Could not safely read your claim-block balance: " + exception.getMessage()
+            ));
             return 0;
         }
     }

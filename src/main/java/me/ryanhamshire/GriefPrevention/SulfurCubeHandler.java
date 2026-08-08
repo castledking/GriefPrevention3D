@@ -11,6 +11,7 @@ import org.bukkit.event.player.PlayerAnimationEvent;
 import org.bukkit.event.player.PlayerAnimationType;
 import org.bukkit.util.Vector;
 
+import me.ryanhamshire.GriefPrevention.compat.CompatUtil;
 import me.ryanhamshire.GriefPrevention.util.SchedulerUtil;
 
 import java.util.function.Supplier;
@@ -57,7 +58,7 @@ public class SulfurCubeHandler implements Listener
             {
                 if (target.isValid())
                 {
-                    target.teleport(frozenLocation);
+                    CompatUtil.teleportSafely(target, frozenLocation);
                     target.setVelocity(new Vector(0, 0, 0));
                 }
             }, 1L);

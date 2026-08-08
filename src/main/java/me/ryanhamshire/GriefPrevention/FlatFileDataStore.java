@@ -26,6 +26,9 @@ import com.griefprevention.geometry.OrthogonalPoint2i;
 import com.griefprevention.persistence.ClaimDocument;
 import com.griefprevention.persistence.ClaimDocumentCodec;
 import com.griefprevention.persistence.ClaimDocumentFormatException;
+import com.griefprevention.persistence.PlayerDataDocument;
+import com.griefprevention.persistence.PlayerDataDocumentCodec;
+import com.griefprevention.persistence.PlayerDataFormatException;
 import org.bukkit.Bukkit;
 import org.jetbrains.annotations.NotNull;
 import org.bukkit.Location;
@@ -49,7 +52,6 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -67,6 +69,7 @@ import java.util.Collections;
 public class FlatFileDataStore extends DataStore
 {
     private static final ClaimDocumentCodec CLAIM_DOCUMENT_CODEC = new ClaimDocumentCodec();
+    private static final PlayerDataDocumentCodec PLAYER_DATA_DOCUMENT_CODEC = new PlayerDataDocumentCodec();
 
     private final Set<Long> claimsNeedingRewrite = new HashSet<>();
 
@@ -1167,42 +1170,12 @@ public class FlatFileDataStore extends DataStore
                 {
                     needRetry = false;
 
-                    //read the file content and immediately close it
-                    @SuppressWarnings("null")
-                    List<String> lines = Files.readLines(playerFile, StandardCharsets.UTF_8);
-                    Iterator<String> iterator = lines.iterator();
-
-
-                    iterator.next();
-                    //first line is last login timestamp //RoboMWM - not using this anymore
-//
-//    				//convert that to a date and store it
-//    				DateFormat dateFormat = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss");
-//    				try
-//    				{
-//    					playerData.setLastLogin(dateFormat.parse(lastLoginTimestampString));
-//    				}
-//    				catch(ParseException parseException)
-//    				{
-//    					GriefPrevention.AddLogEntry("Unable to load last login for \"" + playerFile.getName() + "\".");
-//    					playerData.setLastLogin(null);
-//    				}
-
-                    //second line is accrued claim blocks
-                    String accruedBlocksString = iterator.next();
-
-                    //convert that to a number and store it
-                    playerData.setAccruedClaimBlocks(Integer.parseInt(accruedBlocksString));
-
-                    //third line is any bonus claim blocks granted by administrators
-                    String bonusBlocksString = iterator.next();
-
-                    //convert that to a number and store it
-                    playerData.setBonusClaimBlocks(Integer.parseInt(bonusBlocksString));
-
-                    //fourth line is a double-semicolon-delimited list of claims, which is currently ignored
-                    //String claimsString = inStream.readLine();
-                    //iterator.next();
+                    // Decode with the same platform-neutral codec used by Fabric. The first and
+                    // fourth upstream lines remain intentionally ignored.
+                    String input = new String(Files.toByteArray(playerFile), StandardCharsets.UTF_8);
+                    PlayerData decoded = decodePlayerData(playerID, input);
+                    playerData.setAccruedClaimBlocks(decoded.getAccruedClaimBlocks());
+                    playerData.setBonusClaimBlocks(decoded.getBonusClaimBlocks());
                 }
 
                 //if there's any problem with the file's content, retry up to 5 times with 5 milliseconds between
@@ -1261,29 +1234,11 @@ public class FlatFileDataStore extends DataStore
             return;
         }
 
-        StringBuilder fileContent = new StringBuilder();
         try
         {
-            //first line is last login timestamp //RoboMWM - no longer storing/using
-            //if(playerData.getLastLogin() == null) playerData.setLastLogin(new Date());
-            //DateFormat dateFormat = new SimpleDateFormat("yyyy.MM.dd.HH.mm.ss");
-            //fileContent.append(dateFormat.format(playerData.getLastLogin()));
-            fileContent.append("\n");
-
-            //second line is accrued claim blocks
-            fileContent.append(playerData.getAccruedClaimBlocks());
-            fileContent.append("\n");
-
-            //third line is bonus claim blocks
-            fileContent.append(playerData.getBonusClaimBlocks());
-            fileContent.append("\n");
-
-            //fourth line is blank
-            fileContent.append("\n");
-
             //write data to file
             File playerDataFile = new File(playerDataFolderPath + File.separator + playerID);
-            Files.write(fileContent.toString().getBytes(StandardCharsets.UTF_8), playerDataFile);
+            Files.write(encodePlayerData(playerData).getBytes(StandardCharsets.UTF_8), playerDataFile);
         }
 
         //if any problem, log it
@@ -1292,6 +1247,24 @@ public class FlatFileDataStore extends DataStore
             GriefPrevention.AddLogEntry("GriefPrevention: Unexpected exception saving data for player \"" + playerID + "\": " + e.getMessage());
             e.printStackTrace();
         }
+    }
+
+    static PlayerData decodePlayerData(UUID playerID, String input) throws PlayerDataFormatException
+    {
+        PlayerDataDocument document = PLAYER_DATA_DOCUMENT_CODEC.decode(input);
+        PlayerData playerData = new PlayerData();
+        playerData.playerID = playerID;
+        playerData.setAccruedClaimBlocks(document.accruedClaimBlocks());
+        playerData.setBonusClaimBlocks(document.bonusClaimBlocks());
+        return playerData;
+    }
+
+    static String encodePlayerData(PlayerData playerData)
+    {
+        return PLAYER_DATA_DOCUMENT_CODEC.encode(new PlayerDataDocument(
+                playerData.getAccruedClaimBlocks(),
+                playerData.getBonusClaimBlocks()
+        ));
     }
 
     @Override

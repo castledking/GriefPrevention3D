@@ -32,6 +32,7 @@ final class FabricDataFolder
                 AllowContainerAccess: false
                 AllowRespawnAnchor: false
               Claims:
+                InitialBlocks: 100
                 Mode:
                   world: Survival
                   world_nether: Disabled
@@ -62,9 +63,12 @@ final class FabricDataFolder
               ClaimStart: "Claim corner set!  Use the shovel again at the opposite corner to claim a rectangle of land.  To cancel, put your shovel away."
               NewClaimTooNarrow: "This claim would be too small.  Any claim must be at least {0} blocks wide."
               ResizeClaimTooNarrow: "This new size would be too small.  Claims must be at least {0} blocks wide."
+              ResizeNeedMoreBlocks: "You don't have enough blocks for this size.  You need {0} more."
               CreateClaimFailOverlapShort: "Your selected area overlaps an existing claim."
+              CreateClaimInsufficientBlocks: "You don't have enough blocks to claim that entire area.  You need {0} more blocks."
               CreateClaimSuccess: "Claim created!  Use /trust to share it with friends."
               ClaimResizeSuccess: "Claim resized.  {0} available claim blocks remaining."
+              EndBlockMath: " = {0} blocks left to spend"
               OnlyOwnersModifyClaims: "Only {0} can modify this claim."
               NotYourClaim: "This isn't your claim."
               DeleteClaimMissing: "There's no claim here."

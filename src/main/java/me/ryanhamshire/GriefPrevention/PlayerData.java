@@ -18,6 +18,8 @@
 
 package me.ryanhamshire.GriefPrevention;
 
+import com.griefprevention.claims.ClaimSnapshot;
+import com.griefprevention.claims.PlayerClaimBlockAccount;
 import com.griefprevention.claims.editor.ClaimEditorSession;
 import com.griefprevention.geometry.OrthogonalPoint2i;
 import com.griefprevention.visualization.BoundaryVisualization;
@@ -28,9 +30,11 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.net.InetAddress;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import java.util.Vector;
@@ -279,33 +283,24 @@ public class PlayerData
     //the number of claim blocks a player has available for claiming land
     public int getRemainingClaimBlocks()
     {
-        int remainingBlocks;
-        try
+        // Load/capture entitlements before getClaims(), preserving the established Bukkit order.
+        // getClaims() may apply the optional negative-balance repair for future calculations.
+        int accruedBlocks = this.getAccruedClaimBlocks();
+        int bonusBlocks = this.getBonusClaimBlocks();
+        int groupBonusBlocks = GriefPrevention.instance.dataStore.getGroupBonusBlocks(this.playerID);
+
+        List<ClaimSnapshot> ownedClaims = new ArrayList<>();
+        for (Claim claim : this.getClaims())
         {
-            remainingBlocks = Math.addExact(
-                    Math.addExact(this.getAccruedClaimBlocks(), this.getBonusClaimBlocks()),
-                    GriefPrevention.instance.dataStore.getGroupBonusBlocks(this.playerID));
-        }
-        catch (ArithmeticException e)
-        {
-            // If there is an overflow adding the player's available blocks, use max value.
-            remainingBlocks = Integer.MAX_VALUE;
-        }
-        try
-        {
-            for (int i = 0; i < this.getClaims().size(); i++)
-            {
-                Claim claim = this.getClaims().get(i);
-                remainingBlocks = Math.subtractExact(remainingBlocks, claim.getArea());
-            }
-        }
-        catch (ArithmeticException e)
-        {
-            // If there is an overflow subtracting the player's claims, they don't have any blocks left.
-            return 0;
+            ownedClaims.add(claim.getSnapshot());
         }
 
-        return remainingBlocks;
+        return new PlayerClaimBlockAccount(
+                this.playerID,
+                accruedBlocks,
+                bonusBlocks,
+                groupBonusBlocks
+        ).balance(ownedClaims).remaining();
     }
 
     //don't load data from secondary storage until it's needed

@@ -1,6 +1,7 @@
 package com.griefprevention.fabric;
 
 import com.griefprevention.claims.ClaimBounds;
+import com.griefprevention.claims.ClaimBlockBalance;
 import com.griefprevention.claims.ClaimRepository;
 import com.griefprevention.claims.ClaimSnapshot;
 import com.griefprevention.claims.ClaimSnapshotIndex;
@@ -32,17 +33,20 @@ public final class FabricClaimRepository implements ClaimRepository
     private final Map<Long, ClaimDocument> documentsByClaimId = new LinkedHashMap<>();
     private final Path dataFolder;
     private final Logger logger;
+    private final FabricClaimBlockService claimBlocks;
     private long nextClaimId;
 
     FabricClaimRepository(@NotNull Path dataFolder, @NotNull Logger logger)
     {
         this.dataFolder = dataFolder;
         this.logger = logger;
+        this.claimBlocks = FabricClaimBlockService.create(dataFolder, logger);
         reload();
     }
 
     synchronized int reload()
     {
+        this.claimBlocks.reload();
         FabricClaimFileStore.LoadedClaims loaded = FabricClaimFileStore.load(this.dataFolder, logger);
         this.claimIndex.rebuild(loaded.snapshots());
         this.documentsByClaimId.clear();
@@ -102,9 +106,19 @@ public final class FabricClaimRepository implements ClaimRepository
                 level.getMaxY(),
                 secondCorner.getZ()
         );
+        return createClaim(worldKey(level), bounds, ownerId, player);
+    }
+
+    synchronized @NotNull CreateClaimResult createClaim(
+            @NotNull String worldKey,
+            @NotNull ClaimBounds bounds,
+            @NotNull UUID ownerId,
+            @Nullable ServerPlayer player)
+            throws IOException
+    {
         ClaimSnapshot snapshot = new ClaimSnapshot(
                 this.nextClaimId,
-                worldKey(level),
+                worldKey,
                 ownerId,
                 null,
                 bounds,
@@ -118,6 +132,16 @@ public final class FabricClaimRepository implements ClaimRepository
             {
                 return CreateClaimResult.overlap(candidate);
             }
+        }
+
+        ClaimBlockBalance balance = this.claimBlocks.balance(ownerId, this.claimIndex.snapshots());
+        int claimArea = snapshot.bounds().area();
+        if (claimArea > balance.remaining())
+        {
+            return CreateClaimResult.insufficientClaimBlocks(
+                    missingBlocks(claimArea, balance.remaining()),
+                    balance.remaining()
+            );
         }
 
         List<ClaimDocument> documents = mutableDocuments();
@@ -134,7 +158,7 @@ public final class FabricClaimRepository implements ClaimRepository
             throw e;
         }
         ClaimCreatedCallback.EVENT.invoker().onClaimCreated(snapshot, player);
-        return CreateClaimResult.created(snapshot);
+        return CreateClaimResult.created(snapshot, balance.remaining() - claimArea);
     }
 
     synchronized @NotNull UpdateClaimResult updateClaimBounds(
@@ -185,6 +209,27 @@ public final class FabricClaimRepository implements ClaimRepository
             return UpdateClaimResult.missingResult();
         }
 
+        Integer remainingAfter = null;
+        if (existing.ownerId() != null
+                && existing.parentId() == null
+                && !existing.subdivision())
+        {
+            ClaimBlockBalance balance = this.claimBlocks.balance(
+                    existing.ownerId(),
+                    this.claimIndex.snapshots()
+            );
+            // Preserve the established Bukkit resize calculation: refund the old top-level area,
+            // then charge the replacement area against the derived remaining balance.
+            remainingAfter = balance.remaining() + (existing.bounds().area() - updated.bounds().area());
+            if (remainingAfter < 0)
+            {
+                return UpdateClaimResult.insufficientClaimBlocks(
+                        negativeMagnitude(remainingAfter),
+                        balance.remaining()
+                );
+            }
+        }
+
         List<ClaimDocument> documents = mutableDocuments();
         replaceDocument(
                 documents,
@@ -192,7 +237,7 @@ public final class FabricClaimRepository implements ClaimRepository
         );
         replaceAndSave(documents);
         ClaimModifiedCallback.EVENT.invoker().onClaimModified(existing, updated, player);
-        return UpdateClaimResult.updated(updated);
+        return UpdateClaimResult.updated(updated, remainingAfter);
     }
 
     synchronized @Nullable ClaimSnapshot deleteClaimAt(@NotNull ServerLevel level, @NotNull BlockPos pos, @Nullable ServerPlayer player)
@@ -204,8 +249,20 @@ public final class FabricClaimRepository implements ClaimRepository
             return null;
         }
 
+        return deleteClaim(claim.id(), player);
+    }
+
+    synchronized @Nullable ClaimSnapshot deleteClaim(long claimId, @Nullable ServerPlayer player)
+            throws IOException
+    {
+        ClaimSnapshot claim = this.claimIndex.get(claimId);
+        if (claim == null)
+        {
+            return null;
+        }
+
         List<ClaimDocument> documents = mutableDocuments();
-        Set<Long> deletedIds = descendantIds(claim.id(), documents);
+        Set<Long> deletedIds = descendantIds(claimId, documents);
         documents.removeIf(document -> deletedIds.contains(document.snapshot().id()));
         replaceAndSave(documents);
         ClaimDeletedCallback.EVENT.invoker().onClaimDeleted(claim, player);
@@ -310,6 +367,11 @@ public final class FabricClaimRepository implements ClaimRepository
     synchronized @Nullable ClaimDocument documentFor(long claimId)
     {
         return this.documentsByClaimId.get(claimId);
+    }
+
+    synchronized @NotNull ClaimBlockBalance claimBlockBalance(@NotNull UUID playerId) throws IOException
+    {
+        return this.claimBlocks.balance(playerId, this.claimIndex.snapshots());
     }
 
     @NotNull String worldKey(@NotNull ServerLevel level)
@@ -418,6 +480,18 @@ public final class FabricClaimRepository implements ClaimRepository
         denies.remove(normalizedIdentifier + ClaimTrustLevel.ACCESS.denySuffix());
     }
 
+    private static int missingBlocks(int required, int remaining)
+    {
+        long missing = (long) required - (long) remaining;
+        return missing > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) Math.max(0L, missing);
+    }
+
+    private static int negativeMagnitude(int value)
+    {
+        long magnitude = -(long) value;
+        return magnitude > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) magnitude;
+    }
+
     // ClaimRepository interface methods
 
     @Override
@@ -467,21 +541,37 @@ public final class FabricClaimRepository implements ClaimRepository
     {
         private final @Nullable ClaimSnapshot created;
         private final @Nullable ClaimSnapshot overlapping;
+        private final boolean insufficientClaimBlocks;
+        private final int blocksNeeded;
+        private final @Nullable Integer remainingBlocks;
 
-        private CreateClaimResult(@Nullable ClaimSnapshot created, @Nullable ClaimSnapshot overlapping)
+        private CreateClaimResult(
+                @Nullable ClaimSnapshot created,
+                @Nullable ClaimSnapshot overlapping,
+                boolean insufficientClaimBlocks,
+                int blocksNeeded,
+                @Nullable Integer remainingBlocks)
         {
             this.created = created;
             this.overlapping = overlapping;
+            this.insufficientClaimBlocks = insufficientClaimBlocks;
+            this.blocksNeeded = blocksNeeded;
+            this.remainingBlocks = remainingBlocks;
         }
 
-        static @NotNull CreateClaimResult created(@NotNull ClaimSnapshot claim)
+        static @NotNull CreateClaimResult created(@NotNull ClaimSnapshot claim, int remainingBlocks)
         {
-            return new CreateClaimResult(claim, null);
+            return new CreateClaimResult(claim, null, false, 0, remainingBlocks);
         }
 
         static @NotNull CreateClaimResult overlap(@NotNull ClaimSnapshot claim)
         {
-            return new CreateClaimResult(null, claim);
+            return new CreateClaimResult(null, claim, false, 0, null);
+        }
+
+        static @NotNull CreateClaimResult insufficientClaimBlocks(int blocksNeeded, int remainingBlocks)
+        {
+            return new CreateClaimResult(null, null, true, blocksNeeded, remainingBlocks);
         }
 
         boolean created()
@@ -498,6 +588,21 @@ public final class FabricClaimRepository implements ClaimRepository
         {
             return this.overlapping;
         }
+
+        boolean hasInsufficientClaimBlocks()
+        {
+            return this.insufficientClaimBlocks;
+        }
+
+        int blocksNeeded()
+        {
+            return this.blocksNeeded;
+        }
+
+        @Nullable Integer remainingBlocks()
+        {
+            return this.remainingBlocks;
+        }
     }
 
     static final class UpdateClaimResult
@@ -505,30 +610,53 @@ public final class FabricClaimRepository implements ClaimRepository
         private final @Nullable ClaimSnapshot updated;
         private final @Nullable ClaimSnapshot overlapping;
         private final boolean missing;
+        private final boolean insufficientClaimBlocks;
+        private final int blocksNeeded;
+        private final @Nullable Integer remainingBlocks;
 
         private UpdateClaimResult(
                 @Nullable ClaimSnapshot updated,
                 @Nullable ClaimSnapshot overlapping,
-                boolean missing)
+                boolean missing,
+                boolean insufficientClaimBlocks,
+                int blocksNeeded,
+                @Nullable Integer remainingBlocks)
         {
             this.updated = updated;
             this.overlapping = overlapping;
             this.missing = missing;
+            this.insufficientClaimBlocks = insufficientClaimBlocks;
+            this.blocksNeeded = blocksNeeded;
+            this.remainingBlocks = remainingBlocks;
         }
 
-        static @NotNull UpdateClaimResult updated(@NotNull ClaimSnapshot claim)
+        static @NotNull UpdateClaimResult updated(
+                @NotNull ClaimSnapshot claim,
+                @Nullable Integer remainingBlocks)
         {
-            return new UpdateClaimResult(claim, null, false);
+            return new UpdateClaimResult(claim, null, false, false, 0, remainingBlocks);
         }
 
         static @NotNull UpdateClaimResult overlap(@NotNull ClaimSnapshot claim)
         {
-            return new UpdateClaimResult(null, claim, false);
+            return new UpdateClaimResult(null, claim, false, false, 0, null);
         }
 
         static @NotNull UpdateClaimResult missingResult()
         {
-            return new UpdateClaimResult(null, null, true);
+            return new UpdateClaimResult(null, null, true, false, 0, null);
+        }
+
+        static @NotNull UpdateClaimResult insufficientClaimBlocks(int blocksNeeded, int remainingBlocks)
+        {
+            return new UpdateClaimResult(
+                    null,
+                    null,
+                    false,
+                    true,
+                    blocksNeeded,
+                    remainingBlocks
+            );
         }
 
         boolean updated()
@@ -549,6 +677,21 @@ public final class FabricClaimRepository implements ClaimRepository
         @Nullable ClaimSnapshot overlappingClaim()
         {
             return this.overlapping;
+        }
+
+        boolean hasInsufficientClaimBlocks()
+        {
+            return this.insufficientClaimBlocks;
+        }
+
+        int blocksNeeded()
+        {
+            return this.blocksNeeded;
+        }
+
+        @Nullable Integer remainingBlocks()
+        {
+            return this.remainingBlocks;
         }
     }
 }

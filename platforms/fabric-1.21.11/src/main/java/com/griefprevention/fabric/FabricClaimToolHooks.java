@@ -176,6 +176,16 @@ final class FabricClaimToolHooks
                     clicked,
                     player.getUUID(),
                     player);
+            if (result.hasInsufficientClaimBlocks())
+            {
+                this.visualization.visualizeInitializeBounds(player, level, bounds, clicked);
+                player.displayClientMessage(Component.literal(
+                        "You don't have enough blocks to claim that entire area. You need "
+                                + result.blocksNeeded()
+                                + " more blocks."
+                ), true);
+                return;
+            }
             if (!result.created())
             {
                 this.visualization.visualizeConflictBounds(player, level, bounds, clicked);
@@ -191,7 +201,10 @@ final class FabricClaimToolHooks
             if (created != null)
             {
                 this.visualization.visualizeClaim(player, level, created, this.claims.snapshots(), clicked);
-                player.displayClientMessage(Component.literal("Created claim #" + created.id() + "."), false);
+                Integer remaining = result.remainingBlocks();
+                player.displayClientMessage(Component.literal("Created claim #"
+                        + created.id()
+                        + (remaining == null ? "." : ". " + remaining + " claim blocks remaining.")), false);
             }
         }
         catch (IOException e)
@@ -248,6 +261,16 @@ final class FabricClaimToolHooks
                 player.displayClientMessage(Component.literal("That claim no longer exists."), true);
                 return;
             }
+            if (result.hasInsufficientClaimBlocks())
+            {
+                this.visualization.visualizeInitializeBounds(player, level, bounds, clicked);
+                player.displayClientMessage(Component.literal(
+                        "You don't have enough blocks for this size. You need "
+                                + result.blocksNeeded()
+                                + " more."
+                ), true);
+                return;
+            }
             if (!result.updated())
             {
                 this.visualization.visualizeConflictBounds(player, level, bounds, clicked);
@@ -263,7 +286,10 @@ final class FabricClaimToolHooks
             if (updated != null)
             {
                 this.visualization.visualizeClaim(player, level, updated, this.claims.snapshots(), clicked);
-                player.displayClientMessage(Component.literal("Resized claim #" + updated.id() + "."), false);
+                Integer remaining = result.remainingBlocks();
+                player.displayClientMessage(Component.literal("Resized claim #"
+                        + updated.id()
+                        + (remaining == null ? "." : ". " + remaining + " claim blocks remaining.")), false);
             }
         }
         catch (IOException e)
