@@ -179,6 +179,7 @@ Messages:
   BuildingOutsideClaims: 他のプレイヤーもここで建築できます。あなたの作品を守るために土地クレームを作成しましょう！
   TrappedWontWorkHere: 申し訳ございませんが、テレポート先の安全な場所が見つかりませんでした。管理者に連絡してください。
   CommandBannedInPvP: PvP戦闘中はそのコマンドを使用できません。
+  UnclaimCleanupWarning: クレームを解除した土地は、他のプレイヤーに変更されたり、管理者によって整地されたりすることがあります。残しておきたい建築物がある場合は、もう一度クレームしてください。
   NoTeleportPvPCombat: 他のプレイヤーと戦闘中はテレポートできません。
   NoTNTDamageAboveSeaLevel: '警告：TNTは海抜より上のブロックを破壊しません。'
   NoTNTDamageClaims: '警告：TNTはクレームされたブロックを破壊しません。'

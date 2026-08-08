@@ -179,6 +179,7 @@ Messages:
   BuildingOutsideClaims: 其他玩家也可以在这里建造。考虑创建领地来保护你的作品！
   TrappedWontWorkHere: 抱歉，无法找到安全位置传送你。请联系管理员。
   CommandBannedInPvP: 你在 PvP 战斗期间不能使用该命令。
+  UnclaimCleanupWarning: 你已取消领地保护的土地可能被其他玩家改动，或被管理员清理。如果你在那里建造了想保留的东西，应该重新创建领地。
   NoTeleportPvPCombat: 你在与其他玩家战斗时不能传送。
   NoTNTDamageAboveSeaLevel: '警告：TNT 不会破坏海平面以上的方块。'
   NoTNTDamageClaims: '警告：TNT 不会破坏已认领的方块。'

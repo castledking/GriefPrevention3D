@@ -31,6 +31,7 @@ import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
+import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
@@ -1420,6 +1421,54 @@ public class Claim
          return thisCorner.getWorld().getName().compareTo(otherCorner.getWorld().getName()) < 0;
      }
 
+
+     //removes any lava or water above sea level in a claim
+     //exclusionClaim is another claim indicating a sub-area to be excluded from this operation
+     //it may be null
+     public void removeSurfaceFluids(Claim exclusionClaim)
+     {
+         //don't do this for administrative claims
+         if (this.isAdminClaim()) return;
+
+         //don't do it for very large claims
+         if (this.getArea() > 10000) return;
+
+         //only in creative mode worlds
+         if (!GriefPrevention.instance.creativeRulesApply(this.lesserBoundaryCorner)) return;
+
+         Location lesser = this.getLesserBoundaryCorner();
+         Location greater = this.getGreaterBoundaryCorner();
+         World world = lesser.getWorld();
+         if (world == null) return;
+
+         if (world.getEnvironment() == World.Environment.NETHER) return;  //don't clean up lava in the nether
+
+         int seaLevel = 0;  //clean up all fluids in the end
+
+         //respect sea level in normal worlds
+         if (world.getEnvironment() == World.Environment.NORMAL)
+             seaLevel = GriefPrevention.instance.getSeaLevel(world);
+
+         int maxY = GriefPrevention.getWorldMaxY(world);
+
+         for (int x = lesser.getBlockX(); x <= greater.getBlockX(); x++)
+         {
+             for (int z = lesser.getBlockZ(); z <= greater.getBlockZ(); z++)
+             {
+                 for (int y = seaLevel - 1; y <= maxY; y++)
+                 {
+                     //dodge the exclusion claim
+                     Block block = world.getBlockAt(x, y, z);
+                     if (exclusionClaim != null && exclusionClaim.contains(block.getLocation(), true, false)) continue;
+
+                     if (block.getType() == Material.LAVA || block.getType() == Material.WATER)
+                     {
+                         block.setType(Material.AIR);
+                     }
+                 }
+             }
+         }
+     }
 
      public ArrayList<Chunk> getChunks()
      {

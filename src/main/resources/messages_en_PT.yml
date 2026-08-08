@@ -180,6 +180,7 @@ Messages:
   BuildingOutsideClaims: "Other players can build here too. Consider creatin' a land claim to protect yer booty!"
   TrappedWontWorkHere: "Sorry, unable to find a safe location to teleport ye to. Contact an admiral."
   CommandBannedInPvP: "Ye can't use that command while in PvP combat."
+  UnclaimCleanupWarning: "The land ye've given up may be changed by other pirates or swabbed clean by the admirals. If ye built somethin' there ye want to keep, ye best claim it again."
   NoTeleportPvPCombat: "Ye can't teleport while fightin' another player."
   NoTNTDamageAboveSeaLevel: "Warning: TNT will not destroy blocks above sea level."
   NoTNTDamageClaims: "Warning: TNT will not destroy claimed blocks."

@@ -179,6 +179,7 @@ Messages:
   BuildingOutsideClaims: Zde mohou stavět i ostatní hráči. Zvaž vytvoření claimu k ochraně své práce!
   TrappedWontWorkHere: Bohužel se nepodařilo najít bezpečné místo pro tvůj teleport. Kontaktuj administrátora.
   CommandBannedInPvP: Tento příkaz nemůžeš použít během PvP souboje.
+  UnclaimCleanupWarning: Území, které jsi uvolnil, mohou změnit ostatní hráči nebo je mohou vyčistit administrátoři. Pokud jsi tam postavil něco, co si chceš nechat, měl bys ho znovu zabrat.
   NoTeleportPvPCombat: Nemůžeš se teleportovat, když bojuješ s jiným hráčem.
   NoTNTDamageAboveSeaLevel: "Varování: TNT nezničí bloky nad úrovní moře."
   NoTNTDamageClaims: "Varování: TNT nezničí claimnuté bloky."

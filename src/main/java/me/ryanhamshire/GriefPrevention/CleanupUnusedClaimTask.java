@@ -63,8 +63,16 @@ class CleanupUnusedClaimTask implements Runnable
             {
                 if (expireEventCanceled())
                     return;
+                claim.removeSurfaceFluids(null);
                 if (!GriefPrevention.instance.dataStore.deleteClaimWithResult(claim, true, true))
                     return;
+
+                //if configured to do so, restore the land to natural
+                if (GriefPrevention.instance.creativeRulesApply(claim.getLesserBoundaryCorner())
+                        || GriefPrevention.instance.config_claims_survivalAutoNatureRestoration)
+                {
+                    GriefPrevention.instance.restoreClaim(claim, 0);
+                }
 
                 GriefPrevention.AddLogEntry(" " + claim.getOwnerName() + "'s new player claim expired.", CustomLogEntryTypes.AdminActivity);
             }
@@ -89,6 +97,16 @@ class CleanupUnusedClaimTask implements Runnable
                 GriefPrevention.AddLogEntry(" All of " + claim.getOwnerName() + "'s claims have expired.", CustomLogEntryTypes.AdminActivity);
                 GriefPrevention.AddLogEntry("earliestPermissibleLastLogin#getTime: " + earliestPermissibleLastLogin.getTime(), CustomLogEntryTypes.Debug, true);
                 GriefPrevention.AddLogEntry("ownerInfo#getLastPlayed: " + ownerInfo.getLastPlayed(), CustomLogEntryTypes.Debug, true);
+
+                for (Claim expiredClaim : expiredClaims)
+                {
+                    //if configured to do so, restore the land to natural
+                    if (GriefPrevention.instance.creativeRulesApply(expiredClaim.getLesserBoundaryCorner())
+                            || GriefPrevention.instance.config_claims_survivalAutoNatureRestoration)
+                    {
+                        GriefPrevention.instance.restoreClaim(expiredClaim, 0);
+                    }
+                }
             }
         }
     }

@@ -179,6 +179,7 @@ Messages:
   BuildingOutsideClaims: Other players can build here, too. Consider creating a land claim to protect your work!
   TrappedWontWorkHere: Sorry, unable to find a safe location to teleport you to. Contact an admin.
   CommandBannedInPvP: You can't use that command while in PvP combat.
+  UnclaimCleanupWarning: The land you've unclaimed may be changed by other players or cleaned up by administrators. If you've built something there you want to keep, you should reclaim it.
   NoTeleportPvPCombat: You can't teleport while fighting another player.
   NoTNTDamageAboveSeaLevel: 'Warning: TNT will not destroy blocks above sea level.'
   NoTNTDamageClaims: 'Warning: TNT will not destroy claimed blocks.'

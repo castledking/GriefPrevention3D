@@ -179,6 +179,7 @@ Messages:
   BuildingOutsideClaims: "Andere Spieler können hier auch bauen. Erstelle ein Landgebiet, um deine Arbeit zu schützen!"
   TrappedWontWorkHere: "Entschuldigung, es konnte kein sicherer Ort zum Teleportieren gefunden werden. Kontaktiere einen Admin."
   CommandBannedInPvP: "Du kannst diesen Befehl während eines PvP-Kampfes nicht verwenden."
+  UnclaimCleanupWarning: "Das Land, dessen Anspruch du aufgegeben hast, kann von anderen Spielern verändert oder von Administratoren bereinigt werden. Wenn du dort etwas gebaut hast, das du behalten möchtest, solltest du es erneut beanspruchen."
   NoTeleportPvPCombat: Du kannst dich während eines Kampfes nicht teleportieren.
   NoTNTDamageAboveSeaLevel: "Warnung: TNT wird Blöcke über dem Meeresspiegel nicht zerstören."
   NoTNTDamageClaims: "Warnung: TNT wird keine geschützten Blöcke zerstören."

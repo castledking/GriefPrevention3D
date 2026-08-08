@@ -179,6 +179,7 @@ Messages:
   BuildingOutsideClaims: Outros jogadores também podem construir aqui. Considere criar um terreno protegido para proteger sua construção!
   TrappedWontWorkHere: Desculpe, não foi possível encontrar um local seguro para teleportar você. Contate um administrador.
   CommandBannedInPvP: Você não pode usar esse comando durante combate PvP.
+  UnclaimCleanupWarning: O terreno que você deixou de proteger pode ser alterado por outros jogadores ou limpo pelos administradores. Se você construiu algo lá que deseja manter, deveria protegê-lo novamente.
   NoTeleportPvPCombat: Você não pode se teleportar enquanto luta contra outro jogador.
   NoTNTDamageAboveSeaLevel: 'Aviso: TNT não destruirá blocos acima do nível do mar.'
   NoTNTDamageClaims: 'Aviso: TNT não destruirá blocos protegidos.'

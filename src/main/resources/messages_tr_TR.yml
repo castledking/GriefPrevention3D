@@ -180,6 +180,7 @@ Messages:
   BuildingOutsideClaims: Diğer oyuncular da burada inşa edebilir. Çalışmanızı korumak için bir bölge oluşturmayı düşünün!
   TrappedWontWorkHere: Üzgünüz, sizi ışınlayacak güvenli bir konum bulunamadı. Bir yöneticiyle iletişime geçin.
   CommandBannedInPvP: PvP savaşı sırasında bu komutu kullanamazsınız.
+  UnclaimCleanupWarning: Korumasını kaldırdığınız arazi diğer oyuncular tarafından değiştirilebilir veya yöneticiler tarafından temizlenebilir. Orada saklamak istediğiniz bir şey inşa ettiyseniz, bölgeyi yeniden talep etmelisiniz.
   NoTeleportPvPCombat: Başka bir oyuncuyla savaşırken ışınlanamazsınız.
   NoTNTDamageAboveSeaLevel: 'Uyarı: TNT, deniz seviyesinin üzerindeki blokları yok etmez.'
   NoTNTDamageClaims: 'Uyarı: TNT, bölgelenmiş blokları yok etmez.'

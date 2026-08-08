@@ -210,6 +210,8 @@ public class GriefPrevention extends JavaPlugin {
 
     public int config_claims_chestClaimExpirationDays; // number of days of inactivity before an automatic chest claim
     // will be deleted
+    public boolean config_claims_survivalAutoNatureRestoration; // whether survival claims will be automatically
+    // restored to nature when auto-deleted
     public boolean config_claims_allowTrappedInAdminClaims; // whether it should be allowed to use /trapped in
     // adminclaims.
     public boolean config_claims_allowNestedSubClaims; // whether nested subdivisions may be created inside other
@@ -1054,6 +1056,10 @@ public class GriefPrevention extends JavaPlugin {
             "GriefPrevention.Claims.Expiration.AllClaims.ExceptWhenOwnerHasBonusClaimBlocks",
             5000
         );
+        this.config_claims_survivalAutoNatureRestoration = config.getBoolean(
+            "GriefPrevention.Claims.Expiration.AutomaticNatureRestoration.SurvivalWorlds",
+            false
+        );
         this.config_claims_allowTrappedInAdminClaims = config.getBoolean(
             "GriefPrevention.Claims.AllowTrappedInAdminClaims",
             false
@@ -1456,6 +1462,10 @@ public class GriefPrevention extends JavaPlugin {
         outConfig.set(
             "GriefPrevention.Claims.Expiration.AllClaims.ExceptWhenOwnerHasBonusClaimBlocks",
             this.config_claims_expirationExemptionBonusBlocks
+        );
+        outConfig.set(
+            "GriefPrevention.Claims.Expiration.AutomaticNatureRestoration.SurvivalWorlds",
+            this.config_claims_survivalAutoNatureRestoration
         );
         outConfig.set("GriefPrevention.Claims.AllowTrappedInAdminClaims", this.config_claims_allowTrappedInAdminClaims);
         outConfig.set("GriefPrevention.Claims.AllowNestedSubClaims", this.config_claims_allowNestedSubClaims);
@@ -2734,8 +2744,17 @@ public class GriefPrevention extends JavaPlugin {
                         GriefPrevention.sendMessage(player, TextMode.Warn, Messages.DeletionSubdivisionWarning);
                         playerData.warnedAboutMajorDeletion = true;
                     } else {
+                        claim.removeSurfaceFluids(null);
                         if (!this.dataStore.deleteClaimWithResult(claim, true, true)) {
                             return true;
+                        }
+
+                        // if in a creative mode world, or if configured to do so in survival, restore the area
+                        if (
+                            this.creativeRulesApply(claim.getLesserBoundaryCorner()) ||
+                            this.config_claims_survivalAutoNatureRestoration
+                        ) {
+                            this.restoreClaim(claim, 0);
                         }
 
                         if (playerData.claimResizing == claim) {
@@ -3690,8 +3709,20 @@ public class GriefPrevention extends JavaPlugin {
             return true;
         } else {
             // delete it
+            claim.removeSurfaceFluids(null);
             if (!this.dataStore.deleteClaimWithResult(claim, true, false)) {
                 return true;
+            }
+
+            // if in a creative mode world, restore the claim area
+            if (this.creativeRulesApply(claim.getLesserBoundaryCorner())) {
+                GriefPrevention.AddLogEntry(
+                    player.getName() +
+                        " abandoned a claim @ " +
+                        GriefPrevention.getfriendlyLocationString(claim.getLesserBoundaryCorner())
+                );
+                GriefPrevention.sendMessage(player, TextMode.Warn, Messages.UnclaimCleanupWarning);
+                this.restoreClaim(claim, 20L * 60 * 2);
             }
 
             // clear selection session if we were deleting the selected claim
@@ -6156,6 +6187,120 @@ public class GriefPrevention extends JavaPlugin {
         } else {
             Bukkit.getLogger().info(color + message);
         }
+    }
+
+    /**
+     * Restores nature in every chunk touched by a claim. Intended for claims that have just been deleted,
+     * abandoned, or expired - if the claim is still in the data store, its blocks are left alone and only
+     * the area bordering it is restored.
+     *
+     * @param claim the claim whose area should be restored
+     * @param delayInTicks how long to wait before capturing and restoring, giving players time to move away
+     */
+    public void restoreClaim(Claim claim, long delayInTicks) {
+        // admin claims aren't automatically cleaned up when deleted or abandoned
+        if (claim.isAdminClaim()) return;
+
+        // it's too expensive to do this for huge claims
+        if (claim.getArea() > 10000 || claim.getWidth() > 250 || claim.getHeight() > 250) return;
+
+        Location lesser = claim.getLesserBoundaryCorner();
+        Location greater = claim.getGreaterBoundaryCorner();
+        World world = lesser.getWorld();
+        if (world == null) return;
+
+        int miny = this.getSeaLevel(world) - 15;
+        // derive chunk coordinates arithmetically rather than via Claim#getChunks, which would load chunks
+        // off the owning region thread
+        for (int chunkX = lesser.getBlockX() >> 4; chunkX <= greater.getBlockX() >> 4; chunkX++) {
+            for (int chunkZ = lesser.getBlockZ() >> 4; chunkZ <= greater.getBlockZ() >> 4; chunkZ++) {
+                this.restoreChunkAt(world, chunkX, chunkZ, miny, false, delayInTicks, null);
+            }
+        }
+    }
+
+    /**
+     * Restores nature in a single chunk. Block data is captured on the chunk's own region thread, processed
+     * off-thread, then applied back on the region thread.
+     *
+     * @param chunk the chunk to restore
+     * @param miny lowest world Y to consider; blocks below this are left untouched
+     * @param aggressiveMode whether to restore claimed blocks too
+     * @param delayInTicks how long to wait before capturing and restoring
+     * @param playerReceivingVisualization player to show the restored area to, or null for automatic restoration
+     */
+    public void restoreChunk(
+        Chunk chunk,
+        int miny,
+        boolean aggressiveMode,
+        long delayInTicks,
+        Player playerReceivingVisualization
+    ) {
+        this.restoreChunkAt(
+            chunk.getWorld(),
+            chunk.getX(),
+            chunk.getZ(),
+            miny,
+            aggressiveMode,
+            delayInTicks,
+            playerReceivingVisualization
+        );
+    }
+
+    private void restoreChunkAt(
+        World world,
+        int chunkX,
+        int chunkZ,
+        int miny,
+        boolean aggressiveMode,
+        long delayInTicks,
+        Player playerReceivingVisualization
+    ) {
+        // snapshot a 1-block boundary outside the chunk all the way around, for reference during processing
+        int minX = (chunkX << 4) - 1;
+        int minZ = (chunkZ << 4) - 1;
+        int floorY = Math.max(getWorldMinY(world), miny);
+        int maxY = getWorldMaxY(world);
+        Location snapshotOrigin = new Location(world, minX, floorY, minZ);
+
+        SchedulerUtil.runAtLocationLater(
+            this,
+            snapshotOrigin,
+            () -> {
+                int sizeY = maxY - floorY;
+                if (sizeY <= 0) return;
+
+                BlockSnapshot[][][] snapshots = new BlockSnapshot[18][sizeY][18];
+                for (int x = 0; x < 18; x++) {
+                    for (int z = 0; z < 18; z++) {
+                        for (int y = 0; y < sizeY; y++) {
+                            snapshots[x][y][z] = new BlockSnapshot(world.getBlockAt(minX + x, floorY + y, minZ + z));
+                        }
+                    }
+                }
+
+                // the boundary corners describe the chunk proper - the outer border ring is reference data only,
+                // and the execution task never applies changes there
+                Location lesserBoundaryCorner = new Location(world, minX + 1, floorY, minZ + 1);
+                Location greaterBoundaryCorner = new Location(world, minX + 16, maxY - 1, minZ + 16);
+
+                // when done processing, this task schedules a region task to actually update the world
+                RestoreNatureProcessingTask task = new RestoreNatureProcessingTask(
+                    snapshots,
+                    0,
+                    world.getEnvironment(),
+                    lesserBoundaryCorner.getBlock().getBiome(),
+                    lesserBoundaryCorner,
+                    greaterBoundaryCorner,
+                    this.getSeaLevel(world),
+                    aggressiveMode,
+                    this.creativeRulesApply(lesserBoundaryCorner),
+                    playerReceivingVisualization
+                );
+                SchedulerUtil.runAsyncNow(this, task);
+            },
+            delayInTicks
+        );
     }
 
     // Public helper methods for command handlers in other packages

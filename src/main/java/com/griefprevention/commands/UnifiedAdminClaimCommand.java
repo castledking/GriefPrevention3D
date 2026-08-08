@@ -531,7 +531,17 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
                 GriefPrevention.sendMessage(player, TextMode.Warn, Messages.DeletionSubdivisionWarning);
                 playerData.warnedAboutMajorDeletion = true;
             } else {
+                claim.removeSurfaceFluids(null);
                 plugin.deleteClaimPublic(claim, true);
+
+                // if in a creative mode world, or if configured to do so in survival, restore the area
+                if (
+                    plugin.creativeRulesApply(claim.getLesserBoundaryCorner()) ||
+                    plugin.config_claims_survivalAutoNatureRestoration
+                ) {
+                    plugin.restoreClaim(claim, 0);
+                }
+
                 if (playerData.claimResizing == claim) {
                     playerData.claimResizing = null;
                     playerData.claimSelectionActive = false;

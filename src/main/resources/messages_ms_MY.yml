@@ -179,6 +179,7 @@ Messages:
   BuildingOutsideClaims: Pemain lain juga boleh membina di sini. Pertimbangkan mencipta kawasan tuntutan tanah untuk melindungi hasil kerja anda!
   TrappedWontWorkHere: Maaf, tidak dapat mencari lokasi selamat untuk memindahkan anda. Hubungi pentadbir.
   CommandBannedInPvP: Anda tidak boleh menggunakan arahan itu semasa dalam pertempuran PvP.
+  UnclaimCleanupWarning: Tanah yang telah anda lepaskan tuntutannya boleh diubah oleh pemain lain atau dibersihkan oleh pentadbir. Jika anda telah membina sesuatu di sana yang ingin anda simpan, anda patut menuntutnya semula.
   NoTeleportPvPCombat: Anda tidak boleh berpindah tempat semasa melawan pemain lain.
   NoTNTDamageAboveSeaLevel: 'Amaran: TNT tidak akan memusnahkan blok di atas paras laut.'
   NoTNTDamageClaims: 'Amaran: TNT tidak akan memusnahkan blok yang dituntut.'
