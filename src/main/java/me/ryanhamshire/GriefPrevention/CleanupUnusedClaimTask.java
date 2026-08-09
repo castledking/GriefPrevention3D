@@ -109,6 +109,28 @@ class CleanupUnusedClaimTask implements Runnable
                 }
             }
         }
+        else if (GriefPrevention.instance.config_claims_unusedClaimExpirationDays > 0
+                && GriefPrevention.instance.creativeRulesApply(claim.getLesserBoundaryCorner()))
+        {
+            // Legacy unused-claim cleanup only considers small, non-admin creative claims.
+            if (claim.isAdminClaim() || claim.getWidth() > 25 || claim.getHeight() > 25) return;
+
+            if (claim.getPlayerInvestmentScore() < 400)
+            {
+                Calendar cutoff = Calendar.getInstance();
+                cutoff.add(Calendar.DATE, -GriefPrevention.instance.config_claims_unusedClaimExpirationDays);
+                if (cutoff.getTime().after(new Date(ownerInfo.getLastPlayed())))
+                {
+                    if (expireEventCanceled()) return;
+                    if (!GriefPrevention.instance.dataStore.deleteClaimWithResult(claim, true, true)) return;
+                    GriefPrevention.AddLogEntry(
+                            "Removed " + claim.getOwnerName() + "'s unused claim @ "
+                                    + GriefPrevention.getfriendlyLocationString(claim.getLesserBoundaryCorner()),
+                            CustomLogEntryTypes.AdminActivity);
+                    GriefPrevention.instance.restoreClaim(claim, 0);
+                }
+            }
+        }
     }
 
     public boolean expireEventCanceled()

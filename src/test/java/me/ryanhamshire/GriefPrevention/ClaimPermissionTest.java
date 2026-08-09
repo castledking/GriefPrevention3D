@@ -65,5 +65,8 @@ class ClaimPermissionTest {
 
         assertNull(claim.checkPermission(manager, ClaimPermission.Manage, null));
         assertNotNull(claim.checkPermission(manager, ClaimPermission.Edit, null));
+        assertNotNull(claim.checkPermission(manager, ClaimPermission.Build, null));
+        assertNotNull(claim.checkPermission(manager, ClaimPermission.Container, null));
+        assertNotNull(claim.checkPermission(manager, ClaimPermission.Access, null));
     }
 }

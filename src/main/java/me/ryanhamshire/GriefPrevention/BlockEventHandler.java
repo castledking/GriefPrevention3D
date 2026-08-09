@@ -45,6 +45,7 @@ import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.World.Environment;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockState;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.BlockState;
 import org.bukkit.block.Hopper;
@@ -180,6 +181,18 @@ public class BlockEventHandler implements Listener {
 
     private static boolean isFire(@NotNull Material material) {
         return FIRE_BLOCKS.contains(material) || MaterialTagCompat.isTagged("FIRE", material);
+    }
+
+    static boolean isActiveBlock(Block block) {
+        return isActiveBlock(block.getType());
+    }
+
+    static boolean isActiveBlock(BlockState state) {
+        return isActiveBlock(state.getType());
+    }
+
+    static boolean isActiveBlock(Material type) {
+        return type == Material.HOPPER || type == Material.BEACON || CompatUtil.isMaterial(type, "SPAWNER");
     }
 
     static boolean isSapling(@NotNull Material material) {
@@ -494,6 +507,17 @@ public class BlockEventHandler implements Listener {
 
             //allow for a build warning in the future
             playerData.warnedAboutBuildingOutsideClaims = false;
+
+            if (!player.hasPermission("griefprevention.adminclaims")
+                    && GriefPrevention.instance.creativeRulesApply(block.getLocation())
+                    && isActiveBlock(block)) {
+                String reason = claim.allowMoreActiveBlocks();
+                if (reason != null) {
+                    GriefPrevention.sendMessage(player, TextMode.Err, reason);
+                    placeEvent.setCancelled(true);
+                    return;
+                }
+            }
         }
         //FEATURE: automatically create a claim when a player who has no claims places a chest
         //otherwise if there's no claim, the player is placing a chest, and new player automatic claims are enabled

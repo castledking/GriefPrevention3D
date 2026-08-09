@@ -1,6 +1,8 @@
 package com.griefprevention.commands;
 
 import me.ryanhamshire.GriefPrevention.*;
+import me.ryanhamshire.GriefPrevention.util.SchedulerUtil;
+import org.bukkit.Location;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
 import org.bukkit.entity.Player;
@@ -420,6 +422,14 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
             return true;
         }
 
+        PlayerData playerData = plugin.dataStore.getPlayerData(player.getUniqueId());
+        int bonusLimit = plugin.config_economy_claimBlocksMaxBonus;
+        if (bonusLimit > 0 && (long) playerData.getBonusClaimBlocks() + amount > bonusLimit) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.MaxBonusReached,
+                    String.valueOf(amount), String.valueOf(bonusLimit));
+            return true;
+        }
+
         // Calculate cost
         double cost = amount * plugin.config_economy_claimBlocksPurchaseCost;
         double balance = economy.getBalance(player);
@@ -441,7 +451,6 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
             return true;
         }
 
-        PlayerData playerData = plugin.dataStore.getPlayerData(player.getUniqueId());
         playerData.setBonusClaimBlocks(playerData.getBonusClaimBlocks() + amount);
         plugin.dataStore.savePlayerData(player.getUniqueId(), playerData);
 
@@ -521,13 +530,7 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
         return true;
     }
 
-    private static net.milkbowl.vault.economy.Economy cachedEconomy = null;
-    private static boolean economyChecked = false;
-
     private net.milkbowl.vault.economy.Economy getEconomy() {
-        if (economyChecked) return cachedEconomy;
-        economyChecked = true;
-
         try {
             if (plugin.getServer().getPluginManager().getPlugin("Vault") == null) {
                 return null;
@@ -536,12 +539,10 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
             org.bukkit.plugin.RegisteredServiceProvider<net.milkbowl.vault.economy.Economy> rsp =
                     plugin.getServer().getServicesManager().getRegistration(net.milkbowl.vault.economy.Economy.class);
             if (rsp == null) return null;
-            cachedEconomy = rsp.getProvider();
+            return rsp.getProvider();
         } catch (NoClassDefFoundError e) {
-            // Vault is not installed
-            cachedEconomy = null;
+            return null;
         }
-        return cachedEconomy;
     }
 
     private boolean handleAbandon(CommandSender sender, String[] args) {
@@ -561,13 +562,100 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
     }
 
     private boolean handleSiege(CommandSender sender, String[] args) {
-        // Siege feature is not available in this version
-        if (sender instanceof Player) {
-            GriefPrevention.sendMessage((Player) sender, TextMode.Info, "The siege feature is not available in this version.");
-        } else {
-            sender.sendMessage("The siege feature is not available in this version.");
+        if (!(sender instanceof Player)) return false;
+        Player attacker = (Player) sender;
+        if (!attacker.hasPermission("griefprevention.siege")) {
+            GriefPrevention.sendMessage(attacker, TextMode.Err, Messages.NoPermissionForCommand);
+            return true;
         }
+        if (!plugin.siegeEnabledForWorld(attacker.getWorld())) {
+            GriefPrevention.sendMessage(attacker, TextMode.Err, Messages.NonSiegeWorld);
+            return true;
+        }
+        if (args.length > 1) return false;
+
+        PlayerData attackerData = plugin.dataStore.getPlayerData(attacker.getUniqueId());
+        if (attackerData.siegeData != null) {
+            GriefPrevention.sendMessage(attacker, TextMode.Err, Messages.AlreadySieging);
+            return true;
+        }
+        if (attackerData.pvpImmune) {
+            GriefPrevention.sendMessage(attacker, TextMode.Err, Messages.CantFightWhileImmune);
+            return true;
+        }
+
+        Player defender = null;
+        if (args.length == 1) defender = plugin.getServer().getPlayer(args[0]);
+        else if (!attackerData.lastPvpPlayer.isEmpty()) defender = plugin.getServer().getPlayer(attackerData.lastPvpPlayer);
+        if (defender == null) {
+            if (args.length == 1) {
+                GriefPrevention.sendMessage(attacker, TextMode.Err, Messages.PlayerNotFound2);
+                return true;
+            }
+            return false;
+        }
+        if (attacker.getUniqueId().equals(defender.getUniqueId())) {
+            GriefPrevention.sendMessage(attacker, TextMode.Err, Messages.NoSiegeYourself);
+            return true;
+        }
+
+        final Player scheduledDefender = defender;
+        final Location attackerLocation = attacker.getLocation().clone();
+        SchedulerUtil.runLaterEntity(plugin, scheduledDefender,
+                () -> completeSiegeStart(attacker, attackerLocation, scheduledDefender), 1L);
         return true;
+    }
+
+    private void completeSiegeStart(Player attacker, Location attackerLocation, Player defender) {
+        PlayerData attackerData = plugin.dataStore.getPlayerData(attacker.getUniqueId());
+        if (attackerData.siegeData != null) return;
+
+        if (defender.hasPermission("griefprevention.siegeimmune")) {
+            sendSiegeMessage(attacker, TextMode.Err, Messages.SiegeImmune);
+            return;
+        }
+
+        PlayerData defenderData = plugin.dataStore.getPlayerData(defender.getUniqueId());
+        if (defenderData.siegeData != null) {
+            sendSiegeMessage(attacker, TextMode.Err, Messages.AlreadyUnderSiegePlayer, defender.getName());
+            return;
+        }
+        if (defenderData.pvpImmune) {
+            sendSiegeMessage(attacker, TextMode.Err, Messages.NoSiegeDefenseless);
+            return;
+        }
+
+        Claim defenderClaim = plugin.dataStore.getClaimAt(defender.getLocation(), false, null);
+        if (defenderClaim == null
+                || defenderClaim.checkPermission(defender, ClaimPermission.Access, null) != null) {
+            sendSiegeMessage(attacker, TextMode.Err, Messages.NotSiegableThere, defender.getName());
+            return;
+        }
+        if (!defenderClaim.isNear(attackerLocation, 25)) {
+            sendSiegeMessage(attacker, TextMode.Err, Messages.SiegeTooFarAway);
+            return;
+        }
+        if (defenderClaim.siegeData != null) {
+            sendSiegeMessage(attacker, TextMode.Err, Messages.AlreadyUnderSiegeArea);
+            return;
+        }
+        if (defenderClaim.isAdminClaim()) {
+            sendSiegeMessage(attacker, TextMode.Err, Messages.NoSiegeAdminClaim);
+            return;
+        }
+        if (plugin.dataStore.onCooldown(attacker, defender, defenderClaim)) {
+            sendSiegeMessage(attacker, TextMode.Err, Messages.SiegeOnCooldown);
+            return;
+        }
+
+        plugin.dataStore.startSiege(attacker, defender, defenderClaim);
+        GriefPrevention.sendMessage(defender, TextMode.Warn, Messages.SiegeAlert, attacker.getName());
+        sendSiegeMessage(attacker, TextMode.Success, Messages.SiegeConfirmed, defender.getName());
+    }
+
+    private void sendSiegeMessage(Player player, org.bukkit.ChatColor color, Messages message, String... arguments) {
+        SchedulerUtil.runLaterEntity(plugin, player,
+                () -> GriefPrevention.sendMessage(player, color, message, arguments), 1L);
     }
 
     private boolean handleTrapped(CommandSender sender, String[] args) {

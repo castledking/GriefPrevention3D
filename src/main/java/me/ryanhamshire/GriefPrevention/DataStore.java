@@ -29,6 +29,8 @@ import com.griefprevention.geometry.OrthogonalPoint2i;
 import com.griefprevention.geometry.OrthogonalPolygon;
 import com.griefprevention.visualization.BoundaryVisualization;
 import com.griefprevention.visualization.VisualizationType;
+import me.ryanhamshire.GriefPrevention.util.SchedulerUtil;
+import me.ryanhamshire.GriefPrevention.util.TaskHandle;
 import me.ryanhamshire.GriefPrevention.events.ClaimCreatedEvent;
 import me.ryanhamshire.GriefPrevention.events.ClaimDeletedEvent;
 import me.ryanhamshire.GriefPrevention.events.ClaimExtendEvent;
@@ -38,10 +40,16 @@ import me.ryanhamshire.GriefPrevention.events.ClaimTransferEvent;
 import me.ryanhamshire.GriefPrevention.util.BoundingBox;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Chunk;
 import org.bukkit.Location;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
+import org.bukkit.entity.AnimalTamer;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Tameable;
+import org.bukkit.inventory.InventoryHolder;
+import org.bukkit.inventory.ItemStack;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -74,6 +82,9 @@ import java.util.stream.Stream;
 //singleton class which manages all GriefPrevention data (except for config options)
 public abstract class DataStore {
 
+    // Optional WorldGuard bridge. Null means WorldGuard is absent or incompatible.
+    private WorldGuardWrapper worldGuard;
+
     // in-memory cache for player data
     protected ConcurrentHashMap<UUID, PlayerData> playerNameToPlayerDataMap = new ConcurrentHashMap<>();
 
@@ -86,6 +97,9 @@ public abstract class DataStore {
     public final Map<Long, Claim> claimIDMap = new ConcurrentHashMap<>();
     ConcurrentHashMap<Long, ArrayList<Claim>> chunksToClaimsMap = new ConcurrentHashMap<>();
     private final ClaimSnapshotIndex claimSnapshotIndex = new ClaimSnapshotIndex();
+
+    // In-memory siege cooldowns; active siege state intentionally does not survive restart.
+    private final HashMap<String, Long> siegeCooldownRemaining = new HashMap<>();
 
     // in-memory cache for messages, keyed by locale code
     private final Map<String, String[]> messagesByLocale = new HashMap<>();
@@ -196,6 +210,13 @@ public abstract class DataStore {
         // make a note of the data store schema version
         this.setSchemaVersion(latestSchemaVersion);
         this.rebuildClaimSnapshotIndex();
+
+        try {
+            this.worldGuard = new WorldGuardWrapper();
+            GriefPrevention.AddLogEntry("Successfully hooked into WorldGuard.");
+        } catch (IllegalStateException | LinkageError ignored) {
+            this.worldGuard = null;
+        }
 
     }
 
@@ -885,25 +906,20 @@ public abstract class DataStore {
         this.deleteClaim(claim, true, false);
     }
 
-    /**
-     * @deprecated Releasing pets is no longer a core feature. Use
-     *             {@link #deleteClaim(Claim)}.
-     */
-    @Deprecated
     synchronized public void deleteClaim(Claim claim, boolean releasePets) {
-        this.deleteClaim(claim, true, false);
+        this.deleteClaim(claim, true, releasePets);
     }
 
-    synchronized void deleteClaim(Claim claim, boolean fireEvent, boolean ignored) {
-        this.deleteClaimWithResult(claim, fireEvent, ignored);
+    synchronized void deleteClaim(Claim claim, boolean fireEvent, boolean releasePets) {
+        this.deleteClaimWithResult(claim, fireEvent, releasePets);
     }
 
-    synchronized boolean deleteClaimWithResult(Claim claim, boolean fireEvent, boolean ignored) {
+    synchronized boolean deleteClaimWithResult(Claim claim, boolean fireEvent, boolean releasePets) {
         if (fireEvent && preDeleteCancelled(claim)) {
             return false;
         }
 
-        this.deleteClaimUnchecked(claim, fireEvent, ignored);
+        this.deleteClaimUnchecked(claim, fireEvent, releasePets);
         return true;
     }
 
@@ -926,7 +942,7 @@ public abstract class DataStore {
         return false;
     }
 
-    private void deleteClaimUnchecked(Claim claim, boolean fireEvent, boolean ignored) {
+    private void deleteClaimUnchecked(Claim claim, boolean fireEvent, boolean releasePets) {
         // Debug logging for claim deletion
         if (GriefPrevention.instance.config_logs_debugEnabled) {
             String claimType = claim.parent != null ? "Subdivision" : (claim.isAdminClaim() ? "Admin Claim" : "Top-level Claim");
@@ -945,7 +961,7 @@ public abstract class DataStore {
         if (!claim.children.isEmpty()) {
             java.util.List<Claim> childrenSnapshot = new java.util.ArrayList<>(claim.children);
             for (Claim child : childrenSnapshot) {
-                this.deleteClaimUnchecked(child, fireEvent, ignored);
+                this.deleteClaimUnchecked(child, fireEvent, releasePets);
             }
         }
 
@@ -1016,6 +1032,51 @@ public abstract class DataStore {
         if (fireEvent) {
             ClaimDeletedEvent ev = new ClaimDeletedEvent(claim);
             Bukkit.getPluginManager().callEvent(ev);
+        }
+
+        if (releasePets && claim.ownerID != null && claim.parent == null) {
+            releasePetsInClaim(claim);
+        }
+    }
+
+    private void releasePetsInClaim(final Claim claim) {
+        final World world = claim.getLesserBoundaryCorner().getWorld();
+        if (world == null) return;
+        final UUID ownerID = claim.ownerID;
+        int minChunkX = claim.getLesserBoundaryCorner().getBlockX() >> 4;
+        int maxChunkX = claim.getGreaterBoundaryCorner().getBlockX() >> 4;
+        int minChunkZ = claim.getLesserBoundaryCorner().getBlockZ() >> 4;
+        int maxChunkZ = claim.getGreaterBoundaryCorner().getBlockZ() >> 4;
+
+        for (int chunkX = minChunkX; chunkX <= maxChunkX; chunkX++) {
+            for (int chunkZ = minChunkZ; chunkZ <= maxChunkZ; chunkZ++) {
+                final int scheduledChunkX = chunkX;
+                final int scheduledChunkZ = chunkZ;
+                Location location = new Location(world, (chunkX << 4) + 8,
+                        claim.getLesserBoundaryCorner().getY(), (chunkZ << 4) + 8);
+                SchedulerUtil.runAtLocation(GriefPrevention.instance, location, new Runnable() {
+                    @Override
+                    public void run() {
+                        Chunk chunk = world.getChunkAt(scheduledChunkX, scheduledChunkZ);
+                        for (Entity entity : chunk.getEntities()) {
+                            if (!(entity instanceof Tameable) || !claim.contains(entity.getLocation(), true, false)) continue;
+                            Tameable pet = (Tameable) entity;
+                            AnimalTamer owner = pet.getOwner();
+                            if (!pet.isTamed() || owner == null || !ownerID.equals(owner.getUniqueId())) continue;
+                            pet.setTamed(false);
+                            pet.setOwner(null);
+                            if (pet instanceof InventoryHolder) {
+                                ((InventoryHolder) pet).getInventory().clear();
+                            }
+                            try {
+                                pet.getClass().getMethod("setSitting", boolean.class).invoke(pet, false);
+                            } catch (ReflectiveOperationException ignored) {
+                                // Not all tameables are sittable, and older APIs have no Sittable interface.
+                            }
+                        }
+                    }
+                });
+            }
         }
     }
 
@@ -1528,6 +1589,15 @@ public abstract class DataStore {
             }
         }
 
+        if (GriefPrevention.instance.config_claims_respectWorldGuard
+                && this.worldGuard != null
+                && creatingPlayer != null
+                && !this.worldGuard.canBuild(smallerBoundaryCorner, greaterBoundaryCorner, creatingPlayer)) {
+            result.succeeded = false;
+            result.claim = null;
+            return result;
+        }
+
         assignClaimID(newClaim);
         ClaimCreatedEvent event = new ClaimCreatedEvent(newClaim, creatingPlayer);
         Bukkit.getPluginManager().callEvent(event);
@@ -1967,6 +2037,18 @@ public abstract class DataStore {
                 result.claim = otherClaim;
                 return result;
             }
+        }
+
+        // Match legacy/v16: a claim may not cover a WorldGuard region unless its
+        // creator has the WorldGuard BUILD flag throughout the proposed footprint.
+        if (GriefPrevention.instance.config_claims_respectWorldGuard
+                && this.worldGuard != null
+                && creatingPlayer != null
+                && !this.worldGuard.canBuild(newClaim.lesserBoundaryCorner,
+                        newClaim.greaterBoundaryCorner, creatingPlayer)) {
+            result.succeeded = false;
+            result.claim = null;
+            return result;
         }
 
         // Minimum distance check for top-level claims
@@ -2630,6 +2712,126 @@ public abstract class DataStore {
                     this.indexClaimSnapshot(localClaim);
                     this.saveClaim(localClaim);
                 });
+    }
+
+    // Starts a siege after the command handler has validated both participants.
+    synchronized public void startSiege(Player attacker, Player defender, Claim defenderClaim) {
+        SiegeData siege = new SiegeData(attacker, defender, defenderClaim);
+        this.getPlayerData(attacker.getUniqueId()).siegeData = siege;
+        this.getPlayerData(defender.getUniqueId()).siegeData = siege;
+        defenderClaim.siegeData = siege;
+        new SiegeCheckupTask(siege).scheduleAnotherCheck();
+    }
+
+    // Either winnerName or loserName may be null, but not both.
+    synchronized public void endSiege(SiegeData siege, String winnerName, String loserName, List<ItemStack> drops) {
+        if (siege == null || siege.ended) return;
+        siege.ended = true;
+
+        if (winnerName == null && loserName != null) {
+            winnerName = siege.attacker.getName().equals(loserName)
+                    ? siege.defender.getName() : siege.attacker.getName();
+        } else if (winnerName != null && loserName == null) {
+            loserName = siege.attacker.getName().equals(winnerName)
+                    ? siege.defender.getName() : siege.attacker.getName();
+        }
+
+        boolean attackerWon = siege.attacker.getName().equals(winnerName);
+        PlayerData attackerData = this.getPlayerData(siege.attacker.getUniqueId());
+        PlayerData defenderData = this.getPlayerData(siege.defender.getUniqueId());
+        attackerData.siegeData = null;
+        defenderData.siegeData = null;
+        defenderData.lastSiegeEndTimeStamp = System.currentTimeMillis();
+
+        long cooldownEnd = System.currentTimeMillis()
+                + 1000L * 60L * GriefPrevention.instance.config_siege_cooldownEndInMinutes;
+        siegeCooldownRemaining.put(cooldownKey(siege.attacker.getName(), siege.defender.getName()), cooldownEnd);
+        for (Claim claim : siege.claims) {
+            claim.siegeData = null;
+            siegeCooldownRemaining.put(cooldownKey(siege.attacker.getName(), claim.getOwnerName()), cooldownEnd);
+            if (attackerWon) claim.doorsOpen = true;
+        }
+
+        TaskHandle checkup = siege.checkupTask;
+        if (checkup != null) checkup.cancel();
+
+        if (winnerName != null && loserName != null) {
+            final String resultMessage = winnerName + " defeated " + loserName + " in siege warfare!";
+            SchedulerUtil.runLaterGlobal(GriefPrevention.instance,
+                    () -> GriefPrevention.instance.getServer().broadcastMessage(resultMessage), 1L);
+        }
+
+        final Player winner = siege.attacker.getName().equals(winnerName) ? siege.attacker : siege.defender;
+        if (attackerWon) {
+            if (winner.isOnline()) {
+                SchedulerUtil.runLaterEntity(GriefPrevention.instance, winner,
+                        () -> GriefPrevention.sendMessage(winner, TextMode.Success, Messages.SiegeWinDoorsOpen), 1L);
+            }
+            SchedulerUtil.runLaterGlobal(GriefPrevention.instance, new SecureClaimTask(siege),
+                    20L * GriefPrevention.instance.config_siege_doorsOpenSeconds);
+        }
+
+        if (drops != null) {
+            final ArrayList<ItemStack> transferredDrops = new ArrayList<>();
+            for (ItemStack stack : drops) {
+                if (stack != null && stack.getType() != org.bukkit.Material.AIR && stack.getAmount() > 0) {
+                    transferredDrops.add(stack.clone());
+                }
+            }
+            drops.clear();
+
+            if (winner.isOnline() && !transferredDrops.isEmpty()) {
+                SchedulerUtil.runLaterEntity(GriefPrevention.instance, winner, () -> {
+                    for (ItemStack stack : transferredDrops) {
+                        HashMap<Integer, ItemStack> remainder = winner.getInventory().addItem(stack);
+                        for (ItemStack leftover : remainder.values()) {
+                            winner.getWorld().dropItemNaturally(winner.getLocation(), leftover);
+                        }
+                    }
+                }, 1L);
+            }
+        }
+    }
+
+    synchronized public boolean onCooldown(Player attacker, Player defender, Claim defenderClaim) {
+        long now = System.currentTimeMillis();
+        String playerKey = cooldownKey(attacker.getName(), defender.getName());
+        Long playerCooldown = siegeCooldownRemaining.get(playerKey);
+        if (playerCooldown != null) {
+            if (now < playerCooldown) return true;
+            siegeCooldownRemaining.remove(playerKey);
+        }
+
+        PlayerData defenderData = this.getPlayerData(defender.getUniqueId());
+        if (defenderData.lastSiegeEndTimeStamp > 0
+                && now - defenderData.lastSiegeEndTimeStamp < 1000L * 60L * 15L) return true;
+
+        String claimKey = cooldownKey(attacker.getName(), defenderClaim.getOwnerName());
+        Long claimCooldown = siegeCooldownRemaining.get(claimKey);
+        if (claimCooldown != null) {
+            if (now < claimCooldown) return true;
+            siegeCooldownRemaining.remove(claimKey);
+        }
+        return false;
+    }
+
+    synchronized void tryExtendSiege(Player player, Claim claim) {
+        PlayerData playerData = this.getPlayerData(player.getUniqueId());
+        SiegeData siege = playerData.siegeData;
+        if (siege == null || siege.claims.contains(claim) || claim.isAdminClaim()) return;
+
+        Claim current = claim;
+        while (!current.hasExplicitPermission(player, ClaimPermission.Access)) {
+            if (current.parent == null) return;
+            current = current.parent;
+        }
+
+        siege.claims.add(claim);
+        claim.siegeData = siege;
+    }
+
+    private static String cooldownKey(String attacker, String target) {
+        return attacker.toLowerCase(java.util.Locale.ROOT) + "_" + target.toLowerCase(java.util.Locale.ROOT);
     }
 
     // deletes all claims owned by a player

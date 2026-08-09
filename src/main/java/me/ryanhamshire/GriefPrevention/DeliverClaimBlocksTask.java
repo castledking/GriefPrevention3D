@@ -31,11 +31,14 @@ class DeliverClaimBlocksTask implements Runnable
 {
     private final Player player;
     private final GriefPrevention instance;
+    private final int idleThresholdSquared;
 
     public DeliverClaimBlocksTask(Player player, GriefPrevention instance)
     {
         this.player = player;
         this.instance = instance;
+        this.idleThresholdSquared = instance.config_claims_accruedIdleThreshold
+                * instance.config_claims_accruedIdleThreshold;
     }
 
     @Override
@@ -66,9 +69,20 @@ class DeliverClaimBlocksTask implements Runnable
         DataStore dataStore = instance.dataStore;
         PlayerData playerData = dataStore.getPlayerData(player.getUniqueId());
 
-        // check if player is idle (considered idle if player's facing direction has not changed)
-        boolean detectedIdle = playerData.lastAfkCheckLocation != null
-                && playerData.lastAfkCheckLocation.getDirection().equals(player.getLocation().getDirection());
+        // Legacy idle detection deliberately treats vehicles and liquid movement as idle,
+        // and otherwise requires the configured amount of player movement.
+        boolean detectedIdle = false;
+        try
+        {
+            detectedIdle = player.isInsideVehicle()
+                    || player.getLocation().getBlock().isLiquid()
+                    || !(playerData.lastAfkCheckLocation == null
+                    || playerData.lastAfkCheckLocation.distanceSquared(player.getLocation()) > idleThresholdSquared);
+        }
+        catch (IllegalArgumentException ignored)
+        {
+            // Locations in different worlds cannot be compared; treat the player as active.
+        }
         boolean isIdle = detectedIdle && !player.hasPermission("griefprevention.accruals.afkbypass");
 
         //remember current location for next time
@@ -85,9 +99,22 @@ class DeliverClaimBlocksTask implements Runnable
             }
 
             int accrualRate = instance.config_claims_blocksAccruedPerHour_default;
+            if (isIdle)
+            {
+                if (instance.config_claims_accruedIdlePercent <= 0)
+                {
+                    GriefPrevention.AddLogEntry(player.getName() + " wasn't active enough to accrue claim blocks this round.", CustomLogEntryTypes.Debug, true);
+                    return;
+                }
+                accrualRate = (int) (accrualRate * (instance.config_claims_accruedIdlePercent / 100.0D));
+                // AccrueClaimBlocksEvent defaults idle events to cancelled in newer GP.
+                // The legacy percentage is an explicit core opt-in, so allow the event by default.
+            }
 
             //fire event for addons
             AccrueClaimBlocksEvent event = new AccrueClaimBlocksEvent(player, accrualRate, isIdle);
+            if (isIdle && instance.config_claims_accruedIdlePercent > 0)
+                event.setCancelled(false);
             instance.getServer().getPluginManager().callEvent(event);
             if (event.isCancelled())
             {

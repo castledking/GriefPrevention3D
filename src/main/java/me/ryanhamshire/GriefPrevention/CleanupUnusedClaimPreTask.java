@@ -92,7 +92,8 @@ class CleanupUnusedClaimPreTask implements Runnable
         }
 
         //pass it back to the main server thread, where it's safe to delete a claim if needed
-        SchedulerUtil.runLaterGlobal(GriefPrevention.instance, new CleanupUnusedClaimTask(claimToExpire, ownerData, ownerInfo), 1L);
+        SchedulerUtil.runAtLocationLater(GriefPrevention.instance, claimToExpire.getLesserBoundaryCorner(),
+                new CleanupUnusedClaimTask(claimToExpire, ownerData, ownerInfo), 1L);
     }
 
     private boolean hasExpirationBypass(OfflinePlayer ownerInfo)

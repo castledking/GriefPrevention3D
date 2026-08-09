@@ -32,6 +32,8 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockState;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
@@ -133,6 +135,9 @@ public class Claim
      // Avoids rebuilding/validating the polygon on every containsColumn/overlap call.
      private transient @Nullable OrthogonalPolygon cachedBoundaryPolygon = null;
  
+     // active siege affecting this claim, if any
+     public SiegeData siegeData = null;
+
      //following a siege, buttons/levers are unlocked temporarily.  this represents that state
      public boolean doorsOpen = false;
 
@@ -263,6 +268,7 @@ public class Claim
          this.parent = claim.parent;
          this.inheritNothing = claim.inheritNothing;
          this.children = new ArrayList<>(claim.children);
+         this.siegeData = claim.siegeData;
          this.doorsOpen = claim.doorsOpen;
          this.is3D = claim.is3D;
          this.expirationDate = claim.expirationDate;
@@ -521,6 +527,12 @@ public class Claim
                          null, new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), new ArrayList<>(), null);
  
          return claim.contains(location, false, true);
+     }
+
+     public boolean canSiege(Player defender)
+     {
+         return !this.isAdminClaim()
+                 && this.checkPermission(defender, ClaimPermission.Access, null) == null;
      }
  
      /**
@@ -1390,19 +1402,102 @@ public class Claim
         return this.getSnapshot().overlaps(otherClaim.getSnapshot());
     }
 
-     @Deprecated
-     @Contract("_ -> null")
      public @Nullable String allowMoreEntities(boolean remove)
      {
+         if (this.parent != null) return this.parent.allowMoreEntities(remove);
+         if (!GriefPrevention.instance.creativeRulesApply(this.getLesserBoundaryCorner())) return null;
+         if (this.isAdminClaim() || this.getArea() > 10000) return null;
+
+         int maxEntities = this.getArea() / 50;
+         if (maxEntities == 0) return GriefPrevention.instance.dataStore.getMessage(Messages.ClaimTooSmallForEntities);
+
+         int totalEntities = 0;
+         for (Chunk chunk : this.getLoadedChunks())
+         {
+             Entity[] entities;
+             try
+             {
+                 entities = chunk.getEntities();
+             }
+             catch (IllegalStateException ignored)
+             {
+                 // Another Folia region owns this chunk; its cleanup pass will enforce it.
+                 continue;
+             }
+             for (Entity entity : entities)
+             {
+                 if (!(entity instanceof Player) && this.contains(entity.getLocation(), false, false))
+                 {
+                     totalEntities++;
+                     if (remove && totalEntities > maxEntities) entity.remove();
+                 }
+             }
+         }
+         if (totalEntities >= maxEntities)
+             return GriefPrevention.instance.dataStore.getMessage(Messages.TooManyEntitiesInClaim);
          return null;
      }
 
-     @Deprecated
-     @Contract("-> null")
      public @Nullable String allowMoreActiveBlocks()
      {
+         if (this.parent != null) return this.parent.allowMoreActiveBlocks();
+         int maxActives = this.getArea() / 100;
+         if (maxActives == 0)
+             return GriefPrevention.instance.dataStore.getMessage(Messages.ClaimTooSmallForActiveBlocks);
+
+         int totalActives = 0;
+         for (Chunk chunk : this.getLoadedChunks())
+         {
+             BlockState[] actives;
+             try
+             {
+                 actives = chunk.getTileEntities();
+             }
+             catch (IllegalStateException ignored)
+             {
+                 continue;
+             }
+             for (BlockState active : actives)
+             {
+                 if (BlockEventHandler.isActiveBlock(active) && this.contains(active.getLocation(), false, false))
+                     totalActives++;
+             }
+         }
+         if (totalActives >= maxActives)
+             return GriefPrevention.instance.dataStore.getMessage(Messages.TooManyActiveBlocksInClaim);
          return null;
      }
+
+    long getPlayerInvestmentScore()
+    {
+        Location lesser = this.getLesserBoundaryCorner();
+        World world = lesser.getWorld();
+        if (world == null) return 0;
+
+        Set<Material> playerBlocks = RestoreNatureProcessingTask.getPlayerBlocks(
+                world.getEnvironment(), lesser.getBlock().getBiome());
+        double score = 0;
+        boolean creativeMode = GriefPrevention.instance.creativeRulesApply(lesser);
+        int scanBottom = Math.max(GriefPrevention.instance.getWorldMinY(world), lesser.getBlockY());
+        int scanTop = GriefPrevention.instance.getWorldMaxY(world);
+        int deepCutoff = GriefPrevention.instance.getSeaLevel(world) - 5;
+
+        for (int x = lesser.getBlockX(); x <= this.greaterBoundaryCorner.getBlockX(); x++)
+        {
+            for (int z = lesser.getBlockZ(); z <= this.greaterBoundaryCorner.getBlockZ(); z++)
+            {
+                for (int y = scanBottom; y < scanTop; y++)
+                {
+                    Material type = world.getBlockAt(x, y, z).getType();
+                    if (!playerBlocks.contains(type)) continue;
+                    if (type == Material.CHEST && !creativeMode) score += 10;
+                    else if (creativeMode && type == Material.LAVA) score -= 10;
+                    else score += y < deepCutoff ? .5 : 1;
+                }
+            }
+        }
+        return (long) score;
+    }
 
      //implements a strict ordering of claims, used to keep the claims collection sorted for faster searching
      boolean greaterThan(Claim otherClaim)
@@ -1486,6 +1581,24 @@ public class Claim
              }
          }
 
+         return chunks;
+     }
+
+     private ArrayList<Chunk> getLoadedChunks()
+     {
+         ArrayList<Chunk> chunks = new ArrayList<>();
+         World world = this.getLesserBoundaryCorner().getWorld();
+         int lesserX = this.getLesserBoundaryCorner().getBlockX() >> 4;
+         int greaterX = this.getGreaterBoundaryCorner().getBlockX() >> 4;
+         int lesserZ = this.getLesserBoundaryCorner().getBlockZ() >> 4;
+         int greaterZ = this.getGreaterBoundaryCorner().getBlockZ() >> 4;
+         for (int x = lesserX; x <= greaterX; x++)
+         {
+             for (int z = lesserZ; z <= greaterZ; z++)
+             {
+                 if (world.isChunkLoaded(x, z)) chunks.add(world.getChunkAt(x, z));
+             }
+         }
          return chunks;
      }
 

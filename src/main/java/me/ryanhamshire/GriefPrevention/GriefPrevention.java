@@ -185,6 +185,7 @@ public class GriefPrevention extends JavaPlugin {
     public boolean config_claims_raidTriggersRequireBuildTrust; // whether raids are triggered by a player that doesn't
     // have build permission in that claim
     public int config_claims_maxClaimsPerPlayer; // maximum number of claims per player
+    public boolean config_claims_respectWorldGuard; // whether claim creation requires WG build permission
     public boolean config_claims_villagerTradingRequiresTrust; // whether trading with a claimed villager requires
     // permission
 
@@ -192,6 +193,8 @@ public class GriefPrevention extends JavaPlugin {
     public double config_claims_abandonReturnRatio; // the portion of claim blocks returned to a player when a claim is abandoned
     public int config_claims_blocksAccruedPerHour_default; // how many additional blocks players get each hour of play (can be zero) without any special permissions
     public int config_claims_maxAccruedBlocks_default; // the limit on accrued blocks (over time) for players without any special permissions. doesn't limit purchased or admin-gifted blocks
+    public int config_claims_accruedIdleThreshold; // distance a player must move between accrual checks to be active
+    public int config_claims_accruedIdlePercent; // percentage of normal accrual granted while idle
     public HashMap<String, Integer> config_claims_maxDepth; // limit on how deep claims can go
     public int config_claims_minY; // minimum Y coordinate claims can reach
     public int config_claims_expirationDays; // how many days of inactivity before a player loses his claims
@@ -210,6 +213,7 @@ public class GriefPrevention extends JavaPlugin {
 
     public int config_claims_chestClaimExpirationDays; // number of days of inactivity before an automatic chest claim
     // will be deleted
+    public int config_claims_unusedClaimExpirationDays; // inactivity days before low-investment creative claims expire
     public boolean config_claims_survivalAutoNatureRestoration; // whether survival claims will be automatically
     // restored to nature when auto-deleted
     public boolean config_claims_allowTrappedInAdminClaims; // whether it should be allowed to use /trapped in
@@ -248,8 +252,15 @@ public class GriefPrevention extends JavaPlugin {
 
     // Economy settings for buying/selling claim blocks
     public boolean config_economy_claimBlocksEnabled; // whether players can buy/sell claim blocks
+    public int config_economy_claimBlocksMaxBonus; // maximum purchasable bonus blocks; zero is unlimited
     public double config_economy_claimBlocksPurchaseCost; // cost per claim block when buying
     public double config_economy_claimBlocksSellValue; // value per claim block when selling
+
+    // Legacy siege settings
+    public ArrayList<World> config_siege_enabledWorlds;
+    public Set<Material> config_siege_blocks;
+    public int config_siege_doorsOpenSeconds;
+    public int config_siege_cooldownEndInMinutes;
 
     // PvP toggle cost configuration
     public boolean config_pvp_toggleCostClaimEnabled; // whether PvP toggle is enabled for main claims
@@ -535,6 +546,10 @@ public class GriefPrevention extends JavaPlugin {
         FindUnusedClaimsTask task2 = new FindUnusedClaimsTask();
         SchedulerUtil.runRepeatingGlobal(this, task2, 20L * 60, 20L * config_advanced_claim_expiration_check_rate);
 
+        // Restore legacy creative-world entity cleanup. The task partitions work by
+        // loaded chunk and reschedules each chunk on its owning region.
+        SchedulerUtil.runLaterGlobal(this, new EntityCleanupTask(0), 20L * 60L * 2L);
+
         // register for events
         PluginManager pluginManager = this.getServer().getPluginManager();
 
@@ -556,6 +571,9 @@ public class GriefPrevention extends JavaPlugin {
         // combat/damage-specific entity events
         entityDamageHandler = new EntityDamageHandler(this.dataStore, this);
         pluginManager.registerEvents(entityDamageHandler, this);
+
+        // Siege modifies the normal claim permission checks while a battle is active.
+        pluginManager.registerEvents(new SiegeEventHandler(), this);
 
         // knockback protection - handles melee, projectile, and other player-caused knockback in claims
         new KnockbackProtectionListener(this.dataStore, this).register(this);
@@ -915,6 +933,40 @@ public class GriefPrevention extends JavaPlugin {
             this.config_pvp_specifiedWorlds.put(world, pvpWorld);
         }
 
+        List<String> siegeEnabledWorldNames = config.getStringList("GriefPrevention.Siege.Worlds");
+        this.config_siege_enabledWorlds = new ArrayList<>();
+        for (String worldName : siegeEnabledWorldNames) {
+            World world = this.getServer().getWorld(worldName);
+            if (world == null) {
+                AddLogEntry("Error: Siege Configuration: There's no world named \"" + worldName + "\".");
+            } else {
+                this.config_siege_enabledWorlds.add(world);
+            }
+        }
+
+        List<String> defaultSiegeBlockNames = Arrays.asList(
+            "DIRT", "GRASS_BLOCK", "GRASS", "SHORT_GRASS", "FERN", "DEAD_BUSH",
+            "COBBLESTONE", "GRAVEL", "SAND", "GLASS", "GLASS_PANE",
+            "WOOD", "WOOL", "OAK_PLANKS", "SPRUCE_PLANKS", "BIRCH_PLANKS",
+            "JUNGLE_PLANKS", "ACACIA_PLANKS", "DARK_OAK_PLANKS", "WHITE_WOOL",
+            "ORANGE_WOOL", "MAGENTA_WOOL", "LIGHT_BLUE_WOOL", "YELLOW_WOOL",
+            "LIME_WOOL", "PINK_WOOL", "GRAY_WOOL", "LIGHT_GRAY_WOOL", "CYAN_WOOL",
+            "PURPLE_WOOL", "BLUE_WOOL", "BROWN_WOOL", "GREEN_WOOL", "RED_WOOL",
+            "BLACK_WOOL", "SNOW"
+        );
+        List<String> siegeBreakableBlockNames = config.isList("GriefPrevention.Siege.BreakableBlocks")
+            ? config.getStringList("GriefPrevention.Siege.BreakableBlocks")
+            : defaultSiegeBlockNames;
+        this.config_siege_blocks = new HashSet<>();
+        for (String materialName : siegeBreakableBlockNames) {
+            Material material = Material.getMaterial(materialName.toUpperCase(Locale.ROOT));
+            if (material != null) this.config_siege_blocks.add(material);
+        }
+        this.config_siege_doorsOpenSeconds = Math.max(0,
+            config.getInt("GriefPrevention.Siege.DoorsOpenDelayInSeconds", 5 * 60));
+        this.config_siege_cooldownEndInMinutes = Math.max(0,
+            config.getInt("GriefPrevention.Siege.CooldownEndInMinutes", 60));
+
         // sea level
         this.config_seaLevelOverride = new HashMap<>();
         for (World world : worlds) {
@@ -968,6 +1020,14 @@ public class GriefPrevention extends JavaPlugin {
         this.config_claims_maxAccruedBlocks_default = config.getInt(
             "GriefPrevention.Claims.Max Accrued Claim Blocks.Default",
             this.config_claims_maxAccruedBlocks_default
+        );
+        this.config_claims_accruedIdleThreshold = config.getInt(
+            "GriefPrevention.Claims.Accrued Idle Threshold",
+            config.getInt("GriefPrevention.Claims.AccruedIdleThreshold", 0)
+        );
+        this.config_claims_accruedIdlePercent = Math.max(
+            0,
+            config.getInt("GriefPrevention.Claims.AccruedIdlePercent", 0)
         );
         this.config_claims_abandonReturnRatio = config.getDouble("GriefPrevention.Claims.AbandonReturnRatio", 1.0D);
         this.config_claims_automaticClaimsForNewPlayersRadius = config.getInt(
@@ -1044,6 +1104,10 @@ public class GriefPrevention extends JavaPlugin {
             "GriefPrevention.Claims.Expiration.ChestClaimDays",
             7
         );
+        this.config_claims_unusedClaimExpirationDays = config.getInt(
+            "GriefPrevention.Claims.Expiration.UnusedClaimDays",
+            14
+        );
         this.config_claims_expirationDays = config.getInt(
             "GriefPrevention.Claims.Expiration.AllClaims.DaysInactive",
             60
@@ -1091,6 +1155,10 @@ public class GriefPrevention extends JavaPlugin {
         this.config_claims_maxClaimsPerPlayer = config.getInt(
             "GriefPrevention.Claims.MaximumNumberOfClaimsPerPlayer",
             0
+        );
+        this.config_claims_respectWorldGuard = config.getBoolean(
+            "GriefPrevention.Claims.CreationRequiresWorldGuardBuildPermission",
+            true
         );
         this.config_claims_villagerTradingRequiresTrust = config.getBoolean(
             "GriefPrevention.Claims.VillagerTradingRequiresPermission",
@@ -1144,6 +1212,10 @@ public class GriefPrevention extends JavaPlugin {
 
         // Economy settings - disabled by default
         this.config_economy_claimBlocksEnabled = config.getBoolean("GriefPrevention.Economy.ClaimBlocksEnabled", false);
+        this.config_economy_claimBlocksMaxBonus = Math.max(
+            0,
+            config.getInt("GriefPrevention.Economy.ClaimBlocksMaxBonus", 0)
+        );
         this.config_economy_claimBlocksPurchaseCost = config.getDouble(
             "GriefPrevention.Economy.ClaimBlocksPurchaseCost",
             1.0
@@ -1309,15 +1381,15 @@ public class GriefPrevention extends JavaPlugin {
 
         this.config_pvp_noCombatInPlayerLandClaims = config.getBoolean(
             "GriefPrevention.PvP.ProtectPlayersInLandClaims.PlayerOwnedClaims",
-            true
+            this.config_siege_enabledWorlds.isEmpty()
         );
         this.config_pvp_noCombatInAdminLandClaims = config.getBoolean(
             "GriefPrevention.PvP.ProtectPlayersInLandClaims.AdministrativeClaims",
-            true
+            this.config_siege_enabledWorlds.isEmpty()
         );
         this.config_pvp_noCombatInAdminSubdivisions = config.getBoolean(
             "GriefPrevention.PvP.ProtectPlayersInLandClaims.AdministrativeSubdivisions",
-            true
+            this.config_siege_enabledWorlds.isEmpty()
         );
         this.config_pvp_allowLavaNearPlayers = config.getBoolean(
             "GriefPrevention.PvP.AllowLavaDumpingNearOtherPlayers.PvPWorlds",
@@ -1431,7 +1503,16 @@ public class GriefPrevention extends JavaPlugin {
             "GriefPrevention.Claims.Max Accrued Claim Blocks.Default",
             this.config_claims_maxAccruedBlocks_default
         );
+        outConfig.set("GriefPrevention.Claims.Accrued Idle Threshold", this.config_claims_accruedIdleThreshold);
+        outConfig.set("GriefPrevention.Claims.AccruedIdlePercent", this.config_claims_accruedIdlePercent);
         outConfig.set("GriefPrevention.Claims.AbandonReturnRatio", this.config_claims_abandonReturnRatio);
+        outConfig.set("GriefPrevention.Siege.Worlds", siegeEnabledWorldNames);
+        ArrayList<String> configuredSiegeBlocks = new ArrayList<>();
+        for (Material material : this.config_siege_blocks) configuredSiegeBlocks.add(material.name());
+        Collections.sort(configuredSiegeBlocks);
+        outConfig.set("GriefPrevention.Siege.BreakableBlocks", configuredSiegeBlocks);
+        outConfig.set("GriefPrevention.Siege.DoorsOpenDelayInSeconds", this.config_siege_doorsOpenSeconds);
+        outConfig.set("GriefPrevention.Siege.CooldownEndInMinutes", this.config_siege_cooldownEndInMinutes);
         outConfig.set(
             "GriefPrevention.Claims.AutomaticNewPlayerClaimsRadius",
             this.config_claims_automaticClaimsForNewPlayersRadius
@@ -1451,9 +1532,14 @@ public class GriefPrevention extends JavaPlugin {
         outConfig.set("GriefPrevention.Claims.MinimumY", this.config_claims_minY);
         outConfig.set("GriefPrevention.Claims.MinimumDistance", this.config_claims_minimumDistance);
         outConfig.set("GriefPrevention.Claims.PreventLavaPlaceNearClaims", this.config_claims_preventLavaPlaceNearClaims);
+        outConfig.set(
+            "GriefPrevention.Claims.CreationRequiresWorldGuardBuildPermission",
+            this.config_claims_respectWorldGuard
+        );
         outConfig.set("GriefPrevention.Claims.InvestigationTool", this.config_claims_investigationTool.name());
         outConfig.set("GriefPrevention.Claims.ModificationTool", this.config_claims_modificationTool.name());
         outConfig.set("GriefPrevention.Claims.Expiration.ChestClaimDays", this.config_claims_chestClaimExpirationDays);
+        outConfig.set("GriefPrevention.Claims.Expiration.UnusedClaimDays", this.config_claims_unusedClaimExpirationDays);
         outConfig.set("GriefPrevention.Claims.Expiration.AllClaims.DaysInactive", this.config_claims_expirationDays);
         outConfig.set(
             "GriefPrevention.Claims.Expiration.AllClaims.ExceptWhenOwnerHasTotalClaimBlocks",
@@ -1500,6 +1586,7 @@ public class GriefPrevention extends JavaPlugin {
 
         // Economy settings
         outConfig.set("GriefPrevention.Economy.ClaimBlocksEnabled", this.config_economy_claimBlocksEnabled);
+        outConfig.set("GriefPrevention.Economy.ClaimBlocksMaxBonus", this.config_economy_claimBlocksMaxBonus);
         outConfig.set("GriefPrevention.Economy.ClaimBlocksPurchaseCost", this.config_economy_claimBlocksPurchaseCost);
         outConfig.set("GriefPrevention.Economy.ClaimBlocksSellValue", this.config_economy_claimBlocksSellValue);
 
@@ -1987,6 +2074,17 @@ public class GriefPrevention extends JavaPlugin {
         Player player = null;
         if (sender instanceof Player) {
             player = (Player) sender;
+        }
+
+        // Legacy administrator diagnostic command.
+        if (cmd.getName().equalsIgnoreCase("gpblockinfo") && player != null) {
+            ItemStack inHand = this.getItemInHand(player, EquipmentSlot.HAND);
+            player.sendMessage("In Hand: " + inHand.getType().name());
+
+            Block inWorld = PlayerEventHandler.getTargetBlock(player, 300);
+            if (inWorld == null) inWorld = player.getEyeLocation().getBlock();
+            player.sendMessage("In World: " + inWorld.getType().name());
+            return true;
         }
 
         // extendclaim
@@ -3199,16 +3297,21 @@ public class GriefPrevention extends JavaPlugin {
         }
         // deletealladminclaims
         else if (cmd.getName().equalsIgnoreCase("deletealladminclaims")) {
-            // must be executed at the console
-            if (player != null) {
-                GriefPrevention.sendMessage(player, TextMode.Err, Messages.ConsoleOnlyCommand);
+            if (player != null && !player.hasPermission("griefprevention.deleteclaims")) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
                 return true;
             }
 
             // delete all admin claims
             this.dataStore.deleteClaimsForPlayer(null, true); // null for owner id indicates an administrative claim
 
-            GriefPrevention.AddLogEntry("Deleted all administrative claims.", CustomLogEntryTypes.AdminActivity);
+            if (player != null) {
+                GriefPrevention.sendMessage(player, TextMode.Success, Messages.AllAdminDeleted);
+                this.dataStore.getPlayerData(player.getUniqueId()).setVisibleBoundaries(null);
+                GriefPrevention.AddLogEntry(player.getName() + " deleted all administrative claims.", CustomLogEntryTypes.AdminActivity);
+            } else {
+                GriefPrevention.AddLogEntry("Deleted all administrative claims.", CustomLogEntryTypes.AdminActivity);
+            }
             return true;
         }
         // adjustbonusclaimblocks <player> <amount> or [<permission>] amount
@@ -3926,6 +4029,13 @@ public class GriefPrevention extends JavaPlugin {
                     GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoManageTrust, claim.getOwnerName());
                     return;
                 }
+                Supplier<String> grantCheck = permissionLevel == ClaimPermission.Manage
+                        ? claim.checkPermission(player, ClaimPermission.Edit, null)
+                        : claim.checkPermission(player, permissionLevel, null);
+                if (grantCheck != null) {
+                    GriefPrevention.sendMessage(player, TextMode.Err, Messages.CantGrantThatPermission);
+                    return;
+                }
                 targetClaims.add(claim);
             }
 
@@ -4579,6 +4689,10 @@ public class GriefPrevention extends JavaPlugin {
         Boolean configSetting = this.config_pvp_specifiedWorlds.get(world);
         if (configSetting != null) return configSetting;
         return world.getPVP();
+    }
+
+    public boolean siegeEnabledForWorld(World world) {
+        return this.config_siege_enabledWorlds.contains(world);
     }
 
     public static boolean isNewToServer(Player player) {

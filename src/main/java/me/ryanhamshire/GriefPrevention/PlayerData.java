@@ -143,6 +143,10 @@ public class PlayerData
     public boolean pvpImmune = false;
     public long lastSpawn = 0;
 
+    // active siege and the end of the most recent siege (not persisted)
+    public SiegeData siegeData = null;
+    public long lastSiegeEndTimeStamp = 0;
+
     //ignore claims mode
     public boolean ignoreClaims = false;
 

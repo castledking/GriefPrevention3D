@@ -645,7 +645,7 @@ public class EntityEventHandler implements Listener
 
         //otherwise, no spawning in the wilderness!
         Claim claim = this.dataStore.getClaimAt(event.getLocation(), false, null);
-        if (claim == null)
+        if (claim == null || claim.allowMoreEntities(true) != null)
         {
             event.setCancelled(true);
             return;
@@ -676,6 +676,10 @@ public class EntityEventHandler implements Listener
         Player player = (Player) entity;
 
         PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
+        if (playerData.siegeData != null)
+        {
+            this.dataStore.endSiege(playerData.siegeData, null, player.getName(), event.getDrops());
+        }
         World world = entity.getWorld();
 
         //decide whether or not to apply this feature to this situation (depends on the world where it happens)
@@ -867,6 +871,17 @@ public class EntityEventHandler implements Listener
             event.setCancelled(true);
             GriefPrevention.sendMessage(event.getPlayer(), TextMode.Err, noBuildReason.get());
             return;
+        }
+
+        if (GriefPrevention.instance.creativeRulesApply(event.getEntity().getLocation())) {
+            Claim claim = this.dataStore.getClaimAt(event.getEntity().getLocation(), false, null);
+            if (claim != null) {
+                String reason = claim.allowMoreEntities(false);
+                if (reason != null) {
+                    event.setCancelled(true);
+                    GriefPrevention.sendMessage(event.getPlayer(), TextMode.Err, reason);
+                }
+            }
         }
     }
 }

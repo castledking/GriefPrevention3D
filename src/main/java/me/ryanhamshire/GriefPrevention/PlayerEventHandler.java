@@ -576,7 +576,8 @@ public class PlayerEventHandler implements Listener {
         // if in pvp, block any pvp-banned slash commands
         if (playerData == null) playerData = this.dataStore.getPlayerData(event.getPlayer().getUniqueId());
 
-        if (playerData.inPvpCombat() && pvpBlockedCommands.isMonitoredCommand(command)) {
+        if ((playerData.inPvpCombat() || playerData.siegeData != null)
+                && pvpBlockedCommands.isMonitoredCommand(command)) {
             event.setCancelled(true);
             GriefPrevention.sendMessage(event.getPlayer(), TextMode.Err, Messages.CommandBannedInPvP);
             return;
@@ -1042,6 +1043,7 @@ public class PlayerEventHandler implements Listener {
         PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
         playerData.dropsAreUnlocked = false;
         playerData.receivedDropUnlockAdvertisement = false;
+
     }
 
     // when a player gets kicked...
@@ -1105,6 +1107,13 @@ public class PlayerEventHandler implements Listener {
             player.setHealth(0);
         }
 
+        // Logging out forfeits an active siege, even when normal PvP logout punishment is off.
+        if (playerData.siegeData != null) {
+            SiegeData siege = playerData.siegeData;
+            if (player.getHealth() > 0) player.setHealth(0);
+            if (!siege.ended) this.dataStore.endSiege(siege, null, player.getName(), null);
+        }
+
         // drop data about this player
         this.dataStore.clearCachedPlayerData(playerID);
 
@@ -1163,6 +1172,12 @@ public class PlayerEventHandler implements Listener {
 
         PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
 
+        if (playerData.siegeData != null) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.SiegeNoDrop);
+            event.setCancelled(true);
+            return;
+        }
+
         // FEATURE: players under siege or in PvP combat, can't throw items on the
         // ground to hide
         // them or give them away to other players before they are defeated
@@ -1207,16 +1222,18 @@ public class PlayerEventHandler implements Listener {
         if (!(event.getWhoClicked() instanceof Player)) return;
         Player player = (Player) event.getWhoClicked();
 
-        // if in combat, don't let him drop it
+        // If in combat or siege, don't let the inventory click drop the item.
         PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
-        if (instance.config_pvp_allowCombatItemDrop || !playerData.inPvpCombat() || player.isDead()) return;
+        boolean siege = playerData.siegeData != null;
+        boolean blockedByPvp = !instance.config_pvp_allowCombatItemDrop && playerData.inPvpCombat();
+        if ((!siege && !blockedByPvp) || player.isDead()) return;
 
         // Block the click rather than the resulting PlayerDropItemEvent. A cancelled drop is
         // returned to the main inventory by the server, but an item dropped from the cursor or an
         // armor or offhand slot has no main slot to return to and is silently deleted when the
         // main inventory is full (see GriefPrevention/GriefPrevention#2619, PaperMC/Paper#7726).
         // The click is never applied, so the item simply stays where it is.
-        GriefPrevention.sendMessage(player, TextMode.Err, Messages.PvPNoDrop);
+        GriefPrevention.sendMessage(player, TextMode.Err, siege ? Messages.SiegeNoDrop : Messages.PvPNoDrop);
         event.setCancelled(true);
     }
 
@@ -1235,9 +1252,11 @@ public class PlayerEventHandler implements Listener {
         ItemStack cursor = player.getItemOnCursor();
         if (cursor == null || cursor.getType() == Material.AIR) return;
 
-        // only during PvP combat with item drops disabled
+        // only while inventory drops are blocked by PvP combat or siege
         PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
-        if (instance.config_pvp_allowCombatItemDrop || !playerData.inPvpCombat() || player.isDead()) return;
+        boolean siege = playerData.siegeData != null;
+        boolean blockedByPvp = !instance.config_pvp_allowCombatItemDrop && playerData.inPvpCombat();
+        if ((!siege && !blockedByPvp) || player.isDead()) return;
 
         // place the cursor item into the main inventory; only the portion that cannot fit stays
         // on the cursor and is dropped by the server
@@ -1279,6 +1298,23 @@ public class PlayerEventHandler implements Listener {
     public void onPlayerTeleport(PlayerTeleportEvent event) {
         Player player = event.getPlayer();
         PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
+
+        if (instance.siegeEnabledForWorld(player.getWorld())
+                && !player.hasPermission("griefprevention.siegeteleport")
+                && event.getCause() != TeleportCause.UNKNOWN) {
+            Claim sourceClaim = this.dataStore.getClaimAt(event.getFrom(), false, playerData.lastClaim);
+            if (sourceClaim != null && sourceClaim.siegeData != null) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.SiegeNoTeleport);
+                event.setCancelled(true);
+                return;
+            }
+            Claim destinationClaim = this.dataStore.getClaimAt(event.getTo(), false, null);
+            if (destinationClaim != null && destinationClaim.siegeData != null) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.BesiegedNoTeleport);
+                event.setCancelled(true);
+                return;
+            }
+        }
 
         // Get the claim at the destination
         Claim toClaim = this.dataStore.getClaimAt(event.getTo(), false, playerData.lastClaim);
@@ -1652,6 +1688,13 @@ public class PlayerEventHandler implements Listener {
 
         // always allow interactions when player is in ignore claims mode
         if (playerData.ignoreClaims) return;
+
+        if (playerData.siegeData != null
+                && (entity instanceof StorageMinecart || entity instanceof PoweredMinecart)) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.SiegeNoContainers);
+            event.setCancelled(true);
+            return;
+        }
 
         // don't allow container access during pvp combat in claimed areas
         if (
@@ -2094,6 +2137,15 @@ public class PlayerEventHandler implements Listener {
 
         PlayerData playerData = null;
 
+        if (event.getMaterial() == instance.config_claims_modificationTool) {
+            playerData = this.dataStore.getPlayerData(player.getUniqueId());
+            if (playerData.siegeData != null) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.SiegeNoShovel);
+                event.setCancelled(true);
+                return;
+            }
+        }
+
         // Turtle eggs
         if (action == Action.PHYSICAL) {
             if (clickedBlockType != Material.TURTLE_EGG) return;
@@ -2113,10 +2165,27 @@ public class PlayerEventHandler implements Listener {
             return;
         }
 
-        // don't care about left-clicking on most blocks, this is probably a break
-        // action
-        if (action == Action.LEFT_CLICK_BLOCK && clickedBlock != null && !this.onLeftClickWatchList(clickedBlockType)) {
-            return;
+        // On legacy clients fire has no hitbox, so a left click arrives for the
+        // supporting block. Re-send the fire when build permission is denied.
+        if (action == Action.LEFT_CLICK_BLOCK && clickedBlock != null) {
+            Block adjacentBlock = clickedBlock.getRelative(event.getBlockFace());
+            if (adjacentBlock.getType() == Material.FIRE && adjacentBlock.getLightFromBlocks() == 15) {
+                if (playerData == null) playerData = this.dataStore.getPlayerData(player.getUniqueId());
+                Claim claim = this.dataStore.getClaimAt(clickedBlock.getLocation(), false, playerData.lastClaim);
+                if (claim != null) {
+                    playerData.lastClaim = claim;
+                    Supplier<String> noBuildReason = claim.checkPermission(player, ClaimPermission.Build, event);
+                    if (noBuildReason != null) {
+                        event.setCancelled(true);
+                        GriefPrevention.sendRateLimitedErrorMessage(player, noBuildReason.get());
+                        player.sendBlockChange(adjacentBlock.getLocation(), adjacentBlock.getType(), adjacentBlock.getData());
+                        return;
+                    }
+                }
+            }
+
+            // Most left clicks are handled by BlockBreakEvent.
+            if (!this.onLeftClickWatchList(clickedBlockType)) return;
         }
 
         // Check for brush usage on any block
@@ -2230,6 +2299,12 @@ public class PlayerEventHandler implements Listener {
                 }
             }
             if (playerData == null) playerData = this.dataStore.getPlayerData(player.getUniqueId());
+
+            if (playerData.siegeData != null) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.SiegeNoContainers);
+                event.setCancelled(true);
+                return;
+            }
 
             // allow players with ignoreclaims permission in spectator mode to access
             // containers
@@ -2415,6 +2490,20 @@ public class PlayerEventHandler implements Listener {
                     event.setCancelled(true);
                 }
 
+                if (!event.isCancelled()
+                        && instance.creativeRulesApply(clickedBlock.getLocation())
+                        && isCreativeEntityPlacement(materialInHand)) {
+                    if (playerData == null) playerData = this.dataStore.getPlayerData(player.getUniqueId());
+                    Claim placementClaim = this.dataStore.getClaimAt(clickedBlock.getLocation(), false, playerData.lastClaim);
+                    if (placementClaim != null) {
+                        String reason = placementClaim.allowMoreEntities(false);
+                        if (reason != null) {
+                            GriefPrevention.sendMessage(player, TextMode.Err, reason);
+                            event.setCancelled(true);
+                        }
+                    }
+                }
+
                 return;
             } else if (clickedBlock != null && MaterialTagCompat.isTagged("ITEMS_BOATS", materialInHand)) {
                 if (playerData == null) playerData = this.dataStore.getPlayerData(player.getUniqueId());
@@ -2450,6 +2539,30 @@ public class PlayerEventHandler implements Listener {
                     }
                 }
 
+                return;
+            }
+            // Creative worlds cap minecarts, armor stands, frames, eggs, and
+            // infested-block spawns according to claim area.
+            else if (clickedBlock != null
+                    && instance.creativeRulesApply(clickedBlock.getLocation())
+                    && isCreativeEntityPlacement(materialInHand)) {
+                Supplier<String> noBuildReason = ProtectionHelper.checkPermission(
+                        player, clickedBlock.getLocation(), ClaimPermission.Build, event);
+                if (noBuildReason != null) {
+                    GriefPrevention.sendRateLimitedErrorMessage(player, noBuildReason.get());
+                    event.setCancelled(true);
+                    return;
+                }
+
+                if (playerData == null) playerData = this.dataStore.getPlayerData(player.getUniqueId());
+                Claim claim = this.dataStore.getClaimAt(clickedBlock.getLocation(), false, playerData.lastClaim);
+                if (claim != null) {
+                    String reason = claim.allowMoreEntities(false);
+                    if (reason != null) {
+                        GriefPrevention.sendMessage(player, TextMode.Err, reason);
+                        event.setCancelled(true);
+                    }
+                }
                 return;
             }
 
@@ -3257,6 +3370,20 @@ public class PlayerEventHandler implements Listener {
                 }
             }
         }
+    }
+
+    private boolean isCreativeEntityPlacement(Material material) {
+        return material == Material.ARMOR_STAND
+                || material == Material.MINECART
+                || CompatUtil.isMaterial(material, "FURNACE_MINECART")
+                || CompatUtil.isMaterial(material, "CHEST_MINECART")
+                || CompatUtil.isMaterial(material, "TNT_MINECART")
+                || CompatUtil.isMaterial(material, "HOPPER_MINECART")
+                || MaterialTagCompat.isTagged("ITEMS_BOATS", material)
+                || spawnEggs.contains(material)
+                || CompatUtil.isMaterial(material, "ITEM_FRAME")
+                || CompatUtil.isMaterial(material, "GLOW_ITEM_FRAME")
+                || material.name().startsWith("INFESTED_");
     }
 
     // Helper container for a corner raycast hit

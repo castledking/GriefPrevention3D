@@ -3,7 +3,7 @@ prefix: GriefPrevention3D
 main: me.ryanhamshire.GriefPrevention.GriefPrevention
 provides: [GriefPrevention]
 softdepend:
-  [Multiverse-Core, MyCommand, My_Worlds, MystCraft, Transporter, RoyalCommands, MultiWorld, Denizen, CommandHelper, Iris, PlaceholderAPI, Vault]
+  [Multiverse-Core, MyCommand, My_Worlds, MystCraft, Transporter, WorldGuard, WorldEdit, RoyalCommands, MultiWorld, Denizen, CommandHelper, Iris, PlaceholderAPI, Vault]
 dev-url: https://github.com/castledking/GriefPrevention3D
 version: "${project.version}"
 description: The self-service anti-griefing plugin for Minecraft servers — now with full 3D subdivisions
@@ -174,6 +174,10 @@ commands:
     description: Allows a player to give away a pet he or she tamed.
     usage: /<command> <player>
     permission: griefprevention.givepet
+  gpblockinfo:
+    description: Shows technical information about the held item and targeted block.
+    usage: /<command>
+    permission: griefprevention.gpblockinfo
   trustlist:
     description: Lists permissions for the claim you're standing in.
     usage: /<command>
@@ -184,7 +188,7 @@ commands:
     permission: griefprevention.ignoreclaims
     aliases: ic
   deletealladminclaims:
-    description: Deletes all administrative claims. Only usable at the server console.
+    description: Deletes all administrative claims.
     usage: /<command>
     permission: griefprevention.adminclaims
   adminclaimslist:
@@ -361,6 +365,18 @@ permissions:
   griefprevention.givepet:
     description: Grants permission to use /givepet.
     default: true
+  griefprevention.siege:
+    description: Grants permission to use /siege.
+    default: true
+  griefprevention.siegeimmune:
+    description: Makes a player immune to /siege.
+    default: op
+  griefprevention.siegeteleport:
+    description: Allows teleporting into and out of besieged areas.
+    default: op
+  griefprevention.gpblockinfo:
+    description: Grants access to /gpblockinfo.
+    default: op
   griefprevention.claimslistother:
     description: Grants permission to use /claimslist to get another player's information.
     default: op
@@ -440,6 +456,7 @@ permissions:
       griefprevention.unlockdrops: true
       griefprevention.trapped: true
       griefprevention.givepet: true
+      griefprevention.siege: true
       griefprevention.createclaims: true
       griefprevention.accruals: true
       griefprevention.ignore: true
