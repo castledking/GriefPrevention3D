@@ -103,6 +103,11 @@ commands:
     usage: /<command> <player> <amount>
     permission: griefprevention.adjustclaimblocks
     aliases: scb
+  setaccruedclaimblocksall:
+    description: Updates the accrued claim block total for all online players.
+    usage: /<command> <amount>
+    permission: griefprevention.adjustclaimblocks
+    aliases: scball
   deleteclaim:
     description: Deletes the claim you're standing in, even if it's not your claim.
     usage: /<command>

@@ -5,6 +5,8 @@
  */
 package me.ryanhamshire.GriefPrevention;
 
+import me.ryanhamshire.GriefPrevention.compat.CompatUtil;
+
 import java.util.ArrayList;
 import java.util.List;
 import me.ryanhamshire.GriefPrevention.util.SchedulerUtil;
@@ -62,7 +64,9 @@ class EntityCleanupTask implements Runnable {
                     remove = vehicle.isEmpty() || !(vehicle.getPassenger() instanceof Player);
                 } else {
                     Material material = entity.getWorld().getBlockAt(entity.getLocation()).getType();
-                    remove = material != Material.RAIL
+                    // RAIL was named RAILS before 1.13
+                    remove = !CompatUtil.isMaterial(material, "RAIL")
+                            && !CompatUtil.isMaterial(material, "RAILS")
                             && material != Material.POWERED_RAIL
                             && material != Material.DETECTOR_RAIL;
                 }

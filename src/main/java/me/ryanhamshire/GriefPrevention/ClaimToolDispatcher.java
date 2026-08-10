@@ -1224,7 +1224,7 @@ final class ClaimToolDispatcher
             if (polygon.isRemovableNode(cornerIndex) || isConcaveCorner(polygon, cornerIndex))
             {
                 OrthogonalPolygonValidationResult nibResult = resolveShapedNibResizeMove(player, claim, polygon, cornerIndex, target);
-                if (nibResult.isValid())
+                if (isChangedShapedResize(polygon, nibResult))
                 {
                     return nibResult;
                 }
@@ -1253,7 +1253,7 @@ final class ClaimToolDispatcher
                     polygon,
                     cornerIndex,
                     target);
-            if (orthogonalNibResult != null && orthogonalNibResult.isValid())
+            if (orthogonalNibResult != null && isChangedShapedResize(polygon, orthogonalNibResult))
             {
                 return orthogonalNibResult;
             }
@@ -1267,6 +1267,15 @@ final class ClaimToolDispatcher
         }
 
         return polygon.moveEdgeRun(faceRun.startEdgeIndex(), faceRun.endEdgeIndex(), amount);
+    }
+
+    private boolean isChangedShapedResize(
+            @NotNull OrthogonalPolygon original,
+            @NotNull OrthogonalPolygonValidationResult result)
+    {
+        return result.isValid()
+                && result.polygon() != null
+                && !result.polygon().corners().equals(original.corners());
     }
 
     private boolean isTargetCornerOnFaceRun(
@@ -1562,7 +1571,7 @@ final class ClaimToolDispatcher
             @NotNull OrthogonalPolygon originalPolygon,
             @Nullable OrthogonalPolygonValidationResult result)
     {
-        if (result == null || !result.isValid() || result.polygon() == null)
+        if (result == null || !isChangedShapedResize(originalPolygon, result))
         {
             return;
         }

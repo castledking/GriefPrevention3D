@@ -3,6 +3,7 @@ package me.ryanhamshire.GriefPrevention.util;
 import com.griefprevention.util.IntVector;
 import me.ryanhamshire.GriefPrevention.Claim;
 import me.ryanhamshire.GriefPrevention.GriefPrevention;
+import me.ryanhamshire.GriefPrevention.compat.CompatUtil;
 import org.bukkit.Location;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -476,7 +477,7 @@ public class BoundingBox implements Cloneable
     {
         if (magnitude == 0 || direction == BlockFace.SELF) return;
 
-        Vector vector = direction.getDirection().multiply(magnitude);
+        Vector vector = CompatUtil.getDirection(direction).multiply(magnitude);
 
         // Force normalized rounding - prevents issues with non-cardinal directions.
         int modX = NumberConversions.round(vector.getX());
@@ -526,7 +527,7 @@ public class BoundingBox implements Cloneable
     {
         if (magnitude == 0 || direction == BlockFace.SELF) return;
 
-        Vector vector = direction.getDirection().multiply(magnitude);
+        Vector vector = CompatUtil.getDirection(direction).multiply(magnitude);
 
         int blockX = NumberConversions.round(vector.getX());
         this.minX += blockX;

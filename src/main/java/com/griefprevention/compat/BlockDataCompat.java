@@ -23,6 +23,7 @@ public final class BlockDataCompat {
     private static final String LIGHTABLE_CLASS = "org.bukkit.block.data.Lightable";
     private static final String WATERLOGGED_CLASS = "org.bukkit.block.data.Waterlogged";
     private static final String WALL_SIGN_CLASS = "org.bukkit.block.data.type.WallSign";
+    private static final String END_PORTAL_FRAME_CLASS = "org.bukkit.block.data.type.EndPortalFrame";
 
     private BlockDataCompat() {}
 
@@ -274,7 +275,38 @@ public final class BlockDataCompat {
         }
     }
 
-    private static @Nullable Object getBlockData(@NotNull Block block) {
+    /**
+     * Check whether an end portal frame already holds an eye of ender.
+     *
+     * @return null when the block's state can't be determined, e.g. a modded block data type
+     */
+    public static @Nullable Boolean endPortalFrameHasEye(@NotNull Block block) {
+        Object blockData = getBlockData(block);
+        if (blockData != null) {
+            Class<?> frameClass = getClass(END_PORTAL_FRAME_CLASS);
+            if (frameClass == null || !frameClass.isInstance(blockData)) return null;
+
+            try {
+                return (Boolean) frameClass.getMethod("hasEye").invoke(blockData);
+            } catch (ReflectiveOperationException | RuntimeException | LinkageError exception) {
+                return null;
+            }
+        }
+
+        // Pre-1.13: the eye flag is bit 0x4 of the block's legacy data value
+        return (getLegacyData(block) & 0x4) != 0;
+    }
+
+    private static int getLegacyData(@NotNull Block block) {
+        try {
+            Object data = Block.class.getMethod("getData").invoke(block);
+            return data instanceof Byte ? ((Byte) data) & 0xFF : 0;
+        } catch (ReflectiveOperationException | RuntimeException | LinkageError exception) {
+            return 0;
+        }
+    }
+
+    public static @Nullable Object getBlockData(@NotNull Block block) {
         try {
             return Block.class.getMethod("getBlockData").invoke(block);
         } catch (ReflectiveOperationException | RuntimeException | LinkageError exception) {

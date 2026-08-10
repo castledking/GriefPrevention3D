@@ -2,6 +2,7 @@ package me.ryanhamshire.GriefPrevention;
 
 import com.griefprevention.compat.MaterialCompat;
 import com.griefprevention.compat.MaterialTagCompat;
+import me.ryanhamshire.GriefPrevention.compat.CompatUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
 import org.bukkit.ChunkSnapshot;
@@ -234,8 +235,10 @@ public class AutoExtendClaimTask implements Runnable
 
     private boolean isPlayerBlock(ChunkSnapshot chunkSnapshot, int x, int y, int z)
     {
-        Material blockType = chunkSnapshot.getBlockType(x, y, z);
-        Biome biome = chunkSnapshot.getBiome(x, y, z);
+        Material blockType = CompatUtil.getSnapshotBlockType(chunkSnapshot, x, y, z);
+        if (blockType == null) return false;
+
+        Biome biome = CompatUtil.getSnapshotBiome(chunkSnapshot, x, y, z);
 
         return this.getBiomePlayerBlocks(biome).contains(blockType);
     }
@@ -406,7 +409,8 @@ public class AutoExtendClaimTask implements Runnable
                 "DECORATED_POT");
     
         //these are unnatural in the nether and end
-        if (environment != Environment.NORMAL && environment != Environment.CUSTOM)
+        // CUSTOM is 1.16+, so it is matched by name rather than linked directly
+        if (environment != Environment.NORMAL && !"CUSTOM".equals(environment.name()))
         {
             addMaterialTags(playerBlocks,
                     "BASE_STONE_OVERWORLD",
@@ -489,8 +493,7 @@ public class AutoExtendClaimTask implements Runnable
         }
     
         //these are unnatural in sandy biomes, but not elsewhere
-        @SuppressWarnings("deprecation")
-        Object biomeKey = biome.getKey();
+        Object biomeKey = CompatUtil.getBiomeKey(biome);
         if (getSandSoilBiomes().contains(biomeKey) || environment != Environment.NORMAL)
         {
             addMaterialTags(playerBlocks, "LEAVES");

@@ -786,10 +786,7 @@ public class PlayerEventHandler implements Listener {
         }
 
         // detect player's client locale for per-player message support
-        try {
-            playerData.locale = player.getLocale();
-        } catch (Exception ignored) {
-        }
+        playerData.locale = CompatUtil.getLocale(player);
 
         // if newish, prevent chat until he's moved a bit to prove he's not a bot
         if (GriefPrevention.isNewToServer(player) && !player.hasPermission("griefprevention.premovementchat")) {
@@ -850,8 +847,7 @@ public class PlayerEventHandler implements Listener {
                                 OfflinePlayer bannedAccount = instance
                                     .getServer()
                                     .getOfflinePlayer(info2.bannedAccountName);
-                                BanList<PlayerProfile> banList = instance.getServer().getBanList(BanList.Type.PROFILE);
-                                banList.pardon(bannedAccount.getPlayerProfile());
+                                CompatUtil.pardon(bannedAccount);
                                 this.tempBannedIps.remove(j--);
                             }
                         }
@@ -1423,7 +1419,7 @@ public class PlayerEventHandler implements Listener {
         Player shooter = (Player) event.getEntity().getShooter();
         if (!instance.claimsEnabledForWorld(event.getEntity().getWorld())) return;
 
-        Block hitBlock = event.getHitBlock();
+        Block hitBlock = CompatUtil.getHitBlock(event);
         Location destLoc = hitBlock != null ? hitBlock.getLocation().add(0.5, 1, 0.5) : event.getEntity().getLocation();
         Supplier<String> noAccessReason = ProtectionHelper.checkPermission(
             shooter,
@@ -1432,7 +1428,9 @@ public class PlayerEventHandler implements Listener {
             null
         );
         if (noAccessReason != null) {
-            event.setCancelled(true);
+            // ProjectileHitEvent only became cancellable in 1.20.2; the rollback below still
+            // returns the player, so older versions degrade to a teleport-and-return.
+            CompatUtil.cancelIfPossible(event);
             // Skip refund if PlayerTeleportEvent already refunded (Purpur etc have both events fire)
             if (refundedByTeleportEvent.contains(shooter.getUniqueId())) return;
             // Only message/refund once - ProjectileHitEvent can fire multiple times when pearl hits entity
@@ -1474,7 +1472,7 @@ public class PlayerEventHandler implements Listener {
         Player shooter = (Player) event.getEntity().getShooter();
         if (!instance.claimsEnabledForWorld(event.getEntity().getWorld())) return;
 
-        Block hitBlock = event.getHitBlock();
+        Block hitBlock = CompatUtil.getHitBlock(event);
         Location destLoc = hitBlock != null ? hitBlock.getLocation().add(0.5, 1, 0.5) : event.getEntity().getLocation();
         Location fromLoc = shooter.getLocation().clone();
         UUID playerID = shooter.getUniqueId();
@@ -1620,7 +1618,7 @@ public class PlayerEventHandler implements Listener {
 
         // allow horse protection to be overridden to allow management from other
         // plugins
-        if (!instance.config_claims_protectHorses && entity instanceof AbstractHorse) return;
+        if (!instance.config_claims_protectHorses && CompatUtil.isAbstractHorse(entity)) return;
         if (
             !instance.config_claims_protectDonkeys &&
             CompatUtil.canCheckEntityType("Donkey") &&
@@ -1750,7 +1748,9 @@ public class PlayerEventHandler implements Listener {
         // if the entity is an animal or copper golem, apply container rules
         if (
             (instance.config_claims_preventTheft &&
-                (entity instanceof Animals || entity instanceof Fish || entity instanceof CopperGolem)) ||
+                (entity instanceof Animals ||
+                    entity instanceof Fish ||
+                    CompatUtil.isEntityType(entity, "COPPER_GOLEM"))) ||
             (entity.getType() == EntityType.VILLAGER && instance.config_claims_villagerTradingRequiresTrust)
         ) {
             Claim claim = this.dataStore.getClaimAt(entity.getLocation(), false, null);
@@ -1784,7 +1784,7 @@ public class PlayerEventHandler implements Listener {
         // if preventing theft, prevent leashing claimed creatures and boats
         if (
             instance.config_claims_preventTheft &&
-            itemInHand.getType() == Material.LEAD &&
+            CompatUtil.isLead(itemInHand.getType()) &&
             (entity.getType().name().contains("BOAT") || entity instanceof Creature)
         ) {
             Claim claim = this.dataStore.getClaimAt(entity.getLocation(), false, playerData.lastClaim);
@@ -1855,7 +1855,7 @@ public class PlayerEventHandler implements Listener {
 
             // only give the egg back if player is in survival or adventure
             if (player.getGameMode() == GameMode.SURVIVAL || player.getGameMode() == GameMode.ADVENTURE) {
-                player.getInventory().addItem(event.getEgg().getItem());
+                player.getInventory().addItem(CompatUtil.getEggItem(event.getEgg()));
             }
         }
     }
@@ -2254,12 +2254,16 @@ public class PlayerEventHandler implements Listener {
         // (items left in them are dropped to the floor on close), so PreventTheft does not
         // apply — the same way it does not apply to plain CRAFTING_TABLE. See upstream
         // GriefPrevention/GriefPrevention#2587.
+        // NOTE: LECTERN is deliberately excluded even though it is an InventoryHolder.
+        // Reading only needs access trust (handled in the doors/beds branch below, gated on
+        // LecternReadingRequiresAccessTrust), while taking the book needs container trust and
+        // is enforced by PlayerTakeLecternBookEventHandler. See upstream
+        // GriefPrevention/GriefPrevention#579.
         if (
             clickedBlock != null &&
             instance.config_claims_preventTheft &&
             event.getAction() == Action.RIGHT_CLICK_BLOCK &&
                 ((this.isInventoryHolder(clickedBlock) && !CompatUtil.isMaterial(clickedBlock.getType(), "LECTERN")) ||
-                    CompatUtil.isMaterial(clickedBlockType, "LECTERN") ||
                     clickedBlockType == Material.ANVIL ||
                     clickedBlockType == Material.BEACON ||
                     CompatUtil.isMaterial(clickedBlockType, "BEE_NEST") ||
@@ -3574,7 +3578,7 @@ public class PlayerEventHandler implements Listener {
                     cornerIndex,
                     target
                 );
-                if (nibResult.isValid()) {
+                if (isChangedShapedResize(polygon, nibResult)) {
                     return nibResult;
                 }
             }
@@ -3600,7 +3604,7 @@ public class PlayerEventHandler implements Listener {
                 cornerIndex,
                 target
             );
-            if (orthogonalNibResult != null && orthogonalNibResult.isValid()) {
+            if (orthogonalNibResult != null && isChangedShapedResize(polygon, orthogonalNibResult)) {
                 return orthogonalNibResult;
             }
         }
@@ -3612,6 +3616,15 @@ public class PlayerEventHandler implements Listener {
         }
 
         return polygon.moveEdgeRun(faceRun.startEdgeIndex(), faceRun.endEdgeIndex(), amount);
+    }
+
+    private boolean isChangedShapedResize(
+        @NotNull OrthogonalPolygon original,
+        @NotNull OrthogonalPolygonValidationResult result
+    ) {
+        return result.isValid() &&
+            result.polygon() != null &&
+            !result.polygon().corners().equals(original.corners());
     }
 
     private boolean isTargetCornerOnFaceRun(
@@ -3920,7 +3933,7 @@ public class PlayerEventHandler implements Listener {
         @NotNull OrthogonalPolygon originalPolygon,
         @Nullable OrthogonalPolygonValidationResult result
     ) {
-        if (result == null || !result.isValid() || result.polygon() == null) {
+        if (result == null || !isChangedShapedResize(originalPolygon, result)) {
             return;
         }
 

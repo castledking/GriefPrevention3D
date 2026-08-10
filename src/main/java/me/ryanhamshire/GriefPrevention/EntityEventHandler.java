@@ -179,9 +179,9 @@ public class EntityEventHandler implements Listener
         }
 
         // Prevent breaking lily pads via collision with a boat.
-        else if (event.getEntity() instanceof Vehicle && !event.getEntity().getPassengers().isEmpty())
+        else if (event.getEntity() instanceof Vehicle && !CompatUtil.getPassengers(event.getEntity()).isEmpty())
         {
-            Entity driver = event.getEntity().getPassengers().get(0);
+            Entity driver = CompatUtil.getPassengers(event.getEntity()).get(0);
             if (driver instanceof Player)
             {
                 Player player = (Player) driver;
@@ -264,7 +264,10 @@ public class EntityEventHandler implements Listener
         // Remove entity so it doesn't continuously spawn drops.
         fallingBlock.remove();
 
-        ItemStack itemStack = new ItemStack(fallingBlock.getBlockData().getMaterial(), 1);
+        Material fallingMaterial = CompatUtil.getFallingBlockMaterial(fallingBlock);
+        if (fallingMaterial == null) return;
+
+        ItemStack itemStack = new ItemStack(fallingMaterial, 1);
         block.getWorld().dropItemNaturally(fallingBlock.getLocation(), itemStack);
     }
 
@@ -310,7 +313,7 @@ public class EntityEventHandler implements Listener
             return;
 
         // Allow change if the config value is set, to enable things like TNT music disc farms on claims.
-        if (GriefPrevention.instance.config_mobProjectilesChangeBlocks && shooter instanceof Mob)
+        if (GriefPrevention.instance.config_mobProjectilesChangeBlocks && CompatUtil.isMob(shooter))
             return;
 
         // Prevent change in all other cases.
@@ -441,7 +444,7 @@ public class EntityEventHandler implements Listener
         for (Block block : blocks)
         {
             // Always ignore air blocks.
-            if (block.getType().isAir()) continue;
+            if (CompatUtil.isAir(block.getType())) continue;
 
             Claim claim = this.dataStore.getClaimAt(block.getLocation(), false, cachedClaim);
 
@@ -499,7 +502,7 @@ public class EntityEventHandler implements Listener
         for (Block block : blocks)
         {
             //always ignore air blocks
-            if (block.getType().isAir()) continue;
+            if (CompatUtil.isAir(block.getType())) continue;
 
             //is it in a land claim?
             Claim claim = this.dataStore.getClaimAt(block.getLocation(), false, cachedClaim);
@@ -749,7 +752,7 @@ public class EntityEventHandler implements Listener
             {
                 Hanging hanging = (Hanging) event.getEntity();
                 Block attachedBlock = hanging.getLocation().getBlock().getRelative(hanging.getAttachedFace());
-                if (!attachedBlock.getType().isAir())
+                if (!CompatUtil.isAir(attachedBlock.getType()))
                 {
                     event.setCancelled(true);
                 }

@@ -18,12 +18,10 @@
 
 package me.ryanhamshire.GriefPrevention;
 
+import me.ryanhamshire.GriefPrevention.compat.CompatUtil;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
-import org.bukkit.block.TileState;
-import org.bukkit.persistence.PersistentDataContainer;
-import org.bukkit.persistence.PersistentDataHolder;
 
 /**
  * Represents a snapshot of a block's state for restore nature operations.
@@ -83,19 +81,8 @@ public class BlockSnapshot {
             return false;
         }
 
-        if (!(block.getState() instanceof TileState)) {
-            return false;
-        }
-        TileState state = (TileState) block.getState();
-
-        return hasQuickShopSignKey(state);
-    }
-
-    private boolean hasQuickShopSignKey(PersistentDataHolder holder) {
-        PersistentDataContainer container = holder.getPersistentDataContainer();
-        return container.getKeys().stream()
-                .anyMatch(key -> key.getKey().equals("shopsign")
-                        && (key.getNamespace().equalsIgnoreCase("quickshop")
-                        || key.getNamespace().toLowerCase(java.util.Locale.ROOT).contains("quickshop")));
+        // The persistent data API is 1.14+. Naming those types here would make this class fail
+        // verification on older servers, so the lookup is done entirely through reflection.
+        return CompatUtil.hasPersistentDataKey(block.getState(), "shopsign", "quickshop");
     }
 }

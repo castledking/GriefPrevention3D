@@ -4601,24 +4601,14 @@ public class GriefPrevention extends JavaPlugin {
     public @Nullable String allowBuild(Player player, Location location, Material material) {
         if (!GriefPrevention.instance.claimsEnabledForWorld(location.getWorld())) return null;
 
-        ItemStack placed;
-        if (material.isItem()) {
-            placed = new ItemStack(material);
-        } else {
-            org.bukkit.block.BlockType blockType = material.asBlockType();
-            if (blockType != null && blockType.hasItemType()) {
-                placed = blockType.getItemType().createItemStack();
-            } else {
-                placed = new ItemStack(Material.DIRT);
-            }
-        }
+        ItemStack placed = CompatUtil.createItemStack(material);
 
         Block block = location.getBlock();
         Supplier<String> result = ProtectionHelper.checkPermission(
             player,
             location,
             ClaimPermission.Build,
-            new BlockPlaceEvent(block, block.getState(), block, placed, player, true, EquipmentSlot.HAND)
+            CompatUtil.createBlockPlaceEvent(block, block.getState(), block, placed, player, true)
         );
         return result == null ? null : result.get();
     }
@@ -4724,8 +4714,7 @@ public class GriefPrevention extends JavaPlugin {
                     .replace("%reason%", reason)
             );
         } else {
-            BanList<PlayerProfile> bans = Bukkit.getServer().getBanList(Type.PROFILE);
-            bans.addBan(player.getPlayerProfile(), reason, (Date) null, source);
+            CompatUtil.addBan(player, reason, source);
 
             // kick
             if (player.isOnline()) {

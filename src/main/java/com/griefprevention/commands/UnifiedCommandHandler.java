@@ -480,16 +480,15 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
         } else {
             // Not just a debug note - if this legacy name resolves to null, the command
             // silently stops working with no console output at all, which is very hard to
-            // diagnose. This happens if some other registration (e.g. a dynamic standalone
-            // command sharing the same alias) has claimed the name first.
+            // diagnose. Either the name is missing from plugin.yml, or some other registration
+            // (e.g. a dynamic standalone command sharing the same alias) claimed it first.
             plugin
                 .getLogger()
                 .warning(
                     "Could not register legacy standalone command '" +
                         commandName +
-                        "': plugin.getCommand(...) returned null. It may have been claimed by " +
-                        "another dynamic standalone command registration; check alias.yml for a " +
-                        "standalone entry using the same name."
+                        "': plugin.getCommand(...) returned null. Declare it in plugin.yml, or " +
+                        "check alias.yml for a standalone entry claiming the same name."
                 );
         }
     }

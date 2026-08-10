@@ -325,7 +325,8 @@ tasks {
             "me.ryanhamshire.GriefPrevention.EntityEventHandler",
             "me.ryanhamshire.GriefPrevention.EntityDamageHandler",
             "me.ryanhamshire.GriefPrevention.PlayerEventHandler",
-            "me.ryanhamshire.GriefPrevention.PlayerEventHandler#construct"
+            "me.ryanhamshire.GriefPrevention.PlayerEventHandler#construct",
+            "me.ryanhamshire.GriefPrevention.RestoreNatureProcessingTask#restore-nature-biome"
         )
     }
 
@@ -544,7 +545,8 @@ if (fabricAdapterProject != null) {
             "me.ryanhamshire.GriefPrevention.EntityEventHandler",
             "me.ryanhamshire.GriefPrevention.EntityDamageHandler",
             "me.ryanhamshire.GriefPrevention.PlayerEventHandler",
-            "me.ryanhamshire.GriefPrevention.PlayerEventHandler#construct"
+            "me.ryanhamshire.GriefPrevention.PlayerEventHandler#construct",
+            "me.ryanhamshire.GriefPrevention.RestoreNatureProcessingTask#restore-nature-biome"
         )
     }
 

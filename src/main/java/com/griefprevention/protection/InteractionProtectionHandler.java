@@ -1,5 +1,7 @@
 package com.griefprevention.protection;
 
+import com.griefprevention.compat.BlockDataCompat;
+import me.ryanhamshire.GriefPrevention.compat.CompatUtil;
 import me.ryanhamshire.GriefPrevention.ClaimPermission;
 import me.ryanhamshire.GriefPrevention.GriefPrevention;
 import me.ryanhamshire.GriefPrevention.TextMode;
@@ -52,12 +54,14 @@ public class InteractionProtectionHandler implements Listener
         if (!isEndPortalFrame) return;
 
         ItemStack item = event.getItem();
-        if (item == null || item.getType() != Material.ENDER_EYE) return;
+        // ENDER_EYE was named EYE_OF_ENDER before 1.13
+        if (item == null) return;
+        if (!CompatUtil.isMaterial(item.getType(), "ENDER_EYE")
+                && !CompatUtil.isMaterial(item.getType(), "EYE_OF_ENDER")) return;
 
-        // Use instanceof check instead of direct cast to safely handle potential modded block data implementations
-        if (!(block.getBlockData() instanceof org.bukkit.block.data.type.EndPortalFrame)) return;
-        org.bukkit.block.data.type.EndPortalFrame frameData = (org.bukkit.block.data.type.EndPortalFrame) block.getBlockData();
-        if (frameData.hasEye()) return;
+        // Null covers modded block data implementations and any state we can't read
+        Boolean hasEye = BlockDataCompat.endPortalFrameHasEye(block);
+        if (hasEye == null || hasEye) return;
 
         Player player = event.getPlayer();
         Supplier<String> noBuildReason = ProtectionHelper.checkPermission(player, block.getLocation(), ClaimPermission.Build, event);

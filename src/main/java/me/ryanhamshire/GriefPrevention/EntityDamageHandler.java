@@ -566,7 +566,8 @@ public class EntityDamageHandler implements Listener {
         PlayerData defenderData = dataStore.getPlayerData(defender.getUniqueId());
         Runnable cancelHandler = () -> {
             event.setCancelled(true);
-            pet.setTarget(null);
+            // Tameable doesn't extend Creature pre-1.9, so the target is cleared through a checked cast.
+            CompatUtil.clearTarget(pet);
         };
 
         // If the defender is PVP-immune, prevent the attack.
@@ -620,7 +621,7 @@ public class EntityDamageHandler implements Listener {
 
         // Wolves are exempt from pet protections in PVP worlds when their target is the
         // attacker
-        if (event.damaged().getType() == EntityType.WOLF && pet.getTarget() == attacker)
+        if (event.damaged().getType() == EntityType.WOLF && CompatUtil.getTarget(pet) == attacker)
             return true;
 
         Claim claim;
@@ -902,7 +903,7 @@ public class EntityDamageHandler implements Listener {
         AnimalTamer owner = tameable.getOwner();
         if (owner == null) {
             // Treat invalid state of tamed with no owner identically to untamed.
-            return tameable.getType() == EntityType.WOLF;
+            return event.damaged().getType() == EntityType.WOLF;
         }
 
         // limit attacks by players to owners and admins in ignore claims mode
@@ -919,9 +920,8 @@ public class EntityDamageHandler implements Listener {
             return true;
 
         // Allow players to attack wolves (dogs) if under attack by them.
-        if (tameable.getType() == EntityType.WOLF && tameable.getTarget() != null) {
-            if (tameable.getTarget() == attacker)
-                return true;
+        if (event.damaged().getType() == EntityType.WOLF && CompatUtil.getTarget(tameable) == attacker) {
+            return true;
         }
 
         event.setCancelled(true);

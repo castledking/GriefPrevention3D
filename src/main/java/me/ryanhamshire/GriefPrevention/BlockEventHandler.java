@@ -100,13 +100,13 @@ public class BlockEventHandler implements Listener {
         Inventory initiator = event.getInitiator();
         if (!(initiator.getHolder() instanceof Hopper)) return;
 
-        Location hopperLocation = initiator.getLocation();
+        Location hopperLocation = CompatUtil.getInventoryLocation(initiator);
         if (hopperLocation == null) return;
 
         Claim hopperClaim = this.dataStore.getClaimAt(hopperLocation, false, null);
 
-        Location sourceLocation = event.getSource().getLocation();
-        Location destLocation = event.getDestination().getLocation();
+        Location sourceLocation = CompatUtil.getInventoryLocation(event.getSource());
+        Location destLocation = CompatUtil.getInventoryLocation(event.getDestination());
 
         if (sourceLocation == null || destLocation == null) return;
 
@@ -657,7 +657,9 @@ public class BlockEventHandler implements Listener {
             GriefPrevention.instance.claimsEnabledForWorld(player.getWorld())
         ) {
             Block earthBlock = placeEvent.getBlockAgainst();
-            if (earthBlock.getType() != Material.SHORT_GRASS) {
+            // The sapling is placed against ground, so this is the grass *block* (GRASS pre-1.13,
+            // GRASS_BLOCK after). SHORT_GRASS is the plant and also doesn't exist before 1.20.3.
+            if (!CompatUtil.isGrassBlock(earthBlock.getType())) {
                 if (
                     earthBlock.getRelative(BlockFace.DOWN).getType() == Material.AIR ||
                     earthBlock.getRelative(BlockFace.DOWN).getRelative(BlockFace.DOWN).getType() == Material.AIR
@@ -1162,7 +1164,13 @@ public class BlockEventHandler implements Listener {
                 );
 
                 if (GriefPrevention.instance.config_pistonExplosionSound) {
-                    pistonBlock.getWorld().createExplosion(pistonBlock.getLocation(), 0, false, false);
+                    CompatUtil.createExplosion(
+                        pistonBlock.getWorld(),
+                        pistonBlock.getLocation(),
+                        0,
+                        false,
+                        false
+                    );
                 }
 
                 // Notify the nearest nearby player with build permission in the piston's claim,
@@ -1517,11 +1525,13 @@ public class BlockEventHandler implements Listener {
             }
 
             // In the event of spontaneous combustion, allow burning.
-            if (burnEvent.getIgnitingBlock() == null) return;
+            // Pre-1.13 has no igniting block at all, which is treated the same way.
+            Block ignitingBlock = CompatUtil.getIgnitingBlock(burnEvent);
+            if (ignitingBlock == null) return;
 
             // If source is external, i.e. wall on the claim border lit on fire from outside, do not allow.
             Claim burningClaim = this.dataStore.getClaimAt(
-                burnEvent.getIgnitingBlock().getLocation(),
+                ignitingBlock.getLocation(),
                 false,
                 burnClaim
             );
@@ -1663,11 +1673,13 @@ public class BlockEventHandler implements Listener {
         //don't track in worlds where claims are not enabled
         if (!GriefPrevention.instance.claimsEnabledForWorld(event.getEntity().getWorld())) return;
 
-        Block block = event.getHitBlock();
+        Block block = CompatUtil.getHitBlock(event);
 
         // Ensure projectile affects block.
         if (
-            block == null || (block.getType() != Material.CHORUS_FLOWER && block.getType() != Material.DECORATED_POT)
+            block == null ||
+            (!CompatUtil.isMaterial(block.getType(), "CHORUS_FLOWER") &&
+                !CompatUtil.isMaterial(block.getType(), "DECORATED_POT"))
         ) return;
 
         Claim claim = dataStore.getClaimAt(block.getLocation(), false, null);
@@ -1679,14 +1691,15 @@ public class BlockEventHandler implements Listener {
         if (projectile.getShooter() instanceof Player) shooter = (Player) projectile.getShooter();
 
         if (shooter == null) {
-            event.setCancelled(true);
+            // ProjectileHitEvent only became cancellable in 1.20.2.
+            CompatUtil.cancelIfPossible(event);
             return;
         }
 
         Supplier<String> allowContainer = claim.checkPermission(shooter, ClaimPermission.Container, event);
 
         if (allowContainer != null) {
-            event.setCancelled(true);
+            CompatUtil.cancelIfPossible(event);
             GriefPrevention.sendMessage(shooter, TextMode.Err, allowContainer.get());
             return;
         }
@@ -1771,7 +1784,10 @@ public class BlockEventHandler implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onNetherPortalCreate(final @NotNull PortalCreateEvent event) {
-        if (event.getReason() != PortalCreateEvent.CreateReason.NETHER_PAIR) {
+        // NETHER_PAIR is 1.14+; older versions report the generated destination portal as
+        // OBC_DESTINATION. Matched by name so neither constant is linked directly.
+        String reason = event.getReason().name();
+        if (!reason.equals("NETHER_PAIR") && !reason.equals("OBC_DESTINATION")) {
             return;
         }
 
@@ -1779,15 +1795,13 @@ public class BlockEventHandler implements Listener {
         if (!GriefPrevention.instance.claimsEnabledForWorld(event.getWorld())) return;
 
         // Ignore this event if preventNonPlayerCreatedPortals config option is disabled, and we don't know the entity.
-        if (
-            !(event.getEntity() instanceof Player) &&
-            !GriefPrevention.instance.config_claims_preventNonPlayerCreatedPortals
-        ) {
+        // Pre-1.14 never reports the creating entity, so it is always treated as unknown.
+        Entity entity = CompatUtil.getPortalCreateEntity(event);
+        if (!(entity instanceof Player) && !GriefPrevention.instance.config_claims_preventNonPlayerCreatedPortals) {
             return;
         }
 
         BiPredicate<Claim, BoundingBox> predicate;
-        Entity entity = event.getEntity();
         if (entity == null) {
             // No entity always means denial.
             predicate = (claim, claimBoundingBox) -> true;
@@ -1814,7 +1828,7 @@ public class BlockEventHandler implements Listener {
             };
         }
 
-        BoundingBox box = BoundingBox.ofStates(event.getBlocks());
+        BoundingBox box = BoundingBox.ofBlocks(CompatUtil.getPortalCreateBlocks(event));
         if (boxConflictsWithClaims(event.getWorld(), box, null, predicate)) {
             event.setCancelled(true);
         }

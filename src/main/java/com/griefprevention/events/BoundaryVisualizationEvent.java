@@ -9,6 +9,7 @@ import com.griefprevention.visualization.impl.FakeBlockVisualization;
 import com.griefprevention.visualization.impl.GlowingVisualization;
 import com.griefprevention.visualization.impl.LegacyFakeBlockVisualization;
 import me.ryanhamshire.GriefPrevention.GriefPrevention;
+import me.ryanhamshire.GriefPrevention.compat.CompatUtil;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
 import org.bukkit.event.HandlerList;
@@ -67,8 +68,7 @@ public class BoundaryVisualizationEvent extends PlayerEvent
                     }
 
                     // Use AntiCheat's transparency check
-                    Collection<BoundingBox> boundingBoxes = block.getCollisionShape().getBoundingBoxes();
-                    return boundingBoxes.isEmpty() || !boundingBoxes.stream().allMatch(box -> box.getVolume() == 1.0);
+                    return CompatUtil.hasPartialCollision(block);
                 }
             };
         }

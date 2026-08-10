@@ -20,6 +20,7 @@ package me.ryanhamshire.GriefPrevention;
 
 import com.griefprevention.compat.BlockDataCompat;
 import com.griefprevention.compat.MaterialCompat;
+import me.ryanhamshire.GriefPrevention.compat.CompatUtil;
 import me.ryanhamshire.GriefPrevention.util.SchedulerUtil;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -29,6 +30,7 @@ import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
 
 import java.util.EnumSet;
+import java.util.Locale;
 import java.util.Set;
 import java.util.UUID;
 
@@ -71,14 +73,12 @@ public class RestoreNatureProcessingTask implements Runnable {
         this.creativeMode = creativeMode;
 
         // Initialize materials that shouldn't hang
-        this.notAllowedToHang = EnumSet.of(
-                Material.DIRT,
-                Material.SHORT_GRASS,
-                Material.TALL_GRASS,
-                Material.SNOW,
-                Material.OAK_LOG, Material.SPRUCE_LOG, Material.BIRCH_LOG, Material.JUNGLE_LOG,
-                Material.ACACIA_LOG, Material.DARK_OAK_LOG
-        );
+        this.notAllowedToHang = EnumSet.noneOf(Material.class);
+        addMaterials(this.notAllowedToHang, "DIRT", "SNOW");
+        addMaterials(this.notAllowedToHang, "SHORT_GRASS", "LONG_GRASS");
+        addMaterials(this.notAllowedToHang, "TALL_GRASS", "DOUBLE_PLANT");
+        addMaterials(this.notAllowedToHang, "OAK_LOG", "SPRUCE_LOG", "BIRCH_LOG", "JUNGLE_LOG", "LOG");
+        addMaterials(this.notAllowedToHang, "ACACIA_LOG", "DARK_OAK_LOG", "LOG_2");
         try {
             this.notAllowedToHang.add(Material.valueOf("MANGROVE_LOG"));
         } catch (IllegalArgumentException e) {
@@ -144,12 +144,12 @@ public class RestoreNatureProcessingTask implements Runnable {
         }
 
         if (this.aggressiveMode) {
-            this.playerBlocks.add(Material.OAK_LEAVES);
-            this.playerBlocks.add(Material.SPRUCE_LEAVES);
-            this.playerBlocks.add(Material.BIRCH_LEAVES);
-            this.playerBlocks.add(Material.JUNGLE_LEAVES);
-            this.playerBlocks.add(Material.ACACIA_LEAVES);
-            this.playerBlocks.add(Material.DARK_OAK_LEAVES);
+            addMaterials(this.playerBlocks, "OAK_LEAVES", "LEAVES");
+            addMaterials(this.playerBlocks, "SPRUCE_LEAVES", "LEAVES");
+            addMaterials(this.playerBlocks, "BIRCH_LEAVES", "LEAVES");
+            addMaterials(this.playerBlocks, "JUNGLE_LEAVES", "LEAVES");
+            addMaterials(this.playerBlocks, "ACACIA_LEAVES", "LEAVES_2");
+            addMaterials(this.playerBlocks, "DARK_OAK_LEAVES", "LEAVES_2");
             try {
                 this.playerBlocks.add(Material.valueOf("MANGROVE_LEAVES"));
             } catch (IllegalArgumentException e) {
@@ -160,12 +160,12 @@ public class RestoreNatureProcessingTask implements Runnable {
             } catch (IllegalArgumentException e) {
                 // 1.8.8: CHERRY_LEAVES doesn't exist
             }
-            this.playerBlocks.add(Material.OAK_LOG);
-            this.playerBlocks.add(Material.SPRUCE_LOG);
-            this.playerBlocks.add(Material.BIRCH_LOG);
-            this.playerBlocks.add(Material.JUNGLE_LOG);
-            this.playerBlocks.add(Material.ACACIA_LOG);
-            this.playerBlocks.add(Material.DARK_OAK_LOG);
+            addMaterials(this.playerBlocks, "OAK_LOG", "LOG");
+            addMaterials(this.playerBlocks, "SPRUCE_LOG", "LOG");
+            addMaterials(this.playerBlocks, "BIRCH_LOG", "LOG");
+            addMaterials(this.playerBlocks, "JUNGLE_LOG", "LOG");
+            addMaterials(this.playerBlocks, "ACACIA_LOG", "LOG_2");
+            addMaterials(this.playerBlocks, "DARK_OAK_LOG", "LOG_2");
             try {
                 this.playerBlocks.add(Material.valueOf("MANGROVE_LOG"));
             } catch (IllegalArgumentException e) {
@@ -284,7 +284,7 @@ public class RestoreNatureProcessingTask implements Runnable {
         }
 
         for (BlockFace face : BlockFace.values()) {
-            if (!face.isCartesian()) {
+            if (!CompatUtil.isCartesian(face)) {
                 continue;
             }
 
@@ -404,7 +404,7 @@ public class RestoreNatureProcessingTask implements Runnable {
         if (environment == Environment.NETHER) {
             return Material.NETHERRACK;
         } else if (environment == Environment.THE_END) {
-            return Material.END_STONE;
+            return firstMaterial(Material.STONE, "END_STONE", "ENDER_STONE");
         }
         return Material.DIRT;
     }
@@ -413,18 +413,17 @@ public class RestoreNatureProcessingTask implements Runnable {
         if (environment == Environment.NETHER) {
             return Material.NETHERRACK;
         } else if (environment == Environment.THE_END) {
-            return Material.END_STONE;
+            return firstMaterial(Material.STONE, "END_STONE", "ENDER_STONE");
         }
 
         // Check biome for appropriate surface
-        @SuppressWarnings("deprecation")
-        String biomeName = biome != null ? biome.name() : "";
+        String biomeName = getBiomeName(biome);
         if (biomeName.contains("DESERT") || biomeName.contains("BEACH")) {
             return Material.SAND;
         } else if (biomeName.contains("BADLANDS") || biomeName.contains("MESA")) {
-            return Material.RED_SAND;
+            return firstMaterial(Material.SAND, "RED_SAND");
         } else if (biomeName.contains("MUSHROOM")) {
-            return Material.MYCELIUM;
+            return firstMaterial(Material.DIRT, "MYCELIUM", "MYCEL");
         }
 
         try {
@@ -443,15 +442,14 @@ public class RestoreNatureProcessingTask implements Runnable {
         if (environment == Environment.NETHER) {
             return Material.NETHERRACK;
         } else if (environment == Environment.THE_END) {
-            return Material.END_STONE;
+            return firstMaterial(Material.STONE, "END_STONE", "ENDER_STONE");
         }
 
-        @SuppressWarnings("deprecation")
-        String biomeName = biome != null ? biome.name() : "";
+        String biomeName = getBiomeName(biome);
         if (biomeName.contains("DESERT") || biomeName.contains("BEACH")) {
             return Material.SAND;
         } else if (biomeName.contains("BADLANDS") || biomeName.contains("MESA")) {
-            return Material.RED_SAND;
+            return firstMaterial(Material.SAND, "RED_SAND");
         }
 
         return Material.DIRT;
@@ -461,6 +459,41 @@ public class RestoreNatureProcessingTask implements Runnable {
      * Gets the set of materials considered to be player-placed based on environment and biome
      */
     @SuppressWarnings("null")
+    /**
+     * Add every material that exists on this server under one of the given names.
+     * The modern name comes first with older aliases after it, e.g. OAK_LOG was LOG before 1.13.
+     * Naming the constants directly would throw NoSuchFieldError on versions that lack them.
+     */
+    private static void addMaterials(Set<Material> materials, String... names) {
+        for (String name : names) {
+            Material material = MaterialCompat.get(name);
+            if (material != null) {
+                materials.add(material);
+            }
+        }
+    }
+
+    /**
+     * Resolve the first of the given material names that exists on this server.
+     */
+    private static Material firstMaterial(Material fallback, String... names) {
+        for (String name : names) {
+            Material material = MaterialCompat.get(name);
+            if (material != null) {
+                return material;
+            }
+        }
+        return fallback;
+    }
+
+    /**
+     * Returns a version-independent biome label. Calling Biome#name directly emits an
+     * invokeinterface instruction on current APIs, but Biome is a class on Bukkit 1.8.
+     */
+    private static String getBiomeName(Biome biome) {
+        return biome == null ? "" : String.valueOf((Object) biome).toUpperCase(Locale.ROOT);
+    }
+
     public static Set<Material> getPlayerBlocks(Environment environment, Biome biome) {
         Set<Material> playerBlocks = EnumSet.noneOf(Material.class);
 
@@ -469,95 +502,95 @@ public class RestoreNatureProcessingTask implements Runnable {
         playerBlocks.add(Material.BEDROCK);
         playerBlocks.add(Material.COBBLESTONE);
         playerBlocks.add(Material.TORCH);
-        playerBlocks.add(Material.WALL_TORCH);
+        addMaterials(playerBlocks, "WALL_TORCH", "TORCH");
         playerBlocks.add(Material.LADDER);
-        playerBlocks.add(Material.CRAFTING_TABLE);
+        addMaterials(playerBlocks, "CRAFTING_TABLE", "WORKBENCH");
         playerBlocks.add(Material.FURNACE);
         playerBlocks.add(Material.CHEST);
         playerBlocks.add(Material.TRAPPED_CHEST);
-        playerBlocks.add(Material.OAK_SIGN);
-        playerBlocks.add(Material.SPRUCE_SIGN);
-        playerBlocks.add(Material.BIRCH_SIGN);
-        playerBlocks.add(Material.JUNGLE_SIGN);
-        playerBlocks.add(Material.ACACIA_SIGN);
-        playerBlocks.add(Material.DARK_OAK_SIGN);
-        playerBlocks.add(Material.OAK_WALL_SIGN);
-        playerBlocks.add(Material.SPRUCE_WALL_SIGN);
-        playerBlocks.add(Material.BIRCH_WALL_SIGN);
-        playerBlocks.add(Material.JUNGLE_WALL_SIGN);
-        playerBlocks.add(Material.ACACIA_WALL_SIGN);
-        playerBlocks.add(Material.DARK_OAK_WALL_SIGN);
-        playerBlocks.add(Material.OAK_FENCE);
-        playerBlocks.add(Material.NETHER_BRICK_FENCE);
+        addMaterials(playerBlocks, "OAK_SIGN", "SIGN_POST", "SIGN");
+        addMaterials(playerBlocks, "SPRUCE_SIGN", "SIGN_POST", "SIGN");
+        addMaterials(playerBlocks, "BIRCH_SIGN", "SIGN_POST", "SIGN");
+        addMaterials(playerBlocks, "JUNGLE_SIGN", "SIGN_POST", "SIGN");
+        addMaterials(playerBlocks, "ACACIA_SIGN", "SIGN_POST", "SIGN");
+        addMaterials(playerBlocks, "DARK_OAK_SIGN", "SIGN_POST", "SIGN");
+        addMaterials(playerBlocks, "OAK_WALL_SIGN", "WALL_SIGN");
+        addMaterials(playerBlocks, "SPRUCE_WALL_SIGN", "WALL_SIGN");
+        addMaterials(playerBlocks, "BIRCH_WALL_SIGN", "WALL_SIGN");
+        addMaterials(playerBlocks, "JUNGLE_WALL_SIGN", "WALL_SIGN");
+        addMaterials(playerBlocks, "ACACIA_WALL_SIGN", "WALL_SIGN");
+        addMaterials(playerBlocks, "DARK_OAK_WALL_SIGN", "WALL_SIGN");
+        addMaterials(playerBlocks, "OAK_FENCE", "FENCE");
+        addMaterials(playerBlocks, "NETHER_BRICK_FENCE", "NETHER_FENCE");
         playerBlocks.add(Material.GLASS);
-        playerBlocks.add(Material.GLASS_PANE);
-        playerBlocks.add(Material.OAK_DOOR);
+        addMaterials(playerBlocks, "GLASS_PANE", "THIN_GLASS");
+        addMaterials(playerBlocks, "OAK_DOOR", "WOODEN_DOOR", "WOOD_DOOR");
         playerBlocks.add(Material.IRON_DOOR);
-        playerBlocks.add(Material.RAIL);
+        addMaterials(playerBlocks, "RAIL", "RAILS");
         playerBlocks.add(Material.POWERED_RAIL);
         playerBlocks.add(Material.DETECTOR_RAIL);
         playerBlocks.add(Material.ACTIVATOR_RAIL);
         playerBlocks.add(Material.TNT);
         playerBlocks.add(Material.BOOKSHELF);
         playerBlocks.add(Material.JACK_O_LANTERN);
-        playerBlocks.add(Material.STONE_BRICKS);
-        playerBlocks.add(Material.MOSSY_STONE_BRICKS);
-        playerBlocks.add(Material.CRACKED_STONE_BRICKS);
-        playerBlocks.add(Material.CHISELED_STONE_BRICKS);
+        addMaterials(playerBlocks, "STONE_BRICKS", "SMOOTH_BRICK");
+        addMaterials(playerBlocks, "MOSSY_STONE_BRICKS", "SMOOTH_BRICK");
+        addMaterials(playerBlocks, "CRACKED_STONE_BRICKS", "SMOOTH_BRICK");
+        addMaterials(playerBlocks, "CHISELED_STONE_BRICKS", "SMOOTH_BRICK");
 
         // All wool colors
-        playerBlocks.add(Material.WHITE_WOOL);
-        playerBlocks.add(Material.ORANGE_WOOL);
-        playerBlocks.add(Material.MAGENTA_WOOL);
-        playerBlocks.add(Material.LIGHT_BLUE_WOOL);
-        playerBlocks.add(Material.YELLOW_WOOL);
-        playerBlocks.add(Material.LIME_WOOL);
-        playerBlocks.add(Material.PINK_WOOL);
-        playerBlocks.add(Material.GRAY_WOOL);
-        playerBlocks.add(Material.LIGHT_GRAY_WOOL);
-        playerBlocks.add(Material.CYAN_WOOL);
-        playerBlocks.add(Material.PURPLE_WOOL);
-        playerBlocks.add(Material.BLUE_WOOL);
-        playerBlocks.add(Material.BROWN_WOOL);
-        playerBlocks.add(Material.GREEN_WOOL);
-        playerBlocks.add(Material.RED_WOOL);
-        playerBlocks.add(Material.BLACK_WOOL);
+        addMaterials(playerBlocks, "WHITE_WOOL", "WOOL");
+        addMaterials(playerBlocks, "ORANGE_WOOL", "WOOL");
+        addMaterials(playerBlocks, "MAGENTA_WOOL", "WOOL");
+        addMaterials(playerBlocks, "LIGHT_BLUE_WOOL", "WOOL");
+        addMaterials(playerBlocks, "YELLOW_WOOL", "WOOL");
+        addMaterials(playerBlocks, "LIME_WOOL", "WOOL");
+        addMaterials(playerBlocks, "PINK_WOOL", "WOOL");
+        addMaterials(playerBlocks, "GRAY_WOOL", "WOOL");
+        addMaterials(playerBlocks, "LIGHT_GRAY_WOOL", "WOOL");
+        addMaterials(playerBlocks, "CYAN_WOOL", "WOOL");
+        addMaterials(playerBlocks, "PURPLE_WOOL", "WOOL");
+        addMaterials(playerBlocks, "BLUE_WOOL", "WOOL");
+        addMaterials(playerBlocks, "BROWN_WOOL", "WOOL");
+        addMaterials(playerBlocks, "GREEN_WOOL", "WOOL");
+        addMaterials(playerBlocks, "RED_WOOL", "WOOL");
+        addMaterials(playerBlocks, "BLACK_WOOL", "WOOL");
 
         // Planks and slabs
-        playerBlocks.add(Material.OAK_PLANKS);
-        playerBlocks.add(Material.SPRUCE_PLANKS);
-        playerBlocks.add(Material.BIRCH_PLANKS);
-        playerBlocks.add(Material.JUNGLE_PLANKS);
-        playerBlocks.add(Material.ACACIA_PLANKS);
-        playerBlocks.add(Material.DARK_OAK_PLANKS);
-        playerBlocks.add(Material.OAK_SLAB);
-        playerBlocks.add(Material.SPRUCE_SLAB);
-        playerBlocks.add(Material.BIRCH_SLAB);
-        playerBlocks.add(Material.JUNGLE_SLAB);
-        playerBlocks.add(Material.ACACIA_SLAB);
-        playerBlocks.add(Material.DARK_OAK_SLAB);
-        playerBlocks.add(Material.STONE_SLAB);
-        playerBlocks.add(Material.COBBLESTONE_SLAB);
-        playerBlocks.add(Material.BRICK_SLAB);
-        playerBlocks.add(Material.STONE_BRICK_SLAB);
-        playerBlocks.add(Material.NETHER_BRICK_SLAB);
+        addMaterials(playerBlocks, "OAK_PLANKS", "WOOD");
+        addMaterials(playerBlocks, "SPRUCE_PLANKS", "WOOD");
+        addMaterials(playerBlocks, "BIRCH_PLANKS", "WOOD");
+        addMaterials(playerBlocks, "JUNGLE_PLANKS", "WOOD");
+        addMaterials(playerBlocks, "ACACIA_PLANKS", "WOOD");
+        addMaterials(playerBlocks, "DARK_OAK_PLANKS", "WOOD");
+        addMaterials(playerBlocks, "OAK_SLAB", "WOOD_STEP");
+        addMaterials(playerBlocks, "SPRUCE_SLAB", "WOOD_STEP");
+        addMaterials(playerBlocks, "BIRCH_SLAB", "WOOD_STEP");
+        addMaterials(playerBlocks, "JUNGLE_SLAB", "WOOD_STEP");
+        addMaterials(playerBlocks, "ACACIA_SLAB", "WOOD_STEP");
+        addMaterials(playerBlocks, "DARK_OAK_SLAB", "WOOD_STEP");
+        addMaterials(playerBlocks, "STONE_SLAB", "STEP");
+        addMaterials(playerBlocks, "COBBLESTONE_SLAB", "STEP");
+        addMaterials(playerBlocks, "BRICK_SLAB", "STEP");
+        addMaterials(playerBlocks, "STONE_BRICK_SLAB", "STEP");
+        addMaterials(playerBlocks, "NETHER_BRICK_SLAB", "STEP");
 
         // Beds
-        playerBlocks.add(Material.WHITE_BED);
-        playerBlocks.add(Material.RED_BED);
-        playerBlocks.add(Material.BLACK_BED);
+        addMaterials(playerBlocks, "WHITE_BED", "BED_BLOCK");
+        addMaterials(playerBlocks, "RED_BED", "BED_BLOCK");
+        addMaterials(playerBlocks, "BLACK_BED", "BED_BLOCK");
 
         // Misc
-        playerBlocks.add(Material.COBWEB);
+        addMaterials(playerBlocks, "COBWEB", "WEB");
         playerBlocks.add(Material.DISPENSER);
         playerBlocks.add(Material.NOTE_BLOCK);
-        playerBlocks.add(Material.STICKY_PISTON);
-        playerBlocks.add(Material.PISTON);
-        playerBlocks.add(Material.BRICKS);
+        addMaterials(playerBlocks, "STICKY_PISTON", "PISTON_STICKY_BASE");
+        addMaterials(playerBlocks, "PISTON", "PISTON_BASE");
+        addMaterials(playerBlocks, "BRICKS", "BRICK");
         playerBlocks.add(Material.OBSIDIAN);
-        playerBlocks.add(Material.SPAWNER);
+        addMaterials(playerBlocks, "SPAWNER", "MOB_SPAWNER");
         playerBlocks.addAll(MaterialCompat.availableSet("FARMLAND", "SOIL"));
-        playerBlocks.add(Material.ENCHANTING_TABLE);
+        addMaterials(playerBlocks, "ENCHANTING_TABLE", "ENCHANTMENT_TABLE");
         try {
             playerBlocks.add(Material.valueOf("BREWING_STAND"));
         } catch (IllegalArgumentException e) {

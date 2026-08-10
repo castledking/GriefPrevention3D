@@ -1,12 +1,10 @@
 package com.griefprevention.visualization.impl;
 
 import com.griefprevention.util.IntVector;
+import me.ryanhamshire.GriefPrevention.compat.CompatUtil;
 import org.bukkit.World;
 import org.bukkit.block.Block;
-import org.bukkit.util.BoundingBox;
 import org.jetbrains.annotations.NotNull;
-
-import java.util.Collection;
 
 /**
  * A {@link FakeBlockVisualization} with maximum anti-cheat compatibility.
@@ -34,9 +32,8 @@ public class AntiCheatCompatVisualization extends FakeBlockVisualization
             return false;
         }
 
-        Collection<BoundingBox> boundingBoxes = block.getCollisionShape().getBoundingBoxes();
         // Decide transparency based on whether block physical bounding box occupies the entire block volume.
-        return boundingBoxes.isEmpty() || !boundingBoxes.stream().allMatch(box -> box.getVolume() == 1.0);
+        return CompatUtil.hasPartialCollision(block);
     }
 
 }

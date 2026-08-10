@@ -18,6 +18,7 @@
 
 package me.ryanhamshire.GriefPrevention;
 
+import com.griefprevention.compat.BlockDataCompat;
 import com.griefprevention.visualization.BoundaryVisualization;
 import com.griefprevention.visualization.VisualizationType;
 import me.ryanhamshire.GriefPrevention.util.SchedulerUtil;
@@ -78,7 +79,8 @@ public class RestoreNatureExecutionTask implements Runnable {
 
                     // Check if the block actually changed
                     if (blockUpdate.material != currentBlock.getType() ||
-                            !blockUpdate.blockData.equals(currentBlock.getBlockData())) {
+                            !java.util.Objects.equals(blockUpdate.blockData,
+                                    BlockDataCompat.getBlockData(currentBlock))) {
 
                         // In aggressive mode, modify all blocks (including claimed ones)
                         // Otherwise, only modify unclaimed blocks
