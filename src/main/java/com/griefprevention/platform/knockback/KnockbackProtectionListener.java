@@ -18,6 +18,13 @@ import org.jetbrains.annotations.NotNull;
 public class KnockbackProtectionListener implements PlatformListener
 {
 
+    enum KnockbackApi
+    {
+        PAPER,
+        SPIGOT,
+        UNSUPPORTED
+    }
+
     private final DataStore dataStore;
     private final GriefPrevention plugin;
 
@@ -30,11 +37,9 @@ public class KnockbackProtectionListener implements PlatformListener
     @Override
     public boolean isSupported()
     {
-        // Example check if the required event class exists for the current
-        // platform. In this case, both Paper and Spigot support these events,
-        // but this pattern is useful for listeners that depend on classes
-        // which may not exist on all servers.
-        switch (PlatformDetection.getPlatform())
+        // Paper-compatible platforms and Spigot expose different knockback events.
+        // Verify the selected API is present before loading its handler class.
+        switch (knockbackApiFor(PlatformDetection.getPlatform()))
         {
             case PAPER:
                 return PlatformDetection.classExists("com.destroystokyo.paper.event.entity.EntityKnockbackByEntityEvent")
@@ -49,7 +54,7 @@ public class KnockbackProtectionListener implements PlatformListener
     @Override
     public @NotNull Listener create()
     {
-        switch (PlatformDetection.getPlatform())
+        switch (knockbackApiFor(PlatformDetection.getPlatform()))
         {
             case PAPER:
                 return new PaperKnockbackProtectionHandler(dataStore, plugin);
@@ -57,6 +62,20 @@ public class KnockbackProtectionListener implements PlatformListener
                 return new SpigotKnockbackProtectionHandler(dataStore, plugin);
             default:
                 return new SpigotKnockbackProtectionHandler(dataStore, plugin);
+        }
+    }
+
+    static @NotNull KnockbackApi knockbackApiFor(@NotNull PlatformDetection.Platform platform)
+    {
+        switch (platform)
+        {
+            case CANVAS:
+            case PAPER:
+                return KnockbackApi.PAPER;
+            case SPIGOT:
+                return KnockbackApi.SPIGOT;
+            default:
+                return KnockbackApi.UNSUPPORTED;
         }
     }
 
