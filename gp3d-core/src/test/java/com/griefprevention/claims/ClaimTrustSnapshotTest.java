@@ -26,20 +26,37 @@ class ClaimTrustSnapshotTest {
     }
 
     @Test
-    void managerTrustGrantsLowerLevelsButNotOwnerOnlyEdit() {
-        UUID manager = UUID.randomUUID();
+    void manageTrustIsSeparateFromInteractionTrust() {
+        UUID manage = UUID.randomUUID();
         ClaimTrustSnapshot trust = new ClaimTrustSnapshot(
             null,
             Collections.emptyMap(),
-            Collections.singletonList(manager.toString()),
+            Collections.singletonList(manage.toString()),
             Collections.emptyList()
         );
 
-        assertFalse(trust.hasExplicitPermission(manager, ClaimTrustLevel.EDIT));
-        assertTrue(trust.hasExplicitPermission(manager, ClaimTrustLevel.MANAGE));
-        assertTrue(trust.hasExplicitPermission(manager, ClaimTrustLevel.BUILD));
-        assertTrue(trust.hasExplicitPermission(manager, ClaimTrustLevel.CONTAINER));
-        assertTrue(trust.hasExplicitPermission(manager, ClaimTrustLevel.ACCESS));
+        assertFalse(trust.hasExplicitPermission(manage, ClaimTrustLevel.EDIT));
+        assertTrue(trust.hasExplicitPermission(manage, ClaimTrustLevel.MANAGE));
+        assertFalse(trust.hasExplicitPermission(manage, ClaimTrustLevel.BUILD));
+        assertFalse(trust.hasExplicitPermission(manage, ClaimTrustLevel.CONTAINER));
+        assertFalse(trust.hasExplicitPermission(manage, ClaimTrustLevel.ACCESS));
+    }
+
+    @Test
+    void manageTrustStacksWithInteractionTrust() {
+        UUID player = UUID.randomUUID();
+        ClaimTrustSnapshot trust = new ClaimTrustSnapshot(
+            null,
+            Collections.singletonMap(player.toString(), ClaimTrustLevel.BUILD),
+            Collections.singletonList(player.toString()),
+            Collections.emptyList()
+        );
+
+        assertTrue(trust.hasExplicitPermission(player, ClaimTrustLevel.MANAGE));
+        assertTrue(trust.hasExplicitPermission(player, ClaimTrustLevel.BUILD));
+        assertTrue(trust.hasExplicitPermission(player, ClaimTrustLevel.CONTAINER));
+        assertTrue(trust.hasExplicitPermission(player, ClaimTrustLevel.ACCESS));
+        assertFalse(trust.hasExplicitPermission(player, ClaimTrustLevel.EDIT));
     }
 
     @Test
@@ -140,6 +157,25 @@ class ClaimTrustSnapshotTest {
         assertFalse(trust.hasExplicitPermission(vip, ClaimTrustLevel.BUILD));
         assertTrue(trust.hasExplicitPermission(staff, ClaimTrustLevel.MANAGE));
         assertTrue(trust.isPermissionDenied(blocked, ClaimTrustLevel.ACCESS));
+    }
+
+    @Test
+    void generallyDeniedPermissionIdentifierCannotGrantExplicitTrust() {
+        UUID player = UUID.randomUUID();
+        ClaimTrustSnapshot trust = new ClaimTrustSnapshot(
+            null,
+            Collections.singletonMap("[gp3d.vip]", ClaimTrustLevel.BUILD),
+            Collections.emptyList(),
+            Collections.singletonList("[gp3d.vip]")
+        );
+
+        ClaimAccessSubject subject = ClaimAccessSubject.of(
+            player,
+            Collections.singletonList("[gp3d.vip]")
+        );
+
+        assertFalse(trust.hasExplicitPermission(subject, ClaimTrustLevel.ACCESS));
+        assertFalse(trust.hasExplicitPermission(subject, ClaimTrustLevel.BUILD));
     }
 
     @Test

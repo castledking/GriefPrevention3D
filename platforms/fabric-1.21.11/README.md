@@ -58,20 +58,46 @@ complete claim graph is validated, and the copy is atomically promoted to `plugi
 marker, startup fails closed instead of guessing which data is authoritative.
 
 `config.yml` and `messages.yml` are seeded under the same roots as the Paper plugin. They currently contain only
-the Fabric-wired subset and are not overwritten after creation. Fabric reads the existing upstream explosion
-keys without rewriting any unrelated config or addon fields.
+the Fabric-wired subset. On each Fabric boot, newly shipped keys missing from an existing file are inserted while
+existing values, comments, ordering, and unknown addon fields remain untouched. Legacy claim-block key values are
+carried into their newer Paper-shaped keys instead of being reset to defaults. Fabric reads the existing upstream
+explosion keys without rewriting any unrelated config or addon fields.
 
 Claim YAML is decoded through the platform-neutral `gp3d-core` document codec. Shaped corners, nested
 subdivisions, 2D/3D state, trust, inheritance flags, explosion/PvP/alert flags, modified dates, and unknown addon
 fields survive semantic round trips. Player files under `PlayerData` use the same shared four-line decoder on
 Paper and Fabric. Fabric reads accrued and personal bonus entitlements lazily, derives used blocks from exact
-top-level claim area, and leaves every player file byte-for-byte untouched during claim mutations. A malformed
-player record fails that player's mutation closed rather than overwriting the record.
+top-level claim area, and leaves every player file byte-for-byte untouched during ordinary claim mutations. When
+`Claims.AbandonReturnRatio` is not `1.0`, abandoning an owned top-level claim atomically adjusts only the accrued
+block line with Bukkit's exact ceiling arithmetic; legacy lines, line endings, and addon data remain unchanged.
+A malformed or concurrently changed player record fails the mutation closed rather than being overwritten, and
+the claim deletion is rolled back if the entitlement update cannot be committed.
+
+Playtime claim blocks use Bukkit's global ten-minute cadence and integer division, so the default 100-block
+hourly rate delivers 16 blocks per check (96 over six uninterrupted checks). The first check treats a player as
+active unless they are riding or in liquid; later checks apply `Accrued Idle Threshold` movement detection and
+`AccruedIdlePercent`. Accrual applies in every world—including creative and claim-disabled worlds—matching
+Bukkit. Each delivered award participates immediately in balance and claim mutations and is atomically written
+to only the accrued-block line before the delivery completes. Disconnect and server shutdown retry any award
+whose write failed.
+The configured maximum uses Bukkit's ordinary integer/cap behavior.
+Also like Bukkit, a zero-or-negative hourly rate at startup does not schedule the task; changing it positive then
+requires a server restart.
 
 Permission-group bonus files named `PlayerData/$<permission>` are loaded with Bukkit-compatible integer
 semantics. When LuckPerms is installed, online-player permissions contribute those bonuses through its optional
-API; the universal jar keeps no hard LuckPerms runtime dependency. Without a permission provider, group bonuses
-remain zero, matching Bukkit's offline/no-applicable-permission behavior.
+API and `griefprevention.overrideclaimcountlimit` bypasses the configured per-player claim cap. Minecraft
+operators receive the same bypass without LuckPerms. The universal jar keeps no hard LuckPerms runtime
+dependency. Without a permission provider, group bonuses remain zero, matching Bukkit's
+offline/no-applicable-permission behavior. The same bridge honors `griefprevention.accruals` (default allowed)
+and `griefprevention.accruals.afkbypass` (default operator-only), including explicit LuckPerms denials.
+Paper-compatible `[permission.node]` entries in Builders, Containers, Accessors, and Managers are resolved through
+that same optional bridge for block/entity protections and explosion-trigger access. General and level-specific
+permission-node deny entries are included in the subject evaluation. The temporary trust commands accept either
+the quoted bracketed form or a bare dotted permission and persist the bracketed Bukkit representation. Player
+names resolve through the online list and Minecraft's previously seen-player cache. Permission-node grants require
+`griefprevention.permissiontrust`; on Fabric it inherits from `griefprevention.adminclaims`, with operator status
+as the no-provider default. Manage grants use the renamed `griefprevention.managetrust` permission.
 
 An older or unversioned YAML layout is migrated only after the complete claim graph validates. Before promotion,
 the existing data folder is copied under `GriefPreventionData/MigrationBackups/`. Invalid, ambiguous, or newer
@@ -109,21 +135,27 @@ Temporary admin commands:
 - `/gp3d claim blocks`
 - `/gp3d claim list`
 - `/gp3d claim abandon`
-- `/gp3d claim trust <public|uuid|online-player> <access|container|build|manage|neighbor>`
-- `/gp3d claim untrust <public|uuid|online-player>`
+- `/gp3d claim trust <public|uuid|known-player|permission.node> <access|container|build|manage|neighbor>`
+- `/gp3d claim untrust <public|uuid|known-player|permission.node>`
 
 `claim create` currently creates a top-level rectangular 2D claim centered on the executor and writes it under
 `ClaimData`. `claim abandon` removes the claim at the executor's current block and writes the updated files.
-`claim trust` and `claim untrust` update the claim at the executor's current block. Trust targets are currently
-limited to `public`, a UUID, or an online player name.
+`claim trust` and `claim untrust` update the claim at the executor's current block. Trust targets may be `public`,
+a UUID, a current or previously seen player name, a bare dotted permission node, or `"[permission.node]"`
+(quotes are required by Fabric's command parser for the bracketed form). Command success replies are sent only
+to the executor rather than broadcast to other operators.
 This is a temporary test path for native Fabric persistence. Claim creation enforces the same derived
-accrued + personal bonus + applicable group bonus - top-level claim area balance as Bukkit. Player limits,
-playtime accrual, economy operations, and administrative balance commands are not wired yet.
+accrued + personal bonus + applicable group bonus - top-level claim area balance as Bukkit. The upstream
+`MaximumNumberOfClaimsPerPlayer` limit and non-default `AbandonReturnRatio` behavior are wired. Playtime accrual,
+including its cap and idle rules, is also wired. Economy operations and administrative balance commands are not
+wired yet.
 
 Temporary claim tool coverage:
 
 - Right-clicking a block with a stick inspects the claim at that block.
 - Right-clicking unclaimed land with a golden shovel starts a two-corner basic claim creation session.
+- The first claim corner is rejected at the configured top-level claim-count limit unless the player has the
+  upstream override permission (or operator status); persistence rechecks the limit before creating the claim.
 - Right-clicking an owned claim corner with a golden shovel starts a resize session; the next golden shovel
   right-click moves that corner.
 - Claim creation and resize enforce a temporary 5x5 minimum, enforce the owner's available claim blocks, and
@@ -160,14 +192,25 @@ Manual explosion/migration gate:
 3. Test TNT and creeper damage with `Explosives Allowed` both `false` and `true`; test wither and wither-skull
    damage independently with `Wither Explosions Allowed` both `false` and `true`.
 4. Check `/gp3d claim blocks`, then create, resize, and abandon a claim on Fabric. Confirm insufficient create and
-   resize attempts are denied, while shrinking and abandoning make the exact area available again.
+   resize attempts are denied. Test a positive `MaximumNumberOfClaimsPerPlayer` with and without the operator or
+   LuckPerms override. With the default return ratio, shrinking and abandoning make the exact area available.
+   With `AbandonReturnRatio: 0.5`, abandoning a 25-block claim removes 13 accrued blocks, matching Bukkit's
+   ceiling behavior.
 5. Stop the server, then boot Paper without moving the data. Verify geometry, graph relationships, policies,
-   trust, unknown fields, byte-identical player entitlement files, and the same remaining claim-block result.
+   trust, unknown fields, and the same remaining claim-block result. Player files must stay byte-identical at the
+   default return ratio; at a non-default ratio, only the accrued-block line may differ.
+6. Set `Claim Blocks Accrued Per Hour.Default` to `600`, remain active through one global ten-minute check, and
+   confirm `/gp3d claim blocks` increases by 100. Restart without a disconnect callback, then boot Fabric or
+   Paper and confirm that exact accrued balance persisted. Repeat while stationary with a positive idle threshold and both zero/non-zero
+   `AccruedIdlePercent`; operators bypass the idle reduction by default.
+7. With LuckPerms installed, grant a second player `gp3d.test.container`, then run
+   `/gp3d claim trust gp3d.test.container container` from inside a claim. Confirm the second player can open a
+   container but cannot place or break blocks. Restart Fabric, repeat the check, and confirm the claim YAML stores
+   `gp3d.test.container` as `[gp3d.test.container]`. Switch to Paper and verify the same permission trust works.
 
 Next implementation slices:
 
-1. Apply permission-provider identifiers to trust subjects in addition to the claim-block LuckPerms bridge.
-2. Add denial feedback messages with rate limiting.
-3. Expand protection hooks into fluid spread, piston, and remaining entity environmental paths.
-4. Expand player-facing claim tools into subdivision and richer selection sessions.
-5. Add player limits, playtime accrual, non-default abandon-return behavior, and legacy/database import tooling.
+1. Add denial feedback messages with rate limiting.
+2. Expand protection hooks into fluid spread, piston, and remaining entity environmental paths.
+3. Expand player-facing claim tools into subdivision and richer selection sessions.
+4. Add administrative/economy balance operations and legacy/database import tooling.

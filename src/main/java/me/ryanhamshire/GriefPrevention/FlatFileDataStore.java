@@ -20,7 +20,6 @@ package me.ryanhamshire.GriefPrevention;
 
 import com.google.common.io.Files;
 import com.griefprevention.claims.ClaimSnapshot;
-import com.griefprevention.claims.ClaimTrustLevel;
 import com.griefprevention.claims.ClaimTrustSnapshot;
 import com.griefprevention.geometry.OrthogonalPoint2i;
 import com.griefprevention.persistence.ClaimDocument;
@@ -845,14 +844,12 @@ public class FlatFileDataStore extends DataStore
     {
         ClaimDocument previous = claim.id == null ? null : this.loadedClaimDocuments.get(claim.id);
         ClaimTrustSnapshot rawTrust = claim.getTrustSnapshot();
-        Map<String, ClaimTrustLevel> permissions = new LinkedHashMap<>(rawTrust.permissionsByIdentifier());
-        for (String manager : rawTrust.managerIdentifiers())
-        {
-            permissions.remove(ClaimTrustSnapshot.normalizeIdentifier(manager));
-        }
+        // Manage trust is its own track and never appears in the interaction map, so both are
+        // written as-is. Dropping managers from the map here would erase the build/container/access
+        // trust of anyone who is also a manager.
         ClaimTrustSnapshot trust = new ClaimTrustSnapshot(
                 claim.ownerID,
-                permissions,
+                rawTrust.permissionsByIdentifier(),
                 rawTrust.managerIdentifiers(),
                 rawTrust.deniedIdentifiers()
         );

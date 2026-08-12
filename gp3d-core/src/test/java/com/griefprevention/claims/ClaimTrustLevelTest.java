@@ -19,11 +19,11 @@ class ClaimTrustLevelTest
     }
 
     @Test
-    void manageGrantsBuildContainerAccess()
+    void manageDoesNotGrantInteractionAccess()
     {
-        assertTrue(ClaimTrustLevel.BUILD.isGrantedBy(ClaimTrustLevel.MANAGE));
-        assertTrue(ClaimTrustLevel.CONTAINER.isGrantedBy(ClaimTrustLevel.MANAGE));
-        assertTrue(ClaimTrustLevel.ACCESS.isGrantedBy(ClaimTrustLevel.MANAGE));
+        assertFalse(ClaimTrustLevel.BUILD.isGrantedBy(ClaimTrustLevel.MANAGE));
+        assertFalse(ClaimTrustLevel.CONTAINER.isGrantedBy(ClaimTrustLevel.MANAGE));
+        assertFalse(ClaimTrustLevel.ACCESS.isGrantedBy(ClaimTrustLevel.MANAGE));
     }
 
     @Test
@@ -82,7 +82,7 @@ class ClaimTrustLevelTest
     void denySuffixReturnsExpectedValues()
     {
         assertEquals("", ClaimTrustLevel.EDIT.denySuffix());
-        assertEquals("#manager", ClaimTrustLevel.MANAGE.denySuffix());
+        assertEquals("#manage", ClaimTrustLevel.MANAGE.denySuffix());
         assertEquals("#build", ClaimTrustLevel.BUILD.denySuffix());
         assertEquals("#inventory", ClaimTrustLevel.CONTAINER.denySuffix());
         assertEquals("#access", ClaimTrustLevel.ACCESS.denySuffix());

@@ -11,12 +11,22 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/** Reads the upstream {@code GriefPrevention.Claims.InitialBlocks} option. */
+/** Reads upstream claim-block and per-player claim mutation settings. */
 public final class ClaimBlockConfigCodec
 {
     private static final String ROOT = "GriefPrevention";
     private static final String CLAIMS = "Claims";
     private static final String INITIAL_BLOCKS = "InitialBlocks";
+    private static final String BLOCKS_ACCRUED_PER_HOUR = "BlocksAccruedPerHour";
+    private static final String CLAIM_BLOCKS_ACCRUED_PER_HOUR = "Claim Blocks Accrued Per Hour";
+    private static final String MAX_ACCRUED_BLOCKS = "MaxAccruedBlocks";
+    private static final String MAX_ACCRUED_CLAIM_BLOCKS = "Max Accrued Claim Blocks";
+    private static final String ACCRUED_IDLE_THRESHOLD = "AccruedIdleThreshold";
+    private static final String ACCRUED_IDLE_THRESHOLD_SPACED = "Accrued Idle Threshold";
+    private static final String ACCRUED_IDLE_PERCENT = "AccruedIdlePercent";
+    private static final String DEFAULT = "Default";
+    private static final String MAXIMUM_CLAIMS_PER_PLAYER = "MaximumNumberOfClaimsPerPlayer";
+    private static final String ABANDON_RETURN_RATIO = "AbandonReturnRatio";
 
     private final Yaml yaml;
 
@@ -56,7 +66,83 @@ public final class ClaimBlockConfigCodec
                 ClaimBlockSettings.DEFAULT_INITIAL_BLOCKS,
                 ROOT + "." + CLAIMS + "." + INITIAL_BLOCKS
         );
-        return new ClaimBlockSettings(initialBlocks);
+        int legacyBlocksAccruedPerHour = integer(
+                claims.get(BLOCKS_ACCRUED_PER_HOUR),
+                ClaimBlockSettings.DEFAULT_BLOCKS_ACCRUED_PER_HOUR,
+                ROOT + "." + CLAIMS + "." + BLOCKS_ACCRUED_PER_HOUR
+        );
+        Map<String, Object> blocksAccruedPerHourSection = optionalMap(
+                claims.get(CLAIM_BLOCKS_ACCRUED_PER_HOUR),
+                ROOT + "." + CLAIMS + "." + CLAIM_BLOCKS_ACCRUED_PER_HOUR
+        );
+        int blocksAccruedPerHour = integer(
+                blocksAccruedPerHourSection.get(DEFAULT),
+                legacyBlocksAccruedPerHour,
+                ROOT + "." + CLAIMS + "." + CLAIM_BLOCKS_ACCRUED_PER_HOUR + "." + DEFAULT
+        );
+        int legacyMaximumAccruedClaimBlocks = integer(
+                claims.get(MAX_ACCRUED_BLOCKS),
+                ClaimBlockSettings.DEFAULT_MAXIMUM_ACCRUED_CLAIM_BLOCKS,
+                ROOT + "." + CLAIMS + "." + MAX_ACCRUED_BLOCKS
+        );
+        Map<String, Object> maximumAccruedClaimBlocksSection = optionalMap(
+                claims.get(MAX_ACCRUED_CLAIM_BLOCKS),
+                ROOT + "." + CLAIMS + "." + MAX_ACCRUED_CLAIM_BLOCKS
+        );
+        int maximumAccruedClaimBlocks = integer(
+                maximumAccruedClaimBlocksSection.get(DEFAULT),
+                legacyMaximumAccruedClaimBlocks,
+                ROOT + "." + CLAIMS + "." + MAX_ACCRUED_CLAIM_BLOCKS + "." + DEFAULT
+        );
+        int legacyAccruedIdleThreshold = integer(
+                claims.get(ACCRUED_IDLE_THRESHOLD),
+                ClaimBlockSettings.DEFAULT_ACCRUED_IDLE_THRESHOLD,
+                ROOT + "." + CLAIMS + "." + ACCRUED_IDLE_THRESHOLD
+        );
+        int accruedIdleThreshold = integer(
+                claims.get(ACCRUED_IDLE_THRESHOLD_SPACED),
+                legacyAccruedIdleThreshold,
+                ROOT + "." + CLAIMS + "." + ACCRUED_IDLE_THRESHOLD_SPACED
+        );
+        int accruedIdlePercent = Math.max(0, integer(
+                claims.get(ACCRUED_IDLE_PERCENT),
+                ClaimBlockSettings.DEFAULT_ACCRUED_IDLE_PERCENT,
+                ROOT + "." + CLAIMS + "." + ACCRUED_IDLE_PERCENT
+        ));
+        int maximumClaimsPerPlayer = integer(
+                claims.get(MAXIMUM_CLAIMS_PER_PLAYER),
+                ClaimBlockSettings.DEFAULT_MAXIMUM_CLAIMS_PER_PLAYER,
+                ROOT + "." + CLAIMS + "." + MAXIMUM_CLAIMS_PER_PLAYER
+        );
+        double abandonReturnRatio = decimal(
+                claims.get(ABANDON_RETURN_RATIO),
+                ClaimBlockSettings.DEFAULT_ABANDON_RETURN_RATIO,
+                ROOT + "." + CLAIMS + "." + ABANDON_RETURN_RATIO
+        );
+        return new ClaimBlockSettings(
+                initialBlocks,
+                blocksAccruedPerHour,
+                maximumAccruedClaimBlocks,
+                accruedIdleThreshold,
+                accruedIdlePercent,
+                maximumClaimsPerPlayer,
+                abandonReturnRatio
+        );
+    }
+
+    private static double decimal(@Nullable Object raw, double defaultValue, @NotNull String field)
+            throws ClaimBlockConfigException
+    {
+        if (raw == null)
+        {
+            return defaultValue;
+        }
+        if (!(raw instanceof Number))
+        {
+            throw new ClaimBlockConfigException(field + " must be a number.");
+        }
+        // Deliberately do not clamp the ratio. Bukkit accepts the configured double verbatim.
+        return ((Number) raw).doubleValue();
     }
 
     private static int integer(@Nullable Object raw, int defaultValue, @NotNull String field)

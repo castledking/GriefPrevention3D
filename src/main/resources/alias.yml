@@ -156,7 +156,7 @@ subcommands:
           options:
             access: [access]
             container: [container]
-            permission: [permission]
+            manage: [manage, manager]
             build: [build]
 
     # ------------------------------------------------------------------------
@@ -347,6 +347,30 @@ subcommands:
   #                        /aclaim SUBCOMMANDS (Admin)
   # ==========================================================================
   aclaim:
+    # ------------------------------------------------------------------------
+    # /aclaim trust permission - Grant trust to a permission node
+    # Standalone form: /permissiontrust <permission> <type>
+    # ------------------------------------------------------------------------
+    trust:
+      enable: true
+      commands: [trust]
+      standalone: [permissiontrust]
+      usage: "/aclaim trust permission <permission> <type>"
+      description: Grant a permission node access to a claim.
+      permission: griefprevention.permissiontrust
+      arguments:
+        target:
+          options:
+            permission: [permission]
+        permission:
+          type: string
+        type:
+          options:
+            access: [access]
+            container: [container, inventory]
+            build: [build]
+            manage: [manage, manager]
+
     # ------------------------------------------------------------------------
     # /aclaim restore - Restore nature
     # ------------------------------------------------------------------------

@@ -143,6 +143,15 @@ final class FabricClaimToolHooks
             @NotNull ServerLevel level,
             @NotNull BlockPos clicked)
     {
+        if (this.claims.hasReachedClaimCountLimit(player))
+        {
+            this.visualization.clear(player);
+            player.displayClientMessage(Component.literal(
+                    FabricClaimRepository.CLAIM_COUNT_LIMIT_MESSAGE
+            ), true);
+            return;
+        }
+
         ClaimToolSession session = ClaimToolSession.create(this.claims.worldKey(level), clicked);
         this.sessions.put(player.getUUID(), session);
         ClaimBounds preview = create2DBounds(level, clicked, clicked);
@@ -176,6 +185,15 @@ final class FabricClaimToolHooks
                     clicked,
                     player.getUUID(),
                     player);
+            if (result.hasReachedClaimCountLimit())
+            {
+                this.sessions.remove(player.getUUID());
+                this.visualization.clear(player);
+                player.displayClientMessage(Component.literal(
+                        FabricClaimRepository.CLAIM_COUNT_LIMIT_MESSAGE
+                ), true);
+                return;
+            }
             if (result.hasInsufficientClaimBlocks())
             {
                 this.visualization.visualizeInitializeBounds(player, level, bounds, clicked);

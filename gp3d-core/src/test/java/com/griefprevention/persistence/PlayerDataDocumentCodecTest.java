@@ -34,6 +34,17 @@ class PlayerDataDocumentCodecTest
     }
 
     @Test
+    void replacesOnlyAccruedBlocksInALegacyOrAddonExtendedRecord() throws Exception
+    {
+        String input = "2014.01.02.03.04.05\r\n88\r\n12\r\nlegacy-claims\r\naddon-data\r\n";
+
+        assertEquals(
+                "2014.01.02.03.04.05\r\n75\r\n12\r\nlegacy-claims\r\naddon-data\r\n",
+                this.codec.replaceAccruedClaimBlocks(input, 75)
+        );
+    }
+
+    @Test
     void rejectsIncompleteOrNonNumericBalances()
     {
         assertThrows(PlayerDataFormatException.class, () -> this.codec.decode("\n100\n"));

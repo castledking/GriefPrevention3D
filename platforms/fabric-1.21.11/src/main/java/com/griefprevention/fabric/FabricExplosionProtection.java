@@ -1,9 +1,7 @@
 package com.griefprevention.fabric;
 
-import com.griefprevention.claims.ClaimAccessSubject;
 import com.griefprevention.claims.ClaimSnapshot;
 import com.griefprevention.claims.ClaimTrustLevel;
-import com.griefprevention.claims.ClaimTrustSnapshot;
 import com.griefprevention.persistence.ClaimDocument;
 import com.griefprevention.protection.ExplosionBlockPolicy;
 import com.griefprevention.protection.ExplosionProtectionConfigCodec;
@@ -192,15 +190,7 @@ public final class FabricExplosionProtection
 
     private boolean mayAccess(@NotNull Player player, @NotNull ClaimSnapshot claim)
     {
-        ClaimTrustSnapshot trust = this.claims.trustFor(claim);
-        if (trust == null)
-        {
-            return false;
-        }
-        ClaimAccessSubject subject = ClaimAccessSubject.of(player.getUUID());
-        return trust.hasExplicitPermission(subject, ClaimTrustLevel.ACCESS)
-                || (!trust.isPermissionDenied(subject, ClaimTrustLevel.ACCESS)
-                && trust.hasPublicPermission(ClaimTrustLevel.ACCESS));
+        return this.claims.allows(claim, player.getUUID(), ClaimTrustLevel.ACCESS);
     }
 
     private static @NotNull ExplosionSourceType sourceType(@Nullable Entity source)

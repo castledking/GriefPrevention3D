@@ -74,9 +74,8 @@ public enum Alias {
 "    options:" + "\n" +
 "      access: [access]" + "\n" +
 "      container: [container]" + "\n" +
-"      permission: [permission]" + "\n" +
+"      manage: [manage, manager]" + "\n" +
 "      build: [build]" + "\n" +
-"      neighbor: [neighbor]" + "\n" +
 "" + "\n",
         "trust"
     ),
@@ -323,6 +322,29 @@ public enum Alias {
     ),
 
     // Subcommands section - aclaim commands
+    AClaimTrust(
+        "enable: true" + "\n" +
+"commands: [trust]" + "\n" +
+"standalone: [permissiontrust]" + "\n" +
+"usage: \"/aclaim trust permission <permission> <type>\"" + "\n" +
+"description: Grant a permission node access to a claim." + "\n" +
+"permission: griefprevention.permissiontrust" + "\n" +
+"arguments:" + "\n" +
+"  target:" + "\n" +
+"    options:" + "\n" +
+"      permission: [permission]" + "\n" +
+"  permission:" + "\n" +
+"    type: string" + "\n" +
+"  type:" + "\n" +
+"    options:" + "\n" +
+"      access: [access]" + "\n" +
+"      container: [container, inventory]" + "\n" +
+"      build: [build]" + "\n" +
+"      manage: [manage, manager]" + "\n" +
+"" + "\n",
+        "permissiontrust"
+    ),
+
     AClaimRestore(
         "enable: true" + "\n" +
 "commands: [restore]" + "\n" +
@@ -567,7 +589,7 @@ public enum Alias {
 "          options:" + "\n" +
 "            access: [access]" + "\n" +
 "            container: [container]" + "\n" +
-"            permission: [permission]" + "\n" +
+"            manage: [manage, manager]" + "\n" +
 "            build: [build]" + "\n" +
 "" + "\n" +
 "    untrust:" + "\n" +
@@ -724,6 +746,26 @@ public enum Alias {
 "          type: integer" + "\n" +
 "" + "\n" +
 "  aclaim:" + "\n" +
+"    trust:" + "\n" +
+"      enable: true" + "\n" +
+"      commands: [trust]" + "\n" +
+"      standalone: [permissiontrust]" + "\n" +
+"      usage: \"/aclaim trust permission <permission> <type>\"" + "\n" +
+"      description: Grant a permission node access to a claim." + "\n" +
+"      permission: griefprevention.permissiontrust" + "\n" +
+"      arguments:" + "\n" +
+"        target:" + "\n" +
+"          options:" + "\n" +
+"            permission: [permission]" + "\n" +
+"        permission:" + "\n" +
+"          type: string" + "\n" +
+"        type:" + "\n" +
+"          options:" + "\n" +
+"            access: [access]" + "\n" +
+"            container: [container, inventory]" + "\n" +
+"            build: [build]" + "\n" +
+"            manage: [manage, manager]" + "\n" +
+"" + "\n" +
 "    restore:" + "\n" +
 "      enable: true" + "\n" +
 "      commands: [restore]" + "\n" +

@@ -101,6 +101,10 @@ Stop _responding_ to grief and prevent it instead. GriefPrevention stops grief b
   - Resizing a claim now selects it and is accessible using common commands like `/claim abandon` or `/claim trust` during that resize session
   - `/restrictsubclaim` while standing in main claims now instantly restricts all subdivisions inside
   - `/trustlist` now shows inherited permissions
+  - Manage trust uses `/managetrust` and `griefprevention.managetrust`. Permission-node trust uses
+    `/permissiontrust <permission> <access|container|build|manage>` or
+    `/aclaim trust permission <permission> <type>`. It requires `griefprevention.permissiontrust`, inherited
+    by `griefprevention.adminclaims`; bare dotted nodes and bracketed `[permission.node]` targets are accepted.
   - Split the `griefprevention.eavesdrop` permission to `griefprevention.eavesdrop.pm` & `griefprevention.eavesdrop.softmute` for more granular permission control
   - Various bug fixes and quality-of-life improvements
   - Full compatibility with original GriefPrevention features

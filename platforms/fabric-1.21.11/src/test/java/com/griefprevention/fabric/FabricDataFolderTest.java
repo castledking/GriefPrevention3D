@@ -26,16 +26,22 @@ class FabricDataFolderTest
 
         FabricDataFolder.ensureDefaults(dataFolder, NOPLogger.NOP_LOGGER);
 
-        assertTrue(Files.readString(dataFolder.resolve("config.yml"), StandardCharsets.UTF_8)
-                .contains("GriefPrevention:"));
-        assertTrue(Files.readString(dataFolder.resolve("messages.yml"), StandardCharsets.UTF_8)
-                .contains("Messages:"));
-        assertTrue(Files.readString(dataFolder.resolve("messages.yml"), StandardCharsets.UTF_8)
-                .contains("PlaceholderTrustLevelUntrusted: \"Untrusted\""));
+        String config = Files.readString(dataFolder.resolve("config.yml"), StandardCharsets.UTF_8);
+        String messages = Files.readString(dataFolder.resolve("messages.yml"), StandardCharsets.UTF_8);
+        assertTrue(config.contains("GriefPrevention:"));
+        assertTrue(config.contains("Claim Blocks Accrued Per Hour:"));
+        assertTrue(config.contains("Max Accrued Claim Blocks:"));
+        assertTrue(config.contains("Accrued Idle Threshold: 0"));
+        assertTrue(config.contains("AccruedIdlePercent: 0"));
+        assertTrue(config.contains("MaximumNumberOfClaimsPerPlayer: 0"));
+        assertTrue(config.contains("AbandonReturnRatio: 1.0"));
+        assertTrue(messages.contains("Messages:"));
+        assertTrue(messages.contains("ClaimCreationFailedOverClaimCountLimit:"));
+        assertTrue(messages.contains("PlaceholderTrustLevelUntrusted: \"Untrusted\""));
     }
 
     @Test
-    void doesNotOverwriteExistingFiles() throws Exception
+    void preservesUnknownTopLevelValuesWhileAddingTheFabricRoots() throws Exception
     {
         Path dataFolder = this.tempDir.resolve("GriefPreventionData");
         Files.createDirectories(dataFolder);
@@ -43,7 +49,94 @@ class FabricDataFolderTest
 
         FabricDataFolder.ensureDefaults(dataFolder, NOPLogger.NOP_LOGGER);
 
-        assertEquals("custom: true\n", Files.readString(dataFolder.resolve("config.yml"), StandardCharsets.UTF_8));
+        String updated = Files.readString(dataFolder.resolve("config.yml"), StandardCharsets.UTF_8);
+        assertTrue(updated.startsWith("custom: true\n"));
+        assertTrue(updated.contains("GriefPrevention:"));
+    }
+
+    @Test
+    void addsMissingDefaultsToAnExistingConfigWithoutReplacingCustomValues() throws Exception
+    {
+        Path dataFolder = this.tempDir.resolve("GriefPreventionData");
+        Files.createDirectories(dataFolder);
+        Path configFile = dataFolder.resolve("config.yml");
+        String existingConfig = """
+                # Keep this administrator comment.
+                GriefPrevention:
+                  ConfigVersion: 1
+                  Claims:
+                    Mode:
+                      world: Survival
+                    MinimumArea: 144
+                  AddonSettings:
+                    CustomValue: fire
+                """;
+        Files.writeString(configFile, existingConfig, StandardCharsets.UTF_8);
+
+        FabricDataFolder.ensureDefaults(dataFolder, NOPLogger.NOP_LOGGER);
+
+        String updated = Files.readString(configFile, StandardCharsets.UTF_8);
+        assertTrue(updated.contains("# Keep this administrator comment."));
+        assertTrue(updated.contains("MinimumArea: 144"));
+        assertTrue(updated.contains("AddonSettings:\n    CustomValue: fire"));
+        assertTrue(updated.contains("InitialBlocks: 100"));
+        assertTrue(updated.contains("Claim Blocks Accrued Per Hour:\n      Default: 100"));
+        assertTrue(updated.contains("Max Accrued Claim Blocks:\n      Default: 80000"));
+        assertTrue(updated.contains("Accrued Idle Threshold: 0"));
+        assertTrue(updated.contains("AccruedIdlePercent: 0"));
+        assertTrue(updated.contains("MaximumNumberOfClaimsPerPlayer: 0"));
+        assertTrue(updated.contains("AbandonReturnRatio: 1.0"));
+
+        FabricDataFolder.ensureDefaults(dataFolder, NOPLogger.NOP_LOGGER);
+
+        assertEquals(updated, Files.readString(configFile, StandardCharsets.UTF_8));
+    }
+
+    @Test
+    void migratesLegacyClaimBlockValuesIntoMissingCanonicalDefaults() throws Exception
+    {
+        Path dataFolder = this.tempDir.resolve("GriefPreventionData");
+        Files.createDirectories(dataFolder);
+        Path configFile = dataFolder.resolve("config.yml");
+        Files.writeString(configFile, """
+                GriefPrevention:
+                  Claims:
+                    BlocksAccruedPerHour: 625
+                    MaxAccruedBlocks: 91234
+                    AccruedIdleThreshold: 45
+                """, StandardCharsets.UTF_8);
+
+        FabricDataFolder.ensureDefaults(dataFolder, NOPLogger.NOP_LOGGER);
+
+        String updated = Files.readString(configFile, StandardCharsets.UTF_8);
+        assertTrue(updated.contains("BlocksAccruedPerHour: 625"));
+        assertTrue(updated.contains("Claim Blocks Accrued Per Hour:\n      Default: 625"));
+        assertTrue(updated.contains("MaxAccruedBlocks: 91234"));
+        assertTrue(updated.contains("Max Accrued Claim Blocks:\n      Default: 91234"));
+        assertTrue(updated.contains("AccruedIdleThreshold: 45"));
+        assertTrue(updated.contains("Accrued Idle Threshold: 45"));
+    }
+
+    @Test
+    void addsMissingMessageDefaultsWithoutReplacingCustomMessages() throws Exception
+    {
+        Path dataFolder = this.tempDir.resolve("GriefPreventionData");
+        Files.createDirectories(dataFolder);
+        Path messagesFile = dataFolder.resolve("messages.yml");
+        Files.writeString(messagesFile, """
+                # Keep the custom wording and addon key.
+                Messages:
+                  BlockNotClaimed: "Custom block message"
+                  AddonMessage: "Custom addon message"
+                """, StandardCharsets.UTF_8);
+
+        FabricDataFolder.ensureDefaults(dataFolder, NOPLogger.NOP_LOGGER);
+
+        String updated = Files.readString(messagesFile, StandardCharsets.UTF_8);
+        assertTrue(updated.contains("# Keep the custom wording and addon key."));
+        assertTrue(updated.contains("BlockNotClaimed: \"Custom block message\""));
+        assertTrue(updated.contains("AddonMessage: \"Custom addon message\""));
+        assertTrue(updated.contains("ClaimCreationFailedOverClaimCountLimit:"));
     }
 
     @Test

@@ -90,7 +90,13 @@ public class Claim
      public boolean allowAllNeighbors = false;
 
      //permissions for this claim, see ClaimPermission class
+     //holds interaction trust only (build/container/access) - manager status lives in managerIdentifiers
      private HashMap<String, ClaimPermission> playerIDToClaimPermissionMap = new HashMap<>();
+
+    //players/permissions who may hand out trust in this claim.  tracked separately from the
+    //interaction trust map because manage trust is its own track: granting it must not overwrite
+    //a player's build/container/access trust, and losing it must not take that trust away
+    private final HashSet<String> managerIdentifiers = new HashSet<>();
 
     //players/permissions explicitly denied in this claim (override parent inheritance)
     private final HashSet<String> deniedPermissions = new HashSet<>();
@@ -239,7 +245,7 @@ public class Claim
 
         for (String managerID : managerIDs)
         {
-            this.setPermission(managerID, ClaimPermission.Manage);
+            this.addManager(managerID);
         }
 
         this.inheritNothing = inheritNothing;
@@ -261,6 +267,7 @@ public class Claim
          this.autoNeighbors = new ArrayList<>(claim.autoNeighbors);
          this.allowAllNeighbors = claim.allowAllNeighbors;
          this.playerIDToClaimPermissionMap = new HashMap<>(claim.playerIDToClaimPermissionMap);
+        this.managerIdentifiers.addAll(claim.managerIdentifiers);
         this.deniedPermissions.addAll(claim.deniedPermissions);
          this.inDataStore = false; //since it's a copy of a claim, not in datastore!
          this.areExplosivesAllowed = claim.areExplosivesAllowed;
@@ -430,17 +437,13 @@ public class Claim
      public @NotNull ClaimTrustSnapshot getTrustSnapshot()
      {
          Map<String, ClaimTrustLevel> permissions = new HashMap<>();
-         List<String> managers = new ArrayList<>();
          for (Map.Entry<String, ClaimPermission> entry : this.playerIDToClaimPermissionMap.entrySet())
          {
              permissions.put(entry.getKey(), toClaimTrustLevel(entry.getValue()));
-             if (entry.getValue() == ClaimPermission.Manage)
-             {
-                 managers.add(entry.getKey());
-             }
          }
 
-         return new ClaimTrustSnapshot(this.getOwnerID(), permissions, managers, this.deniedPermissions);
+         return new ClaimTrustSnapshot(this.getOwnerID(), permissions, this.managerIdentifiers,
+                 this.deniedPermissions);
      }
 
      private static @NotNull ClaimTrustLevel toClaimTrustLevel(@NotNull ClaimPermission permission)
@@ -458,6 +461,8 @@ public class Claim
                  return ClaimTrustLevel.CONTAINER;
              case Access:
                  return ClaimTrustLevel.ACCESS;
+             case Neighbor:
+                 return ClaimTrustLevel.NEIGHBOR;
              default:
                  throw new IllegalStateException("Unknown claim permission: " + permission);
          }
@@ -578,7 +583,7 @@ public class Claim
         switch (permission)
         {
             case Manage:
-                return "#manager";
+                return "#manage";
             case Build:
                 return "#build";
             case Container:
@@ -695,22 +700,41 @@ public class Claim
         return false;
     }
  
+     /**
+      * Check whether an identifier is granted a ClaimPermission by the trust stored in this claim.
+      * Manage trust and interaction trust are independent grants, so either can satisfy the check.
+      *
+      * @param normalizedIdentifier a {@link #normalizeIdentifier(String) normalized} identifier
+      * @param level the ClaimPermission required
+      * @return true if the identifier holds the required trust
+      */
+     private boolean isGranted(@NotNull String normalizedIdentifier, @NotNull ClaimPermission level)
+     {
+         if (this.managerIdentifiers.contains(normalizedIdentifier)
+                 && level.isGrantedBy(ClaimPermission.Manage))
+             return true;
+
+         return level.isGrantedBy(this.playerIDToClaimPermissionMap.get(normalizedIdentifier));
+     }
+
      public boolean hasExplicitPermission(@NotNull UUID uuid, @NotNull ClaimPermission level)
      {
          if (uuid.equals(this.getOwnerID())) return true;
 
-         return level.isGrantedBy(this.playerIDToClaimPermissionMap.get(uuid.toString()));
+         return this.isGranted(normalizeIdentifier(uuid.toString()), level);
      }
- 
+
      public boolean hasExplicitPermission(@NotNull Player player, @NotNull ClaimPermission level)
      {
          // Check explicit ClaimPermission for UUID
          if (this.hasExplicitPermission(player.getUniqueId(), level)) return true;
 
-         // Check permission-based ClaimPermission
-         for (Map.Entry<String, ClaimPermission> stringToPermission : this.playerIDToClaimPermissionMap.entrySet())
+         // Check permission-based ClaimPermission across both trust tracks
+         Set<String> nodes = new HashSet<>(this.playerIDToClaimPermissionMap.keySet());
+         nodes.addAll(this.managerIdentifiers);
+
+         for (String node : nodes)
          {
-             String node = stringToPermission.getKey();
              // Ensure valid permission format for permissions - [permission.node]
              if (node.length() < 3 || node.charAt(0) != '[' || node.charAt(node.length() - 1) != ']') continue;
 
@@ -718,11 +742,11 @@ public class Claim
              if (this.isPermissionDenied(node)) continue;
 
              // Check if level is high enough and player has node
-             if (level.isGrantedBy(stringToPermission.getValue())
+             if (this.isGranted(node, level)
                      && player.hasPermission(node.substring(1, node.length() - 1)))
                  return true;
          }
- 
+
          return false;
      }
  
@@ -893,7 +917,7 @@ public class Claim
          }
 
          // Check for public permission.
-         if (permission.isGrantedBy(this.playerIDToClaimPermissionMap.get("public"))) return null;
+         if (this.isGranted("public", permission)) return null;
 
          // Special building-only rules.
         if (permission == ClaimPermission.Build)
@@ -1020,7 +1044,53 @@ public class Claim
     {
         if (playerID == null || playerID.isEmpty()) return null;
 
-        return this.playerIDToClaimPermissionMap.get(normalizeIdentifier(playerID));
+        String normalized = normalizeIdentifier(playerID);
+        ClaimPermission interactionLevel = this.playerIDToClaimPermissionMap.get(normalized);
+
+        // Interaction trust is what callers care about when it exists.  Manager status is only
+        // reported here when it is all the player has, so that legacy callers comparing the result
+        // against ClaimPermission.Manage keep working.  Use isManager to test manager status.
+        if (interactionLevel != null) return interactionLevel;
+
+        return this.managerIdentifiers.contains(normalized) ? ClaimPermission.Manage : null;
+    }
+
+    /**
+     * Check whether a player or permission identifier may hand out trust in this claim.
+     *
+     * @param playerID the UUID string, {@code public}, or {@code [permission.node]} identifier
+     * @return true if the identifier has manage trust here
+     */
+    public boolean isManager(@Nullable String playerID)
+    {
+        String normalized = normalizeIdentifier(playerID);
+        return !normalized.isEmpty() && this.managerIdentifiers.contains(normalized);
+    }
+
+    //grants manage trust to a player or the public, leaving interaction trust untouched
+    public void addManager(@Nullable String playerID)
+    {
+        String normalized = normalizeIdentifier(playerID);
+        if (normalized.isEmpty()) return;
+
+        this.managerIdentifiers.add(normalized);
+    }
+
+    //revokes manage trust, leaving interaction trust untouched
+    public void dropManager(@NotNull String playerID)
+    {
+        String normalized = normalizeIdentifier(playerID);
+        if (normalized.isEmpty())
+        {
+            return;
+        }
+
+        this.managerIdentifiers.remove(normalized);
+
+        for (Claim child : this.children)
+        {
+            child.dropManager(normalized);
+        }
     }
 
      //grants a permission for a player or the public
@@ -1033,12 +1103,32 @@ public class Claim
 
         if (permissionLevel == null)
             dropPermission(normalized);
+        else if (permissionLevel == ClaimPermission.Manage)
+            addManager(normalized);
         else
             this.playerIDToClaimPermissionMap.put(normalized, permissionLevel);
     }
 
-    //revokes a permission for a player or the public
+    //revokes all trust - both interaction and manage - for a player or the public
     public void dropPermission(@NotNull String playerID)
+    {
+        String normalized = normalizeIdentifier(playerID);
+        if (normalized.isEmpty())
+        {
+            return;
+        }
+
+        this.playerIDToClaimPermissionMap.remove(normalized);
+        this.managerIdentifiers.remove(normalized);
+
+        for (Claim child : this.children)
+        {
+            child.dropPermission(normalized);
+        }
+    }
+
+    //revokes build/container/access trust, leaving manage trust untouched
+    public void dropInteractionPermission(@NotNull String playerID)
     {
         String normalized = normalizeIdentifier(playerID);
         if (normalized.isEmpty())
@@ -1050,7 +1140,7 @@ public class Claim
 
         for (Claim child : this.children)
         {
-            child.dropPermission(normalized);
+            child.dropInteractionPermission(normalized);
         }
     }
 
@@ -1058,6 +1148,7 @@ public class Claim
      public void clearPermissions()
      {
          this.playerIDToClaimPermissionMap.clear();
+         this.managerIdentifiers.clear();
          this.neighbors.clear();
          this.autoNeighbors.clear();
          this.allowAllNeighbors = false;
@@ -1084,15 +1175,16 @@ public class Claim
              {
                  containers.add(entry.getKey());
              }
-             else if (entry.getValue() == ClaimPermission.Manage)
-             {
-                 managers.add(entry.getKey());
-             }
-             else
+             else if (entry.getValue() == ClaimPermission.Access)
              {
                  accessors.add(entry.getKey());
              }
+             //Neighbor trust has its own list (see getNeighbors) and no bucket here.  Lumping it in
+             //with accessors would silently promote neighbors to access trust on the next load.
          }
+
+         //manage trust is tracked separately, so a player can appear here and in a trust list above
+         managers.addAll(this.managerIdentifiers);
      }
 
      //gets neighbor trust list

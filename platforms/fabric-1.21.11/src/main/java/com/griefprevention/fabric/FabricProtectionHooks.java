@@ -1,9 +1,7 @@
 package com.griefprevention.fabric;
 
 import com.griefprevention.claims.ClaimSnapshot;
-import com.griefprevention.claims.ClaimAccessSubject;
 import com.griefprevention.claims.ClaimTrustLevel;
-import com.griefprevention.claims.ClaimTrustSnapshot;
 import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
@@ -114,19 +112,7 @@ final class FabricProtectionHooks
             return true;
         }
 
-        ClaimTrustSnapshot trust = this.claims.trustFor(claim);
-        if (trust == null)
-        {
-            trust = ClaimTrustSnapshot.empty(claim.ownerId());
-        }
-
-        ClaimAccessSubject subject = ClaimAccessSubject.of(player.getUUID());
-        if (trust.hasExplicitPermission(subject, levelRequired))
-        {
-            return true;
-        }
-
-        return !trust.isPermissionDenied(subject, levelRequired) && trust.hasPublicPermission(levelRequired);
+        return this.claims.allows(claim, player.getUUID(), levelRequired);
     }
 
     private static boolean requiresBuildTrust(@NotNull ItemStack stack)

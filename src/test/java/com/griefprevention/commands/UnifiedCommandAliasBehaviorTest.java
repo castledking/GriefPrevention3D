@@ -10,6 +10,7 @@ import org.bukkit.Server;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.PluginManager;
 import org.junit.jupiter.api.AfterAll;
@@ -121,10 +122,8 @@ class UnifiedCommandAliasBehaviorTest
 
         command.onCommand(sender, mock(Command.class), "claim", new String[] { "help" });
 
-        // Let's see what messages are actually being sent
-        verify(sender, atLeastOnce()).sendMessage("§6Available /claim commands (Page 1/1):");
+        verify(sender, atLeastOnce()).sendMessage("§6Available /claim commands (Page 1/3):");
         verify(sender, atLeastOnce()).sendMessage("");
-        // The help entry should be sent but isn't
         verify(sender, atLeastOnce()).sendMessage("CUSTOM claim create [radius] :: Create or expand a claim centered on you.");
     }
 
@@ -152,6 +151,41 @@ class UnifiedCommandAliasBehaviorTest
         verify(sender, never()).sendMessage(anyString());
         assertTrue(!GriefPrevention.hasVisibleMessageContent(""));
         assertTrue(!GriefPrevention.hasVisibleMessageContent("\u00A7c\n"));
+    }
+
+    @Test
+    void addingPermissionTrustDefaultsPreservesCustomizedAliases() throws Exception
+    {
+        YamlConfiguration defaults = new YamlConfiguration();
+        defaults.loadFromString(me.ryanhamshire.GriefPrevention.Alias.getDefaultYaml());
+
+        YamlConfiguration user = new YamlConfiguration();
+        user.loadFromString(
+                "enabled: true\n"
+                        + "standalone: true\n"
+                        + "commands:\n"
+                        + "  claim:\n"
+                        + "    enable: true\n"
+                        + "    commands: [land]\n"
+                        + "subcommands:\n"
+                        + "  claim:\n"
+                        + "    trust:\n"
+                        + "      enable: true\n"
+                        + "      commands: [allow]\n"
+                        + "      standalone: [allow]\n"
+        );
+
+        YamlConfiguration merged = CommandAliasConfiguration.mergeConfigurations(defaults, user);
+
+        assertEquals(java.util.Collections.singletonList("land"), merged.getStringList("commands.claim.commands"));
+        assertEquals(
+                java.util.Collections.singletonList("allow"),
+                merged.getStringList("subcommands.claim.trust.commands")
+        );
+        assertEquals(
+                java.util.Collections.singletonList("permissiontrust"),
+                merged.getStringList("subcommands.aclaim.trust.standalone")
+        );
     }
 
     private static CommandAliasConfiguration loadAliases(Path tempDir, String yaml) throws Exception

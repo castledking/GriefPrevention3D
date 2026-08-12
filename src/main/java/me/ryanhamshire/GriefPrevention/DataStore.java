@@ -1726,13 +1726,14 @@ public abstract class DataStore {
             for (String identifier : builders) newClaim.setPermission(identifier, ClaimPermission.Build);
             for (String identifier : containers) newClaim.setPermission(identifier, ClaimPermission.Container);
             for (String identifier : accessors) newClaim.setPermission(identifier, ClaimPermission.Access);
-            for (String identifier : managers) newClaim.setPermission(identifier, ClaimPermission.Manage);
+            for (String identifier : managers) newClaim.addManager(identifier);
         }
 
-        if (creatingPlayer != null && !creatingPlayer.getUniqueId().equals(newClaim.getOwnerID())
-                && newClaim.getPermission(creatingPlayer.getUniqueId().toString()) != ClaimPermission.Manage)
+        // Manage trust is additive, so this leaves any build/container/access trust the creator
+        // inherited from the parent claim intact.
+        if (creatingPlayer != null && !creatingPlayer.getUniqueId().equals(newClaim.getOwnerID()))
         {
-            newClaim.setPermission(creatingPlayer.getUniqueId().toString(), ClaimPermission.Manage);
+            newClaim.addManager(creatingPlayer.getUniqueId().toString());
         }
 
         result.succeeded = true;
@@ -2120,16 +2121,14 @@ public abstract class DataStore {
             for (String identifier : builders) newClaim.setPermission(identifier, ClaimPermission.Build);
             for (String identifier : containers) newClaim.setPermission(identifier, ClaimPermission.Container);
             for (String identifier : accessors) newClaim.setPermission(identifier, ClaimPermission.Access);
-            for (String identifier : managers) newClaim.setPermission(identifier, ClaimPermission.Manage);
+            for (String identifier : managers) newClaim.addManager(identifier);
         }
 
-        // Ensure the creating player has Manage on new subdivisions for cascading trust
+        // Ensure the creating player has Manage on new subdivisions for cascading trust.  Manager
+        // trust is additive, so their inherited build/container/access trust survives this.
         if (parent != null && creatingPlayer != null
                 && !creatingPlayer.getUniqueId().equals(newClaim.getOwnerID())) {
-            String creatorId = creatingPlayer.getUniqueId().toString();
-            if (newClaim.getPermission(creatorId) != ClaimPermission.Manage) {
-                newClaim.setPermission(creatorId, ClaimPermission.Manage);
-            }
+            newClaim.addManager(creatingPlayer.getUniqueId().toString());
         }
 
         // then return success along with reference to new claim

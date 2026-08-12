@@ -29,7 +29,7 @@ public enum ClaimPermission
     Edit(Messages.OnlyOwnersModifyClaims),
     /**
      * ClaimPermission that allows users to grant ClaimPermissions. This is a separate trust track and does not
-     * grant {@link #Build}, {@link #Container}, or {@link #Access}. Command: /managetrust or /permissiontrust
+     * grant {@link #Build}, {@link #Container}, or {@link #Access}. Command: /managetrust
      */
     Manage(Messages.NoManageTrust),
     /**
@@ -81,7 +81,7 @@ public enum ClaimPermission
     public boolean isGrantedBy(ClaimPermission other)
     {
         if (other == null) return false;
-        // Legacy permission trust is a separate track: managers may manage trust,
+        // Manage trust is a separate track: managers may manage trust,
         // but do not implicitly receive build, container, or access trust.
         if (other == Manage || this == Manage) return other == this || other == Edit;
         return other.getTrustLevel() <= this.getTrustLevel();

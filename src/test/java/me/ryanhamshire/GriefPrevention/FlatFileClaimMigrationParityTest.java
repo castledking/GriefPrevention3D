@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -98,6 +99,61 @@ class FlatFileClaimMigrationParityTest
 
             assertEquals(-1L, parentId.get(0).longValue());
             assertEquals(expected, afterPaper);
+        }
+        finally
+        {
+            paper.close();
+        }
+    }
+
+    @Test
+    void aManagerKeepsBuildTrustThroughARealPaperLoadAndSave() throws Exception
+    {
+        String yaml = String.join("\n", Arrays.asList(
+                "Claim ID: '28'",
+                "Lesser Boundary Corner: world;0;-64;0",
+                "Greater Boundary Corner: world;10;320;10",
+                "Owner: 11111111-2222-3333-4444-555555555555",
+                "Builders:",
+                "- aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+                "Containers: []",
+                "Accessors: []",
+                "Managers:",
+                "- aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+                "Parent Claim ID: -1",
+                "Is3D: false",
+                "Modified Date: 1779681984295"
+        )) + "\n";
+
+        World world = mock(World.class);
+        when(world.getName()).thenReturn("world");
+        when(world.getMinHeight()).thenReturn(-64);
+        when(world.getMaxHeight()).thenReturn(320);
+
+        FlatFileDataStore paper = new FlatFileDataStore(false);
+        try
+        {
+            Claim loaded = paper.loadClaim(
+                    yaml,
+                    new ArrayList<Long>(),
+                    999L,
+                    28L,
+                    Collections.singletonList(world)
+            );
+
+            // Both tracks must survive the load...
+            assertTrue(loaded.isManager(BUILDER.toString()));
+            assertEquals(ClaimPermission.Build, loaded.getPermission(BUILDER.toString()));
+
+            // ...and the save, which is where the document path used to drop the build trust
+            // of anyone who was also a manager.
+            ClaimTrustSnapshot saved = this.codec
+                    .decodeTree(paper.getYamlForClaim(loaded), 28L, 999L)
+                    .get(0)
+                    .trust();
+
+            assertEquals(ClaimTrustLevel.BUILD, saved.permissionsByIdentifier().get(BUILDER.toString()));
+            assertTrue(saved.managerIdentifiers().contains(BUILDER.toString()));
         }
         finally
         {

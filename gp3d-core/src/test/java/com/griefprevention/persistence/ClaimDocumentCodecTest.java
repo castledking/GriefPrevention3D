@@ -154,6 +154,37 @@ class ClaimDocumentCodecTest
                 () -> this.codec.encodeTree(root, Arrays.asList(root, unrelatedRoot)));
     }
 
+    @Test
+    void manageTrustDoesNotStripInteractionTrust() throws Exception
+    {
+        // A player granted /trust and then /managetrust is written to both lists.
+        String yaml = "Claim ID: '28'\n"
+                + "Lesser Boundary Corner: world;0;-64;0\n"
+                + "Greater Boundary Corner: world;10;320;10\n"
+                + "Owner: " + OWNER + "\n"
+                + "Builders:\n"
+                + "- " + BUILDER + "\n"
+                + "Containers: []\n"
+                + "Accessors: []\n"
+                + "Managers:\n"
+                + "- " + BUILDER + "\n"
+                + "Parent Claim ID: -1\n";
+
+        List<ClaimDocument> decoded = this.codec.decodeTree(yaml, 28L, 100L);
+        ClaimDocument root = decoded.get(0);
+
+        assertEquals(ClaimTrustLevel.BUILD,
+                root.trust().permissionsByIdentifier().get(BUILDER.toString()));
+        assertTrue(root.trust().managerIdentifiers().contains(BUILDER.toString()));
+        assertTrue(root.trust().hasExplicitIdentifierPermission(BUILDER.toString(), ClaimTrustLevel.CONTAINER));
+        assertTrue(root.trust().hasExplicitIdentifierPermission(BUILDER.toString(), ClaimTrustLevel.MANAGE));
+
+        String encoded = this.codec.encodeTree(root, decoded);
+        ClaimDocument reloaded = this.codec.decodeTree(encoded, 28L, 999L).get(0);
+
+        assertEquals(root.trust(), reloaded.trust());
+    }
+
     private static String completeClaimYaml()
     {
         return "Claim ID: '28'\n"

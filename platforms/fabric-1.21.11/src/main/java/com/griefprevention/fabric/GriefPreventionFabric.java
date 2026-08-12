@@ -26,6 +26,7 @@ public final class GriefPreventionFabric implements FabricPlatformAdapter
         );
         FabricDataFolder.ensureDefaults(dataFolder, LOGGER);
         FabricClaimRepository claims = new FabricClaimRepository(dataFolder, LOGGER);
+        new FabricClaimBlockAccrual(claims.claimBlockService(), LOGGER).register();
         FabricExplosionProtection.install(dataFolder.resolve("config.yml"), claims);
         claimRepository = claims;
         FabricFakeBlockVisualization visualization = new FabricFakeBlockVisualization();

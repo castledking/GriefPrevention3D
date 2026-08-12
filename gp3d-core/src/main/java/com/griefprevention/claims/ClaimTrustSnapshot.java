@@ -99,7 +99,9 @@ public final class ClaimTrustSnapshot
 
         for (String identifier : identifiers)
         {
-            if (hasExplicitIdentifierPermission(identifier, level))
+            // Match Bukkit permission-node trust: a generally denied [permission.node]
+            // cannot grant explicit trust, while UUID trust remains owner/direct-entry based.
+            if (!isPermissionDenied(identifier) && hasExplicitIdentifierPermission(identifier, level))
             {
                 return true;
             }
@@ -126,9 +128,11 @@ public final class ClaimTrustSnapshot
             return false;
         }
 
-        if (this.managerIdentifiers.contains(normalized))
+        // Manage trust and interaction trust are independent grants: a manager who also holds
+        // build/container/access trust keeps it, so either track can satisfy the check.
+        if (this.managerIdentifiers.contains(normalized) && level.isGrantedBy(ClaimTrustLevel.MANAGE))
         {
-            return level.isGrantedBy(ClaimTrustLevel.MANAGE);
+            return true;
         }
 
         return level.isGrantedBy(this.permissionsByIdentifier.get(normalized));

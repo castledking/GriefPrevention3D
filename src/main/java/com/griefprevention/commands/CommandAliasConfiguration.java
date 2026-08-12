@@ -195,104 +195,19 @@ public final class CommandAliasConfiguration {
             @NotNull YamlConfiguration userConfig) {
         YamlConfiguration merged = new YamlConfiguration();
 
-        // First, handle the commands section
-        ConfigurationSection defaultCommands = defaults.getConfigurationSection("commands");
-        ConfigurationSection userCommands = userConfig.getConfigurationSection("commands");
-
-        if (defaultCommands != null) {
-            for (String commandKey : defaultCommands.getKeys(false)) {
-                ConfigurationSection defaultCommand = defaultCommands.getConfigurationSection(commandKey);
-                ConfigurationSection userCommand = userCommands != null
-                        ? userCommands.getConfigurationSection(commandKey)
-                        : null;
-
-                // Create or get the command section in merged config
-                String commandPath = "commands." + commandKey;
-                ConfigurationSection mergedCommand = merged.createSection(commandPath);
-
-                // Copy all default values first
-                if (defaultCommand != null) {
-                    for (String key : defaultCommand.getKeys(false)) {
-                        mergedCommand.set(key, defaultCommand.get(key));
-                    }
-                }
-
-                // Override with user values if they exist
-                if (userCommand != null) {
-                    for (String key : userCommand.getKeys(false)) {
-                        mergedCommand.set(key, userCommand.get(key));
-                    }
-                }
-            }
-        }
-
-        // Then handle the subcommands section similarly
-        ConfigurationSection defaultSubcommands = defaults.getConfigurationSection("subcommands");
-        ConfigurationSection userSubcommands = userConfig.getConfigurationSection("subcommands");
-
-        if (defaultSubcommands != null) {
-            for (String rootKey : defaultSubcommands.getKeys(false)) {
-                ConfigurationSection defaultRoot = defaultSubcommands.getConfigurationSection(rootKey);
-                ConfigurationSection userRoot = userSubcommands != null
-                        ? userSubcommands.getConfigurationSection(rootKey)
-                        : null;
-
-                if (defaultRoot != null) {
-                    for (String subKey : defaultRoot.getKeys(false)) {
-                        ConfigurationSection defaultSub = defaultRoot.getConfigurationSection(subKey);
-                        ConfigurationSection userSub = (userRoot != null) ? userRoot.getConfigurationSection(subKey)
-                                : null;
-
-                        String subPath = "subcommands." + rootKey + "." + subKey;
-                        ConfigurationSection mergedSub = merged.createSection(subPath);
-
-                        // Copy all default values first
-                        if (defaultSub != null) {
-                            for (String key : defaultSub.getKeys(false)) {
-                                mergedSub.set(key, defaultSub.get(key));
-                            }
-                        }
-
-                        // Override with user values if they exist
-                        if (userSub != null) {
-                            for (String key : userSub.getKeys(false)) {
-                                mergedSub.set(key, userSub.get(key));
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Override with user configuration (preserves user customizations)
-        for (String key : userConfig.getKeys(true)) {
-            if (userConfig.isConfigurationSection(key)) {
-                // Handle configuration sections
-                ConfigurationSection userSection = userConfig.getConfigurationSection(key);
-                if (userSection != null) {
-                    copySection(userSection, merged, key);
-                }
-            } else {
-                // Override primitive values
-                Object value = userConfig.get(key);
-                merged.set(key, value);
-            }
-        }
+        // Copy every default leaf first, then overlay every user leaf. Recreating a
+        // user-owned parent section here would erase default siblings introduced by an
+        // upgrade (for example, adding aclaim.trust beside an existing aclaim.restore).
+        copyValues(defaults, merged);
+        copyValues(userConfig, merged);
 
         return merged;
     }
 
-    private static void copySection(@NotNull ConfigurationSection source, @NotNull YamlConfiguration target,
-            @NotNull String path) {
-        ConfigurationSection targetSection = target.createSection(path);
-
-        for (String key : source.getKeys(false)) {
-            Object value = source.get(key);
-            if (value instanceof ConfigurationSection) {
-                ConfigurationSection subSection = (ConfigurationSection) value;
-                copySection(subSection, target, path + "." + key);
-            } else {
-                targetSection.set(key, value);
+    private static void copyValues(@NotNull ConfigurationSection source, @NotNull YamlConfiguration target) {
+        for (String key : source.getKeys(true)) {
+            if (!source.isConfigurationSection(key)) {
+                target.set(key, source.get(key));
             }
         }
     }

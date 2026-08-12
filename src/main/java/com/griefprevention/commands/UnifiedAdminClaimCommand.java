@@ -1,21 +1,37 @@
 package com.griefprevention.commands;
 
+import com.griefprevention.claims.ClaimTrustCommandPermissions;
+import com.griefprevention.claims.ClaimTrustIdentifier;
 import me.ryanhamshire.GriefPrevention.*;
 import me.ryanhamshire.GriefPrevention.DataStore.NoTransferException;
 import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.command.TabExecutor;
 import org.bukkit.entity.Player;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Locale;
+import java.util.stream.Collectors;
 
 /**
  * Unified command handler for /aclaim with administrative subcommands
  */
 public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
 
+    private static final List<String> DEFAULT_PERMISSION_TRUST_TYPES = Collections.unmodifiableList(
+        Arrays.asList("access", "container", "build", "manage")
+    );
+
     public UnifiedAdminClaimCommand(@NotNull GriefPrevention plugin) {
         super(plugin, "aclaim");
         // Register subcommands
+        registerSubcommand("trust", this::handlePermissionTrust);
         registerSubcommand("restore", createRestoreTabExecutor());
         registerSubcommand("ignore", this::handleIgnore);
         registerSubcommand("mode", this::handleMode);
@@ -38,6 +54,7 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
         registerSubcommand("help", this::handleHelp);
 
         // Register standalone commands from Alias enum
+        registerStandaloneCommand(Alias.AClaimTrust, createPermissionTrustStandaloneTabExecutor());
         registerStandaloneCommand(Alias.AClaimRestore, createNoArgStandaloneTabExecutor(this::handleRestore));
         // Legacy standalone commands - redirect to unified restore with appropriate type
         registerLegacyStandaloneCommand(
@@ -116,6 +133,112 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
         registerStandaloneCommand(Alias.AClaimMakeAdmin, this::handleMakeAdmin);
         registerStandaloneCommand(Alias.AClaimMakeBasic, this::handleMakeBasic);
         registerStandaloneCommand(Alias.AClaimHelp, this::handleHelp);
+    }
+
+    private boolean handlePermissionTrust(CommandSender sender, String[] args) {
+        if (args.length != 3 || !"permission".equalsIgnoreCase(args[0])) {
+            return false;
+        }
+
+        return grantPermissionTrust(sender, args[1], args[2]);
+    }
+
+    private boolean handleStandalonePermissionTrust(CommandSender sender, String[] args) {
+        if (args.length != 2) {
+            return false;
+        }
+
+        return grantPermissionTrust(sender, args[0], args[1]);
+    }
+
+    private boolean grantPermissionTrust(CommandSender sender, String permissionNode, String type) {
+        if (!(sender instanceof Player)) {
+            sender.sendMessage("This command can only be used by players.");
+            return true;
+        }
+
+        Player player = (Player) sender;
+        if (!player.hasPermission(ClaimTrustCommandPermissions.PERMISSION_TRUST)) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+            return true;
+        }
+
+        String identifier = ClaimTrustIdentifier.fromPermissionTarget(permissionNode);
+        if (identifier == null) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.InvalidPermissionID);
+            return true;
+        }
+
+        ClaimPermission permissionLevel = parsePermissionTrustType(type);
+        if (permissionLevel == null) {
+            return false;
+        }
+
+        plugin.handleTrustCommand(player, permissionLevel, identifier, false);
+        return true;
+    }
+
+    private static @Nullable ClaimPermission parsePermissionTrustType(@NotNull String type) {
+        switch (type.trim().toLowerCase(Locale.ROOT)) {
+            case "access":
+                return ClaimPermission.Access;
+            case "container":
+            case "inventory":
+                return ClaimPermission.Container;
+            case "build":
+                return ClaimPermission.Build;
+            case "manage":
+            case "manager":
+                return ClaimPermission.Manage;
+            default:
+                return null;
+        }
+    }
+
+    private @NotNull TabExecutor createPermissionTrustStandaloneTabExecutor() {
+        return new TabExecutor() {
+            @Override
+            public boolean onCommand(
+                @NotNull CommandSender sender,
+                @NotNull Command command,
+                @NotNull String label,
+                @NotNull String[] args
+            ) {
+                return handleStandalonePermissionTrust(sender, args);
+            }
+
+            @Override
+            public @NotNull List<String> onTabComplete(
+                @NotNull CommandSender sender,
+                @NotNull Command command,
+                @NotNull String alias,
+                @NotNull String[] args
+            ) {
+                if (args.length != 2) {
+                    return Collections.emptyList();
+                }
+
+                String prefix = args[1].toLowerCase(Locale.ROOT);
+                return permissionTrustTypeSuggestions()
+                    .stream()
+                    .filter(suggestion -> suggestion.toLowerCase(Locale.ROOT).startsWith(prefix))
+                    .collect(Collectors.toList());
+            }
+        };
+    }
+
+    private @NotNull List<String> permissionTrustTypeSuggestions() {
+        if (rootCommandConfig != null) {
+            CommandAliasConfiguration.Subcommand trustConfig = rootCommandConfig.getSubcommand("trust");
+            if (trustConfig != null) {
+                CommandAliasConfiguration.Subcommand.Argument typeArgument = trustConfig.getArgument(2);
+                if (typeArgument != null && !typeArgument.suggestions().isEmpty()) {
+                    return typeArgument.suggestions();
+                }
+            }
+        }
+
+        return DEFAULT_PERMISSION_TRUST_TYPES;
     }
 
     @Override

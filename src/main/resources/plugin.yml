@@ -56,8 +56,13 @@ commands:
   managetrust:
     description: Grants a player permission to manage the claim trustlist.
     usage: /<command> <player>.  Permits a player /trust and /untrust players in the claim.
-    aliases: [pt, mt, permissiontrust]
+    aliases: [mt]
     permission: griefprevention.claims
+  permissiontrust:
+    description: Grants a permission node access to a claim.
+    usage: /<command> <permission> <access|container|build|manage>
+    permission: griefprevention.permissiontrust
+    aliases: [pt]
   subdivideclaims:
     description: Switches the shovel tool to subdivision mode, used to subdivide your claims.
     usage: /<command>
@@ -394,6 +399,8 @@ permissions:
   griefprevention.adminclaims:
     description: Grants permission to create administrative claims.
     default: op
+    children:
+      griefprevention.permissiontrust: true
   griefprevention.adminclaims.convert:
     description: Grants permission to convert claims between basic and administrative ownership.
     default: op
@@ -438,7 +445,7 @@ permissions:
       griefprevention.untrust: true
       griefprevention.containertrust: true
       griefprevention.accesstrust: true
-      griefprevention.permissiontrust: true
+      griefprevention.managetrust: true
       griefprevention.neighbortrust: true
       griefprevention.distancetrust: true
       griefprevention.checkclaimdistance: true
@@ -480,9 +487,12 @@ permissions:
   griefprevention.accesstrust:
     description: Grants permission to use /accesstrust.
     default: true
-  griefprevention.permissiontrust:
-    description: Grants permission to use /managetrust (formerly /permissiontrust).
+  griefprevention.managetrust:
+    description: Grants permission to use /managetrust.
     default: true
+  griefprevention.permissiontrust:
+    description: Grants permission to give permission nodes trust in claims.
+    default: false
   griefprevention.neighbortrust:
     description: Grants permission to use /neighbortrust and /distancetrust.
     default: true

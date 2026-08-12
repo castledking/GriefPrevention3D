@@ -13,7 +13,7 @@ public enum ClaimTrustLevel
      */
     EDIT(0),
     /**
-     * Permission management. Also grants build, container, and access.
+     * Permission management. This is a separate track and grants no interaction access.
      */
     MANAGE(1),
     /**
@@ -42,7 +42,15 @@ public enum ClaimTrustLevel
 
     public boolean isGrantedBy(@Nullable ClaimTrustLevel other)
     {
-        return other != null && other.trustLevel <= this.trustLevel;
+        if (other == null)
+        {
+            return false;
+        }
+        if (other == MANAGE || this == MANAGE)
+        {
+            return other == this || other == EDIT;
+        }
+        return other.trustLevel <= this.trustLevel;
     }
 
     public @NotNull String denySuffix()
@@ -50,7 +58,7 @@ public enum ClaimTrustLevel
         switch (this)
         {
             case MANAGE:
-                return "#manager";
+                return "#manage";
             case BUILD:
                 return "#build";
             case CONTAINER:

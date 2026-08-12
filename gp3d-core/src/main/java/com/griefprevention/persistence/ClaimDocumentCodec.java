@@ -453,11 +453,9 @@ public final class ClaimDocumentCodec
         putTrust(permissions, stringList(section.get(CONTAINERS), CONTAINERS), ClaimTrustLevel.CONTAINER);
         putTrust(permissions, stringList(section.get(ACCESSORS), ACCESSORS), ClaimTrustLevel.ACCESS);
 
+        // Manage trust is its own track, so listing a player under Managers must not strip the
+        // build/container/access trust they were also granted.
         List<String> managers = stringList(section.get(MANAGERS), MANAGERS);
-        for (String manager : managers)
-        {
-            permissions.remove(ClaimTrustSnapshot.normalizeIdentifier(manager));
-        }
         return new ClaimTrustSnapshot(ownerId, permissions, managers, Collections.<String>emptyList());
     }
 

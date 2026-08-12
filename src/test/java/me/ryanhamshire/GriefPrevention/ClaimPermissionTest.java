@@ -2,12 +2,15 @@ package me.ryanhamshire.GriefPrevention;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.griefprevention.test.ServerMocks;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -23,6 +26,7 @@ class ClaimPermissionTest {
 
     private static final UUID OWNER_ID = UUID.fromString("3c34f3c7-04b1-46e3-8120-b5dcb6bb5ca7");
     private static final UUID MANAGER_ID = UUID.fromString("f53a8b61-c8a9-4ed5-b2f2-c2a7f7951dc3");
+    private static final UUID TRUSTED_MANAGER_ID = UUID.fromString("6b2b9d0e-9d0a-4a3a-9f5e-1d7c3a5b8e42");
 
     @BeforeAll
     static void beforeAll() {
@@ -38,6 +42,7 @@ class ClaimPermissionTest {
 
         when(dataStore.getPlayerData(OWNER_ID)).thenReturn(new PlayerData());
         when(dataStore.getPlayerData(MANAGER_ID)).thenReturn(new PlayerData());
+        when(dataStore.getPlayerData(TRUSTED_MANAGER_ID)).thenReturn(new PlayerData());
     }
 
     @AfterAll
@@ -68,5 +73,131 @@ class ClaimPermissionTest {
         assertNotNull(claim.checkPermission(manager, ClaimPermission.Build, null));
         assertNotNull(claim.checkPermission(manager, ClaimPermission.Container, null));
         assertNotNull(claim.checkPermission(manager, ClaimPermission.Access, null));
+    }
+
+    @Test
+    void loadedManageTrustKeepsBuildTrust() {
+        Player trustedManager = trustedManager();
+
+        // A player listed under both Builders and Managers on disk, as /trust followed by
+        // /managetrust records them.
+        Claim claim = claim(
+            Collections.singletonList(TRUSTED_MANAGER_ID.toString()),
+            Collections.singletonList(TRUSTED_MANAGER_ID.toString())
+        );
+
+        assertNull(claim.checkPermission(trustedManager, ClaimPermission.Manage, null));
+        assertNull(claim.checkPermission(trustedManager, ClaimPermission.Build, null));
+        assertNull(claim.checkPermission(trustedManager, ClaimPermission.Container, null));
+        assertNull(claim.checkPermission(trustedManager, ClaimPermission.Access, null));
+        assertNotNull(claim.checkPermission(trustedManager, ClaimPermission.Edit, null));
+    }
+
+    @Test
+    void grantingManageTrustKeepsExistingContainerTrust() {
+        Player trustedManager = trustedManager();
+        Claim claim = claim(Collections.emptyList(), Collections.emptyList());
+
+        claim.setPermission(TRUSTED_MANAGER_ID.toString(), ClaimPermission.Container);
+        claim.setPermission(TRUSTED_MANAGER_ID.toString(), ClaimPermission.Manage);
+
+        assertNull(claim.checkPermission(trustedManager, ClaimPermission.Manage, null));
+        assertNull(claim.checkPermission(trustedManager, ClaimPermission.Container, null));
+        assertNotNull(claim.checkPermission(trustedManager, ClaimPermission.Build, null));
+    }
+
+    @Test
+    void grantingInteractionTrustKeepsExistingManageTrust() {
+        Player trustedManager = trustedManager();
+        Claim claim = claim(Collections.emptyList(), Collections.singletonList(TRUSTED_MANAGER_ID.toString()));
+
+        claim.setPermission(TRUSTED_MANAGER_ID.toString(), ClaimPermission.Container);
+
+        assertNull(claim.checkPermission(trustedManager, ClaimPermission.Manage, null));
+        assertNull(claim.checkPermission(trustedManager, ClaimPermission.Container, null));
+    }
+
+    @Test
+    void untrustRemovesBothTrustTracks() {
+        Player trustedManager = trustedManager();
+        Claim claim = claim(
+            Collections.singletonList(TRUSTED_MANAGER_ID.toString()),
+            Collections.singletonList(TRUSTED_MANAGER_ID.toString())
+        );
+
+        claim.dropPermission(TRUSTED_MANAGER_ID.toString());
+
+        assertNotNull(claim.checkPermission(trustedManager, ClaimPermission.Manage, null));
+        assertNotNull(claim.checkPermission(trustedManager, ClaimPermission.Access, null));
+    }
+
+    @Test
+    void droppingManageTrustKeepsBuildTrust() {
+        Player trustedManager = trustedManager();
+        Claim claim = claim(
+            Collections.singletonList(TRUSTED_MANAGER_ID.toString()),
+            Collections.singletonList(TRUSTED_MANAGER_ID.toString())
+        );
+
+        claim.dropManager(TRUSTED_MANAGER_ID.toString());
+
+        assertNotNull(claim.checkPermission(trustedManager, ClaimPermission.Manage, null));
+        assertNull(claim.checkPermission(trustedManager, ClaimPermission.Build, null));
+    }
+
+    @Test
+    void savedTrustListsReportBothTracks() {
+        Claim claim = claim(
+            Collections.singletonList(TRUSTED_MANAGER_ID.toString()),
+            Collections.singletonList(TRUSTED_MANAGER_ID.toString())
+        );
+
+        ArrayList<String> builders = new ArrayList<>();
+        ArrayList<String> containers = new ArrayList<>();
+        ArrayList<String> accessors = new ArrayList<>();
+        ArrayList<String> managers = new ArrayList<>();
+        claim.getPermissions(builders, containers, accessors, managers);
+
+        assertTrue(builders.contains(TRUSTED_MANAGER_ID.toString()));
+        assertTrue(managers.contains(TRUSTED_MANAGER_ID.toString()));
+        assertTrue(containers.isEmpty());
+        assertTrue(accessors.isEmpty());
+    }
+
+    @Test
+    void neighborTrustIsNotSavedAsAccessTrust() {
+        Claim claim = claim(Collections.emptyList(), Collections.emptyList());
+        claim.setPermission(TRUSTED_MANAGER_ID.toString(), ClaimPermission.Neighbor);
+
+        ArrayList<String> builders = new ArrayList<>();
+        ArrayList<String> containers = new ArrayList<>();
+        ArrayList<String> accessors = new ArrayList<>();
+        ArrayList<String> managers = new ArrayList<>();
+        claim.getPermissions(builders, containers, accessors, managers);
+
+        assertTrue(accessors.isEmpty());
+        assertTrue(builders.isEmpty());
+        assertTrue(containers.isEmpty());
+        assertTrue(managers.isEmpty());
+    }
+
+    private static Player trustedManager() {
+        Player player = mock(Player.class);
+        when(player.getUniqueId()).thenReturn(TRUSTED_MANAGER_ID);
+        when(Bukkit.getServer().getPlayer(TRUSTED_MANAGER_ID)).thenReturn(player);
+        return player;
+    }
+
+    private static Claim claim(List<String> builderIDs, List<String> managerIDs) {
+        return new Claim(
+            new Location(null, 0, 64, 0),
+            new Location(null, 9, 64, 9),
+            OWNER_ID,
+            builderIDs,
+            Collections.emptyList(),
+            Collections.emptyList(),
+            managerIDs,
+            1L
+        );
     }
 }

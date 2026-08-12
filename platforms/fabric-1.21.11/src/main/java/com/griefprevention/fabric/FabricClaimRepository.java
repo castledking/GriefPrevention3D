@@ -8,6 +8,7 @@ import com.griefprevention.claims.ClaimSnapshotIndex;
 import com.griefprevention.claims.ClaimTrustLevel;
 import com.griefprevention.claims.ClaimTrustSnapshot;
 import com.griefprevention.persistence.ClaimDocument;
+import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -29,18 +30,33 @@ import java.util.UUID;
 
 public final class FabricClaimRepository implements ClaimRepository
 {
+    private static final String OVERRIDE_CLAIM_COUNT_PERMISSION =
+            "griefprevention.overrideclaimcountlimit";
+    static final String CLAIM_COUNT_LIMIT_MESSAGE =
+            "You've reached your limit on land claims. Use /abandonclaim to remove one before creating another.";
+
     private final ClaimSnapshotIndex claimIndex = new ClaimSnapshotIndex();
     private final Map<Long, ClaimDocument> documentsByClaimId = new LinkedHashMap<>();
     private final Path dataFolder;
     private final Logger logger;
+    private final FabricPermissionResolver permissions;
     private final FabricClaimBlockService claimBlocks;
     private long nextClaimId;
 
     FabricClaimRepository(@NotNull Path dataFolder, @NotNull Logger logger)
     {
+        this(dataFolder, logger, FabricPermissions.detect(logger));
+    }
+
+    FabricClaimRepository(
+            @NotNull Path dataFolder,
+            @NotNull Logger logger,
+            @NotNull FabricPermissionResolver permissions)
+    {
         this.dataFolder = dataFolder;
         this.logger = logger;
-        this.claimBlocks = FabricClaimBlockService.create(dataFolder, logger);
+        this.permissions = permissions;
+        this.claimBlocks = new FabricClaimBlockService(dataFolder, logger, permissions);
         reload();
     }
 
@@ -72,6 +88,11 @@ public final class FabricClaimRepository implements ClaimRepository
     @NotNull Path dataFolder()
     {
         return this.dataFolder;
+    }
+
+    @NotNull FabricClaimBlockService claimBlockService()
+    {
+        return this.claimBlocks;
     }
 
     synchronized @NotNull CreateClaimResult createClaim(
@@ -106,7 +127,13 @@ public final class FabricClaimRepository implements ClaimRepository
                 level.getMaxY(),
                 secondCorner.getZ()
         );
-        return createClaim(worldKey(level), bounds, ownerId, player);
+        return createClaim(
+                worldKey(level),
+                bounds,
+                ownerId,
+                player,
+                bypassesClaimCountLimit(ownerId, player)
+        );
     }
 
     synchronized @NotNull CreateClaimResult createClaim(
@@ -116,6 +143,22 @@ public final class FabricClaimRepository implements ClaimRepository
             @Nullable ServerPlayer player)
             throws IOException
     {
+        return createClaim(worldKey, bounds, ownerId, player, bypassesClaimCountLimit(ownerId, player));
+    }
+
+    synchronized @NotNull CreateClaimResult createClaim(
+            @NotNull String worldKey,
+            @NotNull ClaimBounds bounds,
+            @NotNull UUID ownerId,
+            @Nullable ServerPlayer player,
+            boolean bypassClaimCountLimit)
+            throws IOException
+    {
+        if (!bypassClaimCountLimit && hasReachedClaimCountLimit(ownerId))
+        {
+            return CreateClaimResult.claimCountLimitReached();
+        }
+
         ClaimSnapshot snapshot = new ClaimSnapshot(
                 this.nextClaimId,
                 worldKey,
@@ -159,6 +202,13 @@ public final class FabricClaimRepository implements ClaimRepository
         }
         ClaimCreatedCallback.EVENT.invoker().onClaimCreated(snapshot, player);
         return CreateClaimResult.created(snapshot, balance.remaining() - claimArea);
+    }
+
+    synchronized boolean hasReachedClaimCountLimit(@NotNull ServerPlayer player)
+    {
+        UUID playerId = player.getUUID();
+        return !bypassesClaimCountLimit(playerId, player)
+                && hasReachedClaimCountLimit(playerId);
     }
 
     synchronized @NotNull UpdateClaimResult updateClaimBounds(
@@ -255,16 +305,57 @@ public final class FabricClaimRepository implements ClaimRepository
     synchronized @Nullable ClaimSnapshot deleteClaim(long claimId, @Nullable ServerPlayer player)
             throws IOException
     {
+        return deleteClaimAs(claimId, player == null ? null : player.getUUID(), player);
+    }
+
+    synchronized @Nullable ClaimSnapshot deleteClaimAs(
+            long claimId,
+            @Nullable UUID actorId,
+            @Nullable ServerPlayer player)
+            throws IOException
+    {
         ClaimSnapshot claim = this.claimIndex.get(claimId);
         if (claim == null)
         {
             return null;
         }
 
-        List<ClaimDocument> documents = mutableDocuments();
-        Set<Long> deletedIds = descendantIds(claimId, documents);
-        documents.removeIf(document -> deletedIds.contains(document.snapshot().id()));
-        replaceAndSave(documents);
+        FabricClaimBlockService.PlayerDataUpdate playerDataUpdate = null;
+        if (actorId != null
+                && actorId.equals(claim.ownerId())
+                && claim.parentId() == null
+                && !claim.subdivision())
+        {
+            playerDataUpdate = this.claimBlocks.prepareAbandonment(
+                    actorId,
+                    claim.bounds().area()
+            );
+        }
+
+        List<ClaimDocument> originalDocuments = mutableDocuments();
+        List<ClaimDocument> updatedDocuments = new ArrayList<>(originalDocuments);
+        Set<Long> deletedIds = descendantIds(claimId, updatedDocuments);
+        updatedDocuments.removeIf(document -> deletedIds.contains(document.snapshot().id()));
+        replaceAndSave(updatedDocuments);
+        if (playerDataUpdate != null)
+        {
+            try
+            {
+                this.claimBlocks.apply(playerDataUpdate);
+            }
+            catch (IOException playerDataFailure)
+            {
+                try
+                {
+                    replaceAndSave(originalDocuments);
+                }
+                catch (IOException rollbackFailure)
+                {
+                    playerDataFailure.addSuppressed(rollbackFailure);
+                }
+                throw playerDataFailure;
+            }
+        }
         ClaimDeletedCallback.EVENT.invoker().onClaimDeleted(claim, player);
         return claim;
     }
@@ -293,14 +384,13 @@ public final class FabricClaimRepository implements ClaimRepository
         Set<String> managers = new LinkedHashSet<>(existingTrust.managerIdentifiers());
         Set<String> denies = new LinkedHashSet<>(existingTrust.deniedIdentifiers());
 
+        // The two trust tracks are independent: granting one must never revoke the other.
         if (levelToGrant == ClaimTrustLevel.MANAGE)
         {
-            permissions.remove(normalized);
             managers.add(normalized);
         }
         else
         {
-            managers.remove(normalized);
             permissions.put(normalized, levelToGrant);
         }
         removeDenyEntries(denies, normalized);
@@ -362,6 +452,33 @@ public final class FabricClaimRepository implements ClaimRepository
         Long id = claim.id();
         ClaimDocument document = id == null ? null : this.documentsByClaimId.get(id);
         return document == null ? null : document.trust();
+    }
+
+    synchronized boolean allows(
+            @NotNull ClaimSnapshot claim,
+            @NotNull UUID playerId,
+            @NotNull ClaimTrustLevel required)
+    {
+        ClaimTrustSnapshot trust = trustForOrEmpty(claim);
+        return FabricClaimTrustEvaluator.allows(playerId, trust, required, this.permissions);
+    }
+
+    synchronized boolean canGrantManageTrust(@NotNull ServerPlayer player)
+    {
+        return FabricTrustCommandAuthorization.canGrantManageTrust(
+                player.getUUID(),
+                this.permissions
+        );
+    }
+
+    synchronized boolean canGrantPermissionTrust(@NotNull ServerPlayer player)
+    {
+        boolean operatorDefault = Commands.LEVEL_GAMEMASTERS.check(player.permissions());
+        return FabricTrustCommandAuthorization.canGrantPermissionTrust(
+                player.getUUID(),
+                this.permissions,
+                operatorDefault
+        );
     }
 
     synchronized @Nullable ClaimDocument documentFor(long claimId)
@@ -492,6 +609,44 @@ public final class FabricClaimRepository implements ClaimRepository
         return magnitude > Integer.MAX_VALUE ? Integer.MAX_VALUE : (int) magnitude;
     }
 
+    private boolean hasReachedClaimCountLimit(@NotNull UUID ownerId)
+    {
+        int maximumClaims = this.claimBlocks.maximumClaimsPerPlayer();
+        if (maximumClaims <= 0)
+        {
+            return false;
+        }
+
+        int ownedTopLevelClaims = 0;
+        for (ClaimSnapshot snapshot : this.claimIndex.snapshots())
+        {
+            if (ownerId.equals(snapshot.ownerId())
+                    && snapshot.parentId() == null
+                    && !snapshot.subdivision()
+                    && ++ownedTopLevelClaims >= maximumClaims)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean bypassesClaimCountLimit(
+            @NotNull UUID ownerId,
+            @Nullable ServerPlayer player)
+    {
+        if (player == null || !ownerId.equals(player.getUUID()))
+        {
+            return false;
+        }
+        boolean operatorDefault = Commands.LEVEL_GAMEMASTERS.check(player.permissions());
+        return this.claimBlocks.permissionOrDefault(
+                ownerId,
+                OVERRIDE_CLAIM_COUNT_PERMISSION,
+                operatorDefault
+        );
+    }
+
     // ClaimRepository interface methods
 
     @Override
@@ -541,6 +696,7 @@ public final class FabricClaimRepository implements ClaimRepository
     {
         private final @Nullable ClaimSnapshot created;
         private final @Nullable ClaimSnapshot overlapping;
+        private final boolean claimCountLimitReached;
         private final boolean insufficientClaimBlocks;
         private final int blocksNeeded;
         private final @Nullable Integer remainingBlocks;
@@ -548,12 +704,14 @@ public final class FabricClaimRepository implements ClaimRepository
         private CreateClaimResult(
                 @Nullable ClaimSnapshot created,
                 @Nullable ClaimSnapshot overlapping,
+                boolean claimCountLimitReached,
                 boolean insufficientClaimBlocks,
                 int blocksNeeded,
                 @Nullable Integer remainingBlocks)
         {
             this.created = created;
             this.overlapping = overlapping;
+            this.claimCountLimitReached = claimCountLimitReached;
             this.insufficientClaimBlocks = insufficientClaimBlocks;
             this.blocksNeeded = blocksNeeded;
             this.remainingBlocks = remainingBlocks;
@@ -561,17 +719,22 @@ public final class FabricClaimRepository implements ClaimRepository
 
         static @NotNull CreateClaimResult created(@NotNull ClaimSnapshot claim, int remainingBlocks)
         {
-            return new CreateClaimResult(claim, null, false, 0, remainingBlocks);
+            return new CreateClaimResult(claim, null, false, false, 0, remainingBlocks);
         }
 
         static @NotNull CreateClaimResult overlap(@NotNull ClaimSnapshot claim)
         {
-            return new CreateClaimResult(null, claim, false, 0, null);
+            return new CreateClaimResult(null, claim, false, false, 0, null);
+        }
+
+        static @NotNull CreateClaimResult claimCountLimitReached()
+        {
+            return new CreateClaimResult(null, null, true, false, 0, null);
         }
 
         static @NotNull CreateClaimResult insufficientClaimBlocks(int blocksNeeded, int remainingBlocks)
         {
-            return new CreateClaimResult(null, null, true, blocksNeeded, remainingBlocks);
+            return new CreateClaimResult(null, null, false, true, blocksNeeded, remainingBlocks);
         }
 
         boolean created()
@@ -587,6 +750,11 @@ public final class FabricClaimRepository implements ClaimRepository
         @Nullable ClaimSnapshot overlappingClaim()
         {
             return this.overlapping;
+        }
+
+        boolean hasReachedClaimCountLimit()
+        {
+            return this.claimCountLimitReached;
         }
 
         boolean hasInsufficientClaimBlocks()

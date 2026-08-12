@@ -3,6 +3,8 @@ package com.griefprevention.fabric;
 import com.griefprevention.claims.ClaimBounds;
 import com.griefprevention.claims.ClaimBlockBalance;
 import com.griefprevention.claims.ClaimSnapshot;
+import com.griefprevention.claims.ClaimTrustCommandPermissions;
+import com.griefprevention.claims.ClaimTrustIdentifier;
 import com.griefprevention.claims.ClaimTrustLevel;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
@@ -57,7 +59,7 @@ final class FabricCommands
                                 .then(Commands.literal("abandon")
                                         .executes(context -> abandonClaim(context.getSource(), claims)))
                                 .then(Commands.literal("trust")
-                                        .then(Commands.argument("target", StringArgumentType.word())
+                                        .then(Commands.argument("target", StringArgumentType.string())
                                                 .suggests((context, builder) -> SharedSuggestionProvider.suggest(
                                                         targetSuggestions(context.getSource()),
                                                         builder))
@@ -71,7 +73,7 @@ final class FabricCommands
                                                                 StringArgumentType.getString(context, "target"),
                                                                 StringArgumentType.getString(context, "level"))))))
                                 .then(Commands.literal("untrust")
-                                        .then(Commands.argument("target", StringArgumentType.word())
+                                        .then(Commands.argument("target", StringArgumentType.string())
                                                 .suggests((context, builder) -> SharedSuggestionProvider.suggest(
                                                         targetSuggestions(context.getSource()),
                                                         builder))
@@ -96,7 +98,7 @@ final class FabricCommands
         source.sendSuccess(() -> Component.literal("Reloaded "
                 + claimCount
                 + " GriefPrevention3D Fabric claims from "
-                + claims.dataFolder()), true);
+                + claims.dataFolder()), false);
         return claimCount;
     }
 
@@ -116,6 +118,13 @@ final class FabricCommands
                     radius,
                     player
             );
+            if (result.hasReachedClaimCountLimit())
+            {
+                source.sendFailure(Component.literal(
+                        FabricClaimRepository.CLAIM_COUNT_LIMIT_MESSAGE
+                ));
+                return 0;
+            }
             if (result.hasInsufficientClaimBlocks())
             {
                 source.sendFailure(Component.literal(
@@ -139,7 +148,7 @@ final class FabricCommands
                     + formatClaim(created)
                     + (result.remainingBlocks() == null
                     ? ""
-                    : "; " + result.remainingBlocks() + " claim blocks remaining")), true);
+                    : "; " + result.remainingBlocks() + " claim blocks remaining")), false);
             return Command.SINGLE_SUCCESS;
         }
         catch (IOException e)
@@ -212,7 +221,7 @@ final class FabricCommands
 
             source.sendSuccess(() -> Component.literal("Abandoned GriefPrevention3D Fabric claim #"
                     + deleted.id()
-                    + "."), true);
+                    + "."), false);
             return Command.SINGLE_SUCCESS;
         }
         catch (IOException e)
@@ -237,11 +246,26 @@ final class FabricCommands
             return 0;
         }
 
+        if (level == ClaimTrustLevel.MANAGE && !claims.canGrantManageTrust(player))
+        {
+            source.sendFailure(Component.literal("You need "
+                    + ClaimTrustCommandPermissions.MANAGE_TRUST
+                    + " to grant manage trust."));
+            return 0;
+        }
+
         String identifier = resolveTrustIdentifier(source, target);
         if (identifier == null)
         {
-            source.sendFailure(Component.literal("Could not resolve target '" + target
-                    + "'. Use public, a UUID, or an online player name."));
+            source.sendFailure(unresolvedTargetMessage(target));
+            return 0;
+        }
+        if (ClaimTrustIdentifier.permissionNode(identifier) != null
+                && !claims.canGrantPermissionTrust(player))
+        {
+            source.sendFailure(Component.literal("You need "
+                    + ClaimTrustCommandPermissions.PERMISSION_TRUST
+                    + " to grant trust to a permission node."));
             return 0;
         }
 
@@ -260,7 +284,7 @@ final class FabricCommands
                     + target
                     + " in claim #"
                     + claim.id()
-                    + "."), true);
+                    + "."), false);
             return Command.SINGLE_SUCCESS;
         }
         catch (IOException | IllegalArgumentException e)
@@ -280,8 +304,7 @@ final class FabricCommands
         String identifier = resolveTrustIdentifier(source, target);
         if (identifier == null)
         {
-            source.sendFailure(Component.literal("Could not resolve target '" + target
-                    + "'. Use public, a UUID, or an online player name."));
+            source.sendFailure(unresolvedTargetMessage(target));
             return 0;
         }
 
@@ -298,7 +321,7 @@ final class FabricCommands
                     + target
                     + " in claim #"
                     + claim.id()
-                    + "."), true);
+                    + "."), false);
             return Command.SINGLE_SUCCESS;
         }
         catch (IOException | IllegalArgumentException e)
@@ -383,26 +406,42 @@ final class FabricCommands
             @NotNull CommandSourceStack source,
             @NotNull String target)
     {
-        if ("public".equalsIgnoreCase(target))
-        {
-            return "public";
-        }
+        return FabricTrustTargetResolver.resolve(target, name -> knownPlayerId(source, name));
+    }
 
-        try
+    private static @Nullable UUID knownPlayerId(
+            @NotNull CommandSourceStack source,
+            @NotNull String name)
+    {
+        ServerPlayer online = source.getServer().getPlayerList().getPlayerByName(name);
+        if (online != null)
         {
-            return UUID.fromString(target).toString();
+            return online.getUUID();
         }
-        catch (IllegalArgumentException ignored)
+        return source.getServer()
+                .services()
+                .nameToIdCache()
+                .get(name)
+                .map(profile -> profile.id())
+                .orElse(null);
+    }
+
+    private static @NotNull Component unresolvedTargetMessage(@NotNull String target)
+    {
+        if (target.startsWith("[") || target.endsWith("]"))
         {
-            ServerPlayer player = source.getServer().getPlayerList().getPlayerByName(target);
-            return player == null ? null : player.getUUID().toString();
+            return Component.literal("Invalid permission trust target '" + target
+                    + "'. Use the complete form \"[permission.node]\".");
         }
+        return Component.literal("No current or previously seen player named '" + target
+                + "'. Use public, a UUID, or a permission node containing a dot.");
     }
 
     private static @NotNull Iterable<String> targetSuggestions(@NotNull CommandSourceStack source)
     {
         List<String> suggestions = new ArrayList<>();
         suggestions.add("public");
+        suggestions.add(StringArgumentType.escapeIfRequired("[permission.node]"));
         suggestions.addAll(source.getOnlinePlayerNames());
         return suggestions;
     }
