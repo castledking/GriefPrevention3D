@@ -128,8 +128,8 @@ public final class ClaimTrustSnapshot
             return false;
         }
 
-        // Manage trust and interaction trust are independent grants: a manager who also holds
-        // build/container/access trust keeps it, so either track can satisfy the check.
+        // Manage and interaction trust are stored independently, so removing manage trust does
+        // not discard an explicit interaction grant. Either stored grant can satisfy the check.
         if (this.managerIdentifiers.contains(normalized) && level.isGrantedBy(ClaimTrustLevel.MANAGE))
         {
             return true;

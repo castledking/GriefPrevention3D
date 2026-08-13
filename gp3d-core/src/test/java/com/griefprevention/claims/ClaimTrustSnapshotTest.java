@@ -26,7 +26,7 @@ class ClaimTrustSnapshotTest {
     }
 
     @Test
-    void manageTrustIsSeparateFromInteractionTrust() {
+    void manageTrustGrantsInteractionTrustButNotOwnerEdit() {
         UUID manage = UUID.randomUUID();
         ClaimTrustSnapshot trust = new ClaimTrustSnapshot(
             null,
@@ -37,9 +37,9 @@ class ClaimTrustSnapshotTest {
 
         assertFalse(trust.hasExplicitPermission(manage, ClaimTrustLevel.EDIT));
         assertTrue(trust.hasExplicitPermission(manage, ClaimTrustLevel.MANAGE));
-        assertFalse(trust.hasExplicitPermission(manage, ClaimTrustLevel.BUILD));
-        assertFalse(trust.hasExplicitPermission(manage, ClaimTrustLevel.CONTAINER));
-        assertFalse(trust.hasExplicitPermission(manage, ClaimTrustLevel.ACCESS));
+        assertTrue(trust.hasExplicitPermission(manage, ClaimTrustLevel.BUILD));
+        assertTrue(trust.hasExplicitPermission(manage, ClaimTrustLevel.CONTAINER));
+        assertTrue(trust.hasExplicitPermission(manage, ClaimTrustLevel.ACCESS));
     }
 
     @Test

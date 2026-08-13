@@ -19,11 +19,11 @@ class ClaimTrustLevelTest
     }
 
     @Test
-    void manageDoesNotGrantInteractionAccess()
+    void manageGrantsInteractionAccess()
     {
-        assertFalse(ClaimTrustLevel.BUILD.isGrantedBy(ClaimTrustLevel.MANAGE));
-        assertFalse(ClaimTrustLevel.CONTAINER.isGrantedBy(ClaimTrustLevel.MANAGE));
-        assertFalse(ClaimTrustLevel.ACCESS.isGrantedBy(ClaimTrustLevel.MANAGE));
+        assertTrue(ClaimTrustLevel.BUILD.isGrantedBy(ClaimTrustLevel.MANAGE));
+        assertTrue(ClaimTrustLevel.CONTAINER.isGrantedBy(ClaimTrustLevel.MANAGE));
+        assertTrue(ClaimTrustLevel.ACCESS.isGrantedBy(ClaimTrustLevel.MANAGE));
     }
 
     @Test

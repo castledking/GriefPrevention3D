@@ -4031,13 +4031,6 @@ public class GriefPrevention extends JavaPlugin {
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoManageTrust, claim.getOwnerName());
                 return;
             }
-            Supplier<String> grantCheck = permissionLevel == ClaimPermission.Manage
-                    ? claim.checkPermission(player, ClaimPermission.Edit, null)
-                    : claim.checkPermission(player, permissionLevel, null);
-            if (grantCheck != null) {
-                GriefPrevention.sendMessage(player, TextMode.Err, Messages.CantGrantThatPermission);
-                return;
-            }
             targetClaims.add(claim);
         }
 

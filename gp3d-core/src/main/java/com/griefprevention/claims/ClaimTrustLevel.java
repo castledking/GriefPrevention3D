@@ -13,7 +13,7 @@ public enum ClaimTrustLevel
      */
     EDIT(0),
     /**
-     * Permission management. This is a separate track and grants no interaction access.
+     * Permission management. Also grants build, container, and access permissions.
      */
     MANAGE(1),
     /**
@@ -45,10 +45,6 @@ public enum ClaimTrustLevel
         if (other == null)
         {
             return false;
-        }
-        if (other == MANAGE || this == MANAGE)
-        {
-            return other == this || other == EDIT;
         }
         return other.trustLevel <= this.trustLevel;
     }

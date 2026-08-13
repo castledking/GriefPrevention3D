@@ -93,9 +93,9 @@ public class Claim
      //holds interaction trust only (build/container/access) - manager status lives in managerIdentifiers
      private HashMap<String, ClaimPermission> playerIDToClaimPermissionMap = new HashMap<>();
 
-    //players/permissions who may hand out trust in this claim.  tracked separately from the
-    //interaction trust map because manage trust is its own track: granting it must not overwrite
-    //a player's build/container/access trust, and losing it must not take that trust away
+    //players/permissions who may hand out trust in this claim. tracked separately from the
+    //interaction trust map so granting manage trust does not overwrite an explicit interaction
+    //grant, and losing manage trust does not take that explicit grant away
     private final HashSet<String> managerIdentifiers = new HashSet<>();
 
     //players/permissions explicitly denied in this claim (override parent inheritance)
@@ -702,7 +702,7 @@ public class Claim
  
      /**
       * Check whether an identifier is granted a ClaimPermission by the trust stored in this claim.
-      * Manage trust and interaction trust are independent grants, so either can satisfy the check.
+      * Manage and interaction trust are stored independently so either grant can satisfy the check.
       *
       * @param normalizedIdentifier a {@link #normalizeIdentifier(String) normalized} identifier
       * @param level the ClaimPermission required

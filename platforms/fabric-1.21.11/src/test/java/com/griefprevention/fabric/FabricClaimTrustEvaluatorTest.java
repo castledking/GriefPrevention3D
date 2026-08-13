@@ -45,7 +45,7 @@ class FabricClaimTrustEvaluatorTest
     }
 
     @Test
-    void permissionNodeManageTrustDoesNotGrantInteractionTrust()
+    void permissionNodeManageTrustGrantsInteractionTrust()
     {
         ClaimTrustSnapshot trust = new ClaimTrustSnapshot(
                 null,
@@ -58,7 +58,7 @@ class FabricClaimTrustEvaluatorTest
 
         assertTrue(FabricClaimTrustEvaluator.allows(
                 PLAYER, trust, ClaimTrustLevel.MANAGE, permissions));
-        assertFalse(FabricClaimTrustEvaluator.allows(
+        assertTrue(FabricClaimTrustEvaluator.allows(
                 PLAYER, trust, ClaimTrustLevel.BUILD, permissions));
     }
 

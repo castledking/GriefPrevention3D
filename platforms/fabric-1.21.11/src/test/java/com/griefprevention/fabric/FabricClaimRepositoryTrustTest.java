@@ -59,7 +59,7 @@ class FabricClaimRepositoryTrustTest
     }
 
     @Test
-    void manageTrustDoesNotRevokeLoadedContainerTrust() throws Exception
+    void loadedManageTrustRetainsContainerGrantAndGrantsBuild() throws Exception
     {
         Path dataFolder = this.tempDir.resolve("GriefPreventionData");
         Path claimData = dataFolder.resolve("ClaimData");
@@ -92,6 +92,6 @@ class FabricClaimRepositoryTrustTest
         assertTrue(repository.allows(claim, PLAYER, ClaimTrustLevel.MANAGE));
         assertTrue(repository.allows(claim, PLAYER, ClaimTrustLevel.CONTAINER));
         assertTrue(repository.allows(claim, PLAYER, ClaimTrustLevel.ACCESS));
-        assertFalse(repository.allows(claim, PLAYER, ClaimTrustLevel.BUILD));
+        assertTrue(repository.allows(claim, PLAYER, ClaimTrustLevel.BUILD));
     }
 }

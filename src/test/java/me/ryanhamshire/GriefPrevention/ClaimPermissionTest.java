@@ -52,7 +52,7 @@ class ClaimPermissionTest {
     }
 
     @Test
-    void permissionTrustDoesNotGrantOwnerOnlyEdit() {
+    void permissionTrustGrantsLowerLevelsButNotOwnerOnlyEdit() {
         Player manager = mock(Player.class);
         when(manager.getUniqueId()).thenReturn(MANAGER_ID);
         when(Bukkit.getServer().getPlayer(MANAGER_ID)).thenReturn(manager);
@@ -70,9 +70,9 @@ class ClaimPermissionTest {
 
         assertNull(claim.checkPermission(manager, ClaimPermission.Manage, null));
         assertNotNull(claim.checkPermission(manager, ClaimPermission.Edit, null));
-        assertNotNull(claim.checkPermission(manager, ClaimPermission.Build, null));
-        assertNotNull(claim.checkPermission(manager, ClaimPermission.Container, null));
-        assertNotNull(claim.checkPermission(manager, ClaimPermission.Access, null));
+        assertNull(claim.checkPermission(manager, ClaimPermission.Build, null));
+        assertNull(claim.checkPermission(manager, ClaimPermission.Container, null));
+        assertNull(claim.checkPermission(manager, ClaimPermission.Access, null));
     }
 
     @Test
@@ -94,7 +94,7 @@ class ClaimPermissionTest {
     }
 
     @Test
-    void grantingManageTrustKeepsExistingContainerTrust() {
+    void grantingManageTrustKeepsExistingContainerTrustAndGrantsBuild() {
         Player trustedManager = trustedManager();
         Claim claim = claim(Collections.emptyList(), Collections.emptyList());
 
@@ -103,7 +103,7 @@ class ClaimPermissionTest {
 
         assertNull(claim.checkPermission(trustedManager, ClaimPermission.Manage, null));
         assertNull(claim.checkPermission(trustedManager, ClaimPermission.Container, null));
-        assertNotNull(claim.checkPermission(trustedManager, ClaimPermission.Build, null));
+        assertNull(claim.checkPermission(trustedManager, ClaimPermission.Build, null));
     }
 
     @Test

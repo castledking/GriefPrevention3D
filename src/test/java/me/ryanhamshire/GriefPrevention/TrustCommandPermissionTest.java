@@ -4,6 +4,7 @@ import com.griefprevention.claims.ClaimTrustCommandPermissions;
 import com.griefprevention.test.ServerMocks;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
+import org.bukkit.OfflinePlayer;
 import org.bukkit.Server;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
@@ -14,10 +15,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -25,6 +28,7 @@ import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -32,6 +36,8 @@ import static org.mockito.Mockito.when;
 class TrustCommandPermissionTest
 {
     private static final UUID OWNER = UUID.fromString("11111111-2222-3333-4444-555555555555");
+    private static final UUID CLAIM_OWNER = UUID.fromString("22222222-3333-4444-5555-666666666666");
+    private static final UUID RECIPIENT = UUID.fromString("33333333-4444-5555-6666-777777777777");
     private static Server server;
     private static PluginManager pluginManager;
 
@@ -126,5 +132,68 @@ class TrustCommandPermissionTest
 
         assertNull(this.claim.getPermission("[gp3d.test.builder]"));
         verify(this.dataStore, never()).saveClaims(anyList());
+    }
+
+    @Test
+    void managerCanGrantBuildTrustToAnotherPlayer()
+    {
+        configureManagerClaimAndRecipient();
+
+        this.plugin.handleTrustCommand(this.player, ClaimPermission.Build, "Linkondorf", false);
+
+        assertEquals(ClaimPermission.Build, this.claim.getPermission(RECIPIENT.toString()));
+        verify(this.dataStore).saveClaims(anyList());
+    }
+
+    @Test
+    void managerCanGrantManageTrustToAnotherPlayer()
+    {
+        configureManagerClaimAndRecipient();
+
+        this.plugin.handleTrustCommand(this.player, ClaimPermission.Manage, "Linkondorf", false);
+
+        assertTrue(this.claim.isManager(RECIPIENT.toString()));
+        verify(this.dataStore).saveClaims(anyList());
+    }
+
+    @Test
+    void ownerCanGrantBuildAndManageTrustWithoutOverwritingEither()
+    {
+        configureRecipient();
+
+        this.plugin.handleTrustCommand(this.player, ClaimPermission.Build, "Linkondorf", false);
+        this.plugin.handleTrustCommand(this.player, ClaimPermission.Manage, "Linkondorf", false);
+
+        assertEquals(ClaimPermission.Build, this.claim.getPermission(RECIPIENT.toString()));
+        assertTrue(this.claim.isManager(RECIPIENT.toString()));
+        verify(this.dataStore, times(2)).saveClaims(anyList());
+    }
+
+    private void configureManagerClaimAndRecipient()
+    {
+        World world = this.player.getLocation().getWorld();
+        this.claim = new Claim(
+                new Location(world, 0, 60, 0),
+                new Location(world, 10, 80, 10),
+                CLAIM_OWNER,
+                new ArrayList<>(),
+                new ArrayList<>(),
+                new ArrayList<>(),
+                new ArrayList<>(Collections.singletonList(OWNER.toString())),
+                false,
+                2L,
+                true
+        );
+        when(this.dataStore.getClaimAt(any(Location.class), anyBoolean(), any())).thenReturn(this.claim);
+
+        configureRecipient();
+    }
+
+    private void configureRecipient()
+    {
+        OfflinePlayer recipient = mock(OfflinePlayer.class);
+        when(recipient.getUniqueId()).thenReturn(RECIPIENT);
+        when(recipient.getName()).thenReturn("Linkondorf");
+        doReturn(recipient).when(this.plugin).resolvePlayerByName("Linkondorf");
     }
 }
