@@ -2,6 +2,7 @@ package com.griefprevention.fabric;
 
 import com.griefprevention.claims.ClaimBounds;
 import com.griefprevention.claims.ClaimSnapshot;
+import com.griefprevention.messages.MessageKey;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -27,14 +28,17 @@ final class FabricClaimToolHooks
 
     private final FabricClaimRepository claims;
     private final FabricFakeBlockVisualization visualization;
+    private final FabricDenialFeedback feedback;
     private final Map<UUID, ClaimToolSession> sessions = new HashMap<>();
 
     FabricClaimToolHooks(
             @NotNull FabricClaimRepository claims,
-            @NotNull FabricFakeBlockVisualization visualization)
+            @NotNull FabricFakeBlockVisualization visualization,
+            @NotNull FabricDenialFeedback feedback)
     {
         this.claims = claims;
         this.visualization = visualization;
+        this.feedback = feedback;
     }
 
     void register()
@@ -131,7 +135,7 @@ final class FabricClaimToolHooks
 
         if (corner != null)
         {
-            player.displayClientMessage(Component.literal("You do not own this claim."), true);
+            this.feedback.sendError(player, MessageKey.NOT_YOUR_CLAIM);
         }
         sendClaimMessage(player, claim, ClaimTool.MODIFICATION);
         this.visualization.visualizeClaim(player, level, claim, this.claims.snapshots(), clicked);
@@ -146,9 +150,7 @@ final class FabricClaimToolHooks
         if (this.claims.hasReachedClaimCountLimit(player))
         {
             this.visualization.clear(player);
-            player.displayClientMessage(Component.literal(
-                    FabricClaimRepository.CLAIM_COUNT_LIMIT_MESSAGE
-            ), true);
+            this.feedback.sendError(player, MessageKey.CLAIM_CREATION_FAILED_OVER_CLAIM_COUNT_LIMIT);
             return;
         }
 
@@ -169,11 +171,10 @@ final class FabricClaimToolHooks
         if (!isLargeEnough(bounds))
         {
             this.visualization.visualizeInitializeBounds(player, level, bounds, clicked);
-            player.displayClientMessage(Component.literal("Claim is too small. Claims must be at least "
-                    + MIN_CLAIM_SIDE
-                    + "x"
-                    + MIN_CLAIM_SIDE
-                    + "."), true);
+            this.feedback.sendError(
+                    player,
+                    MessageKey.NEW_CLAIM_TOO_NARROW,
+                    String.valueOf(MIN_CLAIM_SIDE));
             return;
         }
 
@@ -189,28 +190,22 @@ final class FabricClaimToolHooks
             {
                 this.sessions.remove(player.getUUID());
                 this.visualization.clear(player);
-                player.displayClientMessage(Component.literal(
-                        FabricClaimRepository.CLAIM_COUNT_LIMIT_MESSAGE
-                ), true);
+                this.feedback.sendError(player, MessageKey.CLAIM_CREATION_FAILED_OVER_CLAIM_COUNT_LIMIT);
                 return;
             }
             if (result.hasInsufficientClaimBlocks())
             {
                 this.visualization.visualizeInitializeBounds(player, level, bounds, clicked);
-                player.displayClientMessage(Component.literal(
-                        "You don't have enough blocks to claim that entire area. You need "
-                                + result.blocksNeeded()
-                                + " more blocks."
-                ), true);
+                this.feedback.sendError(
+                        player,
+                        MessageKey.CREATE_CLAIM_INSUFFICIENT_BLOCKS,
+                        String.valueOf(result.blocksNeeded()));
                 return;
             }
             if (!result.created())
             {
                 this.visualization.visualizeConflictBounds(player, level, bounds, clicked);
-                ClaimSnapshot overlap = result.overlappingClaim();
-                player.displayClientMessage(Component.literal("Cannot create claim; overlaps claim #"
-                        + (overlap == null ? "unknown" : overlap.id())
-                        + "."), true);
+                this.feedback.sendError(player, MessageKey.CREATE_CLAIM_FAIL_OVERLAP_SHORT);
                 return;
             }
 
@@ -261,11 +256,10 @@ final class FabricClaimToolHooks
         if (!isLargeEnough(bounds))
         {
             this.visualization.visualizeInitializeBounds(player, level, bounds, clicked);
-            player.displayClientMessage(Component.literal("Claim is too small. Claims must be at least "
-                    + MIN_CLAIM_SIDE
-                    + "x"
-                    + MIN_CLAIM_SIDE
-                    + "."), true);
+            this.feedback.sendError(
+                    player,
+                    MessageKey.RESIZE_CLAIM_TOO_NARROW,
+                    String.valueOf(MIN_CLAIM_SIDE));
             return;
         }
 
@@ -282,20 +276,16 @@ final class FabricClaimToolHooks
             if (result.hasInsufficientClaimBlocks())
             {
                 this.visualization.visualizeInitializeBounds(player, level, bounds, clicked);
-                player.displayClientMessage(Component.literal(
-                        "You don't have enough blocks for this size. You need "
-                                + result.blocksNeeded()
-                                + " more."
-                ), true);
+                this.feedback.sendError(
+                        player,
+                        MessageKey.RESIZE_NEED_MORE_BLOCKS,
+                        String.valueOf(result.blocksNeeded()));
                 return;
             }
             if (!result.updated())
             {
                 this.visualization.visualizeConflictBounds(player, level, bounds, clicked);
-                ClaimSnapshot overlap = result.overlappingClaim();
-                player.displayClientMessage(Component.literal("Cannot resize claim; overlaps claim #"
-                        + (overlap == null ? "unknown" : overlap.id())
-                        + "."), true);
+                this.feedback.sendError(player, MessageKey.RESIZE_FAIL_OVERLAP);
                 return;
             }
 

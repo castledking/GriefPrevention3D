@@ -716,7 +716,11 @@ public class GriefPrevention extends JavaPlugin {
 
         try {
             // Load the configuration, which will merge user customizations with defaults
-            this.commandAliases = CommandAliasConfiguration.load(this, aliasFile);
+            this.commandAliases = CommandAliasConfiguration.load(aliasFile.toPath(), new CommandAliasConfiguration.Logger() {
+                @Override public void info(String msg) { log.info(msg); }
+                @Override public void warning(String msg) { log.warning(msg); }
+                @Override public void severe(String msg) { log.severe(msg); }
+            });
 
             // Check if we need to update the file with new default keys
             YamlConfiguration defaultConfig = new YamlConfiguration();
@@ -738,11 +742,11 @@ public class GriefPrevention extends JavaPlugin {
                 // Persist the same semantic merge used at runtime. Writing defaultYaml here
                 // would silently erase renamed commands, translations, and addon-owned keys
                 // whenever GP3D introduces a new default subcommand.
-                YamlConfiguration mergedConfig = CommandAliasConfiguration.mergeConfigurations(
-                    defaultConfig,
-                    userConfig
-                );
-                mergedConfig.save(aliasFile);
+                this.commandAliases = CommandAliasConfiguration.load(aliasFile.toPath(), new CommandAliasConfiguration.Logger() {
+                @Override public void info(String msg) { log.info(msg); }
+                @Override public void warning(String msg) { log.warning(msg); }
+                @Override public void severe(String msg) { log.severe(msg); }
+            });
                 log.info("Updated alias.yml with latest default configuration while preserving customizations.");
             }
         } catch (Exception e) {

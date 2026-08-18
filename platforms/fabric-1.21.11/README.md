@@ -63,6 +63,14 @@ existing values, comments, ordering, and unknown addon fields remain untouched. 
 carried into their newer Paper-shaped keys instead of being reset to defaults. Fabric reads the existing upstream
 explosion keys without rewriting any unrelated config or addon fields.
 
+Player-facing text is read from `messages.yml` rather than hardcoded. Both shapes Paper accepts are understood: a
+key mapped straight to its text, and the legacy `<Key>.Text` sub-key. A key missing from the file falls back to the
+same default the Paper plugin ships, and an unreadable or malformed file logs a warning and falls back to defaults
+rather than failing startup. Unknown addon keys are preserved on read. As on Paper, `&`/`$` prefix codes,
+`&#RRGGBB` hex colors, and literal `\n` escapes are translated when the file is read — before placeholder
+arguments are substituted, so a player name cannot inject formatting — and blanking a message disables it.
+`/gp3d reload` re-reads `messages.yml` alongside claim data.
+
 Claim YAML is decoded through the platform-neutral `gp3d-core` document codec. Shaped corners, nested
 subdivisions, 2D/3D state, trust, inheritance flags, explosion/PvP/alert flags, modified dates, and unknown addon
 fields survive semantic round trips. Player files under `PlayerData` use the same shared four-line decoder on
@@ -160,7 +168,9 @@ Temporary claim tool coverage:
   right-click moves that corner.
 - Claim creation and resize enforce a temporary 5x5 minimum, enforce the owner's available claim blocks, and
   write directly to `ClaimData`. Resizing refunds the previous top-level area before charging the replacement;
-  subdivisions do not consume additional blocks.
+  subdivisions do not consume additional blocks. Refusals report through the Paper message keys
+  (`NewClaimTooNarrow`, `ResizeClaimTooNarrow`, `CreateClaimInsufficientBlocks`, `ResizeNeedMoreBlocks`,
+  `CreateClaimFailOverlapShort`, `ResizeFailOverlap`, `ClaimCreationFailedOverClaimCountLimit`, `NotYourClaim`).
 - The selected claim is shown with client-only fake block updates, using the same corner/side block language as
   the Bukkit fake block visualization.
 - Fake blocks are only sent to the interacting player and are restored automatically after 60 seconds or when a new
@@ -182,6 +192,22 @@ Temporary protection coverage:
   per-claim flags, creative-world rule, and overworld sea-level threshold as the Bukkit implementation.
 - Trigger-only explosions require access trust; ownerless projectiles originating inside the same claim retain
   upstream's dispenser exception.
+
+Denial feedback:
+
+- A refused block break, block use, entity attack, or entity interaction now tells the player why, using the same
+  `NoBuildPermission`, `NoContainersPermission`, and `NoAccessPermission` text as Paper, in red chat.
+- The `{0}` placeholder resolves to the claim owner's name. Subdivisions inherit the name from their top-level
+  parent, and admin claims use `OwnerNameForAdminClaims`. Names come from the online player list and Minecraft's
+  seen-player cache only; no profile fetch is issued from the interaction path, so an owner the server has never
+  seen falls back to their UUID.
+- Protection denials are rate limited to one message per player per ten seconds across all denials, matching
+  Bukkit's `sendRateLimitedErrorMessage`, so holding a mouse button inside someone else's claim cannot flood chat.
+  A player's cooldown is dropped on disconnect.
+- Claim tool and `/gp3d claim create` denials — claim count limit, minimum size, insufficient claim blocks, and
+  overlap — are sent unthrottled through the same message keys, matching upstream's choice to send those directly
+  since each requires a deliberate action. These moved from the action bar to red chat to match Paper.
+- Explosion-trigger denials are not wired to feedback yet; upstream is silent on that path too.
 
 Manual explosion/migration gate:
 
@@ -207,10 +233,16 @@ Manual explosion/migration gate:
    `/gp3d claim trust gp3d.test.container container` from inside a claim. Confirm the second player can open a
    container but cannot place or break blocks. Restart Fabric, repeat the check, and confirm the claim YAML stores
    `gp3d.test.container` as `[gp3d.test.container]`. Switch to Paper and verify the same permission trust works.
+8. As a second, untrusted player, break a block inside another player's claim and confirm the red
+   `You don't have <owner>'s permission to build here.` reply naming the real owner. Repeat inside a subdivision
+   and confirm it names the parent claim's owner, and inside an admin claim to confirm `an administrator`. Open a
+   container for the access/container wording. Hold the break key for a minute and confirm at most one message per
+   ten seconds. Edit `NoBuildPermission` in `messages.yml` to include `&6` and a `\n`, run `/gp3d reload`, and
+   confirm the color and line break render; blank the value and confirm the message stops being sent.
 
 Next implementation slices:
 
-1. Add denial feedback messages with rate limiting.
-2. Expand protection hooks into fluid spread, piston, and remaining entity environmental paths.
-3. Expand player-facing claim tools into subdivision and richer selection sessions.
-4. Add administrative/economy balance operations and legacy/database import tooling.
+1. Expand protection hooks into fluid spread, piston, and remaining entity environmental paths.
+2. Expand player-facing claim tools into subdivision and richer selection sessions, moving their remaining
+   informational and success text onto the same `messages.yml` keys the denial paths now use.
+3. Add administrative/economy balance operations and legacy/database import tooling.

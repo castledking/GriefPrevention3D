@@ -1,5 +1,6 @@
 package com.griefprevention.claims;
 
+import com.griefprevention.messages.MessageKey;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -47,6 +48,30 @@ public enum ClaimTrustLevel
             return false;
         }
         return other.trustLevel <= this.trustLevel;
+    }
+
+    /**
+     * @return the message shown when a player lacks this trust level, matching Bukkit's
+     *         {@code ClaimPermission.getDenialMessage()}
+     */
+    public @NotNull MessageKey denialMessage()
+    {
+        switch (this)
+        {
+            case EDIT:
+                return MessageKey.ONLY_OWNERS_MODIFY_CLAIMS;
+            case MANAGE:
+                return MessageKey.NO_MANAGE_TRUST;
+            case BUILD:
+                return MessageKey.NO_BUILD_PERMISSION;
+            case CONTAINER:
+                return MessageKey.NO_CONTAINERS_PERMISSION;
+            case ACCESS:
+            case NEIGHBOR:
+                return MessageKey.NO_ACCESS_PERMISSION;
+            default:
+                throw new IllegalStateException("Unknown claim trust level: " + this);
+        }
     }
 
     public @NotNull String denySuffix()

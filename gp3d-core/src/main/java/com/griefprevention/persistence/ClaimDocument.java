@@ -1,5 +1,6 @@
 package com.griefprevention.persistence;
 
+import com.griefprevention.claims.ClaimFlag;
 import com.griefprevention.claims.ClaimSnapshot;
 import com.griefprevention.claims.ClaimTrustSnapshot;
 import com.griefprevention.geometry.OrthogonalPoint2i;
@@ -218,6 +219,49 @@ public final class ClaimDocument
                 this.allowAllNeighbors,
                 this.pvpEnabled,
                 this.alertsEnabled,
+                this.modifiedDate,
+                this.storageKey,
+                this.extraFields
+        );
+    }
+
+    public boolean flag(@NotNull ClaimFlag flag)
+    {
+        switch (flag)
+        {
+            case EXPLOSIONS:
+                return this.explosivesAllowed;
+            case WITHER_EXPLOSIONS:
+                return this.witherExplosionsAllowed;
+            case PVP:
+                return this.pvpEnabled;
+            case ALERTS:
+                return this.alertsEnabled;
+            default:
+                throw new IllegalStateException("Unknown claim flag: " + flag);
+        }
+    }
+
+    /**
+     * Returns a copy with one policy flag changed.
+     *
+     * <p>The modified date is deliberately preserved: upstream stores these as plain fields and only
+     * stamps the date when the claim itself is created or resized, so bumping it here would shift
+     * claim expiry.
+     */
+    public @NotNull ClaimDocument withFlag(@NotNull ClaimFlag flag, boolean value)
+    {
+        return new ClaimDocument(
+                this.snapshot,
+                this.trust,
+                this.shapeCorners,
+                this.inheritNothing,
+                this.inheritNothingForNewSubdivisions,
+                flag == ClaimFlag.EXPLOSIONS ? value : this.explosivesAllowed,
+                flag == ClaimFlag.WITHER_EXPLOSIONS ? value : this.witherExplosionsAllowed,
+                this.allowAllNeighbors,
+                flag == ClaimFlag.PVP ? value : this.pvpEnabled,
+                flag == ClaimFlag.ALERTS ? value : this.alertsEnabled,
                 this.modifiedDate,
                 this.storageKey,
                 this.extraFields

@@ -33,10 +33,12 @@ import org.jetbrains.annotations.NotNull;
 final class FabricProtectionHooks
 {
     private final FabricClaimRepository claims;
+    private final FabricDenialFeedback feedback;
 
-    FabricProtectionHooks(@NotNull FabricClaimRepository claims)
+    FabricProtectionHooks(@NotNull FabricClaimRepository claims, @NotNull FabricDenialFeedback feedback)
     {
         this.claims = claims;
+        this.feedback = feedback;
     }
 
     void register()
@@ -112,7 +114,13 @@ final class FabricProtectionHooks
             return true;
         }
 
-        return this.claims.allows(claim, player.getUUID(), levelRequired);
+        if (this.claims.allows(claim, player.getUUID(), levelRequired))
+        {
+            return true;
+        }
+
+        this.feedback.denied(player, claim, levelRequired);
+        return false;
     }
 
     private static boolean requiresBuildTrust(@NotNull ItemStack stack)

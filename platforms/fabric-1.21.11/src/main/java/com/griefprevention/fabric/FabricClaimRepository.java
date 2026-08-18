@@ -2,6 +2,7 @@ package com.griefprevention.fabric;
 
 import com.griefprevention.claims.ClaimBounds;
 import com.griefprevention.claims.ClaimBlockBalance;
+import com.griefprevention.claims.ClaimFlag;
 import com.griefprevention.claims.ClaimRepository;
 import com.griefprevention.claims.ClaimSnapshot;
 import com.griefprevention.claims.ClaimSnapshotIndex;
@@ -32,9 +33,6 @@ public final class FabricClaimRepository implements ClaimRepository
 {
     private static final String OVERRIDE_CLAIM_COUNT_PERMISSION =
             "griefprevention.overrideclaimcountlimit";
-    static final String CLAIM_COUNT_LIMIT_MESSAGE =
-            "You've reached your limit on land claims. Use /abandonclaim to remove one before creating another.";
-
     private final ClaimSnapshotIndex claimIndex = new ClaimSnapshotIndex();
     private final Map<Long, ClaimDocument> documentsByClaimId = new LinkedHashMap<>();
     private final Path dataFolder;
@@ -452,6 +450,45 @@ public final class FabricClaimRepository implements ClaimRepository
     synchronized @Nullable ClaimSnapshot findClaimAt(@NotNull ServerLevel level, @NotNull BlockPos pos)
     {
         return this.claimIndex.findAt(worldKey(level), pos.getX(), pos.getY(), pos.getZ(), false, false);
+    }
+
+    synchronized @Nullable ClaimSnapshot claimById(long claimId)
+    {
+        return this.claimIndex.get(claimId);
+    }
+
+    /**
+     * @return the flag's current value, or null when the claim is unknown
+     */
+    synchronized @Nullable Boolean flag(long claimId, @NotNull ClaimFlag flag)
+    {
+        ClaimDocument document = this.documentsByClaimId.get(claimId);
+        return document == null ? null : document.flag(flag);
+    }
+
+    /**
+     * Writes one policy flag and persists the claim.
+     *
+     * @return the stored value, or null when the claim is unknown
+     */
+    synchronized @Nullable Boolean setFlag(long claimId, @NotNull ClaimFlag flag, boolean value)
+            throws IOException
+    {
+        ClaimDocument document = this.documentsByClaimId.get(claimId);
+        if (document == null)
+        {
+            return null;
+        }
+        if (document.flag(flag) == value)
+        {
+            // Nothing to write; avoid rewriting the file for a no-op toggle.
+            return value;
+        }
+
+        List<ClaimDocument> documents = mutableDocuments();
+        replaceDocument(documents, document.withFlag(flag, value));
+        replaceAndSave(documents);
+        return value;
     }
 
     synchronized @Nullable ClaimTrustSnapshot trustFor(@NotNull ClaimSnapshot claim)
