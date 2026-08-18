@@ -333,6 +333,126 @@ class FabricClaimFileStoreTest
         assertTrue(Files.isRegularFile(legacy));
     }
 
+    @Test
+    void manualNeighborTrustAndAllowAllNeighborsSurviveAFabricRestart() throws Exception
+    {
+        Path dataFolder = this.tempDir.resolve("GriefPreventionData");
+        Path claimDataFolder = dataFolder.resolve("ClaimData");
+        Files.createDirectories(claimDataFolder);
+        Files.writeString(
+                dataFolder.resolve("_schemaVersion"),
+                String.valueOf(ClaimDataSchema.CURRENT_VERSION),
+                StandardCharsets.UTF_8
+        );
+        Files.writeString(claimDataFolder.resolve("1.yml"), """
+                Claim ID: '1'
+                Lesser Boundary Corner: world;0;-64;0
+                Greater Boundary Corner: world;10;320;10
+                Owner: ''
+                Builders: []
+                Containers: []
+                Accessors:
+                - aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
+                Managers: []
+                Neighbors:
+                - aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee
+                - '[gp3d.vip]'
+                Parent Claim ID: -1
+                inheritNothing: false
+                allowAllNeighbors: true
+                Is3D: false
+                Modified Date: 1779681984295
+                """, StandardCharsets.UTF_8);
+
+        FabricClaimFileStore.LoadedClaims loaded = FabricClaimFileStore.load(dataFolder, LOGGER);
+        ClaimDocument document = loaded.documents().getFirst();
+        ClaimTrustSnapshot trust = loaded.trustByClaimId().get(1L);
+
+        assertTrue(document.allowAllNeighbors());
+        assertEquals(ClaimTrustLevel.ACCESS,
+                trust.permissionsByIdentifier().get("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"));
+        assertTrue(trust.neighborIdentifiers().contains("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"));
+        assertTrue(trust.neighborIdentifiers().contains("[gp3d.vip]"));
+
+        FabricClaimFileStore.save(dataFolder, loaded.documents(), loaded.nextClaimId());
+        String saved = Files.readString(claimDataFolder.resolve("1.yml"), StandardCharsets.UTF_8);
+        assertTrue(saved.contains("Neighbors:"));
+        assertTrue(saved.contains("allowAllNeighbors: true"));
+
+        FabricClaimFileStore.LoadedClaims reloaded = FabricClaimFileStore.load(dataFolder, LOGGER);
+
+        assertEquals(loaded.documents(), reloaded.documents());
+        assertTrue(reloaded.trustByClaimId().get(1L).neighborIdentifiers().contains("[gp3d.vip]"));
+        assertTrue(reloaded.documents().getFirst().allowAllNeighbors());
+    }
+
+    @Test
+    void aRevokedInheritedGrantStaysRevokedAcrossAFabricRestart() throws Exception
+    {
+        Path dataFolder = this.tempDir.resolve("GriefPreventionData");
+        Path claimDataFolder = dataFolder.resolve("ClaimData");
+        Files.createDirectories(claimDataFolder);
+        Files.writeString(
+                dataFolder.resolve("_schemaVersion"),
+                String.valueOf(ClaimDataSchema.CURRENT_VERSION),
+                StandardCharsets.UTF_8
+        );
+        Files.writeString(claimDataFolder.resolve("28.yml"), """
+                Claim ID: '28'
+                Lesser Boundary Corner: world;0;-64;0
+                Greater Boundary Corner: world;10;320;10
+                Owner: ''
+                Builders:
+                - '[server.builders]'
+                Containers: []
+                Accessors: []
+                Managers: []
+                Parent Claim ID: -1
+                inheritNothing: false
+                Is3D: false
+                Modified Date: 1779681984295
+                Children:
+                  '29':
+                    Claim ID: '29'
+                    Lesser Boundary Corner: world;1;-64;1
+                    Greater Boundary Corner: world;3;320;3
+                    Owner: ''
+                    Builders: []
+                    Containers: []
+                    Accessors: []
+                    Managers: []
+                    Denied:
+                    - '[server.builders]#build'
+                    Parent Claim ID: 28
+                    inheritNothing: false
+                    Is3D: false
+                    Modified Date: 1779681984295
+                """, StandardCharsets.UTF_8);
+
+        FabricClaimFileStore.LoadedClaims loaded = FabricClaimFileStore.load(dataFolder, LOGGER);
+        assertRevokedInheritedGrant(loaded.trustByClaimId());
+
+        // The restart: the server writes the loaded graph back out and boots from what it wrote.
+        FabricClaimFileStore.save(dataFolder, loaded.documents(), loaded.nextClaimId());
+        assertTrue(Files.readString(claimDataFolder.resolve("28.yml"), StandardCharsets.UTF_8)
+                .contains("Denied:"));
+
+        FabricClaimFileStore.LoadedClaims reloaded = FabricClaimFileStore.load(dataFolder, LOGGER);
+        assertRevokedInheritedGrant(reloaded.trustByClaimId());
+        assertEquals(loaded.documents(), reloaded.documents());
+    }
+
+    private static void assertRevokedInheritedGrant(Map<Long, ClaimTrustSnapshot> trustByClaimId)
+    {
+        ClaimTrustSnapshot parent = trustByClaimId.get(28L);
+        ClaimTrustSnapshot child = trustByClaimId.get(29L);
+
+        assertEquals(ClaimTrustLevel.BUILD,
+                parent.permissionsByIdentifier().get("[server.builders]"));
+        assertFalse(parent.isPermissionDenied("[server.builders]", ClaimTrustLevel.BUILD));
+        assertTrue(child.isPermissionDenied("[server.builders]", ClaimTrustLevel.BUILD));
+    }
+
     private static List<OrthogonalPoint2i> closed(List<OrthogonalPoint2i> shape)
     {
         List<OrthogonalPoint2i> closed = new ArrayList<>(shape);

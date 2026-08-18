@@ -657,6 +657,12 @@ public class FlatFileDataStore extends DataStore
         claim.alertsEnabled = yaml.getBoolean("Alerts Enabled", true);
         claim.setInheritNothingForNewSubdivisions(inheritNothingForNewSubdivisions);
         claim.setShapedCorners(parseShapeCorners(yaml.getStringList("Shape Corners")));
+        claim.restoreDeniedPermissions(yaml.getStringList("Denied"));
+        for (String neighbor : yaml.getStringList("Neighbors"))
+        {
+            claim.addNeighbor(neighbor);
+        }
+        claim.allowAllNeighbors = yaml.getBoolean("allowAllNeighbors", false);
 
         ConfigurationSection childrenSection = yaml.getConfigurationSection("Children");
         if (childrenSection != null)
@@ -744,6 +750,12 @@ public class FlatFileDataStore extends DataStore
         );
         child.setShapedCorners(parseShapeCorners(section.getStringList("Shape Corners")));
         child.setAdminSubdivision(section.getBoolean(ADMIN_SUBDIVISION_FIELD, false));
+        child.restoreDeniedPermissions(section.getStringList("Denied"));
+        for (String neighbor : section.getStringList("Neighbors"))
+        {
+            child.addNeighbor(neighbor);
+        }
+        child.allowAllNeighbors = section.getBoolean("allowAllNeighbors", false);
 
         if (!child.getSubclaimRestrictions())
         {
@@ -851,6 +863,7 @@ public class FlatFileDataStore extends DataStore
                 claim.ownerID,
                 rawTrust.permissionsByIdentifier(),
                 rawTrust.managerIdentifiers(),
+                rawTrust.neighborIdentifiers(),
                 rawTrust.deniedIdentifiers()
         );
 
@@ -892,6 +905,7 @@ public class FlatFileDataStore extends DataStore
                 claim.getInheritNothingForNewSubdivisions(),
                 claim.areExplosivesAllowed,
                 claim.areWitherExplosionsAllowed,
+                claim.allowAllNeighbors,
                 claim.pvpEnabled,
                 claim.alertsEnabled,
                 modifiedDate,
@@ -943,10 +957,20 @@ public class FlatFileDataStore extends DataStore
         section.set("Containers", containers);
         section.set("Accessors", accessors);
         section.set("Managers", managers);
+        section.set("Neighbors", claim.getManualNeighbors());
+
+        // A revoked inherited grant is stored as a deny entry, not as missing trust. Omitting it
+        // here would let the next load hand that trust back.
+        Set<String> denied = claim.getTrustSnapshot().deniedIdentifiers();
+        if (!denied.isEmpty())
+        {
+            section.set("Denied", new ArrayList<>(denied));
+        }
 
         section.set("Parent Claim ID", claim.parent == null ? -1L : claim.parent.id);
         section.set("inheritNothing", claim.getSubclaimRestrictions());
         section.set("inheritNothingForNewSubdivisions", claim.getInheritNothingForNewSubdivisions());
+        section.set("allowAllNeighbors", claim.allowAllNeighbors);
         section.set("Is3D", claim.is3D());
         if (claim.isShaped())
         {

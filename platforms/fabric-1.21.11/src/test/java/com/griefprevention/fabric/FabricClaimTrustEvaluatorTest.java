@@ -126,14 +126,17 @@ class FabricClaimTrustEvaluatorTest
                         UUID.randomUUID().toString(), ClaimTrustLevel.BUILD
                 ),
                 Collections.singleton("[gp3d.staff]"),
+                Collections.singleton("[gp3d.neighbor]"),
                 Collections.singleton("[gp3d.blocked]#access")
         );
         FabricPermissionResolver permissions = (playerId, permission) ->
-                "gp3d.vip".equals(permission) || "gp3d.blocked".equals(permission);
+                "gp3d.vip".equals(permission)
+                        || "gp3d.neighbor".equals(permission)
+                        || "gp3d.blocked".equals(permission);
 
         ClaimAccessSubject subject = FabricClaimTrustEvaluator.subject(PLAYER, trust, permissions);
 
-        assertEquals(Set.of("[gp3d.vip]", "[gp3d.blocked]"), subject.identifiers());
+        assertEquals(Set.of("[gp3d.vip]", "[gp3d.neighbor]", "[gp3d.blocked]"), subject.identifiers());
     }
 
     @Test

@@ -28,6 +28,7 @@ import org.bukkit.World;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -40,6 +41,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Properties;
 import java.util.UUID;
 
@@ -52,8 +54,13 @@ public class DatabaseDataStore extends DataStore
     @SuppressWarnings("unused")
     private static final String SQL_UPDATE_CLAIM =
             "UPDATE griefprevention_claimdata SET owner = ?, lessercorner = ?, greatercorner = ?, builders = ?, containers = ?, accessors = ?, managers = ?, inheritnothing = ?, inheritnothingfornewsubdivisions = ?, parentid = ?, expiration = ?, explosivesallowed = ?, witherexplosionsallowed = ? WHERE id = ?";
-    private static final String SQL_INSERT_CLAIM =
-            "INSERT INTO griefprevention_claimdata (id, owner, lessercorner, greatercorner, builders, containers, accessors, managers, inheritnothing, inheritnothingfornewsubdivisions, parentid, expiration, explosivesallowed, witherexplosionsallowed, is3d, shapecorners, modifieddate, pvpenabled, alertsenabled, adminsubdivision) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    // A brand new database is stamped at the latest schema, which skips every versioned ALTER in
+    // initialize(). This has to list the full current column set or the first claim insert fails
+    // against columns that were never added.
+    static final String SQL_CREATE_CLAIM_TABLE =
+            "CREATE TABLE IF NOT EXISTS griefprevention_claimdata (id INTEGER, owner VARCHAR(50), lessercorner VARCHAR(100), greatercorner VARCHAR(100), builders TEXT, containers TEXT, accessors TEXT, managers TEXT, denied TEXT, inheritnothing BOOLEAN, parentid INTEGER, expiration BIGINT, explosivesallowed BOOLEAN, inheritnothingfornewsubdivisions BOOLEAN, witherexplosionsallowed BOOLEAN, is3d BOOLEAN DEFAULT 0, shapecorners TEXT, modifieddate BIGINT DEFAULT 0, pvpenabled BOOLEAN DEFAULT 1, alertsenabled BOOLEAN DEFAULT 1, adminsubdivision BOOLEAN DEFAULT 0)";
+    static final String SQL_INSERT_CLAIM =
+            "INSERT INTO griefprevention_claimdata (id, owner, lessercorner, greatercorner, builders, containers, accessors, managers, denied, inheritnothing, inheritnothingfornewsubdivisions, parentid, expiration, explosivesallowed, witherexplosionsallowed, is3d, shapecorners, modifieddate, pvpenabled, alertsenabled, adminsubdivision) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     private static final String SQL_DELETE_CLAIM =
             "DELETE FROM griefprevention_claimdata WHERE id = ?";
     private static final String SQL_SELECT_PLAYER_DATA =
@@ -128,7 +135,7 @@ public class DatabaseDataStore extends DataStore
         {
             //ensure the data tables exist
             statement.execute("CREATE TABLE IF NOT EXISTS griefprevention_nextclaimid (nextid INTEGER)");
-            statement.execute("CREATE TABLE IF NOT EXISTS griefprevention_claimdata (id INTEGER, owner VARCHAR(50), lessercorner VARCHAR(100), greatercorner VARCHAR(100), builders TEXT, containers TEXT, accessors TEXT, managers TEXT, inheritnothing BOOLEAN, parentid INTEGER, expiration BIGINT, explosivesallowed BOOLEAN, inheritnothingfornewsubdivisions BOOLEAN, witherexplosionsallowed BOOLEAN)");
+            statement.execute(SQL_CREATE_CLAIM_TABLE);
             statement.execute("CREATE TABLE IF NOT EXISTS griefprevention_playerdata (name VARCHAR(50), lastlogin DATETIME, accruedblocks INTEGER, bonusblocks INTEGER)");
             statement.execute("CREATE TABLE IF NOT EXISTS griefprevention_schemaversion (version INTEGER)");
 
@@ -142,6 +149,11 @@ public class DatabaseDataStore extends DataStore
                 statement.execute("ALTER TABLE griefprevention_claimdata MODIFY accessors TEXT");
                 statement.execute("ALTER TABLE griefprevention_claimdata MODIFY managers TEXT");
             }
+
+            // Deny entries record trust a subdivision revoked, so an existing database that
+            // predates the column has to gain it before any claim is written. Checked against
+            // JDBC metadata rather than ADD COLUMN IF NOT EXISTS, which real MySQL rejects.
+            this.addClaimColumnIfMissing(statement, "denied", "TEXT");
 
             //if the next claim id table is empty, this is a brand new database which will write using the latest schema
             //otherwise, schema version is determined by schemaversion table (or =0 if table is empty, see getSchemaVersion())
@@ -438,6 +450,15 @@ public class DatabaseDataStore extends DataStore
                 String managersString = results.getString("managers");
                 List<String> managerNames = Arrays.asList(managersString.split(";"));
                 managerNames = this.convertNameListToUUIDList(managerNames);
+
+                // Deny entries carry a trust-level suffix and may name a permission node, so they
+                // are stored verbatim rather than run through the legacy name-to-UUID conversion.
+                List<String> deniedIdentifiers;
+                try {
+                    deniedIdentifiers = parseStorageList(results.getString("denied"));
+                } catch (SQLException e) {
+                    deniedIdentifiers = Collections.emptyList(); // Default if column doesn't exist
+                }
                 boolean explosivesAllowed = results.getBoolean("explosivesallowed");
                 boolean witherExplosionsAllowed = results.getBoolean("witherexplosionsallowed");
                 boolean is3d = results.getBoolean("is3d");
@@ -471,6 +492,7 @@ public class DatabaseDataStore extends DataStore
                 claim.setInheritNothingForNewSubdivisions(inheritNothingForNewSubdivisions);
                 claim.setShapedCorners(parseCornersFromDb(shapecornersStr));
                 claim.setAdminSubdivision(adminSubdivision);
+                claim.restoreDeniedPermissions(deniedIdentifiers);
                 if (modifiedDate > 0) claim.modifiedDate = new Date(modifiedDate);
 
                 if (removeClaim)
@@ -568,6 +590,11 @@ public class DatabaseDataStore extends DataStore
         String containersString = this.storageStringBuilder(containers);
         String accessorsString = this.storageStringBuilder(accessors);
         String managersString = this.storageStringBuilder(managers);
+        // Revoked inherited trust is stored as a deny entry, not as missing trust, so it has to be
+        // written alongside the grant lists or a reload hands that trust back.
+        String deniedString = this.storageStringBuilder(
+                new ArrayList<>(claim.getTrustSnapshot().deniedIdentifiers())
+        );
         boolean inheritNothing = claim.getSubclaimRestrictions();
         boolean inheritNothingForNewSubdivisions = claim.getInheritNothingForNewSubdivisions();
         long parentId = claim.parent == null ? -1 : claim.parent.id;
@@ -590,18 +617,19 @@ public class DatabaseDataStore extends DataStore
             insertStmt.setString(6, containersString);
             insertStmt.setString(7, accessorsString);
             insertStmt.setString(8, managersString);
-            insertStmt.setBoolean(9, inheritNothing);
-            insertStmt.setBoolean(10, inheritNothingForNewSubdivisions);
-            insertStmt.setLong(11, parentId);
-            insertStmt.setLong(12, expirationDate);
-            insertStmt.setBoolean(13, explosivesAllowed);
-            insertStmt.setBoolean(14, witherExplosionsAllowed);
-            insertStmt.setBoolean(15, is3d);
-            insertStmt.setString(16, shapecorners);
-            insertStmt.setLong(17, modifiedDate);
-            insertStmt.setBoolean(18, pvpEnabled);
-            insertStmt.setBoolean(19, claim.alertsEnabled);
-            insertStmt.setBoolean(20, claim.isAdminSubdivision());
+            insertStmt.setString(9, deniedString);
+            insertStmt.setBoolean(10, inheritNothing);
+            insertStmt.setBoolean(11, inheritNothingForNewSubdivisions);
+            insertStmt.setLong(12, parentId);
+            insertStmt.setLong(13, expirationDate);
+            insertStmt.setBoolean(14, explosivesAllowed);
+            insertStmt.setBoolean(15, witherExplosionsAllowed);
+            insertStmt.setBoolean(16, is3d);
+            insertStmt.setString(17, shapecorners);
+            insertStmt.setLong(18, modifiedDate);
+            insertStmt.setBoolean(19, pvpEnabled);
+            insertStmt.setBoolean(20, claim.alertsEnabled);
+            insertStmt.setBoolean(21, claim.isAdminSubdivision());
             insertStmt.executeUpdate();
         }
         catch (SQLException e)
@@ -901,6 +929,58 @@ public class DatabaseDataStore extends DataStore
             output += string + ";";
         }
         return output;
+    }
+
+    /**
+     * Adds a claim data column when the connected database does not already have it.
+     *
+     * <p>Uses JDBC metadata instead of {@code ADD COLUMN IF NOT EXISTS} so the statement stays
+     * portable across MySQL, MariaDB, and SQLite.
+     *
+     * @param statement an open statement on the claim database
+     * @param columnName the column to ensure exists
+     * @param columnDefinition the SQL type to create the column with
+     */
+    private void addClaimColumnIfMissing(Statement statement, String columnName, String columnDefinition)
+            throws SQLException
+    {
+        if (this.claimDataColumnExists(columnName)) return;
+
+        statement.execute(
+                "ALTER TABLE griefprevention_claimdata ADD COLUMN " + columnName + " " + columnDefinition
+        );
+    }
+
+    private boolean claimDataColumnExists(String columnName) throws SQLException
+    {
+        DatabaseMetaData metaData = this.databaseConnection.getMetaData();
+        // Identifier casing varies per driver, so check both stored forms before giving up.
+        for (String table : new String[] {"griefprevention_claimdata", "GRIEFPREVENTION_CLAIMDATA"})
+        {
+            for (String column : new String[] {columnName, columnName.toUpperCase(Locale.ROOT)})
+            {
+                try (ResultSet columns = metaData.getColumns(null, null, table, column))
+                {
+                    if (columns.next()) return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Splits a stored {@code ;}-delimited list, dropping the empty trailing entry the writer adds.
+     */
+    static List<String> parseStorageList(String stored)
+    {
+        if (stored == null || stored.isEmpty()) return Collections.emptyList();
+
+        List<String> values = new ArrayList<>();
+        for (String value : stored.split(";"))
+        {
+            if (!value.isEmpty()) values.add(value);
+        }
+        return values;
     }
 
 }

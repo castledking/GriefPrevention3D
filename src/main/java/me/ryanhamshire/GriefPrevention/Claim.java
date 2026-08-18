@@ -46,6 +46,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -437,13 +438,22 @@ public class Claim
      public @NotNull ClaimTrustSnapshot getTrustSnapshot()
      {
          Map<String, ClaimTrustLevel> permissions = new HashMap<>();
+         Set<String> neighborIdentifiers = new HashSet<>(this.neighbors);
          for (Map.Entry<String, ClaimPermission> entry : this.playerIDToClaimPermissionMap.entrySet())
          {
-             permissions.put(entry.getKey(), toClaimTrustLevel(entry.getValue()));
+             ClaimTrustLevel level = toClaimTrustLevel(entry.getValue());
+             if (level == ClaimTrustLevel.NEIGHBOR)
+             {
+                 neighborIdentifiers.add(entry.getKey());
+             }
+             else
+             {
+                 permissions.put(entry.getKey(), level);
+             }
          }
 
          return new ClaimTrustSnapshot(this.getOwnerID(), permissions, this.managerIdentifiers,
-                 this.deniedPermissions);
+                 neighborIdentifiers, this.deniedPermissions);
      }
 
      private static @NotNull ClaimTrustLevel toClaimTrustLevel(@NotNull ClaimPermission permission)
@@ -662,6 +672,28 @@ public class Claim
         for (Claim child : this.children)
         {
             child.allowPermission(identifier);
+        }
+    }
+
+    /**
+     * Replaces this claim's deny entries with the persisted set, without touching subdivisions.
+     *
+     * <p>{@link #denyPermission(String)} cascades to children because a deny handed out at runtime
+     * applies to everything below it. Storage already records the resulting entry on every claim it
+     * reached, so loading must restore each claim exactly as written instead of cascading again.
+     *
+     * @param identifiers the persisted deny entries for this claim alone
+     */
+    void restoreDeniedPermissions(@NotNull Collection<String> identifiers)
+    {
+        this.deniedPermissions.clear();
+        for (String identifier : identifiers)
+        {
+            String normalized = normalizeIdentifier(identifier);
+            if (!normalized.isEmpty())
+            {
+                this.deniedPermissions.add(normalized);
+            }
         }
     }
 
@@ -1105,6 +1137,8 @@ public class Claim
             dropPermission(normalized);
         else if (permissionLevel == ClaimPermission.Manage)
             addManager(normalized);
+        else if (permissionLevel == ClaimPermission.Neighbor)
+            addNeighbor(normalized);
         else
             this.playerIDToClaimPermissionMap.put(normalized, permissionLevel);
     }
@@ -1120,6 +1154,7 @@ public class Claim
 
         this.playerIDToClaimPermissionMap.remove(normalized);
         this.managerIdentifiers.remove(normalized);
+        this.neighbors.remove(normalized);
 
         for (Claim child : this.children)
         {
@@ -1149,6 +1184,9 @@ public class Claim
      {
          this.playerIDToClaimPermissionMap.clear();
          this.managerIdentifiers.clear();
+         //deny entries are part of this claim's trust state, so a full reset drops them too.
+         //leaving them would make a subdivision keep refusing trust the parent grants it later.
+         this.deniedPermissions.clear();
          this.neighbors.clear();
          this.autoNeighbors.clear();
          this.allowAllNeighbors = false;

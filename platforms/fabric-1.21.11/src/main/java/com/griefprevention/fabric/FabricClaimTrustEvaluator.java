@@ -44,6 +44,7 @@ final class FabricClaimTrustEvaluator
         Set<String> candidates = new LinkedHashSet<>();
         candidates.addAll(trust.permissionsByIdentifier().keySet());
         candidates.addAll(trust.managerIdentifiers());
+        candidates.addAll(trust.neighborIdentifiers());
         candidates.addAll(trust.deniedIdentifiers());
 
         Set<String> grantedIdentifiers = new LinkedHashSet<>();

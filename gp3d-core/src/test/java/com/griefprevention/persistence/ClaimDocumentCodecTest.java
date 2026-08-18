@@ -3,6 +3,7 @@ package com.griefprevention.persistence;
 import com.griefprevention.claims.ClaimBounds;
 import com.griefprevention.claims.ClaimSnapshot;
 import com.griefprevention.claims.ClaimTrustLevel;
+import com.griefprevention.claims.ClaimTrustSnapshot;
 import com.griefprevention.geometry.OrthogonalPoint2i;
 import org.junit.jupiter.api.Test;
 
@@ -24,6 +25,7 @@ class ClaimDocumentCodecTest
     private static final UUID OWNER = UUID.fromString("11111111-2222-3333-4444-555555555555");
     private static final UUID BUILDER = UUID.fromString("aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee");
     private static final UUID OVERLAPPING_TRUST = UUID.fromString("12345678-1234-5678-9abc-123456789abc");
+    private static final String PERMISSION_TRUST = "[server.builders]";
 
     private final ClaimDocumentCodec codec = new ClaimDocumentCodec();
 
@@ -183,6 +185,134 @@ class ClaimDocumentCodecTest
         ClaimDocument reloaded = this.codec.decodeTree(encoded, 28L, 999L).get(0);
 
         assertEquals(root.trust(), reloaded.trust());
+    }
+
+    @Test
+    void aRevokedInheritedGrantSurvivesTheRoundTrip() throws Exception
+    {
+        List<ClaimDocument> decoded = this.codec.decodeTree(revokedInheritedTrustYaml(), 28L, 100L);
+        Map<Long, ClaimDocument> byId = byId(decoded);
+
+        ClaimDocument parent = byId.get(28L);
+        ClaimDocument child = byId.get(29L);
+
+        assertEquals(ClaimTrustLevel.BUILD,
+                parent.trust().permissionsByIdentifier().get(PERMISSION_TRUST));
+        assertTrue(parent.trust().deniedIdentifiers().isEmpty());
+        assertTrue(child.trust().isPermissionDenied(PERMISSION_TRUST, ClaimTrustLevel.BUILD));
+
+        String encoded = this.codec.encodeTree(parent, decoded);
+        assertTrue(encoded.contains("Denied:"));
+
+        Map<Long, ClaimDocument> reloaded = byId(this.codec.decodeTree(encoded, 28L, 999L));
+
+        // The parent keeps handing out build trust; the child keeps refusing to inherit it.
+        assertEquals(ClaimTrustLevel.BUILD,
+                reloaded.get(28L).trust().permissionsByIdentifier().get(PERMISSION_TRUST));
+        assertTrue(reloaded.get(28L).trust().deniedIdentifiers().isEmpty());
+        assertTrue(reloaded.get(29L).trust().isPermissionDenied(PERMISSION_TRUST, ClaimTrustLevel.BUILD));
+        assertEquals(byId, reloaded);
+    }
+
+    @Test
+    void omitsTheDeniedListWhenNothingIsRevoked() throws Exception
+    {
+        List<ClaimDocument> decoded = this.codec.decodeTree(minimalClaim(1L), 1L, 100L);
+
+        assertFalse(this.codec.encodeTree(decoded.get(0), decoded).contains("Denied:"));
+    }
+
+    @Test
+    void keepsADenyEntryThatCarriesNoLevelSuffix() throws Exception
+    {
+        // Denying an identifier outright blocks every level, including public trust it would
+        // otherwise ride in on. Storage has to distinguish that from a per-level revocation.
+        String yaml = minimalClaim(1L)
+                .replace("Accessors: []", "Accessors:\n- public")
+                + "Denied:\n"
+                + "- '" + PERMISSION_TRUST + "'\n";
+
+        List<ClaimDocument> decoded = this.codec.decodeTree(yaml, 1L, 100L);
+        ClaimDocument reloaded = this.codec
+                .decodeTree(this.codec.encodeTree(decoded.get(0), decoded), 1L, 999L)
+                .get(0);
+
+        assertTrue(reloaded.trust().isPermissionDenied(PERMISSION_TRUST));
+        assertTrue(reloaded.trust().isPermissionDenied(PERMISSION_TRUST, ClaimTrustLevel.ACCESS));
+        assertEquals(decoded.get(0).trust(), reloaded.trust());
+    }
+
+    @Test
+    void rejectsAMalformedDeniedField()
+    {
+        String scalar = minimalClaim(1L) + "Denied: '" + PERMISSION_TRUST + "#build'\n";
+        String nonString = minimalClaim(1L) + "Denied:\n- 42\n";
+
+        assertThrows(ClaimDocumentFormatException.class,
+                () -> this.codec.decodeTree(scalar, 1L, 100L));
+        assertThrows(ClaimDocumentFormatException.class,
+                () -> this.codec.decodeTree(nonString, 1L, 100L));
+    }
+
+    @Test
+    void roundTripsManualNeighborTrustAndAllowAllNeighbors() throws Exception
+    {
+        String yaml = minimalClaim(1L)
+                .replace("Accessors: []", "Accessors:\n- " + BUILDER)
+                + "Neighbors:\n"
+                + "- " + BUILDER + "\n"
+                + "- '" + PERMISSION_TRUST + "'\n"
+                + "allowAllNeighbors: true\n";
+
+        ClaimDocument decoded = this.codec.decodeTree(yaml, 1L, 100L).get(0);
+        ClaimTrustSnapshot trust = decoded.trust();
+
+        assertEquals(ClaimTrustLevel.ACCESS, trust.permissionsByIdentifier().get(BUILDER.toString()));
+        assertTrue(trust.neighborIdentifiers().contains(BUILDER.toString()));
+        assertTrue(trust.neighborIdentifiers().contains(PERMISSION_TRUST));
+        assertTrue(trust.hasExplicitIdentifierPermission(BUILDER.toString(), ClaimTrustLevel.NEIGHBOR));
+        assertTrue(decoded.allowAllNeighbors());
+
+        String encoded = this.codec.encodeTree(decoded, Collections.singletonList(decoded));
+        assertTrue(encoded.contains("Neighbors:"));
+        assertTrue(encoded.contains("allowAllNeighbors: true"));
+
+        ClaimDocument reloaded = this.codec.decodeTree(encoded, 1L, 999L).get(0);
+
+        assertEquals(decoded, reloaded);
+    }
+
+    private static String revokedInheritedTrustYaml()
+    {
+        return "Claim ID: '28'\n"
+                + "Lesser Boundary Corner: world;0;-64;0\n"
+                + "Greater Boundary Corner: world;10;320;10\n"
+                + "Owner: " + OWNER + "\n"
+                + "Builders:\n"
+                + "- '" + PERMISSION_TRUST + "'\n"
+                + "Containers: []\n"
+                + "Accessors: []\n"
+                + "Managers: []\n"
+                + "Parent Claim ID: -1\n"
+                + "inheritNothing: false\n"
+                + "Is3D: false\n"
+                + "Modified Date: 1779681984295\n"
+                + "Children:\n"
+                + "  '29':\n"
+                + "    Claim ID: '29'\n"
+                + "    Lesser Boundary Corner: world;1;-64;1\n"
+                + "    Greater Boundary Corner: world;3;320;3\n"
+                + "    Owner: ''\n"
+                + "    Builders: []\n"
+                + "    Containers: []\n"
+                + "    Accessors: []\n"
+                + "    Managers: []\n"
+                + "    Denied:\n"
+                + "    - '" + PERMISSION_TRUST + "#build'\n"
+                + "    Parent Claim ID: 28\n"
+                + "    inheritNothing: false\n"
+                + "    Is3D: false\n"
+                + "    Modified Date: 1779681984295\n";
     }
 
     private static String completeClaimYaml()

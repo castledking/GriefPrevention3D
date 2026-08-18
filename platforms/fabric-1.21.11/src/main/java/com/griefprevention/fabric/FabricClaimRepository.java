@@ -382,12 +382,17 @@ public final class FabricClaimRepository implements ClaimRepository
         ClaimTrustSnapshot existingTrust = trustForOrEmpty(claim);
         Map<String, ClaimTrustLevel> permissions = new LinkedHashMap<>(existingTrust.permissionsByIdentifier());
         Set<String> managers = new LinkedHashSet<>(existingTrust.managerIdentifiers());
+        Set<String> neighbors = new LinkedHashSet<>(existingTrust.neighborIdentifiers());
         Set<String> denies = new LinkedHashSet<>(existingTrust.deniedIdentifiers());
 
-        // The two trust tracks are independent: granting one must never revoke the other.
+        // Interaction, manage, and neighbor trust are independent tracks.
         if (levelToGrant == ClaimTrustLevel.MANAGE)
         {
             managers.add(normalized);
+        }
+        else if (levelToGrant == ClaimTrustLevel.NEIGHBOR)
+        {
+            neighbors.add(normalized);
         }
         else
         {
@@ -402,7 +407,7 @@ public final class FabricClaimRepository implements ClaimRepository
         }
         List<ClaimDocument> documents = mutableDocuments();
         replaceDocument(documents, document.withTrust(
-                new ClaimTrustSnapshot(claim.ownerId(), permissions, managers, denies)
+                new ClaimTrustSnapshot(claim.ownerId(), permissions, managers, neighbors, denies)
         ));
         replaceAndSave(documents);
         return claim;
@@ -424,9 +429,11 @@ public final class FabricClaimRepository implements ClaimRepository
         ClaimTrustSnapshot existingTrust = trustForOrEmpty(claim);
         Map<String, ClaimTrustLevel> permissions = new LinkedHashMap<>(existingTrust.permissionsByIdentifier());
         Set<String> managers = new LinkedHashSet<>(existingTrust.managerIdentifiers());
+        Set<String> neighbors = new LinkedHashSet<>(existingTrust.neighborIdentifiers());
         Set<String> denies = new LinkedHashSet<>(existingTrust.deniedIdentifiers());
         permissions.remove(normalized);
         managers.remove(normalized);
+        neighbors.remove(normalized);
         removeDenyEntries(denies, normalized);
 
         ClaimDocument document = this.documentsByClaimId.get(claim.id());
@@ -436,7 +443,7 @@ public final class FabricClaimRepository implements ClaimRepository
         }
         List<ClaimDocument> documents = mutableDocuments();
         replaceDocument(documents, document.withTrust(
-                new ClaimTrustSnapshot(claim.ownerId(), permissions, managers, denies)
+                new ClaimTrustSnapshot(claim.ownerId(), permissions, managers, neighbors, denies)
         ));
         replaceAndSave(documents);
         return claim;
@@ -595,6 +602,7 @@ public final class FabricClaimRepository implements ClaimRepository
         denies.remove(normalizedIdentifier + ClaimTrustLevel.BUILD.denySuffix());
         denies.remove(normalizedIdentifier + ClaimTrustLevel.CONTAINER.denySuffix());
         denies.remove(normalizedIdentifier + ClaimTrustLevel.ACCESS.denySuffix());
+        denies.remove(normalizedIdentifier + ClaimTrustLevel.NEIGHBOR.denySuffix());
     }
 
     private static int missingBlocks(int required, int remaining)

@@ -23,6 +23,7 @@ public final class ClaimTrustSnapshot
     private final @Nullable UUID ownerId;
     private final @NotNull Map<String, ClaimTrustLevel> permissionsByIdentifier;
     private final @NotNull Set<String> managerIdentifiers;
+    private final @NotNull Set<String> neighborIdentifiers;
     private final @NotNull Set<String> deniedIdentifiers;
 
     public ClaimTrustSnapshot(
@@ -31,9 +32,21 @@ public final class ClaimTrustSnapshot
             @NotNull Collection<String> managerIdentifiers,
             @NotNull Collection<String> deniedIdentifiers)
     {
+        this(ownerId, permissionsByIdentifier, managerIdentifiers, Collections.emptySet(), deniedIdentifiers);
+    }
+
+    public ClaimTrustSnapshot(
+            @Nullable UUID ownerId,
+            @NotNull Map<String, ClaimTrustLevel> permissionsByIdentifier,
+            @NotNull Collection<String> managerIdentifiers,
+            @NotNull Collection<String> neighborIdentifiers,
+            @NotNull Collection<String> deniedIdentifiers)
+    {
         this.ownerId = ownerId;
-        this.permissionsByIdentifier = normalizePermissions(permissionsByIdentifier);
+        Set<String> normalizedNeighbors = mutableNormalizedIdentifiers(neighborIdentifiers);
+        this.permissionsByIdentifier = normalizePermissions(permissionsByIdentifier, normalizedNeighbors);
         this.managerIdentifiers = normalizeIdentifiers(managerIdentifiers);
+        this.neighborIdentifiers = Collections.unmodifiableSet(normalizedNeighbors);
         this.deniedIdentifiers = normalizeIdentifiers(deniedIdentifiers);
     }
 
@@ -65,6 +78,11 @@ public final class ClaimTrustSnapshot
     public @NotNull Set<String> managerIdentifiers()
     {
         return this.managerIdentifiers;
+    }
+
+    public @NotNull Set<String> neighborIdentifiers()
+    {
+        return this.neighborIdentifiers;
     }
 
     public @NotNull Set<String> deniedIdentifiers()
@@ -135,6 +153,11 @@ public final class ClaimTrustSnapshot
             return true;
         }
 
+        if (level == ClaimTrustLevel.NEIGHBOR && this.neighborIdentifiers.contains(normalized))
+        {
+            return true;
+        }
+
         return level.isGrantedBy(this.permissionsByIdentifier.get(normalized));
     }
 
@@ -185,7 +208,8 @@ public final class ClaimTrustSnapshot
     }
 
     private static @NotNull Map<String, ClaimTrustLevel> normalizePermissions(
-            @NotNull Map<String, ClaimTrustLevel> permissionsByIdentifier)
+            @NotNull Map<String, ClaimTrustLevel> permissionsByIdentifier,
+            @NotNull Set<String> neighborIdentifiers)
     {
         Map<String, ClaimTrustLevel> normalized = new LinkedHashMap<>();
         for (Map.Entry<String, ClaimTrustLevel> entry : permissionsByIdentifier.entrySet())
@@ -194,13 +218,25 @@ public final class ClaimTrustSnapshot
             ClaimTrustLevel level = entry.getValue();
             if (!identifier.isEmpty() && level != null)
             {
-                normalized.put(identifier, level);
+                if (level == ClaimTrustLevel.NEIGHBOR)
+                {
+                    neighborIdentifiers.add(identifier);
+                }
+                else
+                {
+                    normalized.put(identifier, level);
+                }
             }
         }
         return Collections.unmodifiableMap(normalized);
     }
 
     private static @NotNull Set<String> normalizeIdentifiers(@NotNull Collection<String> identifiers)
+    {
+        return Collections.unmodifiableSet(mutableNormalizedIdentifiers(identifiers));
+    }
+
+    private static @NotNull Set<String> mutableNormalizedIdentifiers(@NotNull Collection<String> identifiers)
     {
         Set<String> normalized = new LinkedHashSet<>();
         for (String identifier : identifiers)
@@ -211,7 +247,7 @@ public final class ClaimTrustSnapshot
                 normalized.add(value);
             }
         }
-        return Collections.unmodifiableSet(normalized);
+        return normalized;
     }
 
     @Override
@@ -223,6 +259,7 @@ public final class ClaimTrustSnapshot
         return Objects.equals(this.ownerId, that.ownerId)
                 && this.permissionsByIdentifier.equals(that.permissionsByIdentifier)
                 && this.managerIdentifiers.equals(that.managerIdentifiers)
+                && this.neighborIdentifiers.equals(that.neighborIdentifiers)
                 && this.deniedIdentifiers.equals(that.deniedIdentifiers);
     }
 
@@ -230,7 +267,7 @@ public final class ClaimTrustSnapshot
     public int hashCode()
     {
         return Objects.hash(this.ownerId, this.permissionsByIdentifier, this.managerIdentifiers,
-                this.deniedIdentifiers);
+                this.neighborIdentifiers, this.deniedIdentifiers);
     }
 
     @Override
@@ -239,6 +276,7 @@ public final class ClaimTrustSnapshot
         return "ClaimTrustSnapshot[ownerId=" + this.ownerId
                 + ", permissionsByIdentifier=" + this.permissionsByIdentifier
                 + ", managerIdentifiers=" + this.managerIdentifiers
+                + ", neighborIdentifiers=" + this.neighborIdentifiers
                 + ", deniedIdentifiers=" + this.deniedIdentifiers
                 + "]";
     }

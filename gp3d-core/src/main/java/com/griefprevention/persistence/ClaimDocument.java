@@ -34,6 +34,7 @@ public final class ClaimDocument
     private final boolean inheritNothingForNewSubdivisions;
     private final boolean explosivesAllowed;
     private final boolean witherExplosionsAllowed;
+    private final boolean allowAllNeighbors;
     private final boolean pvpEnabled;
     private final boolean alertsEnabled;
     private final long modifiedDate;
@@ -54,6 +55,38 @@ public final class ClaimDocument
             @Nullable String storageKey,
             @NotNull Map<String, Object> extraFields)
     {
+        this(
+                snapshot,
+                trust,
+                shapeCorners,
+                inheritNothing,
+                inheritNothingForNewSubdivisions,
+                explosivesAllowed,
+                witherExplosionsAllowed,
+                false,
+                pvpEnabled,
+                alertsEnabled,
+                modifiedDate,
+                storageKey,
+                extraFields
+        );
+    }
+
+    public ClaimDocument(
+            @NotNull ClaimSnapshot snapshot,
+            @NotNull ClaimTrustSnapshot trust,
+            @NotNull List<OrthogonalPoint2i> shapeCorners,
+            boolean inheritNothing,
+            boolean inheritNothingForNewSubdivisions,
+            boolean explosivesAllowed,
+            boolean witherExplosionsAllowed,
+            boolean allowAllNeighbors,
+            boolean pvpEnabled,
+            boolean alertsEnabled,
+            long modifiedDate,
+            @Nullable String storageKey,
+            @NotNull Map<String, Object> extraFields)
+    {
         this.snapshot = snapshot;
         this.trust = trust;
         this.shapeCorners = Collections.unmodifiableList(new ArrayList<>(shapeCorners));
@@ -61,6 +94,7 @@ public final class ClaimDocument
         this.inheritNothingForNewSubdivisions = inheritNothingForNewSubdivisions;
         this.explosivesAllowed = explosivesAllowed;
         this.witherExplosionsAllowed = witherExplosionsAllowed;
+        this.allowAllNeighbors = allowAllNeighbors;
         this.pvpEnabled = pvpEnabled;
         this.alertsEnabled = alertsEnabled;
         this.modifiedDate = modifiedDate;
@@ -74,6 +108,7 @@ public final class ClaimDocument
                 snapshot,
                 ClaimTrustSnapshot.empty(snapshot.ownerId()),
                 Collections.<OrthogonalPoint2i>emptyList(),
+                false,
                 false,
                 false,
                 false,
@@ -121,6 +156,11 @@ public final class ClaimDocument
         return this.witherExplosionsAllowed;
     }
 
+    public boolean allowAllNeighbors()
+    {
+        return this.allowAllNeighbors;
+    }
+
     public boolean pvpEnabled()
     {
         return this.pvpEnabled;
@@ -156,6 +196,7 @@ public final class ClaimDocument
                 this.inheritNothingForNewSubdivisions,
                 this.explosivesAllowed,
                 this.witherExplosionsAllowed,
+                this.allowAllNeighbors,
                 this.pvpEnabled,
                 this.alertsEnabled,
                 updatedModifiedDate,
@@ -174,6 +215,7 @@ public final class ClaimDocument
                 this.inheritNothingForNewSubdivisions,
                 this.explosivesAllowed,
                 this.witherExplosionsAllowed,
+                this.allowAllNeighbors,
                 this.pvpEnabled,
                 this.alertsEnabled,
                 this.modifiedDate,
@@ -252,6 +294,7 @@ public final class ClaimDocument
                 && this.inheritNothingForNewSubdivisions == that.inheritNothingForNewSubdivisions
                 && this.explosivesAllowed == that.explosivesAllowed
                 && this.witherExplosionsAllowed == that.witherExplosionsAllowed
+                && this.allowAllNeighbors == that.allowAllNeighbors
                 && this.pvpEnabled == that.pvpEnabled
                 && this.alertsEnabled == that.alertsEnabled
                 && this.modifiedDate == that.modifiedDate
@@ -273,6 +316,7 @@ public final class ClaimDocument
                 this.inheritNothingForNewSubdivisions,
                 this.explosivesAllowed,
                 this.witherExplosionsAllowed,
+                this.allowAllNeighbors,
                 this.pvpEnabled,
                 this.alertsEnabled,
                 this.modifiedDate,

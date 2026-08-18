@@ -46,9 +46,12 @@ public final class ClaimDocumentCodec
     private static final String CONTAINERS = "Containers";
     private static final String ACCESSORS = "Accessors";
     private static final String MANAGERS = "Managers";
+    private static final String NEIGHBORS = "Neighbors";
+    private static final String DENIED = "Denied";
     private static final String PARENT_ID = "Parent Claim ID";
     private static final String INHERIT_NOTHING = "inheritNothing";
     private static final String INHERIT_NOTHING_FOR_NEW = "inheritNothingForNewSubdivisions";
+    private static final String ALLOW_ALL_NEIGHBORS = "allowAllNeighbors";
     private static final String IS_3D = "Is3D";
     private static final String SHAPE_CORNERS = "Shape Corners";
     private static final String EXPLOSIVES_ALLOWED = "Explosives Allowed";
@@ -71,9 +74,12 @@ public final class ClaimDocumentCodec
         fields.add(CONTAINERS);
         fields.add(ACCESSORS);
         fields.add(MANAGERS);
+        fields.add(NEIGHBORS);
+        fields.add(DENIED);
         fields.add(PARENT_ID);
         fields.add(INHERIT_NOTHING);
         fields.add(INHERIT_NOTHING_FOR_NEW);
+        fields.add(ALLOW_ALL_NEIGHBORS);
         fields.add(IS_3D);
         fields.add(SHAPE_CORNERS);
         fields.add(EXPLOSIVES_ALLOWED);
@@ -326,6 +332,7 @@ public final class ClaimDocumentCodec
                 bool(section.get(INHERIT_NOTHING_FOR_NEW), false, INHERIT_NOTHING_FOR_NEW),
                 bool(section.get(EXPLOSIVES_ALLOWED), false, EXPLOSIVES_ALLOWED),
                 bool(section.get(WITHER_EXPLOSIONS_ALLOWED), false, WITHER_EXPLOSIONS_ALLOWED),
+                bool(section.get(ALLOW_ALL_NEIGHBORS), false, ALLOW_ALL_NEIGHBORS),
                 bool(section.get(PVP_ENABLED), true, PVP_ENABLED),
                 bool(section.get(ALERTS_ENABLED), true, ALERTS_ENABLED),
                 modifiedDate,
@@ -392,9 +399,15 @@ public final class ClaimDocumentCodec
         section.put(CONTAINERS, trustLists.containers);
         section.put(ACCESSORS, trustLists.accessors);
         section.put(MANAGERS, trustLists.managers);
+        section.put(NEIGHBORS, trustLists.neighbors);
+        if (!trustLists.denied.isEmpty())
+        {
+            section.put(DENIED, trustLists.denied);
+        }
         section.put(PARENT_ID, snapshot.parentId() == null ? Long.valueOf(-1L) : snapshot.parentId());
         section.put(INHERIT_NOTHING, document.inheritNothing());
         section.put(INHERIT_NOTHING_FOR_NEW, document.inheritNothingForNewSubdivisions());
+        section.put(ALLOW_ALL_NEIGHBORS, document.allowAllNeighbors());
         section.put(IS_3D, snapshot.threeDimensional());
         if (!document.shapeCorners().isEmpty())
         {
@@ -456,7 +469,12 @@ public final class ClaimDocumentCodec
         // Manage trust is its own track, so listing a player under Managers must not strip the
         // build/container/access trust they were also granted.
         List<String> managers = stringList(section.get(MANAGERS), MANAGERS);
-        return new ClaimTrustSnapshot(ownerId, permissions, managers, Collections.<String>emptyList());
+        List<String> neighbors = stringList(section.get(NEIGHBORS), NEIGHBORS);
+
+        // A subdivision that revoked inherited trust stores a deny entry rather than an absence of
+        // trust. Dropping those entries here would hand the revoked player access back on reload.
+        List<String> denied = stringList(section.get(DENIED), DENIED);
+        return new ClaimTrustSnapshot(ownerId, permissions, managers, neighbors, denied);
     }
 
     private static void putTrust(
@@ -484,6 +502,8 @@ public final class ClaimDocumentCodec
         List<String> containers = new ArrayList<>();
         List<String> accessors = new ArrayList<>();
         List<String> managers = new ArrayList<>(trust.managerIdentifiers());
+        List<String> neighbors = new ArrayList<>(trust.neighborIdentifiers());
+        List<String> denied = new ArrayList<>(trust.deniedIdentifiers());
         for (Map.Entry<String, ClaimTrustLevel> entry : trust.permissionsByIdentifier().entrySet())
         {
             if (entry.getValue() == ClaimTrustLevel.BUILD)
@@ -502,8 +522,12 @@ public final class ClaimDocumentCodec
             {
                 managers.add(entry.getKey());
             }
+            else if (entry.getValue() == ClaimTrustLevel.NEIGHBOR)
+            {
+                neighbors.add(entry.getKey());
+            }
         }
-        return new TrustLists(builders, containers, accessors, managers);
+        return new TrustLists(builders, containers, accessors, managers, neighbors, denied);
     }
 
     private static @NotNull Map<String, Object> claimSection(@Nullable Object value, @NotNull String context)
@@ -818,17 +842,23 @@ public final class ClaimDocumentCodec
         private final List<String> containers;
         private final List<String> accessors;
         private final List<String> managers;
+        private final List<String> neighbors;
+        private final List<String> denied;
 
         private TrustLists(
                 List<String> builders,
                 List<String> containers,
                 List<String> accessors,
-                List<String> managers)
+                List<String> managers,
+                List<String> neighbors,
+                List<String> denied)
         {
             this.builders = builders;
             this.containers = containers;
             this.accessors = accessors;
             this.managers = managers;
+            this.neighbors = neighbors;
+            this.denied = denied;
         }
     }
 }
