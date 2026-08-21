@@ -99,3 +99,7 @@ wiki/
 build/
 bin/
 docs/
+platforms/fabric-1.21.11/logs/latest.log
+
+# dev server logs (any platform module)
+platforms/*/logs/
