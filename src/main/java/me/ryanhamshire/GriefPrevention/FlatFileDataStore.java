@@ -662,6 +662,14 @@ public class FlatFileDataStore extends DataStore
         {
             claim.addNeighbor(neighbor);
         }
+        for (String identifier : yaml.getStringList("PvP Trusted"))
+        {
+            claim.addPvpTrust(identifier);
+        }
+        for (String identifier : yaml.getStringList("PvE Trusted"))
+        {
+            claim.addPveTrust(identifier);
+        }
         claim.allowAllNeighbors = yaml.getBoolean("allowAllNeighbors", false);
 
         ConfigurationSection childrenSection = yaml.getConfigurationSection("Children");
@@ -754,6 +762,14 @@ public class FlatFileDataStore extends DataStore
         for (String neighbor : section.getStringList("Neighbors"))
         {
             child.addNeighbor(neighbor);
+        }
+        for (String identifier : section.getStringList("PvP Trusted"))
+        {
+            child.addPvpTrust(identifier);
+        }
+        for (String identifier : section.getStringList("PvE Trusted"))
+        {
+            child.addPveTrust(identifier);
         }
         child.allowAllNeighbors = section.getBoolean("allowAllNeighbors", false);
 
@@ -864,7 +880,9 @@ public class FlatFileDataStore extends DataStore
                 rawTrust.permissionsByIdentifier(),
                 rawTrust.managerIdentifiers(),
                 rawTrust.neighborIdentifiers(),
-                rawTrust.deniedIdentifiers()
+                rawTrust.deniedIdentifiers(),
+                claim.getPvpTrustedIdentifiers(),
+                claim.getPveTrustedIdentifiers()
         );
 
         ClaimSnapshot runtimeSnapshot = claim.getSnapshot();
@@ -958,6 +976,8 @@ public class FlatFileDataStore extends DataStore
         section.set("Accessors", accessors);
         section.set("Managers", managers);
         section.set("Neighbors", claim.getManualNeighbors());
+        section.set("PvP Trusted", new ArrayList<>(claim.getPvpTrustedIdentifiers()));
+        section.set("PvE Trusted", new ArrayList<>(claim.getPveTrustedIdentifiers()));
 
         // A revoked inherited grant is stored as a deny entry, not as missing trust. Omitting it
         // here would let the next load hand that trust back.

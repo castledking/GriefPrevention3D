@@ -104,6 +104,8 @@ Messages:
   ContainersPermission: access containers and animals
   AccessPermission: use buttons and levers
   ManagePermission: manage permissions
+  PvPTrustPermission: fight players
+  PvETrustPermission: fight animals
   LocationCurrentClaim: in this claim
   LocationAllClaims: in all your claims
   PvPImmunityStart: You're protected from attack by other players as long as your inventory is empty.
@@ -164,6 +166,8 @@ Messages:
   NoBuildPermission: You don't have {0}'s permission to build here.
   NoAccessPermission: You don't have {0}'s permission to use that.
   NoContainersPermission: You don't have {0}'s permission to use that.
+  NoPvPTrust: You don't have {0}'s permission to fight players here.
+  NoPvETrust: You don't have {0}'s permission to fight animals here.
   OwnerNameForAdminClaims: an administrator
   UnknownPlayerName: someone
   ClaimTooSmallForEntities: This claim isn't big enough for that. Try enlarging it.

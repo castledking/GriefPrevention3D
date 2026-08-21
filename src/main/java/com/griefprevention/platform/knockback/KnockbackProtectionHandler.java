@@ -105,13 +105,31 @@ public abstract class KnockbackProtectionHandler implements Listener
         {
             defenderData.lastClaim = defenderClaim;
 
-            // If the attacker has access trust, allow the knockback.
-            if (defenderClaim.checkPermission(attacker, ClaimPermission.Access, null) == null)
+            // When combat trust is enabled, only an explicit PvP grant allows fighting players
+            // here - Access trust no longer covers combat. Otherwise legacy rules apply and
+            // Access trust allows the knockback.
+            boolean allowed;
+            if (this.instance.config_claims_allowPvPTrust)
             {
-                debug("allow: attacker " + attacker.getName() + " has Access trust in defender's claim "
-                        + defenderClaim.getID());
-                return;
+                allowed = defenderClaim.hasExplicitPermission(attacker, ClaimPermission.PVP);
+                debug(allowed
+                        ? "allow: attacker " + attacker.getName() + " has PvP trust in defender's claim "
+                                + defenderClaim.getID()
+                        : "denied: attacker " + attacker.getName() + " lacks PvP trust in defender's claim "
+                                + defenderClaim.getID() + " (falling through to PvP rules)");
             }
+            else
+            {
+                // If the attacker has access trust, allow the knockback.
+                allowed = defenderClaim.checkPermission(attacker, ClaimPermission.Access, null) == null;
+                if (allowed)
+                {
+                    debug("allow: attacker " + attacker.getName() + " has Access trust in defender's claim "
+                            + defenderClaim.getID());
+                }
+            }
+
+            if (allowed) return;
         }
 
         // If GP PvP rules don't apply, GriefPrevention doesn't manage PvP in this world.
@@ -209,9 +227,12 @@ public abstract class KnockbackProtectionHandler implements Listener
         else if (entity instanceof Creature && instance.config_claims_preventTheft)
         {
             // Creatures require container trust, matching handleCreatureDamageByEntity,
-            // but skip monsters - they are never protected.
+            // but skip monsters - they are never protected. With PvE combat trust enabled,
+            // hurting or shoving creatures requires an explicit PvE grant instead.
             if (EntityDamageHandler.isHostile(entity)) return;
-            requiredPermission = ClaimPermission.Container;
+            requiredPermission = instance.config_claims_allowPvETrust
+                    ? ClaimPermission.PVE
+                    : ClaimPermission.Container;
         }
         else
         {

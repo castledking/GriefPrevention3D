@@ -25,6 +25,8 @@ public final class ClaimTrustSnapshot
     private final @NotNull Set<String> managerIdentifiers;
     private final @NotNull Set<String> neighborIdentifiers;
     private final @NotNull Set<String> deniedIdentifiers;
+    private final @NotNull Set<String> pvpTrustedIdentifiers;
+    private final @NotNull Set<String> pveTrustedIdentifiers;
 
     public ClaimTrustSnapshot(
             @Nullable UUID ownerId,
@@ -32,7 +34,8 @@ public final class ClaimTrustSnapshot
             @NotNull Collection<String> managerIdentifiers,
             @NotNull Collection<String> deniedIdentifiers)
     {
-        this(ownerId, permissionsByIdentifier, managerIdentifiers, Collections.emptySet(), deniedIdentifiers);
+        this(ownerId, permissionsByIdentifier, managerIdentifiers, Collections.emptySet(), deniedIdentifiers,
+                Collections.emptySet(), Collections.emptySet());
     }
 
     public ClaimTrustSnapshot(
@@ -42,12 +45,27 @@ public final class ClaimTrustSnapshot
             @NotNull Collection<String> neighborIdentifiers,
             @NotNull Collection<String> deniedIdentifiers)
     {
+        this(ownerId, permissionsByIdentifier, managerIdentifiers, neighborIdentifiers, deniedIdentifiers,
+                Collections.emptySet(), Collections.emptySet());
+    }
+
+    public ClaimTrustSnapshot(
+            @Nullable UUID ownerId,
+            @NotNull Map<String, ClaimTrustLevel> permissionsByIdentifier,
+            @NotNull Collection<String> managerIdentifiers,
+            @NotNull Collection<String> neighborIdentifiers,
+            @NotNull Collection<String> deniedIdentifiers,
+            @NotNull Collection<String> pvpTrustedIdentifiers,
+            @NotNull Collection<String> pveTrustedIdentifiers)
+    {
         this.ownerId = ownerId;
         Set<String> normalizedNeighbors = mutableNormalizedIdentifiers(neighborIdentifiers);
         this.permissionsByIdentifier = normalizePermissions(permissionsByIdentifier, normalizedNeighbors);
         this.managerIdentifiers = normalizeIdentifiers(managerIdentifiers);
         this.neighborIdentifiers = Collections.unmodifiableSet(normalizedNeighbors);
         this.deniedIdentifiers = normalizeIdentifiers(deniedIdentifiers);
+        this.pvpTrustedIdentifiers = normalizeIdentifiers(pvpTrustedIdentifiers);
+        this.pveTrustedIdentifiers = normalizeIdentifiers(pveTrustedIdentifiers);
     }
 
     public static @NotNull ClaimTrustSnapshot empty(@Nullable UUID ownerId)
@@ -88,6 +106,24 @@ public final class ClaimTrustSnapshot
     public @NotNull Set<String> deniedIdentifiers()
     {
         return this.deniedIdentifiers;
+    }
+
+    /**
+     * Identifiers granted standalone combat trust against players. Never implied by other trust
+     * levels; enforced only while the host platform's PvP-trust feature is enabled.
+     */
+    public @NotNull Set<String> pvpTrustedIdentifiers()
+    {
+        return this.pvpTrustedIdentifiers;
+    }
+
+    /**
+     * Identifiers granted standalone combat trust against creatures. Never implied by other trust
+     * levels; enforced only while the host platform's PvE-trust feature is enabled.
+     */
+    public @NotNull Set<String> pveTrustedIdentifiers()
+    {
+        return this.pveTrustedIdentifiers;
     }
 
     public boolean isOwner(@NotNull UUID playerId)
@@ -260,14 +296,17 @@ public final class ClaimTrustSnapshot
                 && this.permissionsByIdentifier.equals(that.permissionsByIdentifier)
                 && this.managerIdentifiers.equals(that.managerIdentifiers)
                 && this.neighborIdentifiers.equals(that.neighborIdentifiers)
-                && this.deniedIdentifiers.equals(that.deniedIdentifiers);
+                && this.deniedIdentifiers.equals(that.deniedIdentifiers)
+                && this.pvpTrustedIdentifiers.equals(that.pvpTrustedIdentifiers)
+                && this.pveTrustedIdentifiers.equals(that.pveTrustedIdentifiers);
     }
 
     @Override
     public int hashCode()
     {
         return Objects.hash(this.ownerId, this.permissionsByIdentifier, this.managerIdentifiers,
-                this.neighborIdentifiers, this.deniedIdentifiers);
+                this.neighborIdentifiers, this.deniedIdentifiers, this.pvpTrustedIdentifiers,
+                this.pveTrustedIdentifiers);
     }
 
     @Override
@@ -278,6 +317,8 @@ public final class ClaimTrustSnapshot
                 + ", managerIdentifiers=" + this.managerIdentifiers
                 + ", neighborIdentifiers=" + this.neighborIdentifiers
                 + ", deniedIdentifiers=" + this.deniedIdentifiers
+                + ", pvpTrustedIdentifiers=" + this.pvpTrustedIdentifiers
+                + ", pveTrustedIdentifiers=" + this.pveTrustedIdentifiers
                 + "]";
     }
 }

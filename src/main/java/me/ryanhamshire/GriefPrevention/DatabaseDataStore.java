@@ -58,9 +58,9 @@ public class DatabaseDataStore extends DataStore
     // initialize(). This has to list the full current column set or the first claim insert fails
     // against columns that were never added.
     static final String SQL_CREATE_CLAIM_TABLE =
-            "CREATE TABLE IF NOT EXISTS griefprevention_claimdata (id INTEGER, owner VARCHAR(50), lessercorner VARCHAR(100), greatercorner VARCHAR(100), builders TEXT, containers TEXT, accessors TEXT, managers TEXT, denied TEXT, inheritnothing BOOLEAN, parentid INTEGER, expiration BIGINT, explosivesallowed BOOLEAN, inheritnothingfornewsubdivisions BOOLEAN, witherexplosionsallowed BOOLEAN, is3d BOOLEAN DEFAULT 0, shapecorners TEXT, modifieddate BIGINT DEFAULT 0, pvpenabled BOOLEAN DEFAULT 1, alertsenabled BOOLEAN DEFAULT 1, adminsubdivision BOOLEAN DEFAULT 0)";
+            "CREATE TABLE IF NOT EXISTS griefprevention_claimdata (id INTEGER, owner VARCHAR(50), lessercorner VARCHAR(100), greatercorner VARCHAR(100), builders TEXT, containers TEXT, accessors TEXT, managers TEXT, denied TEXT, inheritnothing BOOLEAN, parentid INTEGER, expiration BIGINT, explosivesallowed BOOLEAN, inheritnothingfornewsubdivisions BOOLEAN, witherexplosionsallowed BOOLEAN, is3d BOOLEAN DEFAULT 0, shapecorners TEXT, modifieddate BIGINT DEFAULT 0, pvpenabled BOOLEAN DEFAULT 1, alertsenabled BOOLEAN DEFAULT 1, adminsubdivision BOOLEAN DEFAULT 0, pvptrusted TEXT, pvetrusted TEXT)";
     static final String SQL_INSERT_CLAIM =
-            "INSERT INTO griefprevention_claimdata (id, owner, lessercorner, greatercorner, builders, containers, accessors, managers, denied, inheritnothing, inheritnothingfornewsubdivisions, parentid, expiration, explosivesallowed, witherexplosionsallowed, is3d, shapecorners, modifieddate, pvpenabled, alertsenabled, adminsubdivision) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            "INSERT INTO griefprevention_claimdata (id, owner, lessercorner, greatercorner, builders, containers, accessors, managers, denied, inheritnothing, inheritnothingfornewsubdivisions, parentid, expiration, explosivesallowed, witherexplosionsallowed, is3d, shapecorners, modifieddate, pvpenabled, alertsenabled, adminsubdivision, pvptrusted, pvetrusted) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     private static final String SQL_DELETE_CLAIM =
             "DELETE FROM griefprevention_claimdata WHERE id = ?";
     private static final String SQL_SELECT_PLAYER_DATA =
@@ -357,6 +357,14 @@ public class DatabaseDataStore extends DataStore
             statement.execute(SQL_UPDATE_SCHEMA_ADD_ADMINSUBDIVISION);
         }
 
+        if (this.getSchemaVersion() <= 13)
+        {
+            // Combat trust lists. Checked against JDBC metadata rather than ADD COLUMN IF NOT
+            // EXISTS, which real MySQL rejects (see the "denied" column above).
+            this.addClaimColumnIfMissing(statement, "pvptrusted", "TEXT");
+            this.addClaimColumnIfMissing(statement, "pvetrusted", "TEXT");
+        }
+
         //load claims data into memory
 
         results = statement.executeQuery("SELECT * FROM griefprevention_claimdata");
@@ -480,6 +488,18 @@ public class DatabaseDataStore extends DataStore
                 } catch (SQLException e) {
                     adminSubdivision = false; // Default if column doesn't exist
                 }
+                List<String> pvpTrusted;
+                try {
+                    pvpTrusted = parseStorageList(results.getString("pvptrusted"));
+                } catch (SQLException e) {
+                    pvpTrusted = Collections.emptyList(); // Default if column doesn't exist
+                }
+                List<String> pveTrusted;
+                try {
+                    pveTrusted = parseStorageList(results.getString("pvetrusted"));
+                } catch (SQLException e) {
+                    pveTrusted = Collections.emptyList(); // Default if column doesn't exist
+                }
                 String shapecornersStr = results.getString("shapecorners");
                 long modifiedDate = results.getLong("modifieddate");
 
@@ -493,6 +513,14 @@ public class DatabaseDataStore extends DataStore
                 claim.setShapedCorners(parseCornersFromDb(shapecornersStr));
                 claim.setAdminSubdivision(adminSubdivision);
                 claim.restoreDeniedPermissions(deniedIdentifiers);
+                for (String identifier : pvpTrusted)
+                {
+                    claim.addPvpTrust(identifier);
+                }
+                for (String identifier : pveTrusted)
+                {
+                    claim.addPveTrust(identifier);
+                }
                 if (modifiedDate > 0) claim.modifiedDate = new Date(modifiedDate);
 
                 if (removeClaim)
@@ -630,6 +658,8 @@ public class DatabaseDataStore extends DataStore
             insertStmt.setBoolean(19, pvpEnabled);
             insertStmt.setBoolean(20, claim.alertsEnabled);
             insertStmt.setBoolean(21, claim.isAdminSubdivision());
+            insertStmt.setString(22, this.storageStringBuilder(new ArrayList<>(claim.getPvpTrustedIdentifiers())));
+            insertStmt.setString(23, this.storageStringBuilder(new ArrayList<>(claim.getPveTrustedIdentifiers())));
             insertStmt.executeUpdate();
         }
         catch (SQLException e)

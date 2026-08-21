@@ -104,6 +104,8 @@ Messages:
   ContainersPermission: přístup k truhlám a zvířatům
   AccessPermission: používat tlačítka a páky
   ManagePermission: spravovat oprávnění
+  PvPTrustPermission: bojovat s hráči
+  PvETrustPermission: bojovat se zvířaty
   LocationCurrentClaim: v tomto claimu
   LocationAllClaims: ve všech tvých claimech
   PvPImmunityStart: Jsi chráněn před útoky ostatních hráčů, dokud je tvůj inventář prázdný.
@@ -165,6 +167,8 @@ Messages:
   NoBuildPermission: Nemáš oprávnění od {0} zde stavět.
   NoAccessPermission: Nemáš oprávnění od {0} to použít.
   NoContainersPermission: Nemáš oprávnění od {0} to použít.
+  NoPvPTrust: Nemáš oprávnění od {0} zde bojovat s hráči.
+  NoPvETrust: Nemáš oprávnění od {0} zde bojovat se zvířaty.
   OwnerNameForAdminClaims: administrátor
   UnknownPlayerName: někdo
   ClaimTooSmallForEntities: Tento claim na to není dostatečně velký. Zkus jej zvětšit.

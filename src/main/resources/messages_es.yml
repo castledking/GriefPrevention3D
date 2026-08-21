@@ -104,6 +104,8 @@ Messages:
   ContainersPermission: acceder a contenedores y animales
   AccessPermission: usar botones y palancas
   ManagePermission: administrar permisos
+  PvPTrustPermission: pelear contra jugadores
+  PvETrustPermission: pelear contra animales
   LocationCurrentClaim: en este terreno protegido
   LocationAllClaims: en todos tus terrenos protegidos
   PvPImmunityStart: Estás protegido contra ataques de otros jugadores mientras tu inventario esté vacío.
@@ -165,6 +167,8 @@ Messages:
   NoBuildPermission: No tienes el permiso de {0} para construir aquí.
   NoAccessPermission: No tienes el permiso de {0} para usar eso.
   NoContainersPermission: No tienes el permiso de {0} para usar eso.
+  NoPvPTrust: No tienes el permiso de {0} para pelear contra jugadores aquí.
+  NoPvETrust: No tienes el permiso de {0} para pelear contra animales aquí.
   OwnerNameForAdminClaims: un administrador
   UnknownPlayerName: alguien
   ClaimTooSmallForEntities: Este terreno protegido no es lo suficientemente grande para eso. Intenta ampliarlo.

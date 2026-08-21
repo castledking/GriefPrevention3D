@@ -63,6 +63,14 @@ commands:
     usage: /<command> <permission> <access|container|build|manage>
     permission: griefprevention.permissiontrust
     aliases: [pt]
+  pvptrust:
+    description: Grants a player permission to fight players in your claim(s). Requires AllowPvPTrust.
+    usage: /<command> <player>
+    permission: griefprevention.pvptrust
+  pvetrust:
+    description: Grants a player permission to fight animals in your claim(s). Requires AllowPvETrust.
+    usage: /<command> <player>
+    permission: griefprevention.pvetrust
   subdivideclaims:
     description: Switches the shovel tool to subdivision mode, used to subdivide your claims.
     usage: /<command>
@@ -475,6 +483,8 @@ permissions:
       griefprevention.abandonallclaims: true
       griefprevention.visualizenearbyclaims: true
       griefprevention.claimpvp: true
+      griefprevention.pvptrust: true
+      griefprevention.pvetrust: true
   griefprevention.trust:
     description: Grants permission to use /trust.
     default: true
@@ -489,6 +499,12 @@ permissions:
     default: true
   griefprevention.managetrust:
     description: Grants permission to use /managetrust.
+    default: true
+  griefprevention.pvptrust:
+    description: Grants permission to use /pvptrust.
+    default: true
+  griefprevention.pvetrust:
+    description: Grants permission to use /pvetrust.
     default: true
   griefprevention.permissiontrust:
     description: Grants permission to give permission nodes trust in claims.

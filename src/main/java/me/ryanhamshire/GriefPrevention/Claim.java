@@ -102,6 +102,13 @@ public class Claim
     //players/permissions explicitly denied in this claim (override parent inheritance)
     private final HashSet<String> deniedPermissions = new HashSet<>();
 
+    //standalone combat trusts. tracked separately from the interaction trust map so granting
+    //pvp/pve trust never overwrites an explicit build/container/access grant, and neither
+    //hierarchy level implies them. Only enforced when the matching Claims.Allow*Trust config
+    //flag is enabled; stored unconditionally so toggling the flag never loses grants.
+    private final HashSet<String> pvpTrusted = new HashSet<>();
+    private final HashSet<String> pveTrusted = new HashSet<>();
+
      //whether or not this claim is in the data store
      //if a claim instance isn't in the data store, it isn't "active" - players can't interract with it
      //why keep this?  so that claims which have been removed from the data store can be correctly
@@ -452,8 +459,8 @@ public class Claim
              }
          }
 
-         return new ClaimTrustSnapshot(this.getOwnerID(), permissions, this.managerIdentifiers,
-                 neighborIdentifiers, this.deniedPermissions);
+        return new ClaimTrustSnapshot(this.getOwnerID(), permissions, this.managerIdentifiers,
+                neighborIdentifiers, this.deniedPermissions, this.pvpTrusted, this.pveTrusted);
      }
 
      private static @NotNull ClaimTrustLevel toClaimTrustLevel(@NotNull ClaimPermission permission)
@@ -601,6 +608,12 @@ public class Claim
                 return "#inventory";
             case Access:
                 return "#access";
+            case Neighbor:
+                return "#neighbor";
+            case PVP:
+                return "#pvp";
+            case PVE:
+                return "#pve";
             case Edit:
                 return "";
             default:
@@ -742,6 +755,11 @@ public class Claim
       */
      private boolean isGranted(@NotNull String normalizedIdentifier, @NotNull ClaimPermission level)
      {
+         // Combat trusts live in their own sets, outside the interaction trust map and manager
+         // identifiers, so no other grant can satisfy them.
+         if (level == ClaimPermission.PVP) return this.pvpTrusted.contains(normalizedIdentifier);
+         if (level == ClaimPermission.PVE) return this.pveTrusted.contains(normalizedIdentifier);
+
          if (this.managerIdentifiers.contains(normalizedIdentifier)
                  && level.isGrantedBy(ClaimPermission.Manage))
              return true;
@@ -756,14 +774,16 @@ public class Claim
          return this.isGranted(normalizeIdentifier(uuid.toString()), level);
      }
 
-     public boolean hasExplicitPermission(@NotNull Player player, @NotNull ClaimPermission level)
-     {
-         // Check explicit ClaimPermission for UUID
-         if (this.hasExplicitPermission(player.getUniqueId(), level)) return true;
+    public boolean hasExplicitPermission(@NotNull Player player, @NotNull ClaimPermission level)
+    {
+        // Check explicit ClaimPermission for UUID
+        if (this.hasExplicitPermission(player.getUniqueId(), level)) return true;
 
-         // Check permission-based ClaimPermission across both trust tracks
-         Set<String> nodes = new HashSet<>(this.playerIDToClaimPermissionMap.keySet());
-         nodes.addAll(this.managerIdentifiers);
+        // Check permission-based ClaimPermission across both trust tracks
+        Set<String> nodes = new HashSet<>(this.playerIDToClaimPermissionMap.keySet());
+        nodes.addAll(this.managerIdentifiers);
+        nodes.addAll(this.pvpTrusted);
+        nodes.addAll(this.pveTrusted);
 
          for (String node : nodes)
          {
@@ -1125,6 +1145,72 @@ public class Claim
         }
     }
 
+    //grants combat trust against players (pvp) or creatures (pve), leaving other trust untouched
+    public void addPvpTrust(@Nullable String playerID)
+    {
+        String normalized = normalizeIdentifier(playerID);
+        if (normalized.isEmpty()) return;
+
+        this.pvpTrusted.add(normalized);
+    }
+
+    public void addPveTrust(@Nullable String playerID)
+    {
+        String normalized = normalizeIdentifier(playerID);
+        if (normalized.isEmpty()) return;
+
+        this.pveTrusted.add(normalized);
+    }
+
+    //revokes combat trust, leaving other trust untouched
+    public void dropPvpTrust(@NotNull String playerID)
+    {
+        String normalized = normalizeIdentifier(playerID);
+        if (normalized.isEmpty()) return;
+
+        this.pvpTrusted.remove(normalized);
+
+        for (Claim child : this.children)
+        {
+            child.dropPvpTrust(normalized);
+        }
+    }
+
+    public void dropPveTrust(@NotNull String playerID)
+    {
+        String normalized = normalizeIdentifier(playerID);
+        if (normalized.isEmpty()) return;
+
+        this.pveTrusted.remove(normalized);
+
+        for (Claim child : this.children)
+        {
+            child.dropPveTrust(normalized);
+        }
+    }
+
+    public boolean isPvpTrusted(@Nullable String playerID)
+    {
+        String normalized = normalizeIdentifier(playerID);
+        return !normalized.isEmpty() && this.pvpTrusted.contains(normalized);
+    }
+
+    public boolean isPveTrusted(@Nullable String playerID)
+    {
+        String normalized = normalizeIdentifier(playerID);
+        return !normalized.isEmpty() && this.pveTrusted.contains(normalized);
+    }
+
+    public @NotNull Set<String> getPvpTrustedIdentifiers()
+    {
+        return Collections.unmodifiableSet(new HashSet<>(this.pvpTrusted));
+    }
+
+    public @NotNull Set<String> getPveTrustedIdentifiers()
+    {
+        return Collections.unmodifiableSet(new HashSet<>(this.pveTrusted));
+    }
+
      //grants a permission for a player or the public
      public void setPermission(@Nullable String playerID, @Nullable ClaimPermission permissionLevel)
      {
@@ -1139,6 +1225,10 @@ public class Claim
             addManager(normalized);
         else if (permissionLevel == ClaimPermission.Neighbor)
             addNeighbor(normalized);
+        else if (permissionLevel == ClaimPermission.PVP)
+            addPvpTrust(normalized);
+        else if (permissionLevel == ClaimPermission.PVE)
+            addPveTrust(normalized);
         else
             this.playerIDToClaimPermissionMap.put(normalized, permissionLevel);
     }
@@ -1155,6 +1245,8 @@ public class Claim
         this.playerIDToClaimPermissionMap.remove(normalized);
         this.managerIdentifiers.remove(normalized);
         this.neighbors.remove(normalized);
+        this.pvpTrusted.remove(normalized);
+        this.pveTrusted.remove(normalized);
 
         for (Claim child : this.children)
         {
@@ -1190,6 +1282,8 @@ public class Claim
          this.neighbors.clear();
          this.autoNeighbors.clear();
          this.allowAllNeighbors = false;
+         this.pvpTrusted.clear();
+         this.pveTrusted.clear();
 
          for (Claim child : this.children)
          {

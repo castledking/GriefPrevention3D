@@ -104,6 +104,8 @@ Messages:
   ContainersPermission: 使用容器和动物
   AccessPermission: 使用按钮和拉杆
   ManagePermission: 管理权限
+  PvPTrustPermission: 与玩家战斗
+  PvETrustPermission: 与动物战斗
   LocationCurrentClaim: 在此领地内
   LocationAllClaims: 在你所有领地内
   PvPImmunityStart: 只要你的背包是空的，你就受到保护，免受其他玩家攻击。
@@ -165,6 +167,8 @@ Messages:
   NoBuildPermission: 你没有 {0} 在这里建造的权限。
   NoAccessPermission: 你没有 {0} 使用该物品的权限。
   NoContainersPermission: 你没有 {0} 使用该物品的权限。
+  NoPvPTrust: 你没有 {0} 在此与玩家战斗的权限。
+  NoPvETrust: 你没有 {0} 在此与动物战斗的权限。
   OwnerNameForAdminClaims: 管理员
   UnknownPlayerName: 某人
   ClaimTooSmallForEntities: 这个领地不够大。尝试扩大它。

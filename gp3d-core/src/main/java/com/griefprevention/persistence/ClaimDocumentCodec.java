@@ -48,6 +48,8 @@ public final class ClaimDocumentCodec
     private static final String MANAGERS = "Managers";
     private static final String NEIGHBORS = "Neighbors";
     private static final String DENIED = "Denied";
+    private static final String PVP_TRUSTED = "PvP Trusted";
+    private static final String PVE_TRUSTED = "PvE Trusted";
     private static final String PARENT_ID = "Parent Claim ID";
     private static final String INHERIT_NOTHING = "inheritNothing";
     private static final String INHERIT_NOTHING_FOR_NEW = "inheritNothingForNewSubdivisions";
@@ -76,6 +78,8 @@ public final class ClaimDocumentCodec
         fields.add(MANAGERS);
         fields.add(NEIGHBORS);
         fields.add(DENIED);
+        fields.add(PVP_TRUSTED);
+        fields.add(PVE_TRUSTED);
         fields.add(PARENT_ID);
         fields.add(INHERIT_NOTHING);
         fields.add(INHERIT_NOTHING_FOR_NEW);
@@ -404,6 +408,8 @@ public final class ClaimDocumentCodec
         {
             section.put(DENIED, trustLists.denied);
         }
+        section.put(PVP_TRUSTED, trustLists.pvpTrusted);
+        section.put(PVE_TRUSTED, trustLists.pveTrusted);
         section.put(PARENT_ID, snapshot.parentId() == null ? Long.valueOf(-1L) : snapshot.parentId());
         section.put(INHERIT_NOTHING, document.inheritNothing());
         section.put(INHERIT_NOTHING_FOR_NEW, document.inheritNothingForNewSubdivisions());
@@ -474,7 +480,11 @@ public final class ClaimDocumentCodec
         // A subdivision that revoked inherited trust stores a deny entry rather than an absence of
         // trust. Dropping those entries here would hand the revoked player access back on reload.
         List<String> denied = stringList(section.get(DENIED), DENIED);
-        return new ClaimTrustSnapshot(ownerId, permissions, managers, neighbors, denied);
+        // Standalone combat trusts are their own tracks; missing keys decode to empty sets so
+        // older files load unchanged.
+        List<String> pvpTrusted = stringList(section.get(PVP_TRUSTED), PVP_TRUSTED);
+        List<String> pveTrusted = stringList(section.get(PVE_TRUSTED), PVE_TRUSTED);
+        return new ClaimTrustSnapshot(ownerId, permissions, managers, neighbors, denied, pvpTrusted, pveTrusted);
     }
 
     private static void putTrust(
@@ -504,6 +514,8 @@ public final class ClaimDocumentCodec
         List<String> managers = new ArrayList<>(trust.managerIdentifiers());
         List<String> neighbors = new ArrayList<>(trust.neighborIdentifiers());
         List<String> denied = new ArrayList<>(trust.deniedIdentifiers());
+        List<String> pvpTrusted = new ArrayList<>(trust.pvpTrustedIdentifiers());
+        List<String> pveTrusted = new ArrayList<>(trust.pveTrustedIdentifiers());
         for (Map.Entry<String, ClaimTrustLevel> entry : trust.permissionsByIdentifier().entrySet())
         {
             if (entry.getValue() == ClaimTrustLevel.BUILD)
@@ -527,7 +539,7 @@ public final class ClaimDocumentCodec
                 neighbors.add(entry.getKey());
             }
         }
-        return new TrustLists(builders, containers, accessors, managers, neighbors, denied);
+        return new TrustLists(builders, containers, accessors, managers, neighbors, denied, pvpTrusted, pveTrusted);
     }
 
     private static @NotNull Map<String, Object> claimSection(@Nullable Object value, @NotNull String context)
@@ -844,6 +856,8 @@ public final class ClaimDocumentCodec
         private final List<String> managers;
         private final List<String> neighbors;
         private final List<String> denied;
+        private final List<String> pvpTrusted;
+        private final List<String> pveTrusted;
 
         private TrustLists(
                 List<String> builders,
@@ -851,7 +865,9 @@ public final class ClaimDocumentCodec
                 List<String> accessors,
                 List<String> managers,
                 List<String> neighbors,
-                List<String> denied)
+                List<String> denied,
+                List<String> pvpTrusted,
+                List<String> pveTrusted)
         {
             this.builders = builders;
             this.containers = containers;
@@ -859,6 +875,8 @@ public final class ClaimDocumentCodec
             this.managers = managers;
             this.neighbors = neighbors;
             this.denied = denied;
+            this.pvpTrusted = pvpTrusted;
+            this.pveTrusted = pveTrusted;
         }
     }
 }

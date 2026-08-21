@@ -105,6 +105,32 @@ public enum Alias {
         "trustlist"
     ),
 
+    ClaimPvpTrust(
+        "enable: true" + "\n" +
+"commands: [pvptrust]" + "\n" +
+"standalone: [pvptrust]" + "\n" +
+"usage: \"/claim trust <player> pvp\"" + "\n" +
+"description: Grant a player permission to fight players in your claim." + "\n" +
+"arguments:" + "\n" +
+"  player:" + "\n" +
+"    type: player" + "\n" +
+"" + "\n",
+        "pvptrust"
+    ),
+
+    ClaimPveTrust(
+        "enable: true" + "\n" +
+"commands: [pvetrust]" + "\n" +
+"standalone: [pvetrust]" + "\n" +
+"usage: \"/claim trust <player> pve\"" + "\n" +
+"description: Grant a player permission to fight animals in your claim." + "\n" +
+"arguments:" + "\n" +
+"  player:" + "\n" +
+"    type: player" + "\n" +
+"" + "\n",
+        "pvetrust"
+    ),
+
     ClaimList(
         "enable: true" + "\n" +
 "commands: [list]" + "\n" +

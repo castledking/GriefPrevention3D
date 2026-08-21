@@ -104,6 +104,8 @@ Messages:
   ContainersPermission: コンテナと動物へのアクセス
   AccessPermission: ボタンとレバーの使用
   ManagePermission: 権限の管理
+  PvPTrustPermission: プレイヤーと戦う
+  PvETrustPermission: 動物と戦う
   LocationCurrentClaim: このクレーム内
   LocationAllClaims: すべてのクレーム内
   PvPImmunityStart: インベントリが空の間、他のプレイヤーからの攻撃から保護されています。
@@ -165,6 +167,8 @@ Messages:
   NoBuildPermission: ここで建築する {0} の許可を持っていません。
   NoAccessPermission: それを使用する {0} の許可を持っていません。
   NoContainersPermission: それを使用する {0} の許可を持っていません。
+  NoPvPTrust: ここでプレイヤーと戦う {0} の許可を持っていません。
+  NoPvETrust: ここで動物と戦う {0} の許可を持っていません。
   OwnerNameForAdminClaims: 管理者
   UnknownPlayerName: 誰か
   ClaimTooSmallForEntities: このクレームはそれに対応するのに十分な大きさではありません。拡大してみてください。

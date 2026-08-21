@@ -69,6 +69,7 @@ import java.util.Locale;
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.UUID;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
@@ -223,6 +224,8 @@ public class GriefPrevention extends JavaPlugin {
     public boolean config_claims_allowNestedSubClaims; // whether nested subdivisions may be created inside other
     // subdivisions
     public boolean config_claims_allowShapedClaims; // whether shaped claim creation and editing tools are enabled
+    public boolean config_claims_allowPvPTrust; // whether /pvptrust and PvP combat trust in claims are enabled
+    public boolean config_claims_allowPvETrust; // whether /pvetrust and PvE (creature) combat trust in claims are enabled
     public boolean config_claims_allowShapedSubClaims; // whether shaped 2D subdivisions may be created inside claims
     public boolean config_claims_allow3DSubdivisions; // whether 3D height-limited subdivisions are enabled
     public boolean config_claims_allow3DAdminClaims; // whether 3D height-limited admin claims are enabled
@@ -1145,6 +1148,8 @@ public class GriefPrevention extends JavaPlugin {
             false
         );
         this.config_claims_allowShapedClaims = config.getBoolean("GriefPrevention.Claims.AllowShapedClaims", false);
+        this.config_claims_allowPvPTrust = config.getBoolean("GriefPrevention.Claims.AllowPvPTrust", false);
+        this.config_claims_allowPvETrust = config.getBoolean("GriefPrevention.Claims.AllowPvETrust", false);
         this.config_claims_allowShapedSubClaims = config.getBoolean(
             "GriefPrevention.Claims.AllowShapedSubClaims",
             false
@@ -1568,6 +1573,8 @@ public class GriefPrevention extends JavaPlugin {
         outConfig.set("GriefPrevention.Claims.AllowTrappedInAdminClaims", this.config_claims_allowTrappedInAdminClaims);
         outConfig.set("GriefPrevention.Claims.AllowNestedSubClaims", this.config_claims_allowNestedSubClaims);
         outConfig.set("GriefPrevention.Claims.AllowShapedClaims", this.config_claims_allowShapedClaims);
+        outConfig.set("GriefPrevention.Claims.AllowPvPTrust", this.config_claims_allowPvPTrust);
+        outConfig.set("GriefPrevention.Claims.AllowPvETrust", this.config_claims_allowPvETrust);
         outConfig.set("GriefPrevention.Claims.AllowShapedSubClaims", this.config_claims_allowShapedSubClaims);
         outConfig.set("GriefPrevention.Claims.UseClaimSelectSessions", this.config_claims_useClaimSelectSessions);
         outConfig.set("GriefPrevention.Claims.UseClaimSelectedMessages", this.config_claims_useClaimSelectedMessages);
@@ -1834,10 +1841,11 @@ public class GriefPrevention extends JavaPlugin {
     }
 
     private void setUpCommands() {
-        new com.griefprevention.commands.UnifiedClaimCommand(this);
+        this.claimCommand = new com.griefprevention.commands.UnifiedClaimCommand(this);
         new com.griefprevention.commands.UnifiedAdminClaimCommand(this);
         syncShapedCommandRegistration();
         sync3DCommandRegistration();
+        syncCombatTrustCommandRegistration();
 
         // Add tab completion for old trust commands
         TrustTabCompleter trustTabCompleter = new TrustTabCompleter();
@@ -1848,6 +1856,38 @@ public class GriefPrevention extends JavaPlugin {
         getCommand("untrust").setTabCompleter(trustTabCompleter);
         getCommand("neighbortrust").setTabCompleter(trustTabCompleter);
         getCommand("distancetrust").setTabCompleter(trustTabCompleter);
+    }
+
+    // handle to the unified /claim command so legacy onCommand paths can reuse its handlers
+    private @Nullable com.griefprevention.commands.UnifiedClaimCommand claimCommand;
+
+    private com.griefprevention.commands.UnifiedClaimCommand unifiedClaimCommand() {
+        if (this.claimCommand == null) {
+            this.claimCommand = new com.griefprevention.commands.UnifiedClaimCommand(this);
+        }
+        return this.claimCommand;
+    }
+
+    /**
+     * Adds or removes {@code /pvptrust} and {@code /pvetrust} (plus their plugin.yml aliases)
+     * from the live command map based on the AllowPvPTrust/AllowPvETrust options, so toggling
+     * either option and running {@code /gpreload} takes effect immediately.
+     */
+    private void syncCombatTrustCommandRegistration() {
+        try {
+            CommandMap commandMap = obtainCommandMap();
+            if (commandMap == null) {
+                return;
+            }
+
+            String prefix = this.getName().toLowerCase(Locale.ROOT);
+            java.util.Map<String, org.bukkit.command.Command> knownCommands = findKnownCommandsMap(commandMap);
+
+            syncOptionalCommand(commandMap, knownCommands, prefix, "pvptrust", this.config_claims_allowPvPTrust);
+            syncOptionalCommand(commandMap, knownCommands, prefix, "pvetrust", this.config_claims_allowPvETrust);
+        } catch (Exception e) {
+            this.getLogger().warning("Failed to sync combat trust commands: " + e.getMessage());
+        }
     }
 
     /**
@@ -2684,6 +2724,14 @@ public class GriefPrevention extends JavaPlugin {
             this.handleTrustCommand(player, ClaimPermission.Manage, args[0], false);
 
             return true;
+        }
+        // pvptrust <player> - combat trust against players (requires AllowPvPTrust)
+        else if (cmd.getName().equalsIgnoreCase("pvptrust") && player != null) {
+            return unifiedClaimCommand().handlePvpTrust(player, args);
+        }
+        // pvetrust <player> - combat trust against creatures (requires AllowPvETrust)
+        else if (cmd.getName().equalsIgnoreCase("pvetrust") && player != null) {
+            return unifiedClaimCommand().handlePveTrust(player, args);
         }
         // restrictsubclaim
         else if (cmd.getName().equalsIgnoreCase("restrictsubclaim") && player != null) {
@@ -4084,6 +4132,10 @@ public class GriefPrevention extends JavaPlugin {
             permissionDescription = this.dataStore.getMessage(Messages.BuildPermission);
         } else if (permissionLevel == ClaimPermission.Access) {
             permissionDescription = this.dataStore.getMessage(Messages.AccessPermission);
+        } else if (permissionLevel == ClaimPermission.PVP) {
+            permissionDescription = this.dataStore.getMessage(Messages.PvPTrustPermission);
+        } else if (permissionLevel == ClaimPermission.PVE) {
+            permissionDescription = this.dataStore.getMessage(Messages.PvETrustPermission);
         } else {
             permissionDescription = this.dataStore.getMessage(Messages.ContainersPermission);
         }
@@ -5155,6 +5207,38 @@ public class GriefPrevention extends JavaPlugin {
 
         player.sendMessage(permissions.toString());
 
+        // Combat trusts are only listed while their features are enabled.
+        if (this.config_claims_allowPvPTrust || this.config_claims_allowPvETrust) {
+            Set<String> pvp = new HashSet<>(claim.getPvpTrustedIdentifiers());
+            Set<String> pve = new HashSet<>(claim.getPveTrustedIdentifiers());
+
+            if (canInheritForDisplay) {
+                // Inherited grants show through unless this claim explicitly denies the identifier.
+                java.util.function.Predicate<String> notDeniedHere =
+                        id -> !claim.isPermissionDenied(id, ClaimPermission.PVP)
+                                && !claim.isPermissionDenied(id);
+                pvp.addAll(claim.parent.getPvpTrustedIdentifiers().stream().filter(notDeniedHere).collect(Collectors.toSet()));
+                pve.addAll(claim.parent.getPveTrustedIdentifiers().stream()
+                        .filter(id -> !claim.isPermissionDenied(id, ClaimPermission.PVE)
+                                && !claim.isPermissionDenied(id))
+                        .collect(Collectors.toSet()));
+            }
+
+            if (this.config_claims_allowPvPTrust && !pvp.isEmpty()) {
+                permissions = new StringBuilder();
+                permissions.append(ChatColor.RED).append('>');
+                for (String id : pvp) permissions.append(this.trustEntryToPlayerName(id)).append(' ');
+                player.sendMessage(permissions.toString());
+            }
+
+            if (this.config_claims_allowPvETrust && !pve.isEmpty()) {
+                permissions = new StringBuilder();
+                permissions.append(ChatColor.DARK_AQUA).append('>');
+                for (String id : pve) permissions.append(this.trustEntryToPlayerName(id)).append(' ');
+                player.sendMessage(permissions.toString());
+            }
+        }
+
         // Show neighbors
         ArrayList<String> neighbors = claim.getAllNeighbors();
         if (!neighbors.isEmpty()) {
@@ -5176,6 +5260,8 @@ public class GriefPrevention extends JavaPlugin {
                 " " +
                 ChatColor.BLUE +
                 this.dataStore.getMessage(Messages.Access) +
+                (this.config_claims_allowPvPTrust ? " " + ChatColor.RED + this.dataStore.getMessage(Messages.PvPTrustPermission) : "") +
+                (this.config_claims_allowPvETrust ? " " + ChatColor.DARK_AQUA + this.dataStore.getMessage(Messages.PvETrustPermission) : "") +
                 (neighbors.isEmpty() ? "" : " " + ChatColor.LIGHT_PURPLE + this.dataStore.getMessage(Messages.Neighbor))
         );
 

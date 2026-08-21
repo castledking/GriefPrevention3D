@@ -55,7 +55,19 @@ public enum ClaimPermission
      * ClaimPermission used for neighbor trust. Allows bypassing minimum distance checks for claim creation.
      * Command: /neighbortrust or /distancetrust
      */
-    Neighbor(Messages.NoAccessPermission);
+    Neighbor(Messages.NoAccessPermission),
+    /**
+     * ClaimPermission for combat against players inside a claim. Command: /pvptrust.
+     * Standalone: it is never granted by any other trust level and grants nothing else.
+     * Only enforced when {@code Claims.AllowPvPTrust} is enabled; otherwise legacy rules apply.
+     */
+    PVP(Messages.NoPvPTrust),
+    /**
+     * ClaimPermission for combat against creatures (animals, villagers) inside a claim. Command: /pvetrust.
+     * Standalone: it is never granted by any other trust level and grants nothing else.
+     * Only enforced when {@code Claims.AllowPvETrust} is enabled; otherwise Container trust governs creatures.
+     */
+    PVE(Messages.NoPvETrust);
 
     private final Messages denialMessage;
 
@@ -75,13 +87,26 @@ public enum ClaimPermission
     /**
      * Check if a ClaimPermission is granted by another ClaimPermission.
      *
+     * <p>{@link #PVP} and {@link #PVE} are standalone combat trusts: they are never implied by
+     * any other trust level and imply nothing beyond themselves.
+     *
      * @param other the ClaimPermission to compare against
      * @return true if this ClaimPermission is equal or lesser than the provided ClaimPermission
      */
     public boolean isGrantedBy(ClaimPermission other)
     {
+        if (this == PVP || this == PVE) return other == this;
         if (other == null) return false;
         return other.getTrustLevel() <= this.getTrustLevel();
+    }
+
+    /**
+     * @return true if this ClaimPermission is a standalone combat trust (PVP/PVE) that sits
+     * outside the normal implication hierarchy
+     */
+    public boolean isCombatTrust()
+    {
+        return this == PVP || this == PVE;
     }
 
     public boolean isContainer()
@@ -106,6 +131,10 @@ public enum ClaimPermission
                 return 4;
             case Neighbor:
                 return 5;
+            case PVP:
+                return 6;
+            case PVE:
+                return 7;
             default:
                 throw new IllegalStateException("Unknown claim permission: " + this);
         }

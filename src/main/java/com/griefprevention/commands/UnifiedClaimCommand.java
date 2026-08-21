@@ -23,7 +23,7 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
 
         // Register subcommands
         registerSubcommand("create", this.claimCreateAction);
-        registerSubcommand("trust", this::handleTrust, "accesstrust", "containertrust", "managetrust");
+        registerSubcommand("trust", createTrustTabExecutor(), "accesstrust", "containertrust", "managetrust");
         registerSubcommand("untrust", this::handleUntrust);
         registerSubcommand("trustlist", this::handleTrustList);
         registerSubcommand("list", this::handleList);
@@ -55,6 +55,8 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
         registerStandaloneCommand(Alias.ClaimBuyBlocks, createBuyBlocksTabExecutor());
         registerStandaloneCommand(Alias.ClaimSellBlocks, createSellBlocksTabExecutor());
         registerStandaloneCommand(Alias.ClaimAbandon, createNoArgStandaloneTabExecutor(this::handleAbandon));
+        registerStandaloneCommand(Alias.ClaimPvpTrust, this::handlePvpTrust);
+        registerStandaloneCommand(Alias.ClaimPveTrust, this::handlePveTrust);
         registerStandaloneCommand(Alias.ClaimSiege, this::handleSiege);
         registerStandaloneCommand(Alias.ClaimTrapped, this::handleTrapped);
         registerStandaloneCommand(Alias.ClaimExpand, this::handleExpand);
@@ -98,6 +100,11 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
         if (!(sender instanceof Player))
             return false;
 
+        // /claim trust permission <node> <type> - grant a permission node a specific trust type
+        if (args.length == 3 && "permission".equalsIgnoreCase(args[0])) {
+            return handlePermissionGrant((Player) sender, args[1], args[2]);
+        }
+
         if (args.length < 1 || args.length > 2)
             return false;
 
@@ -123,9 +130,125 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
             case "manager":
                 return plugin.getCommand("managetrust").execute(sender, "managetrust",
                         new String[] { recipientName });
+            case "pvp":
+                return handlePvpTrust(sender, new String[] { recipientName });
+            case "pve":
+                return handlePveTrust(sender, new String[] { recipientName });
             default:
                 return false;
         }
+    }
+
+    /**
+     * Grants a permission node (bracket identifier) one of the supported trust types.
+     * Shared by "/claim trust permission &lt;node&gt; &lt;type&gt;" and the standalone
+     * permission-trust command.
+     */
+    private boolean handlePermissionGrant(@NotNull Player player, @NotNull String permissionNode,
+            @NotNull String type) {
+        if (!player.hasPermission(com.griefprevention.claims.ClaimTrustCommandPermissions.PERMISSION_TRUST)) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+            return true;
+        }
+
+        String identifier = com.griefprevention.claims.ClaimTrustIdentifier.fromPermissionTarget(permissionNode);
+        if (identifier == null) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.InvalidPermissionID);
+            return true;
+        }
+
+        ClaimPermission permissionLevel = parsePermissionTrustType(type);
+        if (permissionLevel == null) {
+            return false;
+        }
+
+        // Combat trusts are opt-in features; reject the grant while disabled.
+        if ((permissionLevel == ClaimPermission.PVP && !plugin.config_claims_allowPvPTrust)
+                || (permissionLevel == ClaimPermission.PVE && !plugin.config_claims_allowPvETrust)) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+            return true;
+        }
+
+        plugin.handleTrustCommand(player, permissionLevel, identifier, false);
+        return true;
+    }
+
+    static @Nullable ClaimPermission parsePermissionTrustType(@NotNull String type) {
+        switch (type.trim().toLowerCase(java.util.Locale.ROOT)) {
+            case "access":
+                return ClaimPermission.Access;
+            case "container":
+            case "inventory":
+                return ClaimPermission.Container;
+            case "build":
+                return ClaimPermission.Build;
+            case "manage":
+            case "manager":
+                return ClaimPermission.Manage;
+            case "pvp":
+                return ClaimPermission.PVP;
+            case "pve":
+                return ClaimPermission.PVE;
+            default:
+                return null;
+        }
+    }
+
+    /**
+     * Trust subcommand with flag-aware tab completion: pvp/pve suggestions only appear while
+     * their Allow*Trust config flags are enabled, so /gpreload updates completions instantly.
+     */
+    private org.bukkit.command.TabExecutor createTrustTabExecutor() {
+        return new org.bukkit.command.TabExecutor() {
+            @Override
+            public boolean onCommand(@NotNull CommandSender sender, @NotNull org.bukkit.command.Command command,
+                    @NotNull String alias, @NotNull String[] args) {
+                return handleTrust(sender, args);
+            }
+
+            @Override
+            public @Nullable java.util.List<String> onTabComplete(@NotNull CommandSender sender,
+                    @NotNull org.bukkit.command.Command command, @NotNull String alias,
+                    @NotNull String[] args) {
+                java.util.List<String> types = new java.util.ArrayList<>(
+                        java.util.Arrays.asList("access", "container", "manage", "manager", "build"));
+                if (plugin.config_claims_allowPvPTrust) types.add("pvp");
+                if (plugin.config_claims_allowPvETrust) types.add("pve");
+
+                // "/claim trust permission <node> <type>"
+                if (args.length >= 1 && "permission".equalsIgnoreCase(args[0])) {
+                    if (args.length == 3) {
+                        return filterPrefix(types, args[2]);
+                    }
+                    return java.util.Collections.emptyList();
+                }
+
+                if (args.length == 1) {
+                    java.util.List<String> names = com.griefprevention.commands.TabCompletions.visiblePlayers(
+                            sender, new String[] { args[0] });
+                    if (sender instanceof Player) {
+                        names.removeIf(name -> name.equalsIgnoreCase(((Player) sender).getName()));
+                    }
+                    names.add("public");
+                    names.add("permission");
+                    return filterPrefix(names, args[0]);
+                }
+
+                if (args.length == 2) {
+                    return filterPrefix(types, args[1]);
+                }
+
+                return java.util.Collections.emptyList();
+            }
+
+            private @Nullable java.util.List<String> filterPrefix(java.util.List<String> options,
+                    @Nullable String prefix) {
+                String lower = prefix == null ? "" : prefix.toLowerCase(java.util.Locale.ROOT);
+                return options.stream()
+                        .filter(option -> option.toLowerCase(java.util.Locale.ROOT).startsWith(lower))
+                        .collect(java.util.stream.Collectors.toList());
+            }
+        };
     }
 
     private boolean handleUntrust(CommandSender sender, String[] args) {
@@ -135,6 +258,34 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
         // - "all" (from all: [all])
         // - "public" (from public: [public])
         return plugin.handleUntrustCommand(sender, args);
+    }
+
+    public boolean handlePvpTrust(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player)) return false;
+        Player player = (Player) sender;
+
+        if (!plugin.config_claims_allowPvPTrust || !player.hasPermission("griefprevention.pvptrust")) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+            return true;
+        }
+        if (args.length != 1) return false;
+
+        plugin.handleTrustCommand(player, ClaimPermission.PVP, args[0], false);
+        return true;
+    }
+
+    public boolean handlePveTrust(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player)) return false;
+        Player player = (Player) sender;
+
+        if (!plugin.config_claims_allowPvETrust || !player.hasPermission("griefprevention.pvetrust")) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+            return true;
+        }
+        if (args.length != 1) return false;
+
+        plugin.handleTrustCommand(player, ClaimPermission.PVE, args[0], false);
+        return true;
     }
 
     private boolean handleTrustList(CommandSender sender, String[] args) {

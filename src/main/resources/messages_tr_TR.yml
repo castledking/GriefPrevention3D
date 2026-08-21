@@ -105,6 +105,8 @@ Messages:
   ContainersPermission: sandık ve hayvanlara erişim
   AccessPermission: düğme ve kolları kullanma
   ManagePermission: izinleri yönetme
+  PvPTrustPermission: oyuncularla dövüşme
+  PvETrustPermission: hayvanlarla dövüşme
   LocationCurrentClaim: bu bölgede
   LocationAllClaims: tüm bölgelerinizde
   PvPImmunityStart: Envanteriniz boş olduğu sürece diğer oyuncuların saldırılarından korunuyorsunuz.
@@ -166,6 +168,8 @@ Messages:
   NoBuildPermission: Burada inşa etmek için {0} iznine sahip değilsiniz.
   NoAccessPermission: Bunu kullanmak için {0} iznine sahip değilsiniz.
   NoContainersPermission: Bunu kullanmak için {0} iznine sahip değilsiniz.
+  NoPvPTrust: Burada oyuncularla dövüşmek için {0} iznine sahip değilsiniz.
+  NoPvETrust: Burada hayvanlarla dövüşmek için {0} iznine sahip değilsiniz.
   OwnerNameForAdminClaims: bir yönetici
   UnknownPlayerName: birisi
   ClaimTooSmallForEntities: Bu bölge bunun için yeterince büyük değil. Büyütmeyi deneyin.

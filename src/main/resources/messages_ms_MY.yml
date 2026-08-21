@@ -104,6 +104,8 @@ Messages:
   ContainersPermission: mengakses bekas dan haiwan
   AccessPermission: menggunakan butang dan tuil
   ManagePermission: mengurus kebenaran
+  PvPTrustPermission: bertarung dengan pemain
+  PvETrustPermission: bertarung dengan haiwan
   LocationCurrentClaim: dalam kawasan tuntutan ini
   LocationAllClaims: dalam semua kawasan tuntutan anda
   PvPImmunityStart: Anda dilindungi daripada serangan pemain lain selagi inventori anda kosong.
@@ -165,6 +167,8 @@ Messages:
   NoBuildPermission: Anda tidak mempunyai kebenaran {0} untuk membina di sini.
   NoAccessPermission: Anda tidak mempunyai kebenaran {0} untuk menggunakan itu.
   NoContainersPermission: Anda tidak mempunyai kebenaran {0} untuk menggunakan itu.
+  NoPvPTrust: Anda tidak mempunyai kebenaran {0} untuk bertarung dengan pemain di sini.
+  NoPvETrust: Anda tidak mempunyai kebenaran {0} untuk bertarung dengan haiwan di sini.
   OwnerNameForAdminClaims: seorang pentadbir
   UnknownPlayerName: seseorang
   ClaimTooSmallForEntities: Kawasan tuntutan ini tidak cukup besar untuk itu. Cuba perbesarkannya.
