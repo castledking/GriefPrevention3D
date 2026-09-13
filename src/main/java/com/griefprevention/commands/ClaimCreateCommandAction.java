@@ -60,9 +60,7 @@ final class ClaimCreateCommandAction implements TabExecutor
 
         PlayerData playerData = plugin.dataStore.getPlayerData(player.getUniqueId());
 
-        if (plugin.config_claims_maxClaimsPerPlayer > 0 &&
-                !player.hasPermission("griefprevention.overrideclaimcountlimit") &&
-                playerData.getClaims().size() >= plugin.config_claims_maxClaimsPerPlayer)
+        if (plugin.isAtClaimCountLimit(player, playerData))
         {
             GriefPrevention.sendMessage(player, TextMode.Err, Messages.ClaimCreationFailedOverClaimCountLimit);
             return true;

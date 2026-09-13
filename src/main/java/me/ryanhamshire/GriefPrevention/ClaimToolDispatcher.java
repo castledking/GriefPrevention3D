@@ -896,9 +896,7 @@ final class ClaimToolDispatcher
 
             // if he's at the claim count per player limit already and doesn't have
             // permission to bypass, display an error message
-            if (instance.config_claims_maxClaimsPerPlayer > 0 &&
-                    !player.hasPermission("griefprevention.overrideclaimcountlimit") &&
-                    playerData.getClaims().size() >= instance.config_claims_maxClaimsPerPlayer) {
+            if (instance.isAtClaimCountLimit(player, playerData)) {
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.ClaimCreationFailedOverClaimCountLimit);
                 return true;
             }

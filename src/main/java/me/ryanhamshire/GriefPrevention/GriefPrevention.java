@@ -4621,6 +4621,34 @@ public class GriefPrevention extends JavaPlugin {
         // If not enough time has passed, silently ignore the message
     }
 
+    public static final String MAX_CLAIMS_PERMISSION_PREFIX = "griefprevention.maxclaims.";
+
+    // the most claims a player may own: the highest griefprevention.maxclaims.<amount> node they hold,
+    // or the configured MaximumNumberOfClaimsPerPlayer when they hold none. 0 means unlimited.
+    public int getMaxClaimsFor(@NotNull Player player) {
+        int permissionLimit = 0;
+        int prefixLength = MAX_CLAIMS_PERMISSION_PREFIX.length();
+        for (org.bukkit.permissions.PermissionAttachmentInfo info : player.getEffectivePermissions()) {
+            if (!info.getValue()) continue;
+            String node = info.getPermission();
+            if (node.length() <= prefixLength
+                    || !node.regionMatches(true, 0, MAX_CLAIMS_PERMISSION_PREFIX, 0, prefixLength)) continue;
+            try {
+                permissionLimit = Math.max(permissionLimit, Integer.parseInt(node.substring(prefixLength)));
+            } catch (NumberFormatException ignored) {
+                // wildcards and other non-numeric suffixes don't set a limit
+            }
+        }
+        return permissionLimit > 0 ? permissionLimit : this.config_claims_maxClaimsPerPlayer;
+    }
+
+    // checks whether a player already owns as many claims as they are allowed to
+    public boolean isAtClaimCountLimit(@NotNull Player player, @NotNull PlayerData playerData) {
+        if (player.hasPermission("griefprevention.overrideclaimcountlimit")) return false;
+        int limit = this.getMaxClaimsFor(player);
+        return limit > 0 && playerData.getClaims().size() >= limit;
+    }
+
     // checks whether players can create claims in a world
     public boolean claimsEnabledForWorld(World world) {
         ClaimsMode mode = this.config_claims_worldModes.get(world);
