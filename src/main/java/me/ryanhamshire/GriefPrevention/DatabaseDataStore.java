@@ -519,8 +519,7 @@ public class DatabaseDataStore extends DataStore
                 claim.setExpirationDate(expirationDate);
                 claim.areExplosivesAllowed = explosivesAllowed;
                 claim.areWitherExplosionsAllowed = witherExplosionsAllowed;
-                claim.pvpEnabled = pvpEnabled;
-                claim.pvpToggleSet = pvpToggleSet;
+                claim.restorePvpToggle(pvpEnabled, pvpToggleSet);
                 claim.alertsEnabled = alertsEnabled;
                 claim.setInheritNothingForNewSubdivisions(inheritNothingForNewSubdivisions);
                 claim.setShapedCorners(parseCornersFromDb(shapecornersStr));

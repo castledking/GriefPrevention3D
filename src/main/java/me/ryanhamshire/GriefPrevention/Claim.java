@@ -126,6 +126,15 @@ public class Claim
       // of being treated as an explicit override in either direction.
       public boolean pvpToggleSet = false;
 
+      // Restores the PvP toggle state read from storage. Claims saved before the explicit-toggle
+      // marker existed can only differ from the default (PvP on) because a player turned PvP off,
+      // so a stored "off" counts as an explicit toggle instead of falling back to the global config.
+      public void restorePvpToggle(boolean pvpEnabled, boolean storedToggleSet)
+      {
+          this.pvpEnabled = pvpEnabled;
+          this.pvpToggleSet = storedToggleSet || !pvpEnabled;
+      }
+
       // per-claim alert toggle
       public boolean alertsEnabled = true;
  
