@@ -1648,13 +1648,7 @@ public abstract class DataStore {
             return result;
         }
 
-        Supplier<String> minimumFailure = validateShapedCreationMinimums(world, polygon);
-        if (minimumFailure != null)
-        {
-            result.succeeded = false;
-            result.denialMessage = minimumFailure;
-            return result;
-        }
+        // Subdivisions carve up land the owner already paid for, so claim size minimums don't apply.
 
         int minY = parent.getLesserBoundaryCorner().getBlockY();
         int maxY = GriefPrevention.getWorldMaxY(world);
@@ -2910,7 +2904,8 @@ public abstract class DataStore {
         final boolean isSubdivision = claim.parent != null;
 
         World world = Objects.requireNonNull(claim.getLesserBoundaryCorner().getWorld());
-        Supplier<String> minimumFailure = validateShapedResizeMinimums(player, claim, world, polygon);
+        // Subdivisions carve up land the owner already paid for, so claim size minimums don't apply.
+        Supplier<String> minimumFailure = isSubdivision ? null : validateShapedResizeMinimums(player, claim, world, polygon);
         if (minimumFailure != null)
         {
             result.succeeded = false;

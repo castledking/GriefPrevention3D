@@ -6622,11 +6622,21 @@ public class GriefPrevention extends JavaPlugin {
         // must be standing in a land claim
         PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
         Claim claim = getSelectedOrCurrentClaim(player, playerData, true);
-        if (claim != null && claim.parent != null && playerData.claimResizing == null) {
-            claim = claim.parent;
+        if (claim == null) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.StandInClaimToResize);
+            return true;
         }
 
-        if (claim != null && claim.isShaped() && claim.parent == null && !claim.is3D()) {
+        // must have permission to edit the land claim you're in
+        Supplier<String> errorMessage = claim.checkPermission(player, ClaimPermission.Edit, null);
+        if (errorMessage != null) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.NotYourClaim);
+            return true;
+        }
+
+        // Extend the most specific claim the player is in (or has selected), including subdivisions.
+        // Shaped claims and shaped subdivisions grow the boundary segment the player is facing.
+        if (claim.isShaped()) {
             ClaimEditorSession shapedSession = resolveShapedExtendSession(player, playerData, claim);
             if (shapedSession == null) {
                 GriefPrevention.sendMessage(
@@ -6687,23 +6697,13 @@ public class GriefPrevention extends JavaPlugin {
             for (String message : result.messages()) {
                 GriefPrevention.sendMessage(player, TextMode.Instr, message);
             }
-            BoundaryVisualization.visualizeClaim(
-                player,
-                updateResult.claim,
-                updateResult.claim.isAdminClaim() ? VisualizationType.ADMIN_CLAIM : VisualizationType.CLAIM
-            );
-            return true;
-        }
-
-        if (claim == null) {
-            GriefPrevention.sendMessage(player, TextMode.Err, Messages.StandInClaimToResize);
-            return true;
-        }
-
-        // must have permission to edit the land claim you're in
-        Supplier<String> errorMessage = claim.checkPermission(player, ClaimPermission.Edit, null);
-        if (errorMessage != null) {
-            GriefPrevention.sendMessage(player, TextMode.Err, Messages.NotYourClaim);
+            VisualizationType visualizationType;
+            if (updateResult.claim.parent != null) {
+                visualizationType = VisualizationType.SUBDIVISION;
+            } else {
+                visualizationType = updateResult.claim.isAdminClaim() ? VisualizationType.ADMIN_CLAIM : VisualizationType.CLAIM;
+            }
+            BoundaryVisualization.visualizeClaim(player, updateResult.claim, visualizationType);
             return true;
         }
 
@@ -6763,11 +6763,12 @@ public class GriefPrevention extends JavaPlugin {
             }
         }
 
-        // For 3D subdivisions, validate that extension stays within parent bounds
+        // For 3D subdivisions, validate that extension stays within the parent's vertical range.
+        // 2D parents (including shaped claims) only store their floor and reach the world top.
         if (is3D && claim.parent != null) {
             Claim parent = claim.parent;
             int parentMinY = parent.getLesserBoundaryCorner().getBlockY();
-            int parentMaxY = parent.getGreaterBoundaryCorner().getBlockY();
+            int parentMaxY = parent.getMaxY();
 
             if (newy1 < parentMinY || newy2 > parentMaxY) {
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.ResizeFailOverlapSubdivision);
