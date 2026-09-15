@@ -24,11 +24,11 @@ commands:
     description: Deletes a claim.
     usage: /<command>
     aliases: [unclaim, declaim, removeclaim, disclaim]
-    permission: griefprevention.claims
+    permission: griefprevention.abandonclaim
   abandontoplevelclaim:
     description: Deletes a claim and all its subdivisions.
     usage: /<command>
-    permission: griefprevention.claims
+    permission: griefprevention.abandontoplevelclaim
   abandonallclaims:
     description: Deletes ALL your claims.
     usage: /<command>
@@ -37,27 +37,27 @@ commands:
     description: Grants a player full access to your claim(s).
     usage: /<command> <player>  Grants a player permission to build.  See also /untrust, /containertrust, /accesstrust, and /managetrust.
     aliases: tr
-    permission: griefprevention.claims
+    permission: griefprevention.trust
   untrust:
     description: Revokes a player's access to your claim(s).
     usage: /<command> <player>
     aliases: ut
-    permission: griefprevention.claims
+    permission: griefprevention.untrust
   containertrust:
     description: Grants a player access to your claim's containers, crops, animals, bed, buttons, and levers.
     usage: /<command> <player>.  Grants a player access to your inventory, crops, animals, bed, and buttons/levers.
     aliases: ct
-    permission: griefprevention.claims
+    permission: griefprevention.containertrust
   accesstrust:
     description: Grants a player entry to your claim(s) and use of your bed, buttons, and levers.
     usage: /<command> <player>.  Grants a player access to your bed, buttons, and levers.
     aliases: at
-    permission: griefprevention.claims
+    permission: griefprevention.accesstrust
   managetrust:
     description: Grants a player permission to manage the claim trustlist.
     usage: /<command> <player>.  Permits a player /trust and /untrust players in the claim.
     aliases: [mt]
-    permission: griefprevention.claims
+    permission: griefprevention.managetrust
   permissiontrust:
     description: Grants a permission node access to a claim.
     usage: /<command> <permission> <access|container|build|manage>
@@ -75,7 +75,7 @@ commands:
     description: Switches the shovel tool to subdivision mode, used to subdivide your claims.
     usage: /<command>
     aliases: [sc, subdivideclaim]
-    permission: griefprevention.claims
+    permission: griefprevention.subdivideclaims
   3dsubdivideclaims:
     description: Switches the shovel tool to 3D subdivision mode, allowing height-limited subclaims.
     usage: /<command>
@@ -86,21 +86,26 @@ commands:
     usage: /<command>
     aliases: [shapedsubdivideclaim, ssc, shapedsubdivide]
     permission: griefprevention.shapedsubdivideclaims
+  scrollresize:
+    description: Resize a claim or subdivision with the mouse wheel. Right-click applies; left-click or Q cancels.
+    usage: /<command>
+    aliases: [scrollresizeclaim, sr, src]
+    permission: griefprevention.scrollresize
   claimtogglealerts:
     description: Toggle violation alerts for all claims on or off.
     usage: /<command> [on|off]
     aliases: [toggleclaimalerts]
-    permission: griefprevention.claims
+    permission: griefprevention.toggleclaimalerts
   3dadminclaims:
     description: Switches the shovel tool to 3D administrative claims mode.
     usage: /<command>
     aliases: [adminclaim3d, adminclaims3d, 3dadminclaim, 3dac]
-    permission: griefprevention.adminclaims
+    permission: griefprevention.3dadminclaims
   restrictsubclaim:
     description: Restricts a subclaim, so that it inherits no permissions from the parent claim
     usage: /<command>
     aliases: rsc
-    permission: griefprevention.claims
+    permission: griefprevention.restrictsubclaim
   adjustbonusclaimblocks:
     description: Adds or subtracts bonus claim blocks for a player.
     usage: /<command> <player> <amount>
@@ -148,7 +153,7 @@ commands:
     description: Switches the shovel tool back to basic claims mode.
     usage: /<command>
     aliases: bc
-    permission: griefprevention.claims
+    permission: griefprevention.basicclaims
   shapedclaims:
     description: Switches the shovel tool to shaped claims mode.
     usage: /<command>
@@ -163,7 +168,7 @@ commands:
     description: Resizes the land claim you're standing in by pushing or pulling its boundary in the direction you're facing.
     usage: /<command> <numberOfBlocks>
     aliases: [expandclaim, resizeclaim]
-    permission: griefprevention.claims
+    permission: griefprevention.extendclaim
   checkclaimexpiry:
     description: View claim expiration details for a player.
     usage: /<command> <player>
@@ -199,7 +204,7 @@ commands:
   trustlist:
     description: Lists permissions for the claim you're standing in.
     usage: /<command>
-    permission: griefprevention.claims
+    permission: griefprevention.trustlist
   ignoreclaims:
     description: Toggles ignore claims mode.
     usage: /<command>
@@ -208,11 +213,11 @@ commands:
   deletealladminclaims:
     description: Deletes all administrative claims.
     usage: /<command>
-    permission: griefprevention.adminclaims
+    permission: griefprevention.deletealladminclaims
   adminclaimslist:
     description: Lists all administrative claims.
     usage: /<command>
-    permission: griefprevention.adminclaims
+    permission: griefprevention.adminclaimslist
   transferclaim:
     description: Converts an administrative claim to a private claim.
     usage: /<command> <player>
@@ -234,11 +239,11 @@ commands:
     description: Lists information about a player's claim blocks and claims.
     usage: /<command> or /<command> <player>
     aliases: [claimlist, listclaims]
-    permission: griefprevention.claims
+    permission: griefprevention.claimslist
   claimexplosions:
     description: Toggles whether explosives may be used in a specific land claim.
     usage: /<command> [on|off]
-    permission: griefprevention.claims
+    permission: griefprevention.claimexplosions
     aliases: claimexplosion
   claimpvp:
     description: Toggles whether PvP is enabled in a specific land claim.
@@ -405,15 +410,36 @@ permissions:
     description: Grants permission to use /ignoreclaims.
     default: op
   griefprevention.adminclaims:
-    description: Grants permission to create administrative claims.
+    description: Grants permission to create and manage administrative claims, including every administrative claim command below.
     default: op
     children:
       griefprevention.permissiontrust: true
+      griefprevention.3dadminclaims: true
+      griefprevention.adminclaimslist: true
+      griefprevention.deletealladminclaims: true
+  griefprevention.3dadminclaims:
+    description: Grants permission to use /3dadminclaims and /aclaim mode admin3d.
+    default: op
+  griefprevention.adminclaimslist:
+    description: Grants permission to use /adminclaimslist and /aclaim list.
+    default: op
+  griefprevention.deletealladminclaims:
+    description: Grants permission to use /deletealladminclaims and /aclaim delete alladmin. Also requires griefprevention.deleteclaims.
+    default: op
   griefprevention.adminclaims.convert:
     description: Grants permission to convert claims between basic and administrative ownership.
     default: op
   griefprevention.deleteclaims:
     description: Grants permission to delete other players' claims.
+    default: op
+  griefprevention.deleteclaimsinworld:
+    description: Grants permission to use /deleteclaimsinworld and /deleteuserclaimsinworld.
+    default: op
+  griefprevention.deathblow:
+    description: Grants permission to use /deathblow.
+    default: op
+  griefprevention.eavesdrop.immune:
+    description: Players with this permission can't have their messages eavesdropped.
     default: op
   griefprevention.adjustclaimblocks:
     description: Grants permission to add or remove bonus blocks from a player's account.
@@ -451,6 +477,7 @@ permissions:
     children:
       griefprevention.trust: true
       griefprevention.untrust: true
+      griefprevention.trustlist: true
       griefprevention.containertrust: true
       griefprevention.accesstrust: true
       griefprevention.managetrust: true
@@ -471,6 +498,7 @@ permissions:
       griefprevention.mergeclaims: true
       griefprevention.3dsubdivideclaims: true
       griefprevention.shapedsubdivideclaims: true
+      griefprevention.scrollresize: true
       griefprevention.buysellclaimblocks: true
       griefprevention.witherexplosions: true
       griefprevention.unlockdrops: true
@@ -485,11 +513,22 @@ permissions:
       griefprevention.claimpvp: true
       griefprevention.pvptrust: true
       griefprevention.pvetrust: true
+      griefprevention.claimalerts: true
+      griefprevention.toggleclaimalerts: true
   griefprevention.trust:
     description: Grants permission to use /trust.
     default: true
   griefprevention.untrust:
     description: Grants permission to use /untrust.
+    default: true
+  griefprevention.trustlist:
+    description: Grants permission to use /trustlist and /claim trustlist.
+    default: true
+  griefprevention.claimalerts:
+    description: Grants permission to use /claim alerts to toggle violation alerts for one claim.
+    default: true
+  griefprevention.toggleclaimalerts:
+    description: Grants permission to use /claimtogglealerts to toggle violation alerts for all your claims.
     default: true
   griefprevention.containertrust:
     description: Grants permission to use /containertrust.
@@ -538,6 +577,9 @@ permissions:
     default: true
   griefprevention.shapedsubdivideclaims:
     description: Grants permission to use /shapedsubdivideclaims and /claim mode shapedsubdivide.
+    default: true
+  griefprevention.scrollresize:
+    description: Grants permission to use /scrollresize and /claim scrollresize.
     default: true
   griefprevention.restrictsubclaim:
     description: Grants permission to use /restrictsubclaim.

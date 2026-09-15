@@ -22,46 +22,56 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
         this.claimCreateAction = new ClaimCreateCommandAction(plugin);
 
         // Register subcommands
-        registerSubcommand("create", this.claimCreateAction);
+        // Each subcommand checks its own permission node on top of the root griefprevention.claims, so servers can
+        // negate a single claim command without removing the rest. Trust, abandon, mode, siege, PvP/PvE trust, and
+        // scroll resize check the node for the variant being used inside their handlers.
+        registerSubcommand("create", requires("griefprevention.createclaims", this.claimCreateAction));
         registerSubcommand("trust", createTrustTabExecutor(), "accesstrust", "containertrust", "managetrust");
-        registerSubcommand("untrust", this::handleUntrust);
-        registerSubcommand("trustlist", this::handleTrustList);
-        registerSubcommand("list", this::handleList);
+        registerSubcommand("untrust", requires("griefprevention.untrust", this::handleUntrust));
+        registerSubcommand("trustlist", requires("griefprevention.trustlist", this::handleTrustList));
+        registerSubcommand("list", requires("griefprevention.claimslist", this::handleList));
         registerSubcommand("mode", createModeTabExecutor());
-        registerSubcommand("restrictsubclaim", this::handleRestrictSubclaim);
-        registerSubcommand("explosions", createExplosionsTabExecutor());
-        registerSubcommand("witherexplosions", createWitherExplosionsTabExecutor(), "witherexplosion");
-        registerSubcommand("pvp", createPvpTabExecutor());
-        registerSubcommand("buyblocks", createBuyBlocksTabExecutor());
-        registerSubcommand("sellblocks", createSellBlocksTabExecutor());
+        registerSubcommand("restrictsubclaim", requires("griefprevention.restrictsubclaim", this::handleRestrictSubclaim));
+        registerSubcommand("explosions", requires("griefprevention.claimexplosions", createExplosionsTabExecutor()));
+        registerSubcommand("witherexplosions",
+                requires("griefprevention.witherexplosions", createWitherExplosionsTabExecutor()), "witherexplosion");
+        registerSubcommand("pvp", requires("griefprevention.claimpvp", createPvpTabExecutor()));
+        registerSubcommand("buyblocks", requires("griefprevention.buysellclaimblocks", createBuyBlocksTabExecutor()));
+        registerSubcommand("sellblocks", requires("griefprevention.buysellclaimblocks", createSellBlocksTabExecutor()));
         registerSubcommand("abandon", this::handleAbandon, "abandonall");
         registerSubcommand("siege", this::handleSiege);
-        registerSubcommand("trapped", this::handleTrapped);
-        registerSubcommand("expand", this::handleExpand);
-        registerSubcommand("alerts", createAlertsTabExecutor());
+        registerSubcommand("trapped", requires("griefprevention.trapped", this::handleTrapped));
+        registerSubcommand("expand", requires("griefprevention.extendclaim", this::handleExpand));
+        registerSubcommand("scrollresize", this::handleScrollResize);
+        registerSubcommand("alerts", requires("griefprevention.claimalerts", createAlertsTabExecutor()));
         registerSubcommand("help", this::handleHelp);
 
         // Register standalone commands from Alias enum
-        registerStandaloneCommand(Alias.ClaimCreate, this.claimCreateAction);
+        registerStandaloneCommand(Alias.ClaimCreate, requires("griefprevention.createclaims", this.claimCreateAction));
         registerStandaloneCommand(Alias.ClaimTrust, this::handleTrust);
-        registerStandaloneCommand(Alias.ClaimUntrust, this::handleUntrust);
-        registerStandaloneCommand(Alias.ClaimTrustlist, this::handleTrustList);
-        registerStandaloneCommand(Alias.ClaimList, this::handleList);
+        registerStandaloneCommand(Alias.ClaimUntrust, requires("griefprevention.untrust", this::handleUntrust));
+        registerStandaloneCommand(Alias.ClaimTrustlist, requires("griefprevention.trustlist", this::handleTrustList));
+        registerStandaloneCommand(Alias.ClaimList, requires("griefprevention.claimslist", this::handleList));
         registerStandaloneCommand(Alias.ClaimMode, createModeTabExecutor());
-        registerStandaloneCommand(Alias.ClaimRestrictSubclaim, this::handleRestrictSubclaim);
-        registerStandaloneCommand(Alias.ClaimExplosions, this::handleExplosions);
-        registerStandaloneCommand(Alias.ClaimWitherExplosions, this::handleWitherExplosions);
-        registerStandaloneCommand(Alias.ClaimPvp, createPvpTabExecutor());
-        registerStandaloneCommand(Alias.ClaimBuyBlocks, createBuyBlocksTabExecutor());
-        registerStandaloneCommand(Alias.ClaimSellBlocks, createSellBlocksTabExecutor());
+        registerStandaloneCommand(Alias.ClaimRestrictSubclaim,
+                requires("griefprevention.restrictsubclaim", this::handleRestrictSubclaim));
+        registerStandaloneCommand(Alias.ClaimExplosions, requires("griefprevention.claimexplosions", this::handleExplosions));
+        registerStandaloneCommand(Alias.ClaimWitherExplosions,
+                requires("griefprevention.witherexplosions", this::handleWitherExplosions));
+        registerStandaloneCommand(Alias.ClaimPvp, requires("griefprevention.claimpvp", createPvpTabExecutor()));
+        registerStandaloneCommand(Alias.ClaimBuyBlocks,
+                requires("griefprevention.buysellclaimblocks", createBuyBlocksTabExecutor()));
+        registerStandaloneCommand(Alias.ClaimSellBlocks,
+                requires("griefprevention.buysellclaimblocks", createSellBlocksTabExecutor()));
         registerStandaloneCommand(Alias.ClaimAbandon, createNoArgStandaloneTabExecutor(this::handleAbandon));
         registerStandaloneCommand(Alias.ClaimPvpTrust, this::handlePvpTrust);
         registerStandaloneCommand(Alias.ClaimPveTrust, this::handlePveTrust);
         registerStandaloneCommand(Alias.ClaimSiege, this::handleSiege);
-        registerStandaloneCommand(Alias.ClaimTrapped, this::handleTrapped);
-        registerStandaloneCommand(Alias.ClaimExpand, this::handleExpand);
+        registerStandaloneCommand(Alias.ClaimTrapped, requires("griefprevention.trapped", this::handleTrapped));
+        registerStandaloneCommand(Alias.ClaimExpand, requires("griefprevention.extendclaim", this::handleExpand));
         registerStandaloneCommand(Alias.ClaimHelp, this::handleHelp);
-        registerStandaloneCommand(Alias.ClaimAlerts, createAlertsStandaloneTabExecutor());
+        registerStandaloneCommand(Alias.ClaimAlerts,
+                requires("griefprevention.toggleclaimalerts", createAlertsStandaloneTabExecutor()));
     }
 
     @Override
@@ -112,6 +122,7 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
 
         if (args.length == 1) {
             // No trust type specified, use default trust command
+            if (!GriefPrevention.checkCommandPermission(sender, "griefprevention.trust")) return true;
             return plugin.handleTrustCommand(sender, new String[] { recipientName });
         }
 
@@ -120,14 +131,18 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
         switch (type) {
             case "build":
                 // Build trust is the default, so just use the standard trust command
+                if (!GriefPrevention.checkCommandPermission(sender, "griefprevention.trust")) return true;
                 return plugin.handleTrustCommand(sender, new String[] { recipientName });
             case "access":
+                if (!GriefPrevention.checkCommandPermission(sender, "griefprevention.accesstrust")) return true;
                 return plugin.getCommand("accesstrust").execute(sender, "accesstrust", new String[] { recipientName });
             case "container":
+                if (!GriefPrevention.checkCommandPermission(sender, "griefprevention.containertrust")) return true;
                 return plugin.getCommand("containertrust").execute(sender, "containertrust",
                         new String[] { recipientName });
             case "manage":
             case "manager":
+                if (!GriefPrevention.checkCommandPermission(sender, "griefprevention.managetrust")) return true;
                 return plugin.getCommand("managetrust").execute(sender, "managetrust",
                         new String[] { recipientName });
             case "pvp":
@@ -698,18 +713,48 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
 
     private boolean handleAbandon(CommandSender sender, String[] args) {
         if (args.length > 0 && "all".equalsIgnoreCase(args[0])) {
+            if (!GriefPrevention.checkCommandPermission(sender, "griefprevention.abandonallclaims")) return true;
             return plugin.abandonAllClaimsHandler(sender);
         }
         if (args.length > 0 && "toplevel".equalsIgnoreCase(args[0])) {
+            if (!GriefPrevention.checkCommandPermission(sender, "griefprevention.abandontoplevelclaim")) return true;
             if (sender instanceof Player) {
                 return plugin.abandonClaimHandler((Player) sender, true);
             }
             return false;
         }
+        if (!GriefPrevention.checkCommandPermission(sender, "griefprevention.abandonclaim")) return true;
         if (sender instanceof Player) {
             return plugin.abandonClaimHandler((Player) sender, false);
         }
         return false;
+    }
+
+    // Wraps a handler so it checks the command's own permission node first.
+    private java.util.function.@NotNull BiFunction<CommandSender, String[], Boolean> requires(
+            @NotNull String permission,
+            java.util.function.@NotNull BiFunction<CommandSender, String[], Boolean> handler) {
+        return (sender, args) -> !GriefPrevention.checkCommandPermission(sender, permission) || handler.apply(sender, args);
+    }
+
+    private @NotNull TabExecutor requires(@NotNull String permission, @NotNull TabExecutor executor) {
+        return new TabExecutor() {
+            @Override
+            public boolean onCommand(@NotNull CommandSender sender, @NotNull org.bukkit.command.Command command,
+                    @NotNull String label, @NotNull String[] args) {
+                return !GriefPrevention.checkCommandPermission(sender, permission)
+                        || executor.onCommand(sender, command, label, args);
+            }
+
+            @Override
+            public @Nullable List<String> onTabComplete(@NotNull CommandSender sender,
+                    @NotNull org.bukkit.command.Command command, @NotNull String alias, @NotNull String[] args) {
+                if (sender instanceof Player && !sender.hasPermission(permission)) {
+                    return java.util.Collections.emptyList();
+                }
+                return executor.onTabComplete(sender, command, alias, args);
+            }
+        };
     }
 
     private boolean handleSiege(CommandSender sender, String[] args) {
@@ -823,6 +868,21 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
         } else {
             return false;
         }
+    }
+
+    private boolean handleScrollResize(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player)) {
+            return false;
+        }
+
+        Player player = (Player) sender;
+        if (!player.hasPermission("griefprevention.scrollresize")) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+            return true;
+        }
+
+        plugin.scrollResizeHandler.start(player);
+        return true;
     }
 
     private boolean handleHelp(CommandSender sender, String[] args) {

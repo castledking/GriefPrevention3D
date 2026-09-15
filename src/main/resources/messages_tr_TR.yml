@@ -51,6 +51,22 @@ Messages:
   ShapedClaimsMode: Şekilli bölge modu. Sahipsiz arazide köşe yerleştirmek için sağ tıklayın veya bölge sınırlarından şekilli düzenlemeler başlatıp genişletin. Sınır tıklamaları gerektiğinde segment işaretçileri oluşturur. Çıkmak için /basicclaims kullanın.
   ShapedClaimsDisabled: Şekilli bölgeler bu sunucuda devre dışı.
   ShapedSubClaimsDisabled: Şekilli alt bölgeler bu sunucuda devre dışı.
+  ScrollResizeStart: "Kaydırarak boyutlandırma: bir kenara bakın, onu sizden uzağa itmek için yukarı, size doğru çekmek için aşağı kaydırın. Uygulamak için sağ tıklayın; iptal etmek için sol tıklayın veya bırakın (Q)."
+  ScrollResizeStartCorner: "Kaydırarak boyutlandırma: seçtiğiniz köşedeki bir kenar boyunca bakın, onu sizden uzağa itmek için yukarı, size doğru çekmek için aşağı kaydırın. Uygulamak için sağ tıklayın; iptal etmek için sol tıklayın veya bırakın (Q)."
+  ScrollResizeNeedTool: "Kaydırarak boyutlandırmayı kullanmak için altın bir kürek tutun."
+  ScrollResizeNoClaim: "Bir bölgenin içinde durun veya altın kürekle köşelerinden birine sağ tıklayın, ardından /scrollresize kullanın."
+  ScrollResizeSize: "{0} x {1}"
+  ScrollResizeSize3D: "{0} x {1} x {2}"
+  ScrollResizeSizeShaped: "{0} blok"
+  ScrollResizeBlocksLeft: "{0} ({1} bölge bloku kaldı)"
+  ScrollResizeConflict: "Bu sınır başka bir bölgeyle çakışıyor veya üst bölgesine ya da alt bölgelerine sığmıyor. Geri kaydırın veya iptal etmek için sol tıklayın."
+  ScrollResizeNotEnoughBlocks: "Bunun için {0} bölge bloku daha gerekiyor. Geri kaydırın veya iptal etmek için sol tıklayın."
+  ScrollResizeLimit: "Bu kenar daha fazla hareket ettirilemez."
+  ScrollResizeNoSegment: "İçinde durduğunuz şekilli bölümün bir kenarına bakın."
+  ScrollResizeCancelled: "Kaydırarak boyutlandırma iptal edildi."
+  ScrollResizeTimedOut: "Bir dakika boyunca kaydırılmadığı için kaydırarak boyutlandırma iptal edildi."
+  ScrollResizeUnchanged: "Kaydırarak boyutlandırma değişiklik yapılmadan kapatıldı."
+  ScrollResizeClaimGone: "Bu bölge artık mevcut değil."
   ShapedSubdivisionMode: Şekilli alt bölge modu. Köşe yerleştirmek için bölgelerinizden birinin içine sağ tıklayın, ardından alt bölgeyi kapatmak için ilk köşenize tekrar tıklayın. Mevcut bir şekilli alt bölgenin sınırına tıklayarak yeniden şekillendirin. Çıkmak için /basicclaims kullanın.
   ShapedSubdivisionNoParent: Şekilli bir alt bölge başlatmak için düzenleyebileceğiniz bir bölgenin içine sağ tıklayın.
   ShapedSubdivisionOn3DClaim: Şekilli alt bölgeler yalnızca üst düzey 2D bölgeler içinde çalışır.

@@ -412,6 +412,7 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
 
         // No args = standalone /adminclaims command - set admin mode directly
         if (args.length == 0 || "admin".equalsIgnoreCase(args[0])) {
+            if (!GriefPrevention.checkCommandPermission(player, "griefprevention.adminclaims")) return true;
             playerData.shovelMode = ShovelMode.Admin;
             GriefPrevention.sendMessage(player, TextMode.Success, Messages.AdminClaimsMode);
             return true;
@@ -422,10 +423,7 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.AdminClaims3DDisabled);
                 return true;
             }
-            if (!player.hasPermission("griefprevention.adminclaims")) {
-                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
-                return true;
-            }
+            if (!GriefPrevention.checkCommandPermission(player, "griefprevention.3dadminclaims")) return true;
             playerData.shovelMode = ShovelMode.Admin3D;
             GriefPrevention.sendMessage(player, TextMode.Success, Messages._3DAdminClaimsMode);
             return true;
@@ -448,11 +446,7 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
         }
         Player player = (Player) sender;
 
-        // Check permission
-        if (!player.hasPermission("griefprevention.adminclaims")) {
-            GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoAdminClaimsPermission);
-            return true;
-        }
+        if (!GriefPrevention.checkCommandPermission(player, "griefprevention.adminclaimslist")) return true;
 
         // Find admin claims
         java.util.Vector<Claim> claims = new java.util.Vector<>();
@@ -584,6 +578,12 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
 
     private boolean handleDelete(CommandSender sender, String[] args) {
         // Usage: /aclaim delete [claim|player <name>|world <world>|alladmin]
+        String operation = args.length == 0 ? "claim" : args[0].toLowerCase();
+        if (!GriefPrevention.checkCommandPermission(sender, deletePermission(operation))) return true;
+        if ("alladmin".equals(operation) && !GriefPrevention.checkCommandPermission(sender, "griefprevention.deleteclaims")) {
+            return true;
+        }
+
         if (args.length == 0) {
             // Default: delete claim player is standing in
             if (!(sender instanceof Player)) {
@@ -637,6 +637,18 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
                     sender.sendMessage("Unknown delete operation: " + subOp);
                 }
                 return true;
+        }
+    }
+
+    private static @NotNull String deletePermission(@NotNull String operation) {
+        switch (operation) {
+            case "world":
+            case "userworld":
+                return "griefprevention.deleteclaimsinworld";
+            case "alladmin":
+                return "griefprevention.deletealladminclaims";
+            default:
+                return "griefprevention.deleteclaims";
         }
     }
 
@@ -760,6 +772,7 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
             return true;
         }
         Player player = (Player) sender;
+        if (!GriefPrevention.checkCommandPermission(player, "griefprevention.transferclaim")) return true;
 
         // which claim is the user in?
         Claim claim = plugin.dataStore.getClaimAt(player.getLocation(), false, null);

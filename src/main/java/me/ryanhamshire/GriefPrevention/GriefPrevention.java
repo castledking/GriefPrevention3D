@@ -124,6 +124,9 @@ public class GriefPrevention extends JavaPlugin {
 
     private static final @NotNull ClaimEditor claimEditor = new ClaimEditorSkeleton();
 
+    // handles /scrollresize sessions
+    public ScrollResizeHandler scrollResizeHandler;
+
     // for convenience, a reference to the instance of this plugin
     public static GriefPrevention instance;
     private final ClaimToolHandlerRegistry claimToolHandlerRegistry = new ClaimToolHandlerRegistry();
@@ -561,6 +564,13 @@ public class GriefPrevention extends JavaPlugin {
         // player events
         playerEventHandler = new PlayerEventHandler(this.dataStore, this);
         pluginManager.registerEvents(playerEventHandler, this);
+
+        // /scrollresize sessions intercept scrolling and claim tool clicks while active
+        scrollResizeHandler = new ScrollResizeHandler(this, this.dataStore);
+        pluginManager.registerEvents(scrollResizeHandler, this);
+        registerIfClassPresent(pluginManager, "org.bukkit.event.player.PlayerSwapHandItemsEvent", () ->
+            new ScrollResizeSwapHandListener(scrollResizeHandler)
+        );
         // Load monitored commands on a 1-tick delay to allow plugins to enable and
         // Bukkit to load commands.yml.
         SchedulerUtil.runLaterGlobal(this, playerEventHandler::reload, 1L);
@@ -1576,6 +1586,8 @@ public class GriefPrevention extends JavaPlugin {
         outConfig.set("GriefPrevention.Claims.AllowPvPTrust", this.config_claims_allowPvPTrust);
         outConfig.set("GriefPrevention.Claims.AllowPvETrust", this.config_claims_allowPvETrust);
         outConfig.set("GriefPrevention.Claims.AllowShapedSubClaims", this.config_claims_allowShapedSubClaims);
+        outConfig.set("GriefPrevention.Claims.Allow3DSubdivisions", this.config_claims_allow3DSubdivisions);
+        outConfig.set("GriefPrevention.Claims.Allow3DAdminClaims", this.config_claims_allow3DAdminClaims);
         outConfig.set("GriefPrevention.Claims.UseClaimSelectSessions", this.config_claims_useClaimSelectSessions);
         outConfig.set("GriefPrevention.Claims.UseClaimSelectedMessages", this.config_claims_useClaimSelectedMessages);
         outConfig.set("GriefPrevention.Claims.LegacySubdivisionFormat", this.config_claims_legacySubdivisionFormat);
@@ -1846,6 +1858,7 @@ public class GriefPrevention extends JavaPlugin {
         syncShapedCommandRegistration();
         sync3DCommandRegistration();
         syncCombatTrustCommandRegistration();
+        applyCommandPermissionMessages();
 
         // Add tab completion for old trust commands
         TrustTabCompleter trustTabCompleter = new TrustTabCompleter();
@@ -1856,6 +1869,18 @@ public class GriefPrevention extends JavaPlugin {
         getCommand("untrust").setTabCompleter(trustTabCompleter);
         getCommand("neighbortrust").setTabCompleter(trustTabCompleter);
         getCommand("distancetrust").setTabCompleter(trustTabCompleter);
+    }
+
+    // Bukkit checks a command's plugin.yml permission before GriefPrevention sees the command. Give that check the
+    // plugin's own "no permission" message (in the server's locale) instead of Bukkit's generic one.
+    private void applyCommandPermissionMessages() {
+        String message = ChatColor.RED + this.dataStore.getMessage(Messages.NoPermissionForCommand);
+        for (String name : this.getDescription().getCommands().keySet()) {
+            org.bukkit.command.PluginCommand command = this.getCommand(name);
+            if (command != null) {
+                command.setPermissionMessage(message);
+            }
+        }
     }
 
     // handle to the unified /claim command so legacy onCommand paths can reuse its handlers
@@ -2130,6 +2155,7 @@ public class GriefPrevention extends JavaPlugin {
 
         // Legacy administrator diagnostic command.
         if (cmd.getName().equalsIgnoreCase("gpblockinfo") && player != null) {
+            if (!checkCommandPermission(player, "griefprevention.gpblockinfo")) return true;
             ItemStack inHand = this.getItemInHand(player, EquipmentSlot.HAND);
             player.sendMessage("In Hand: " + inHand.getType().name());
 
@@ -2173,6 +2199,7 @@ public class GriefPrevention extends JavaPlugin {
 
         // ignoreclaims
         if (cmd.getName().equalsIgnoreCase("ignoreclaims") && player != null) {
+            if (!checkCommandPermission(player, "griefprevention.ignoreclaims")) return true;
             PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
             playerData.ignoreClaims = !playerData.ignoreClaims;
 
@@ -2265,6 +2292,7 @@ public class GriefPrevention extends JavaPlugin {
         }
         // transferclaim <player>
         else if (cmd.getName().equalsIgnoreCase("transferclaim") && player != null) {
+            if (!checkCommandPermission(player, "griefprevention.transferclaim")) return true;
             // which claim is the user in?
             Claim claim = getSelectedOrCurrentClaim(player, false);
             if (claim == null) {
@@ -2315,6 +2343,7 @@ public class GriefPrevention extends JavaPlugin {
         }
         // trustlist
         else if (cmd.getName().equalsIgnoreCase("trustlist") && player != null) {
+            if (!checkCommandPermission(player, "griefprevention.trustlist")) return true;
             PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
             Claim claim = getSelectedOrCurrentClaim(player, playerData, false);
 
@@ -2743,6 +2772,7 @@ public class GriefPrevention extends JavaPlugin {
         }
         // adminclaims
         else if (cmd.getName().equalsIgnoreCase("adminclaims") && player != null) {
+            if (!checkCommandPermission(player, "griefprevention.adminclaims")) return true;
             PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
             playerData.shovelMode = ShovelMode.Admin;
             GriefPrevention.sendMessage(player, TextMode.Success, Messages.AdminClaimsMode);
@@ -2758,7 +2788,7 @@ public class GriefPrevention extends JavaPlugin {
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.AdminClaims3DDisabled);
                 return true;
             }
-            if (!player.hasPermission("griefprevention.adminclaims")) {
+            if (!player.hasPermission("griefprevention.3dadminclaims")) {
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
                 return true;
             }
@@ -2861,6 +2891,16 @@ public class GriefPrevention extends JavaPlugin {
 
             return true;
         }
+        // scrollresize
+        else if (cmd.getName().equalsIgnoreCase("scrollresize") && player != null) {
+            if (!player.hasPermission("griefprevention.scrollresize")) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+                return true;
+            }
+            this.scrollResizeHandler.start(player);
+
+            return true;
+        }
         // 3dsubdivideclaims
         else if (cmd.getName().equalsIgnoreCase("3dsubdivideclaims") && player != null) {
             if (!this.config_claims_allow3DSubdivisions) {
@@ -2886,6 +2926,7 @@ public class GriefPrevention extends JavaPlugin {
         }
         // deleteclaim
         else if (cmd.getName().equalsIgnoreCase("deleteclaim") && player != null) {
+            if (!checkCommandPermission(player, "griefprevention.deleteclaims")) return true;
             PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
             Claim claim = getSelectedOrCurrentClaim(player, playerData, false);
 
@@ -2945,13 +2986,13 @@ public class GriefPrevention extends JavaPlugin {
             }
             return this.handleClaimExplosionsCommand(sender, args);
         } else if (cmd.getName().equalsIgnoreCase("claimpvp") && player != null) {
-            if (!player.hasPermission("griefprevention.claims")) {
+            if (!player.hasPermission("griefprevention.claimpvp")) {
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
                 return true;
             }
             return this.handleClaimPvpCommand(sender, args);
         } else if (cmd.getName().equalsIgnoreCase("claimpvpconfirm") && player != null) {
-            if (!player.hasPermission("griefprevention.claims")) {
+            if (!player.hasPermission("griefprevention.claimpvp")) {
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
                 return true;
             }
@@ -3139,6 +3180,7 @@ public class GriefPrevention extends JavaPlugin {
         }
         // deleteallclaims <player>
         else if (cmd.getName().equalsIgnoreCase("deleteallclaims")) {
+            if (!checkCommandPermission(sender, "griefprevention.deleteclaims")) return true;
             // requires exactly one parameter, the other player's name
             if (args.length != 1) return false;
 
@@ -3302,6 +3344,7 @@ public class GriefPrevention extends JavaPlugin {
         }
         // adminclaimslist
         else if (cmd.getName().equalsIgnoreCase("adminclaimslist")) {
+            if (!checkCommandPermission(sender, "griefprevention.adminclaimslist")) return true;
             // find admin claims
             Vector<Claim> claims = new Vector<>();
             for (Claim claim : this.dataStore.claims) {
@@ -3353,7 +3396,9 @@ public class GriefPrevention extends JavaPlugin {
         }
         // deletealladminclaims
         else if (cmd.getName().equalsIgnoreCase("deletealladminclaims")) {
-            if (player != null && !player.hasPermission("griefprevention.deleteclaims")) {
+            if (player != null
+                && (!player.hasPermission("griefprevention.deletealladminclaims")
+                    || !player.hasPermission("griefprevention.deleteclaims"))) {
                 GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
                 return true;
             }
@@ -4642,6 +4687,23 @@ public class GriefPrevention extends JavaPlugin {
         return permissionLimit > 0 ? permissionLimit : this.config_claims_maxClaimsPerPlayer;
     }
 
+    // Sends the standard "no permission" message: in the player's locale for players, plainly for the console.
+    public static void sendNoPermissionMessage(@NotNull CommandSender sender) {
+        if (sender instanceof Player) {
+            sendMessage((Player) sender, TextMode.Err, Messages.NoPermissionForCommand);
+        } else {
+            sender.sendMessage(ChatColor.RED + instance.dataStore.getMessage(Messages.NoPermissionForCommand));
+        }
+    }
+
+    // Claim and admin commands each check their own node, so one command can be negated without removing the rest of
+    // griefprevention.claims or griefprevention.adminclaims. The console always passes.
+    public static boolean checkCommandPermission(@NotNull CommandSender sender, @NotNull String permission) {
+        if (!(sender instanceof Player) || sender.hasPermission(permission)) return true;
+        sendNoPermissionMessage(sender);
+        return false;
+    }
+
     // checks whether a player already owns as many claims as they are allowed to
     public boolean isAtClaimCountLimit(@NotNull Player player, @NotNull PlayerData playerData) {
         if (player.hasPermission("griefprevention.overrideclaimcountlimit")) return false;
@@ -5382,6 +5444,7 @@ public class GriefPrevention extends JavaPlugin {
 
         // No args = standalone /basicclaims command - set basic mode directly
         if (args.length == 0) {
+            if (!checkCommandPermission(player, "griefprevention.basicclaims")) return true;
             playerData.shovelMode = ShovelMode.Basic;
             playerData.claimSubdividing = null;
             playerData.claimResizing = null;
@@ -5393,6 +5456,7 @@ public class GriefPrevention extends JavaPlugin {
 
         switch (args[0].toLowerCase()) {
             case "basic":
+                if (!checkCommandPermission(player, "griefprevention.basicclaims")) return true;
                 playerData.shovelMode = ShovelMode.Basic;
                 playerData.claimSubdividing = null;
                 playerData.claimResizing = null;
@@ -5435,6 +5499,7 @@ public class GriefPrevention extends JavaPlugin {
                 this.enterShapedSubdivideMode(player);
                 break;
             case "2d":
+                if (!checkCommandPermission(player, "griefprevention.subdivideclaims")) return true;
                 playerData.shovelMode = ShovelMode.Subdivide;
                 playerData.claimSubdividing = null;
                 playerData.setClaimEditorSession(null);
@@ -5977,11 +6042,12 @@ public class GriefPrevention extends JavaPlugin {
             return true;
         }
 
-        // Admin claims have no owner, so hasExplicitPermission can never pass there. Use the
-        // claim permission check which lets griefprevention.adminclaims (and ops) modify them.
-        if (claim.checkPermission(player, ClaimPermission.Edit, null) != null) {
+        // Toggling PvP manages the claim: owners, players with manager trust, and staff with
+        // griefprevention.adminclaims on admin claims may do it.
+        Supplier<String> noManageReason = claim.checkPermission(player, ClaimPermission.Manage, null);
+        if (noManageReason != null) {
             clearPendingPvpToggle(playerData);
-            GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+            GriefPrevention.sendMessage(player, TextMode.Err, noManageReason.get());
             return true;
         }
 
@@ -6017,10 +6083,11 @@ public class GriefPrevention extends JavaPlugin {
             return true;
         }
 
-        // Admin claims have no owner, so hasExplicitPermission can never pass there. Use the
-        // claim permission check which lets griefprevention.adminclaims (and ops) modify them.
-        if (claim.checkPermission(player, ClaimPermission.Edit, null) != null) {
-            GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+        // Toggling PvP manages the claim: owners, players with manager trust, and staff with
+        // griefprevention.adminclaims on admin claims may do it.
+        Supplier<String> noManageReason = claim.checkPermission(player, ClaimPermission.Manage, null);
+        if (noManageReason != null) {
+            GriefPrevention.sendMessage(player, TextMode.Err, noManageReason.get());
             return true;
         }
 
@@ -7061,6 +7128,59 @@ public class GriefPrevention extends JavaPlugin {
                     Collections.emptyList()
                 )
             );
+    }
+
+    // the shaped boundary segment a player is standing in front of and facing, the same one /expandclaim moves
+    public @Nullable Integer resolveShapedSegmentForPlayer(
+        @NotNull OrthogonalPolygon polygon,
+        @NotNull Location playerLocation
+    ) {
+        return resolveBoundarySegmentForPlayer(polygon, playerLocation);
+    }
+
+    // Moves one segment of a shaped outline outward (positive amount) or inward (negative amount).
+    // Returns null when the result would not be a valid claim outline.
+    public @Nullable OrthogonalPolygon expandShapedSegment(
+        @NotNull Claim claim,
+        @NotNull OrthogonalPolygon polygon,
+        int edgeIndex,
+        int amount
+    ) {
+        Long claimId = claim.getID();
+        SegmentSelection selection = new SegmentSelection(claimId == null ? 0L : claimId, edgeIndex, null, null, null);
+        ClaimEditorSession session = ClaimEditorSession.idle(new UUID(0L, 0L))
+            .withMode(com.griefprevention.claims.editor.ClaimEditorMode.SHAPED, ClaimEditSource.COMMAND)
+            .withTarget(new ClaimEditTarget(
+                claim.parent == null
+                    ? ClaimEditTargetType.EXISTING_PARENT_CLAIM
+                    : ClaimEditTargetType.EXISTING_SUBDIVISION_CLAIM,
+                claimId
+            ))
+            .withActiveSegment(selection)
+            .withPreview(new ClaimEditPreview(
+                polygon,
+                selection,
+                Collections.emptyList(),
+                null,
+                Collections.emptyList(),
+                Collections.emptyList(),
+                Collections.emptyList()
+            ));
+
+        ClaimEditResult result = claimEditor.apply(
+            session,
+            new ClaimEditIntent(
+                ClaimEditIntentType.EXPAND_SEGMENT,
+                ClaimEditSource.COMMAND,
+                null,
+                claimId,
+                null,
+                amount,
+                true,
+                Collections.emptyList()
+            )
+        );
+        return result.success() ? result.preview().polygon() : null;
     }
 
     private @Nullable Integer resolveBoundarySegmentForPlayer(

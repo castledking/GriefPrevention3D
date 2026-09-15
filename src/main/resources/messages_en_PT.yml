@@ -51,6 +51,22 @@ Messages:
   ShapedClaimsMode: "Shaped claim mode, arrr. Right-click to place corners in unclaimed land or to start and extend shaped edits from claim boundaries. Boundary clicks create segment markers as needed. Use /basicclaims to exit."
   ShapedClaimsDisabled: "Shaped claims be disabled on this server, matey."
   ShapedSubClaimsDisabled: Shaped subdivisions be disabled on this server.
+  ScrollResizeStart: "Scroll resize, arrr: look at a side, then scroll up to shove it away from ye or down to haul it toward ye. Right-click to make it so; left-click or drop (Q) to belay that."
+  ScrollResizeStartCorner: "Scroll resize, arrr: look along a side at the corner ye picked, then scroll up to shove it away from ye or down to haul it toward ye. Right-click to make it so; left-click or drop (Q) to belay that."
+  ScrollResizeNeedTool: "Hold yer golden shovel to use scroll resize."
+  ScrollResizeNoClaim: "Stand in a claim, or right-click one o' its corners with yer golden shovel, then run /scrollresize."
+  ScrollResizeSize: "{0} x {1}"
+  ScrollResizeSize3D: "{0} x {1} x {2}"
+  ScrollResizeSizeShaped: "{0} blocks"
+  ScrollResizeBlocksLeft: "{0} ({1} claim blocks left in yer chest)"
+  ScrollResizeConflict: "That outline be crossin' another claim or won't fit its parent or subdivisions. Scroll back or left-click to belay that."
+  ScrollResizeNotEnoughBlocks: "Ye need {0} more claim blocks fer that. Scroll back or left-click to belay that."
+  ScrollResizeLimit: "That side won't budge any further."
+  ScrollResizeNoSegment: "Look at a side o' the shaped section ye be standin' in."
+  ScrollResizeCancelled: "Scroll resize belayed."
+  ScrollResizeTimedOut: "Scroll resize belayed after a minute o' no scrollin'."
+  ScrollResizeUnchanged: "Scroll resize closed with nothin' changed."
+  ScrollResizeClaimGone: "That claim be gone to Davy Jones' locker."
   ShapedSubdivisionMode: "Shaped subdivision mode, arrr. Right-click inside one o' yer claims to place corners, then click yer first corner again to close the subdivision. Click an existing shaped subdivision's boundary to reshape it. Use /basicclaims to exit."
   ShapedSubdivisionNoParent: Right-click inside a claim ye can edit to start a shaped subdivision.
   ShapedSubdivisionOn3DClaim: Shaped subdivisions only work inside top-level 2D claims, arrr.

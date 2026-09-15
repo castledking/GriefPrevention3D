@@ -7,6 +7,8 @@ import com.griefprevention.visualization.BlockBoundaryVisualization;
 import com.griefprevention.visualization.Boundary;
 import com.griefprevention.visualization.BoundaryVisualization;
 import com.griefprevention.visualization.VisualizationType;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.function.Consumer;
 import me.ryanhamshire.GriefPrevention.Claim;
 import me.ryanhamshire.GriefPrevention.GriefPrevention;
@@ -237,47 +239,55 @@ public class FakeBlockVisualization extends BlockBoundaryVisualization {
         Consumer<@NotNull IntVector> addCorner = addCornerElements(boundary);
         Consumer<@NotNull IntVector> addSide = addSideElements(boundary);
 
+        // Very small claims put several markers on the same block: a one-block-wide ring collapses into a column,
+        // a one-layer claim has the same top and bottom ring, and the rings of a two-layer claim touch. Every block
+        // is planned once with corners winning, so the preview shows the claim's real shape instead of whichever
+        // overlapping marker the client happened to draw.
+        Set<IntVector> corners = new LinkedHashSet<>();
+        Set<IntVector> sides = new LinkedHashSet<>();
+
         // We only render at the top and bottom Y boundaries for 3D subdivisions.
-        int[] yLevels = new int[] { claimMinY, claimMaxY };
+        int[] yLevels = claimMinY == claimMaxY ? new int[] { claimMinY } : new int[] { claimMinY, claimMaxY };
         for (int y : yLevels) {
             if (y < GriefPrevention.getWorldMinY(world) || y > GriefPrevention.getWorldMaxY(world)) continue;
 
             // Short directional side markers next to corners only (no full ring)
             if (area.getLength() > 2) {
-                addDisplayed3D(displayZone, new IntVector(area.getMinX() + 1, y, area.getMaxZ()), addSide);
-                addDisplayed3D(displayZone, new IntVector(area.getMinX() + 1, y, area.getMinZ()), addSide);
-                addDisplayed3D(displayZone, new IntVector(area.getMaxX() - 1, y, area.getMaxZ()), addSide);
-                addDisplayed3D(displayZone, new IntVector(area.getMaxX() - 1, y, area.getMinZ()), addSide);
+                sides.add(new IntVector(area.getMinX() + 1, y, area.getMaxZ()));
+                sides.add(new IntVector(area.getMinX() + 1, y, area.getMinZ()));
+                sides.add(new IntVector(area.getMaxX() - 1, y, area.getMaxZ()));
+                sides.add(new IntVector(area.getMaxX() - 1, y, area.getMinZ()));
             }
             if (area.getWidth() > 2) {
-                addDisplayed3D(displayZone, new IntVector(area.getMinX(), y, area.getMinZ() + 1), addSide);
-                addDisplayed3D(displayZone, new IntVector(area.getMaxX(), y, area.getMinZ() + 1), addSide);
-                addDisplayed3D(displayZone, new IntVector(area.getMinX(), y, area.getMaxZ() - 1), addSide);
-                addDisplayed3D(displayZone, new IntVector(area.getMaxX(), y, area.getMaxZ() - 1), addSide);
+                sides.add(new IntVector(area.getMinX(), y, area.getMinZ() + 1));
+                sides.add(new IntVector(area.getMaxX(), y, area.getMinZ() + 1));
+                sides.add(new IntVector(area.getMinX(), y, area.getMaxZ() - 1));
+                sides.add(new IntVector(area.getMaxX(), y, area.getMaxZ() - 1));
             }
 
             // Corners at this Y level
-            addDisplayed3D(displayZone, new IntVector(area.getMinX(), y, area.getMaxZ()), addCorner);
-            addDisplayed3D(displayZone, new IntVector(area.getMaxX(), y, area.getMaxZ()), addCorner);
-            addDisplayed3D(displayZone, new IntVector(area.getMinX(), y, area.getMinZ()), addCorner);
-            addDisplayed3D(displayZone, new IntVector(area.getMaxX(), y, area.getMinZ()), addCorner);
+            corners.add(new IntVector(area.getMinX(), y, area.getMaxZ()));
+            corners.add(new IntVector(area.getMaxX(), y, area.getMaxZ()));
+            corners.add(new IntVector(area.getMinX(), y, area.getMinZ()));
+            corners.add(new IntVector(area.getMaxX(), y, area.getMinZ()));
 
-            // Vertical indicator: exactly one white wool block above bottom corners and below top corners
-            int verticalY;
-            if (y == claimMinY) {
-                verticalY = y + 1; // one block above bottom ring
-            } else if (y == claimMaxY) {
-                verticalY = y - 1; // one block below top ring
-            } else {
-                continue; // shouldn't happen, but guards future changes
+            // Vertical indicator: one white wool block above the bottom corners and below the top corners, only when
+            // there is a gap between the two rings to put it in.
+            if (claimMaxY - claimMinY >= 2) {
+                int verticalY = y == claimMinY ? y + 1 : y - 1;
+                sides.add(new IntVector(area.getMinX(), verticalY, area.getMaxZ()));
+                sides.add(new IntVector(area.getMaxX(), verticalY, area.getMaxZ()));
+                sides.add(new IntVector(area.getMinX(), verticalY, area.getMinZ()));
+                sides.add(new IntVector(area.getMaxX(), verticalY, area.getMinZ()));
             }
-            if (verticalY >= GriefPrevention.getWorldMinY(world) && verticalY <= GriefPrevention.getWorldMaxY(world)) {
-                // reuse exact-placement white wool consumer for 3D sides
-                addDisplayed3D(displayZone, new IntVector(area.getMinX(), verticalY, area.getMaxZ()), addSide);
-                addDisplayed3D(displayZone, new IntVector(area.getMaxX(), verticalY, area.getMaxZ()), addSide);
-                addDisplayed3D(displayZone, new IntVector(area.getMinX(), verticalY, area.getMinZ()), addSide);
-                addDisplayed3D(displayZone, new IntVector(area.getMaxX(), verticalY, area.getMinZ()), addSide);
-            }
+        }
+
+        sides.removeAll(corners);
+        for (IntVector side : sides) {
+            addDisplayed3D(displayZone, side, addSide);
+        }
+        for (IntVector corner : corners) {
+            addDisplayed3D(displayZone, corner, addCorner);
         }
     }
 

@@ -50,6 +50,22 @@ Messages:
   ShapedClaimsMode: 自定义形状领地模式。在未认领的土地上右键单击放置角落，或在领地边界上开始和扩展形状编辑。边界点击会根据需要创建分段标记。使用 /basicclaims 退出。
   ShapedClaimsDisabled: 此服务器上已禁用自定义形状领地。
   ShapedSubClaimsDisabled: 此服务器已禁用自定义形状子领地。
+  ScrollResizeStart: "滚轮调整：看向一条边，向上滚动将它推离你，向下滚动将它拉近你。右键应用；左键或丢弃（Q）取消。"
+  ScrollResizeStartCorner: "滚轮调整：沿着所选角落的一条边看去，向上滚动将它推离你，向下滚动将它拉近你。右键应用；左键或丢弃（Q）取消。"
+  ScrollResizeNeedTool: "手持金铲子才能使用滚轮调整。"
+  ScrollResizeNoClaim: "请站在领地内，或用金铲子右键单击领地的一个角落，然后使用 /scrollresize。"
+  ScrollResizeSize: "{0} x {1}"
+  ScrollResizeSize3D: "{0} x {1} x {2}"
+  ScrollResizeSizeShaped: "{0} 格"
+  ScrollResizeBlocksLeft: "{0}（剩余 {1} 个领地方块）"
+  ScrollResizeConflict: "该轮廓与其他领地重叠，或超出了其父领地或子领地的范围。请回滚或左键取消。"
+  ScrollResizeNotEnoughBlocks: "你还需要 {0} 个领地方块。请回滚或左键取消。"
+  ScrollResizeLimit: "这条边无法再移动了。"
+  ScrollResizeNoSegment: "请看向你所在的自定义形状区域的一条边。"
+  ScrollResizeCancelled: "已取消滚轮调整。"
+  ScrollResizeTimedOut: "一分钟未滚动，已取消滚轮调整。"
+  ScrollResizeUnchanged: "滚轮调整已关闭，未做任何更改。"
+  ScrollResizeClaimGone: "该领地已不存在。"
   ShapedSubdivisionMode: 自定义形状子领地模式。在你的某个领地内右键单击放置角落，然后再次点击第一个角落以闭合子领地。点击现有自定义形状子领地的边界可对其重新塑形。使用 /basicclaims 退出。
   ShapedSubdivisionNoParent: 在你可以编辑的领地内右键单击以开始创建自定义形状子领地。
   ShapedSubdivisionOn3DClaim: 自定义形状子领地仅在顶层 2D 领地内有效。

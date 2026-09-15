@@ -50,6 +50,22 @@ Messages:
   ShapedClaimsMode: Mode terrain personnalisé. Faites un clic droit pour placer des coins dans une zone non protégée ou pour commencer et étendre des formes depuis les limites du terrain. Les clics sur les limites créent des marqueurs de segment. Utilisez /basicclaims pour quitter.
   ShapedClaimsDisabled: Les terrains personnalisés sont désactivés sur ce serveur.
   ShapedSubClaimsDisabled: Les subdivisions personnalisées sont désactivées sur ce serveur.
+  ScrollResizeStart: "Redimensionnement à la molette : regardez un côté, puis faites défiler vers le haut pour l'éloigner de vous ou vers le bas pour le rapprocher. Clic droit pour appliquer ; clic gauche ou lâcher (Q) pour annuler."
+  ScrollResizeStartCorner: "Redimensionnement à la molette : regardez le long d'un côté du coin sélectionné, puis faites défiler vers le haut pour l'éloigner de vous ou vers le bas pour le rapprocher. Clic droit pour appliquer ; clic gauche ou lâcher (Q) pour annuler."
+  ScrollResizeNeedTool: "Tenez votre pelle en or pour redimensionner à la molette."
+  ScrollResizeNoClaim: "Placez-vous dans un terrain, ou faites un clic droit sur l'un de ses coins avec votre pelle en or, puis utilisez /scrollresize."
+  ScrollResizeSize: "{0} x {1}"
+  ScrollResizeSize3D: "{0} x {1} x {2}"
+  ScrollResizeSizeShaped: "{0} blocs"
+  ScrollResizeBlocksLeft: "{0} ({1} blocs de protection restants)"
+  ScrollResizeConflict: "Ce contour chevauche un autre terrain ou ne tient pas dans son terrain parent ou ses subdivisions. Revenez en arrière avec la molette ou faites un clic gauche pour annuler."
+  ScrollResizeNotEnoughBlocks: "Il vous faut {0} blocs de protection de plus pour cela. Revenez en arrière avec la molette ou faites un clic gauche pour annuler."
+  ScrollResizeLimit: "Ce côté ne peut pas aller plus loin."
+  ScrollResizeNoSegment: "Regardez un côté de la section personnalisée dans laquelle vous vous trouvez."
+  ScrollResizeCancelled: "Redimensionnement à la molette annulé."
+  ScrollResizeTimedOut: "Redimensionnement à la molette annulé après une minute sans défilement."
+  ScrollResizeUnchanged: "Redimensionnement à la molette fermé sans modification."
+  ScrollResizeClaimGone: "Ce terrain n'existe plus."
   ShapedSubdivisionMode: Mode subdivision personnalisée. Faites un clic droit à l'intérieur d'un de vos terrains pour placer des coins, puis cliquez à nouveau sur votre premier coin pour fermer la subdivision. Cliquez sur la limite d'une subdivision personnalisée existante pour la remodeler. Utilisez /basicclaims pour quitter.
   ShapedSubdivisionNoParent: Faites un clic droit à l'intérieur d'un terrain que vous pouvez modifier pour démarrer une subdivision personnalisée.
   ShapedSubdivisionOn3DClaim: Les subdivisions personnalisées ne fonctionnent qu'à l'intérieur des terrains 2D de premier niveau.

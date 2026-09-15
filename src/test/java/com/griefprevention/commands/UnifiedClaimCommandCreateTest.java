@@ -81,6 +81,7 @@ class UnifiedClaimCommandCreateTest
         when(player.getUniqueId()).thenReturn(playerId);
         when(player.getWorld()).thenReturn(world);
         when(player.getLocation()).thenReturn(new Location(world, 100.5D, 64D, 200.5D));
+        when(player.hasPermission("griefprevention.createclaims")).thenReturn(true);
 
         PlayerData playerData = new PlayerData();
         playerData.playerID = playerId;

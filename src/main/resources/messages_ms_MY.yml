@@ -50,6 +50,22 @@ Messages:
   ShapedClaimsMode: Mod kawasan tuntutan berbentuk. Klik kanan untuk meletakkan bucu pada tanah yang belum dituntut atau untuk memulakan dan melanjutkan suntingan berbentuk daripada sempadan kawasan tuntutan. Klik pada sempadan mencipta penanda segmen mengikut keperluan. Gunakan /basicclaims untuk keluar.
   ShapedClaimsDisabled: Kawasan tuntutan berbentuk dilumpuhkan di pelayan ini.
   ShapedSubClaimsDisabled: Subbahagian berbentuk dilumpuhkan di pelayan ini.
+  ScrollResizeStart: "Saiz semula tatal: lihat pada satu sisi, kemudian tatal ke atas untuk menolaknya menjauhi anda atau ke bawah untuk menariknya ke arah anda. Klik kanan untuk menggunakan; klik kiri atau jatuhkan (Q) untuk membatalkan."
+  ScrollResizeStartCorner: "Saiz semula tatal: lihat sepanjang satu sisi pada bucu yang anda pilih, kemudian tatal ke atas untuk menolaknya menjauhi anda atau ke bawah untuk menariknya ke arah anda. Klik kanan untuk menggunakan; klik kiri atau jatuhkan (Q) untuk membatalkan."
+  ScrollResizeNeedTool: "Pegang penyodok emas untuk menggunakan saiz semula tatal."
+  ScrollResizeNoClaim: "Berdiri di dalam kawasan tuntutan, atau klik kanan salah satu bucunya dengan penyodok emas anda, kemudian gunakan /scrollresize."
+  ScrollResizeSize: "{0} x {1}"
+  ScrollResizeSize3D: "{0} x {1} x {2}"
+  ScrollResizeSizeShaped: "{0} blok"
+  ScrollResizeBlocksLeft: "{0} ({1} blok tuntutan tinggal)"
+  ScrollResizeConflict: "Garis luar itu bertindih dengan kawasan tuntutan lain atau tidak muat dalam kawasan induk atau subbahagiannya. Tatal semula atau klik kiri untuk membatalkan."
+  ScrollResizeNotEnoughBlocks: "Anda memerlukan {0} lagi blok tuntutan untuk itu. Tatal semula atau klik kiri untuk membatalkan."
+  ScrollResizeLimit: "Sisi itu tidak boleh bergerak lagi."
+  ScrollResizeNoSegment: "Lihat pada satu sisi bahagian berbentuk tempat anda berdiri."
+  ScrollResizeCancelled: "Saiz semula tatal dibatalkan."
+  ScrollResizeTimedOut: "Saiz semula tatal dibatalkan selepas seminit tanpa menatal."
+  ScrollResizeUnchanged: "Saiz semula tatal ditutup tanpa perubahan."
+  ScrollResizeClaimGone: "Kawasan tuntutan itu tidak wujud lagi."
   ShapedSubdivisionMode: Mod subbahagian berbentuk. Klik kanan di dalam salah satu kawasan tuntutan anda untuk meletakkan bucu, kemudian klik semula bucu pertama anda untuk menutup subbahagian itu. Klik pada sempadan subbahagian berbentuk sedia ada untuk membentuknya semula. Gunakan /basicclaims untuk keluar.
   ShapedSubdivisionNoParent: Klik kanan di dalam kawasan tuntutan yang anda boleh edit untuk memulakan subbahagian berbentuk.
   ShapedSubdivisionOn3DClaim: Subbahagian berbentuk hanya berfungsi di dalam kawasan tuntutan 2D peringkat tertinggi.

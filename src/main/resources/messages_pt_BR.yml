@@ -50,6 +50,22 @@ Messages:
   ShapedClaimsMode: Modo de terreno com forma. Clique com o botao direito para colocar cantos em terra desprotegida ou para iniciar e extender edicoes com forma a partir das bordas de terrenos. Cliques nas bordas criam marcadores de segmentos conforme necessario. Use /basicclaims para sair.
   ShapedClaimsDisabled: Terrenos com forma estao desativados neste servidor.
   ShapedSubClaimsDisabled: Subdivisões com forma estão desativadas neste servidor.
+  ScrollResizeStart: "Redimensionar com a rolagem: olhe para um lado e role para cima para afastá-lo de você ou para baixo para aproximá-lo. Clique direito para aplicar; clique esquerdo ou soltar (Q) para cancelar."
+  ScrollResizeStartCorner: "Redimensionar com a rolagem: olhe ao longo de um lado no canto que você selecionou e role para cima para afastá-lo de você ou para baixo para aproximá-lo. Clique direito para aplicar; clique esquerdo ou soltar (Q) para cancelar."
+  ScrollResizeNeedTool: "Segure sua pá de ouro para redimensionar com a rolagem."
+  ScrollResizeNoClaim: "Fique dentro de um terreno protegido, ou clique com o botão direito em um dos cantos dele com sua pá de ouro, e depois use /scrollresize."
+  ScrollResizeSize: "{0} x {1}"
+  ScrollResizeSize3D: "{0} x {1} x {2}"
+  ScrollResizeSizeShaped: "{0} blocos"
+  ScrollResizeBlocksLeft: "{0} ({1} blocos de proteção restantes)"
+  ScrollResizeConflict: "Esse contorno sobrepõe outro terreno protegido ou não cabe no terreno principal ou nas subdivisões. Role de volta ou clique esquerdo para cancelar."
+  ScrollResizeNotEnoughBlocks: "Você precisa de mais {0} blocos de proteção para isso. Role de volta ou clique esquerdo para cancelar."
+  ScrollResizeLimit: "Esse lado não pode se mover mais."
+  ScrollResizeNoSegment: "Olhe para um lado da seção com forma em que você está."
+  ScrollResizeCancelled: "Redimensionamento com a rolagem cancelado."
+  ScrollResizeTimedOut: "Redimensionamento com a rolagem cancelado após um minuto sem rolar."
+  ScrollResizeUnchanged: "Redimensionamento com a rolagem encerrado sem alterações."
+  ScrollResizeClaimGone: "Esse terreno protegido não existe mais."
   ShapedSubdivisionMode: Modo de subdivisão com forma. Clique com o botão direito dentro de um dos seus terrenos para colocar cantos, depois clique novamente no primeiro canto para fechar a subdivisão. Clique na borda de uma subdivisão com forma existente para remodelá-la. Use /basicclaims para sair.
   ShapedSubdivisionNoParent: Clique com o botão direito dentro de um terreno que você pode editar para iniciar uma subdivisão com forma.
   ShapedSubdivisionOn3DClaim: Subdivisões com forma só funcionam dentro de terrenos 2D de nível superior.

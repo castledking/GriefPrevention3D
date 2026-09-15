@@ -50,6 +50,22 @@ Messages:
   ShapedClaimsMode: Tryb terenu o dowolnym kształcie. Kliknij prawym, aby umieścić narożniki na niezagospodarowanym terenie lub rozpocząć i rozszerzyć edycje kształtu z granic terenu. Kliknięcia na granicach tworzą znaczniki segmentów w razie potrzeby. Użyj /basicclaims, aby wyjść.
   ShapedClaimsDisabled: Tereny o dowolnym kształcie są wyłączone na tym serwerze.
   ShapedSubClaimsDisabled: Podziały o dowolnym kształcie są wyłączone na tym serwerze.
+  ScrollResizeStart: "Zmiana rozmiaru kółkiem: spójrz na bok i przewiń w górę, aby odsunąć go od siebie, lub w dół, aby przysunąć go do siebie. Prawy przycisk, aby zastosować; lewy przycisk lub wyrzucenie (Q), aby anulować."
+  ScrollResizeStartCorner: "Zmiana rozmiaru kółkiem: spójrz wzdłuż boku przy wybranym narożniku i przewiń w górę, aby odsunąć go od siebie, lub w dół, aby przysunąć go do siebie. Prawy przycisk, aby zastosować; lewy przycisk lub wyrzucenie (Q), aby anulować."
+  ScrollResizeNeedTool: "Trzymaj złotą łopatę, aby zmieniać rozmiar kółkiem."
+  ScrollResizeNoClaim: "Stań wewnątrz terenu albo kliknij prawym przyciskiem złotą łopatą jeden z jego narożników, a potem użyj /scrollresize."
+  ScrollResizeSize: "{0} x {1}"
+  ScrollResizeSize3D: "{0} x {1} x {2}"
+  ScrollResizeSizeShaped: "{0} bloków"
+  ScrollResizeBlocksLeft: "{0} (pozostało {1} bloków terenu)"
+  ScrollResizeConflict: "Ten obrys nachodzi na inny teren albo nie mieści się w terenie nadrzędnym lub jego podziałach. Przewiń z powrotem lub kliknij lewym przyciskiem, aby anulować."
+  ScrollResizeNotEnoughBlocks: "Potrzebujesz jeszcze {0} bloków terenu. Przewiń z powrotem lub kliknij lewym przyciskiem, aby anulować."
+  ScrollResizeLimit: "Tego boku nie można przesunąć dalej."
+  ScrollResizeNoSegment: "Spójrz na bok części o dowolnym kształcie, w której stoisz."
+  ScrollResizeCancelled: "Anulowano zmianę rozmiaru kółkiem."
+  ScrollResizeTimedOut: "Anulowano zmianę rozmiaru kółkiem po minucie bez przewijania."
+  ScrollResizeUnchanged: "Zamknięto zmianę rozmiaru kółkiem bez zmian."
+  ScrollResizeClaimGone: "Ten teren już nie istnieje."
   ShapedSubdivisionMode: Tryb podziału o dowolnym kształcie. Kliknij prawym przyciskiem wewnątrz jednego ze swoich terenów, aby umieścić narożniki, a następnie kliknij ponownie pierwszy narożnik, aby zamknąć podział. Kliknij granicę istniejącego podziału o dowolnym kształcie, aby zmienić jego kształt. Użyj /basicclaims, aby wyjść.
   ShapedSubdivisionNoParent: Kliknij prawym przyciskiem wewnątrz terenu, który możesz edytować, aby rozpocząć podział o dowolnym kształcie.
   ShapedSubdivisionOn3DClaim: Podziały o dowolnym kształcie działają tylko wewnątrz terenów 2D najwyższego poziomu.

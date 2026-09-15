@@ -2106,6 +2106,11 @@ public class PlayerEventHandler implements Listener {
     // when a player interacts with the world
     @EventHandler(priority = EventPriority.LOW)
     void onPlayerInteract(PlayerInteractEvent event) {
+        // an active /scrollresize session already used this click
+        if (instance.scrollResizeHandler != null && instance.scrollResizeHandler.wasHandled(event)) {
+            return;
+        }
+
         GriefPrevention.AddLogEntry(
             "[GP Debug] PlayerEventHandler.onPlayerInteract: player=" +
                 event.getPlayer().getName() +
@@ -4619,6 +4624,7 @@ public class PlayerEventHandler implements Listener {
         if (session.mode() != com.griefprevention.claims.editor.ClaimEditorMode.SHAPED) {
             session = session.withMode(com.griefprevention.claims.editor.ClaimEditorMode.SHAPED, ClaimEditSource.TOOL);
         }
+        session = releaseUnstartedBoundaryPath(playerData, session, clickedBlock);
 
         if (
             session.activeTarget() != null &&
@@ -5201,6 +5207,49 @@ public class PlayerEventHandler implements Listener {
         int distanceToStart = Math.abs(point.x() - edge.start().x()) + Math.abs(point.z() - edge.start().z());
         int distanceToEnd = Math.abs(point.x() - edge.end().x()) + Math.abs(point.z() - edge.end().z());
         return distanceToStart >= minimumEdgeLength && distanceToEnd >= minimumEdgeLength;
+    }
+
+    /**
+     * A reshape path that only holds its starting marker hasn't left the boundary yet. Clicking a different spot on
+     * the same claim's boundary should place a new segment marker there, like the first click did, rather than read
+     * the click as the next point of a path along the boundary, which snaps it next to the previous marker.
+     */
+    private @NotNull ClaimEditorSession releaseUnstartedBoundaryPath(
+        @NotNull PlayerData playerData,
+        @NotNull ClaimEditorSession session,
+        @NotNull Block clickedBlock
+    ) {
+        ShapedPathDraft openPath = session.openPath();
+        if (
+            openPath == null ||
+            openPath.points().size() != 1 ||
+            session.activeTarget() == null ||
+            session.activeTarget().type() != ClaimEditTargetType.EXISTING_PARENT_CLAIM ||
+            session.activeTarget().claimId() == null
+        ) {
+            return session;
+        }
+
+        Claim targetClaim = this.dataStore.getClaim(session.activeTarget().claimId());
+        if (targetClaim == null) return session;
+
+        OrthogonalPoint2i clickedPoint = new OrthogonalPoint2i(clickedBlock.getX(), clickedBlock.getZ());
+        if (
+            clickedPoint.equals(openPath.points().get(0)) ||
+            !isBoundaryPoint(targetClaim.getBoundaryPolygon(), clickedPoint)
+        ) {
+            return session;
+        }
+
+        Claim clickedClaim = this.dataStore.getClaimAt(clickedBlock.getLocation(), true, playerData.lastClaim);
+        while (clickedClaim != null && clickedClaim.parent != null) {
+            clickedClaim = clickedClaim.parent;
+        }
+        if (clickedClaim == null || !clickedClaim.getID().equals(targetClaim.getID())) return session;
+
+        ClaimEditorSession released = session.withOpenPath(null).withActiveSegment(null);
+        playerData.setClaimEditorSession(released);
+        return released;
     }
 
     private @NotNull OrthogonalPoint2i snapOutsideShapedCornerToMinimumDistance(
@@ -6461,6 +6510,11 @@ public class PlayerEventHandler implements Listener {
         float yaw,
         float pitch
     ) {
+        // an active /scrollresize session confirms on right-click
+        if (instance.scrollResizeHandler != null && instance.scrollResizeHandler.handleLegacyRightClick(player)) {
+            return;
+        }
+
         // Create a minimal event for the dispatcher (not fired publicly)
         PlayerInteractEvent event = new PlayerInteractEvent(
             player,

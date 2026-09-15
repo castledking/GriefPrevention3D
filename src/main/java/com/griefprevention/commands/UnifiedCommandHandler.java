@@ -436,7 +436,7 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
                     @NotNull String[] args
                 ) {
                     if (permission != null && !sender.hasPermission(permission)) {
-                        sender.sendMessage(org.bukkit.ChatColor.RED + "You don't have permission to use this command.");
+                        GriefPrevention.sendNoPermissionMessage(sender);
                         return true;
                     }
                     return handler.apply(sender, args);
@@ -702,7 +702,7 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
         @Override
         public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
             if (getPermission() != null && !sender.hasPermission(getPermission())) {
-                sender.sendMessage(ChatColor.RED + "You don't have permission to use this command.");
+                GriefPrevention.sendNoPermissionMessage(sender);
                 return true;
             }
             // Delegate to the main handler
@@ -753,7 +753,7 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
         @Override
         public boolean execute(@NotNull CommandSender sender, @NotNull String commandLabel, @NotNull String[] args) {
             if (getPermission() != null && !sender.hasPermission(getPermission())) {
-                sender.sendMessage(ChatColor.RED + "You don't have permission to use this command.");
+                GriefPrevention.sendNoPermissionMessage(sender);
                 return true;
             }
             String[] translated = config != null ? config.translate(args) : args;
@@ -837,7 +837,7 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
             if (handlerObj != null) {
                 CommandAliasConfiguration.Subcommand config = subcommandConfigs.get(canonicalSubcommand);
                 if (!hasSubcommandPermission(sender, config)) {
-                    sender.sendMessage(ChatColor.RED + "You don't have permission to use this command.");
+                    GriefPrevention.sendNoPermissionMessage(sender);
                     return true;
                 }
 

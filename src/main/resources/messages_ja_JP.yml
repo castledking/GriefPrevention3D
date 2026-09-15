@@ -50,6 +50,22 @@ Messages:
   ShapedClaimsMode: 形状クレームモード。未クレームの土地で右クリックしてコーナーを配置するか、クレーム境界から形状編集を開始・拡張します。境界クリックで必要に応じてセグメントマーカーを作成します。/basicclaims で終了します。
   ShapedClaimsDisabled: このサーバーでは形状クレームは無効です。
   ShapedSubClaimsDisabled: このサーバーでは形状サブディビジョンが無効になっています。
+  ScrollResizeStart: "スクロールリサイズ：辺を見て、上にスクロールすると遠ざけ、下にスクロールすると近づけます。右クリックで適用、左クリックまたはドロップ（Q）でキャンセルします。"
+  ScrollResizeStartCorner: "スクロールリサイズ：選択したコーナーの辺に沿って見て、上にスクロールすると遠ざけ、下にスクロールすると近づけます。右クリックで適用、左クリックまたはドロップ（Q）でキャンセルします。"
+  ScrollResizeNeedTool: "スクロールリサイズを使うには金のシャベルを持ってください。"
+  ScrollResizeNoClaim: "クレームの中に立つか、金のシャベルでコーナーを右クリックしてから /scrollresize を実行してください。"
+  ScrollResizeSize: "{0} x {1}"
+  ScrollResizeSize3D: "{0} x {1} x {2}"
+  ScrollResizeSizeShaped: "{0} ブロック"
+  ScrollResizeBlocksLeft: "{0}（残りクレームブロック：{1}）"
+  ScrollResizeConflict: "この輪郭は別のクレームと重なっているか、親クレームやサブディビジョンに収まっていません。スクロールで戻すか、左クリックでキャンセルしてください。"
+  ScrollResizeNotEnoughBlocks: "あと {0} クレームブロック必要です。スクロールで戻すか、左クリックでキャンセルしてください。"
+  ScrollResizeLimit: "この辺はこれ以上動かせません。"
+  ScrollResizeNoSegment: "立っている形状セクションの辺を見てください。"
+  ScrollResizeCancelled: "スクロールリサイズをキャンセルしました。"
+  ScrollResizeTimedOut: "1分間スクロールがなかったため、スクロールリサイズをキャンセルしました。"
+  ScrollResizeUnchanged: "変更せずにスクロールリサイズを終了しました。"
+  ScrollResizeClaimGone: "そのクレームはもう存在しません。"
   ShapedSubdivisionMode: 形状サブディビジョンモード。自分のクレーム内で右クリックしてコーナーを配置し、最初のコーナーを再度クリックしてサブディビジョンを閉じます。既存の形状サブディビジョンの境界をクリックすると、その形を変更できます。/basicclaims で終了します。
   ShapedSubdivisionNoParent: 編集可能なクレーム内で右クリックして、形状サブディビジョンを開始してください。
   ShapedSubdivisionOn3DClaim: 形状サブディビジョンは最上位の2Dクレーム内でのみ機能します。
