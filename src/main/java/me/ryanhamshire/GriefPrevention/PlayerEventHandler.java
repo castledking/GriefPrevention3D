@@ -34,6 +34,7 @@ import com.griefprevention.claims.editor.ShapedPathDraft;
 import com.griefprevention.compat.BlockDataCompat;
 import com.griefprevention.compat.Compat;
 import com.griefprevention.compat.MaterialCompat;
+import com.griefprevention.compat.ContentCompat;
 import com.griefprevention.compat.MaterialTagCompat;
 import com.griefprevention.events.BoundaryVisualizationEvent;
 import com.griefprevention.geometry.OrthogonalEdge2i;
@@ -2383,6 +2384,7 @@ public class PlayerEventHandler implements Listener {
             ((instance.config_claims_lockWoodenDoors && MaterialTagCompat.isTagged("DOORS", clickedBlockType)) ||
                 (instance.config_claims_preventButtonsSwitches &&
                     MaterialTagCompat.isTagged("BEDS", clickedBlockType)) ||
+                (instance.config_claims_protectStrawBeds && ContentCompat.isStrawBed(clickedBlockType)) ||
                 (instance.config_claims_lockTrapDoors && isLockableTrapdoor(clickedBlockType)) ||
                 (instance.config_claims_lecternReadingRequiresAccessTrust &&
                     CompatUtil.isMaterial(clickedBlockType, "LECTERN")) ||
@@ -2487,6 +2489,7 @@ public class PlayerEventHandler implements Listener {
                     CompatUtil.isMaterial(materialInHand, "INK_SAC") ||
                     CompatUtil.isMaterial(materialInHand, "GLOW_INK_SAC") ||
                     CompatUtil.isMaterial(materialInHand, "HONEYCOMB") ||
+                    ContentCompat.isCushionItem(materialInHand) ||
                     dyes.contains(materialInHand))
             ) {
                 Supplier<String> noBuildReason = ProtectionHelper.checkPermission(
@@ -3389,6 +3392,7 @@ public class PlayerEventHandler implements Listener {
                 || spawnEggs.contains(material)
                 || CompatUtil.isMaterial(material, "ITEM_FRAME")
                 || CompatUtil.isMaterial(material, "GLOW_ITEM_FRAME")
+                || ContentCompat.isCushionItem(material)
                 || material.name().startsWith("INFESTED_");
     }
 

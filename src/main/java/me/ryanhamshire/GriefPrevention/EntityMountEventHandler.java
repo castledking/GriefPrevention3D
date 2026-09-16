@@ -7,6 +7,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import com.griefprevention.compat.ContentCompat;
 import org.bukkit.event.entity.EntityMountEvent;
 
 public final class EntityMountEventHandler implements Listener {
@@ -27,7 +28,9 @@ public final class EntityMountEventHandler implements Listener {
         Player player = (Player) event.getEntity();
 
         Entity mount = event.getMount();
-        if (!(mount instanceof Animals)) {
+        // Cushions are sat on rather than ridden, so they are only gated when the server opts in.
+        boolean gatedCushion = instance.config_claims_preventCushionMount && ContentCompat.isCushionEntity(mount);
+        if (!(mount instanceof Animals) && !gatedCushion) {
             return;
         }
 

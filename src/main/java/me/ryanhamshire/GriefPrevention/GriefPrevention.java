@@ -177,6 +177,8 @@ public class GriefPrevention extends JavaPlugin {
     public boolean config_claims_protectDonkeys; // whether donkeys on a claim should be protected by that claim's rules
     public boolean config_claims_protectLlamas; // whether llamas on a claim should be protected by that claim's rules
     public boolean config_claims_preventButtonsSwitches; // whether buttons and switches are protectable
+    public boolean config_claims_preventCushionMount; // whether sitting on a cushion in a claim requires access trust
+    public boolean config_claims_protectStrawBeds; // whether using a straw bed in a claim requires access trust
     public boolean config_claims_lockWoodenDoors; // whether wooden doors should be locked by default (require
     // /accesstrust)
     public boolean config_claims_lockTrapDoors; // whether trap doors should be locked by default (require /accesstrust)
@@ -1009,6 +1011,11 @@ public class GriefPrevention extends JavaPlugin {
         this.config_claims_protectHorses = config.getBoolean("GriefPrevention.Claims.ProtectHorses", true);
         this.config_claims_protectDonkeys = config.getBoolean("GriefPrevention.Claims.ProtectDonkeys", true);
         this.config_claims_protectLlamas = config.getBoolean("GriefPrevention.Claims.ProtectLlamas", true);
+        this.config_claims_preventCushionMount = config.getBoolean(
+            "GriefPrevention.Claims.PreventCushionMount",
+            false
+        );
+        this.config_claims_protectStrawBeds = config.getBoolean("GriefPrevention.Claims.ProtectStrawBeds", true);
         this.config_claims_preventButtonsSwitches = config.getBoolean(
             "GriefPrevention.Claims.PreventButtonsSwitches",
             true
@@ -1504,6 +1511,8 @@ public class GriefPrevention extends JavaPlugin {
 
         outConfig.set("GriefPrevention.Claims.PreventGlobalMonsterEggs", this.config_claims_preventGlobalMonsterEggs);
         outConfig.set("GriefPrevention.Claims.PreventTheft", this.config_claims_preventTheft);
+        outConfig.set("GriefPrevention.Claims.PreventCushionMount", this.config_claims_preventCushionMount);
+        outConfig.set("GriefPrevention.Claims.ProtectStrawBeds", this.config_claims_protectStrawBeds);
         outConfig.set("GriefPrevention.Claims.ProtectCreatures", this.config_claims_protectCreatures);
         outConfig.set("GriefPrevention.Claims.PreventButtonsSwitches", this.config_claims_preventButtonsSwitches);
         outConfig.set("GriefPrevention.Claims.LockWoodenDoors", this.config_claims_lockWoodenDoors);
