@@ -40,7 +40,6 @@ import org.bukkit.event.entity.EntityTargetEvent;
 import org.bukkit.event.entity.PotionSplashEvent;
 import org.bukkit.event.vehicle.VehicleDamageEvent;
 import org.bukkit.potion.PotionEffect;
-import org.bukkit.projectiles.BlockProjectileSource;
 import org.bukkit.projectiles.ProjectileSource;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
@@ -758,13 +757,9 @@ public class EntityDamageHandler implements Listener {
                 Projectile projectile = (Projectile) event.damager();
                 // Get the projectile source (dispenser, etc.)
                 ProjectileSource source = projectile.getShooter();
-                if (source instanceof BlockProjectileSource) {
-                    BlockProjectileSource blockSource = (BlockProjectileSource) source;
-                    // Check if the dispenser is in the same claim as the armor stand
-                    Claim sourceClaim = this.dataStore.getClaimAt(blockSource.getBlock().getLocation(), false, null);
-                    if (sourceClaim != null && sourceClaim.getID().equals(claim.getID())) {
-                        return false; // Allow the damage to proceed
-                    }
+                // Check if the dispenser is in the same claim as the armor stand
+                if (EntityEventHandler.isBlockSourceInClaim(source, claim)) {
+                    return false; // Allow the damage to proceed
                 }
             }
 

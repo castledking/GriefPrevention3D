@@ -308,16 +308,26 @@ public class EntityEventHandler implements Listener
             return;
         }
 
+        // Prevent change unless a same-claim dispenser or an allowed mob shot the projectile.
+        if (!nonPlayerProjectileMayChangeBlock(shooter, claim))
+            event.setCancelled(true);
+    }
+
+    /**
+     * Whether a projectile that was not shot by a player may change a block in a claim.
+     *
+     * @param shooter the projectile's shooter
+     * @param claim the claim containing the block
+     * @return true if the change is allowed
+     */
+    static boolean nonPlayerProjectileMayChangeBlock(@Nullable ProjectileSource shooter, @NotNull Claim claim)
+    {
         // Allow change if projectile was shot by a dispenser in the same claim.
         if (isBlockSourceInClaim(shooter, claim))
-            return;
+            return true;
 
         // Allow change if the config value is set, to enable things like TNT music disc farms on claims.
-        if (GriefPrevention.instance.config_mobProjectilesChangeBlocks && CompatUtil.isMob(shooter))
-            return;
-
-        // Prevent change in all other cases.
-        event.setCancelled(true);
+        return GriefPrevention.instance.config_mobProjectilesChangeBlocks && CompatUtil.isMob(shooter);
     }
 
     private void handleEntityMeltPowderedSnow(@NotNull EntityChangeBlockEvent event)

@@ -1669,7 +1669,7 @@ public class BlockEventHandler implements Listener {
 
     //Stop projectiles from destroying blocks that don't fire a proper event
     @EventHandler(ignoreCancelled = true)
-    private void chorusFlower(ProjectileHitEvent event) {
+    void chorusFlower(ProjectileHitEvent event) {
         //don't track in worlds where claims are not enabled
         if (!GriefPrevention.instance.claimsEnabledForWorld(event.getEntity().getWorld())) return;
 
@@ -1691,6 +1691,9 @@ public class BlockEventHandler implements Listener {
         if (projectile.getShooter() instanceof Player) shooter = (Player) projectile.getShooter();
 
         if (shooter == null) {
+            // Same rule as EntityChangeBlockEvent, which never fires if this hit is cancelled.
+            if (EntityEventHandler.nonPlayerProjectileMayChangeBlock(projectile.getShooter(), claim)) return;
+
             // ProjectileHitEvent only became cancellable in 1.20.2.
             CompatUtil.cancelIfPossible(event);
             return;

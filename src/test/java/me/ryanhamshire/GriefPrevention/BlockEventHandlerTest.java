@@ -3,14 +3,22 @@ package me.ryanhamshire.GriefPrevention;
 import com.griefprevention.test.ServerMocks;
 import org.bukkit.Bukkit;
 import org.bukkit.Server;
+import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.Tag;
+import org.bukkit.World;
+import org.bukkit.block.Block;
+import org.bukkit.entity.Arrow;
 import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
+import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.inventory.InventoryPickupItemEvent;
 import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.projectiles.BlockProjectileSource;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -141,5 +149,76 @@ public class BlockEventHandlerTest
         }
 
         verify(event, never()).setCancelled(true);
+    }
+
+    @AfterEach
+    void clearPlugin()
+    {
+        GriefPrevention.instance = null;
+    }
+
+    @Test
+    void dispenserInSameClaimMayBreakChorusFlower()
+    {
+        // Chorus flower farms: a dispenser inside the claim shooting the claim's own flowers.
+        ProjectileHitEvent event = projectileHitFromDispenser(Material.CHORUS_FLOWER, true);
+
+        new BlockEventHandler(GriefPrevention.instance.dataStore).chorusFlower(event);
+
+        verify(event, never()).setCancelled(true);
+    }
+
+    @Test
+    void dispenserInSameClaimMayBreakDecoratedPot()
+    {
+        ProjectileHitEvent event = projectileHitFromDispenser(Material.DECORATED_POT, true);
+
+        new BlockEventHandler(GriefPrevention.instance.dataStore).chorusFlower(event);
+
+        verify(event, never()).setCancelled(true);
+    }
+
+    @Test
+    void dispenserOutsideClaimMayNotBreakChorusFlower()
+    {
+        ProjectileHitEvent event = projectileHitFromDispenser(Material.CHORUS_FLOWER, false);
+
+        new BlockEventHandler(GriefPrevention.instance.dataStore).chorusFlower(event);
+
+        verify(event).setCancelled(true);
+    }
+
+    private static ProjectileHitEvent projectileHitFromDispenser(Material hitType, boolean dispenserInClaim)
+    {
+        GriefPrevention plugin = mock(GriefPrevention.class);
+        DataStore dataStore = mock(DataStore.class);
+        plugin.dataStore = dataStore;
+        GriefPrevention.instance = plugin;
+
+        World world = mock(World.class);
+        when(plugin.claimsEnabledForWorld(world)).thenReturn(true);
+
+        Claim claim = mock(Claim.class);
+        Location hitLocation = mock(Location.class);
+        Block hitBlock = mock(Block.class);
+        when(hitBlock.getType()).thenReturn(hitType);
+        when(hitBlock.getLocation()).thenReturn(hitLocation);
+        when(dataStore.getClaimAt(hitLocation, false, null)).thenReturn(claim);
+
+        Location dispenserLocation = mock(Location.class);
+        Block dispenserBlock = mock(Block.class);
+        when(dispenserBlock.getLocation()).thenReturn(dispenserLocation);
+        BlockProjectileSource dispenser = mock(BlockProjectileSource.class);
+        when(dispenser.getBlock()).thenReturn(dispenserBlock);
+        when(dataStore.getClaimAt(dispenserLocation, false, claim)).thenReturn(dispenserInClaim ? claim : null);
+
+        Arrow arrow = mock(Arrow.class);
+        when(arrow.getWorld()).thenReturn(world);
+        when(arrow.getShooter()).thenReturn(dispenser);
+
+        ProjectileHitEvent event = mock(ProjectileHitEvent.class);
+        when(event.getEntity()).thenReturn(arrow);
+        when(event.getHitBlock()).thenReturn(hitBlock);
+        return event;
     }
 }
