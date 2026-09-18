@@ -91,13 +91,21 @@ Stop _responding_ to grief and prevent it instead. GriefPrevention stops grief b
   - `/claim distance toggle` — While standing in your own claim, toggle whether ALL players can bypass minimum distance for that claim.
   - Existing nearby claims auto-grant neighbor trust to each other, cleaned up automatically when claims are abandoned.
 ####
+- **Scroll Resize**
+  `/scrollresize`
+  Resize a claim or subdivision with your mouse wheel while holding the claim tool, with a live preview of the new
+  boundary. Scrolling up pushes the side you are facing away from you, scrolling down pulls it toward you. Right-click
+  applies the resize; left-click, drop, or swapping hands cancels it. Works on 3D subdivisions and shaped claims, down
+  to a single block.
+####
 - **Wither Explosion Toggle**
   `/witherexplosions`
   Use this command to toggle wither explosions inside your claim.
 ####
 ### Subtle Changes
-  - **Per-Player Locale**: Enabled by default. Players with a Spanish or Portuguese client locale receive messages in their language automatically, while others receive English. Disable with `PerPlayerLocale: false` in config.yml.
+  - **Per-Player Locale**: Enabled by default. Players receive messages in their client language when a translation is available, falling back to English. See [Supported Languages](#supported-languages) for the full list. Disable with `PerPlayerLocale: false` in config.yml.
   - **Action Bar Messages**: You can now define a list of message keys that should be chosen to be shown in the action bar instead of chat.
+  - **Rate Limited Messages**: Denials that repeat on their own — an arrow bouncing off a claimed decorated pot, a swing at a claimed animal, a piston placed outside a claim — are sent at most once per 10 seconds, counted separately for each message so one denial never hides another.
   - Resizing a claim now selects it and is accessible using common commands like `/claim abandon` or `/claim trust` during that resize session
   - `/restrictsubclaim` while standing in main claims now instantly restricts all subdivisions inside
   - `/trustlist` now shows inherited permissions
@@ -110,6 +118,32 @@ Stop _responding_ to grief and prevent it instead. GriefPrevention stops grief b
   - Full compatibility with original GriefPrevention features
   - Works with Spigot, Paper, Purpur, and Folia
   - Maintains all anti-grief protections
+
+## Supported Languages
+
+GriefPrevention3D ships with translations for every language below. Set one for the whole server with
+`Locale:` in `config.yml`, or leave `PerPlayerLocale: true` and each player is served their own client language,
+falling back to English.
+
+| Code | Language |
+|------|----------|
+| `en` | English |
+| `cs_CZ` | Czech |
+| `de_DE` | German |
+| `es` | Spanish |
+| `fr_FR` | French |
+| `ja_JP` | Japanese |
+| `ms_MY` | Malay |
+| `pl_PL` | Polish |
+| `pt_BR` | Portuguese (Brazil) |
+| `ru_RU` | Russian |
+| `tr_TR` | Turkish |
+| `uk_UA` | Ukrainian |
+| `zh_CN` | Chinese (Simplified) |
+| `en_PT` | Pirate Speak |
+
+See the [Locale guide](https://github.com/castledking/GriefPrevention3D/wiki/Locale) for how to customise messages or
+add a language of your own.
 
 ## Supported Platforms: Spigot, Paper, Purpur, and Folia.
 ### GriefPrevention3D targets and supports 1.8 - latest available version of these platforms.
