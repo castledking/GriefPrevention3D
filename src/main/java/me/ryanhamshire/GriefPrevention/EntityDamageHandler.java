@@ -651,7 +651,7 @@ public class EntityDamageHandler implements Listener {
                 String message = dataStore.getMessage(Messages.NoDamageClaimedEntity, ownerName);
                 if (attacker.hasPermission("griefprevention.ignoreclaims"))
                     message += "  " + dataStore.getMessage(Messages.IgnoreClaimsAdvertisement);
-                GriefPrevention.sendMessage(attacker, TextMode.Err, message);
+                GriefPrevention.sendRateLimitedErrorMessage(attacker, message);
             }
         }
         return true;
@@ -775,7 +775,7 @@ public class EntityDamageHandler implements Listener {
 
         event.setCancelled(true);
         if (sendMessages)
-            GriefPrevention.sendMessage(attacker, TextMode.Err, failureReason.get());
+            GriefPrevention.sendRateLimitedErrorMessage(attacker, failureReason.get());
         return true;
     }
 
@@ -876,7 +876,7 @@ public class EntityDamageHandler implements Listener {
         preventInfiniteBounce(arrow, event.damaged());
 
         if (sendMessages)
-            GriefPrevention.sendMessage(attacker, TextMode.Err, noContainersReason.get());
+            GriefPrevention.sendRateLimitedErrorMessage(attacker, noContainersReason.get());
 
         return true;
     }
@@ -930,7 +930,7 @@ public class EntityDamageHandler implements Listener {
             String message = dataStore.getMessage(Messages.NoDamageClaimedEntity, ownerName);
             if (attacker.hasPermission("griefprevention.ignoreclaims"))
                 message += "  " + dataStore.getMessage(Messages.IgnoreClaimsAdvertisement);
-            GriefPrevention.sendMessage(attacker, TextMode.Err, message);
+            GriefPrevention.sendRateLimitedErrorMessage(attacker, message);
         }
         return true;
     }
@@ -1072,7 +1072,7 @@ public class EntityDamageHandler implements Listener {
         if (noContainersReason != null) {
             event.setCancelled(true);
             preventInfiniteBounce(arrow, event.getVehicle());
-            GriefPrevention.sendMessage(attacker, TextMode.Err, noContainersReason.get());
+            GriefPrevention.sendRateLimitedErrorMessage(attacker, noContainersReason.get());
         }
 
         // cache claim for later
@@ -1132,7 +1132,7 @@ public class EntityDamageHandler implements Listener {
                                 if (noContainersReason != null) {
                                     event.setIntensity(affected, 0);
                                     if (messagedPlayer.compareAndSet(false, true)) {
-                                        GriefPrevention.sendMessage(thrower, TextMode.Err, noContainersReason.get());
+                                        GriefPrevention.sendRateLimitedErrorMessage(thrower, noContainersReason.get());
                                     }
                                 }
                             }

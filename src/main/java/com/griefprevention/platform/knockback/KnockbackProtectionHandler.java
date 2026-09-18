@@ -148,9 +148,8 @@ public abstract class KnockbackProtectionHandler implements Listener
                 debug("CANCEL: fresh-spawn PvP immunity (attackerImmune=" + attackerData.pvpImmune
                         + ", defenderImmune=" + defenderData.pvpImmune + ")");
                 event.setCancelled(true);
-                GriefPrevention.sendMessage(
+                GriefPrevention.sendRateLimitedErrorMessage(
                         attacker,
-                        TextMode.Err,
                         attackerData.pvpImmune ? Messages.CantFightWhileImmune : Messages.ThatPlayerPvPImmune);
                 return;
             }
@@ -166,7 +165,7 @@ public abstract class KnockbackProtectionHandler implements Listener
                 debug("CANCEL: defender " + defender.getName() + " is in PvP-safe claim " + defenderClaim.getID()
                         + " (see PvP.ProtectPlayersInLandClaims in config.yml)");
                 event.setCancelled(true);
-                GriefPrevention.sendMessage(attacker, TextMode.Err, Messages.PlayerInPvPSafeZone);
+                GriefPrevention.sendRateLimitedErrorMessage(attacker, Messages.PlayerInPvPSafeZone);
             }
             else
             {
@@ -191,7 +190,7 @@ public abstract class KnockbackProtectionHandler implements Listener
                             + attackerClaim.getID()
                             + " (see PvP.ProtectPlayersInLandClaims in config.yml)");
                     event.setCancelled(true);
-                    GriefPrevention.sendMessage(attacker, TextMode.Err, Messages.CantFightWhileImmune);
+                    GriefPrevention.sendRateLimitedErrorMessage(attacker, Messages.CantFightWhileImmune);
                 }
                 return;
             }
@@ -254,7 +253,7 @@ public abstract class KnockbackProtectionHandler implements Listener
         if (noPermissionReason != null)
         {
             event.setCancelled(true);
-            GriefPrevention.sendMessage(attacker, TextMode.Err, noPermissionReason.get());
+            GriefPrevention.sendRateLimitedErrorMessage(attacker, noPermissionReason.get());
         }
     }
 

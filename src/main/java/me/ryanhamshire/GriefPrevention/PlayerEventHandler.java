@@ -1059,6 +1059,7 @@ public class PlayerEventHandler implements Listener {
     void onPlayerQuit(PlayerQuitEvent event) {
         Player player = event.getPlayer();
         UUID playerID = player.getUniqueId();
+        GriefPrevention.clearErrorMessageCooldowns(playerID);
         PlayerData playerData = this.dataStore.getPlayerData(playerID);
         boolean isBanned;
 
@@ -1171,7 +1172,7 @@ public class PlayerEventHandler implements Listener {
         PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
 
         if (playerData.siegeData != null) {
-            GriefPrevention.sendMessage(player, TextMode.Err, Messages.SiegeNoDrop);
+            GriefPrevention.sendRateLimitedErrorMessage(player, Messages.SiegeNoDrop);
             event.setCancelled(true);
             return;
         }
@@ -1197,7 +1198,7 @@ public class PlayerEventHandler implements Listener {
                 return;
             }
 
-            GriefPrevention.sendMessage(player, TextMode.Err, Messages.PvPNoDrop);
+            GriefPrevention.sendRateLimitedErrorMessage(player, Messages.PvPNoDrop);
             event.setCancelled(true);
         }
     }
@@ -1231,7 +1232,7 @@ public class PlayerEventHandler implements Listener {
         // armor or offhand slot has no main slot to return to and is silently deleted when the
         // main inventory is full (see GriefPrevention/GriefPrevention#2619, PaperMC/Paper#7726).
         // The click is never applied, so the item simply stays where it is.
-        GriefPrevention.sendMessage(player, TextMode.Err, siege ? Messages.SiegeNoDrop : Messages.PvPNoDrop);
+        GriefPrevention.sendRateLimitedErrorMessage(player, siege ? Messages.SiegeNoDrop : Messages.PvPNoDrop);
         event.setCancelled(true);
     }
 
@@ -1350,7 +1351,7 @@ public class PlayerEventHandler implements Listener {
                 if (noAccessReason != null) {
                     // Skip message if ProjectileHitEvent already handled it (Purpur/Folia: both events fire)
                     if (!refundedByProjectileHitEvent.contains(player.getUniqueId())) {
-                        GriefPrevention.sendMessage(player, TextMode.Err, noAccessReason.get());
+                        GriefPrevention.sendRateLimitedErrorMessage(player, noAccessReason.get());
                     }
                     event.setCancelled(true);
                     if (
@@ -1450,7 +1451,7 @@ public class PlayerEventHandler implements Listener {
                     () -> recentPearlRollbackPlayers.remove(shooter.getUniqueId()),
                     20L
                 );
-                GriefPrevention.sendMessage(shooter, TextMode.Err, noAccessReason.get());
+                GriefPrevention.sendRateLimitedErrorMessage(shooter, noAccessReason.get());
                 if (instance.config_claims_refundDeniedEnderPearls) {
                     shooter.getInventory().addItem(new ItemStack(Material.ENDER_PEARL));
                 }
@@ -1498,7 +1499,7 @@ public class PlayerEventHandler implements Listener {
                 rollbackLoc.setPitch(p.getLocation().getPitch());
                 SchedulerUtil.runLaterEntity(instance, p, () -> teleportFoliaSafe(p, rollbackLoc), 0L);
                 if (!refundedEnderPearlEntities.contains(pearlEntityID)) {
-                    GriefPrevention.sendMessage(p, TextMode.Err, noAccessReason.get());
+                    GriefPrevention.sendRateLimitedErrorMessage(p, noAccessReason.get());
                     if (instance.config_claims_refundDeniedEnderPearls) {
                         refundedEnderPearlEntities.add(pearlEntityID);
                         p.getInventory().addItem(new ItemStack(Material.ENDER_PEARL));
@@ -1662,7 +1663,7 @@ public class PlayerEventHandler implements Listener {
                         String message = instance.dataStore.getMessage(Messages.NotYourPet, ownerName);
                         if (player.hasPermission("griefprevention.ignoreclaims")) message +=
                             "  " + instance.dataStore.getMessage(Messages.IgnoreClaimsAdvertisement);
-                        GriefPrevention.sendMessage(player, TextMode.Err, message);
+                        GriefPrevention.sendRateLimitedErrorMessage(player, message);
                         event.setCancelled(true);
                         return;
                     }
@@ -1691,7 +1692,7 @@ public class PlayerEventHandler implements Listener {
 
         if (playerData.siegeData != null
                 && (entity instanceof StorageMinecart || entity instanceof PoweredMinecart)) {
-            GriefPrevention.sendMessage(player, TextMode.Err, Messages.SiegeNoContainers);
+            GriefPrevention.sendRateLimitedErrorMessage(player, Messages.SiegeNoContainers);
             event.setCancelled(true);
             return;
         }
@@ -1704,7 +1705,7 @@ public class PlayerEventHandler implements Listener {
             if (playerData.inPvpCombat()) {
                 Claim claim = this.dataStore.getClaimAt(entity.getLocation(), false, playerData.lastClaim);
                 if (claim != null) {
-                    GriefPrevention.sendMessage(player, TextMode.Err, Messages.PvPNoContainers);
+                    GriefPrevention.sendRateLimitedErrorMessage(player, Messages.PvPNoContainers);
                     event.setCancelled(true);
                     return;
                 }
@@ -1991,7 +1992,7 @@ public class PlayerEventHandler implements Listener {
                 !player.hasPermission("griefprevention.lava")
             ) {
                 if (bucketEvent.getBucket() == Material.LAVA_BUCKET) {
-                    GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoWildernessBuckets);
+                    GriefPrevention.sendRateLimitedErrorMessage(player, Messages.NoWildernessBuckets);
                     bucketEvent.setCancelled(true);
                     return;
                 }
@@ -2147,7 +2148,7 @@ public class PlayerEventHandler implements Listener {
         if (event.getMaterial() == instance.config_claims_modificationTool) {
             playerData = this.dataStore.getPlayerData(player.getUniqueId());
             if (playerData.siegeData != null) {
-                GriefPrevention.sendMessage(player, TextMode.Err, Messages.SiegeNoShovel);
+                GriefPrevention.sendRateLimitedErrorMessage(player, Messages.SiegeNoShovel);
                 event.setCancelled(true);
                 return;
             }
@@ -2312,7 +2313,7 @@ public class PlayerEventHandler implements Listener {
             if (playerData == null) playerData = this.dataStore.getPlayerData(player.getUniqueId());
 
             if (playerData.siegeData != null) {
-                GriefPrevention.sendMessage(player, TextMode.Err, Messages.SiegeNoContainers);
+                GriefPrevention.sendRateLimitedErrorMessage(player, Messages.SiegeNoContainers);
                 event.setCancelled(true);
                 return;
             }

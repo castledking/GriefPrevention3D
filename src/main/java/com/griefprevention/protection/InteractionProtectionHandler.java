@@ -68,7 +68,7 @@ public class InteractionProtectionHandler implements Listener
         if (noBuildReason != null)
         {
             event.setCancelled(true);
-            GriefPrevention.sendMessage(player, TextMode.Err, noBuildReason.get());
+            GriefPrevention.sendRateLimitedErrorMessage(player, noBuildReason.get());
         }
     }
 

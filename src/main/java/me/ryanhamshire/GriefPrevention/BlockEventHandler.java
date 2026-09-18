@@ -242,7 +242,7 @@ public class BlockEventHandler implements Listener {
             event
         );
         if (noBuildReason != null) {
-            GriefPrevention.sendMessage(player, TextMode.Err, noBuildReason.get());
+            GriefPrevention.sendRateLimitedErrorMessage(player, noBuildReason.get());
             event.setCancelled(true);
             return;
         }
@@ -357,7 +357,7 @@ public class BlockEventHandler implements Listener {
                 placeEvent
             );
             if (noBuildReason != null) {
-                GriefPrevention.sendMessage(player, TextMode.Err, noBuildReason.get());
+                GriefPrevention.sendRateLimitedErrorMessage(player, noBuildReason.get());
                 placeEvent.setCancelled(true);
                 return;
             }
@@ -513,7 +513,7 @@ public class BlockEventHandler implements Listener {
                     && isActiveBlock(block)) {
                 String reason = claim.allowMoreActiveBlocks();
                 if (reason != null) {
-                    GriefPrevention.sendMessage(player, TextMode.Err, reason);
+                    GriefPrevention.sendRateLimitedErrorMessage(player, reason);
                     placeEvent.setCancelled(true);
                     return;
                 }
@@ -531,7 +531,7 @@ public class BlockEventHandler implements Listener {
                 GriefPrevention.instance.config_claims_preventTheft &&
                 block.getY() < GriefPrevention.instance.getMaxDepthForWorld(block.getWorld())
             ) {
-                GriefPrevention.sendMessage(player, TextMode.Warn, Messages.TooDeepToClaim);
+                GriefPrevention.sendRateLimitedMessage(player, TextMode.Warn, Messages.TooDeepToClaim);
                 return;
             }
 
@@ -566,7 +566,11 @@ public class BlockEventHandler implements Listener {
                             2
                         )
                     ) {
-                        GriefPrevention.sendMessage(player, TextMode.Warn, Messages.NoEnoughBlocksForChestClaim);
+                        GriefPrevention.sendRateLimitedMessage(
+                            player,
+                            TextMode.Warn,
+                            Messages.NoEnoughBlocksForChestClaim
+                        );
                         return;
                     }
 
@@ -605,9 +609,8 @@ public class BlockEventHandler implements Listener {
                             BoundaryVisualization.visualizeClaim(player, result.claim, VisualizationType.CLAIM, block);
                         } else {
                             //notify and explain to player
-                            GriefPrevention.sendMessage(
+                            GriefPrevention.sendRateLimitedErrorMessage(
                                 player,
-                                TextMode.Err,
                                 Messages.AutomaticClaimOtherClaimTooClose
                             );
 
@@ -737,7 +740,7 @@ public class BlockEventHandler implements Listener {
             (block.getType() == MaterialCompat.PISTON() || block.getType() == MaterialCompat.STICKY_PISTON()) &&
             claim == null
         ) {
-            GriefPrevention.sendMessage(player, TextMode.Warn, Messages.NoPistonsOutsideClaims);
+            GriefPrevention.sendRateLimitedMessage(player, TextMode.Warn, Messages.NoPistonsOutsideClaims);
         }
     }
 
@@ -1358,7 +1361,7 @@ public class BlockEventHandler implements Listener {
                 Supplier<String> supplier = claim.checkPermission(player, ClaimPermission.Build, event);
                 if (supplier != null) {
                     // Warn when denied access to a claim.
-                    GriefPrevention.sendMessage(player, TextMode.Err, supplier.get());
+                    GriefPrevention.sendRateLimitedErrorMessage(player, supplier.get());
                     return true;
                 }
                 return false;
@@ -1703,7 +1706,7 @@ public class BlockEventHandler implements Listener {
 
         if (allowContainer != null) {
             CompatUtil.cancelIfPossible(event);
-            GriefPrevention.sendMessage(shooter, TextMode.Err, allowContainer.get());
+            GriefPrevention.sendRateLimitedErrorMessage(shooter, allowContainer.get());
             return;
         }
     }
@@ -1814,7 +1817,7 @@ public class BlockEventHandler implements Listener {
                 Supplier<String> noPortalReason = claim.checkPermission(player, ClaimPermission.Build, event);
 
                 if (noPortalReason != null) {
-                    GriefPrevention.sendMessage(player, TextMode.Err, noPortalReason.get());
+                    GriefPrevention.sendRateLimitedErrorMessage(player, noPortalReason.get());
                     CompatUtil.setPortalCooldown(player, 40);
                     return true;
                 }

@@ -299,9 +299,8 @@ public class EntityEventHandler implements Listener
             // If the player cannot place the material being broken, disallow.
             if (denial != null)
             {
-                // Unlike entities where arrows rebound and may cause multiple alerts,
-                // projectiles lodged in blocks do not continuously re-trigger events.
-                GriefPrevention.sendMessage((Player) shooter, TextMode.Err, denial.get());
+                // A cancelled hit leaves the projectile in flight, so it can collide repeatedly.
+                GriefPrevention.sendRateLimitedErrorMessage((Player) shooter, denial.get());
                 event.setCancelled(true);
             }
 
@@ -803,7 +802,7 @@ public class EntityEventHandler implements Listener
         if (noBuildReason != null)
         {
             event.setCancelled(true);
-            GriefPrevention.sendMessage(playerRemover, TextMode.Err, noBuildReason.get());
+            GriefPrevention.sendRateLimitedErrorMessage(playerRemover, noBuildReason.get());
         }
     }
 
@@ -842,7 +841,7 @@ public class EntityEventHandler implements Listener
             event.setCancelled(true);
             if (!(event.getDamager() instanceof Projectile))
             {
-                GriefPrevention.sendMessage(player, TextMode.Err, noBuildReason.get());
+                GriefPrevention.sendRateLimitedErrorMessage(player, noBuildReason.get());
             }
         }
     }
@@ -882,7 +881,7 @@ public class EntityEventHandler implements Listener
         if (noBuildReason != null)
         {
             event.setCancelled(true);
-            GriefPrevention.sendMessage(event.getPlayer(), TextMode.Err, noBuildReason.get());
+            GriefPrevention.sendRateLimitedErrorMessage(event.getPlayer(), noBuildReason.get());
             return;
         }
 
@@ -892,7 +891,7 @@ public class EntityEventHandler implements Listener
                 String reason = claim.allowMoreEntities(false);
                 if (reason != null) {
                     event.setCancelled(true);
-                    GriefPrevention.sendMessage(event.getPlayer(), TextMode.Err, reason);
+                    GriefPrevention.sendRateLimitedErrorMessage(event.getPlayer(), reason);
                 }
             }
         }

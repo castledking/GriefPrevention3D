@@ -390,9 +390,24 @@ public class GriefPrevention extends JavaPlugin {
     // offline, for notication messages
     public static final int NOTIFICATION_SECONDS = 20;
 
-    // error message rate limiting - tracks last error message time per player (10
-    // second cooldown)
-    private static final ConcurrentHashMap<UUID, Long> lastErrorMessageTime = new ConcurrentHashMap<>();
+    // messages rendered in the action bar unless the administrator sets their own list.
+    // Each one is a repeatable warning, so chat would be the wrong place for it.
+    static final List<String> DEFAULT_ACTION_BAR_MESSAGES = Collections.unmodifiableList(Arrays.asList(
+        "UnprotectedChestWarning",
+        "ExternalLiquidBoundaryViolation",
+        "InternalLiquidBoundaryViolation",
+        "ExternalPistonBoundaryViolation",
+        "InternalPistonBoundaryViolation",
+        "NoPistonsOutsideClaims",
+        "TooDeepToClaim",
+        "NoEnoughBlocksForChestClaim"
+    ));
+
+    // error message rate limiting - tracks the last send time per player per message
+    // (10 second cooldown). Keyed by message so a throttled denial cannot silence an
+    // unrelated one within the same window.
+    private static final ConcurrentHashMap<UUID, ConcurrentHashMap<String, Long>> lastErrorMessageTime =
+        new ConcurrentHashMap<>();
     private static final long ERROR_MESSAGE_COOLDOWN_MS = 10000; // 10 seconds
 
     // Conditionally register a Listener only if the given event class is available at runtime.
@@ -1232,16 +1247,9 @@ public class GriefPrevention extends JavaPlugin {
             100
         );
 
-        List<String> defaultActionBarMessages = Arrays.asList(
-            "UnprotectedChestWarning",
-            "ExternalLiquidBoundaryViolation",
-            "InternalLiquidBoundaryViolation",
-            "ExternalPistonBoundaryViolation",
-            "InternalPistonBoundaryViolation"
-        );
         this.config_claims_actionBarMessages = config.getStringList("GriefPrevention.ActionBarMessages");
         if (this.config_claims_actionBarMessages.isEmpty()) {
-            this.config_claims_actionBarMessages = new ArrayList<>(defaultActionBarMessages);
+            this.config_claims_actionBarMessages = new ArrayList<>(DEFAULT_ACTION_BAR_MESSAGES);
         }
 
         // Economy settings - disabled by default
@@ -4614,6 +4622,24 @@ public class GriefPrevention extends JavaPlugin {
         sendRateLimitedErrorMessage(player, messageID, 0, args);
     }
 
+    // sends a rate-limited message in the caller's mode, for warnings and instructions that
+    // should not arrive in the player's error colour (max once per 10 seconds)
+    public static void sendRateLimitedMessage(
+        @Nullable Player player,
+        @NotNull ChatColor color,
+        @NotNull Messages messageID,
+        @NotNull String @NotNull... args
+    ) {
+        if (player == null) {
+            sendMessage(player, color, messageID, 0, args);
+            return;
+        }
+
+        if (allowErrorMessage(player.getUniqueId(), messageID.name(), System.currentTimeMillis())) {
+            sendMessage(player, color, messageID, 0, args);
+        }
+    }
+
     // sends a rate-limited error message to a player with delay (max once per 10
     // seconds)
     public static void sendRateLimitedErrorMessage(
@@ -4628,15 +4654,7 @@ public class GriefPrevention extends JavaPlugin {
             return;
         }
 
-        UUID playerId = player.getUniqueId();
-        long currentTime = System.currentTimeMillis();
-        Long lastMessageTime = lastErrorMessageTime.get(playerId);
-
-        // Check if enough time has passed since the last error message
-        if (lastMessageTime == null || currentTime - lastMessageTime >= ERROR_MESSAGE_COOLDOWN_MS) {
-            // Update the last message time
-            lastErrorMessageTime.put(playerId, currentTime);
-            // Send the message
+        if (allowErrorMessage(player.getUniqueId(), messageID.name(), System.currentTimeMillis())) {
             sendMessage(player, TextMode.Err, messageID, delayInTicks, args);
         }
         // If not enough time has passed, silently ignore the message
@@ -4661,18 +4679,47 @@ public class GriefPrevention extends JavaPlugin {
             return;
         }
 
-        UUID playerId = player.getUniqueId();
-        long currentTime = System.currentTimeMillis();
-        Long lastMessageTime = lastErrorMessageTime.get(playerId);
-
-        // Check if enough time has passed since the last error message
-        if (lastMessageTime == null || currentTime - lastMessageTime >= ERROR_MESSAGE_COOLDOWN_MS) {
-            // Update the last message time
-            lastErrorMessageTime.put(playerId, currentTime);
-            // Send the message
+        if (allowErrorMessage(player.getUniqueId(), message, System.currentTimeMillis())) {
             sendMessage(player, TextMode.Err, message, delayInTicks);
         }
         // If not enough time has passed, silently ignore the message
+    }
+
+    /**
+     * Claim this player's cooldown slot for a message, if its 10 second window has lapsed.
+     *
+     * @param playerId the player being messaged
+     * @param key      identifies the message: its {@link Messages} name, or the text itself when
+     *                 the caller only has a resolved string
+     * @param now      the current time in milliseconds
+     * @return true if the message should be sent
+     */
+    static boolean allowErrorMessage(@NotNull UUID playerId, @NotNull String key, long now) {
+        ConcurrentHashMap<String, Long> sentTimes = lastErrorMessageTime.computeIfAbsent(
+            playerId,
+            id -> new ConcurrentHashMap<>()
+        );
+
+        // Forget lapsed entries so messages that vary by argument - owner names, sizes - cannot
+        // accumulate for the length of a session.
+        sentTimes.values().removeIf(sentTime -> now - sentTime >= ERROR_MESSAGE_COOLDOWN_MS);
+
+        return sentTimes.putIfAbsent(key, now) == null;
+    }
+
+    /**
+     * How many message cooldowns are currently held for a player. For tests.
+     */
+    static int errorMessageCooldownCount(@NotNull UUID playerId) {
+        ConcurrentHashMap<String, Long> sentTimes = lastErrorMessageTime.get(playerId);
+        return sentTimes == null ? 0 : sentTimes.size();
+    }
+
+    /**
+     * Forget a player's error message cooldowns. Called when they disconnect.
+     */
+    static void clearErrorMessageCooldowns(@NotNull UUID playerId) {
+        lastErrorMessageTime.remove(playerId);
     }
 
     public static final String MAX_CLAIMS_PERMISSION_PREFIX = "griefprevention.maxclaims.";
