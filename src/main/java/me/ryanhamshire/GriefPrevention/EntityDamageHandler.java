@@ -1068,11 +1068,14 @@ public class EntityDamageHandler implements Listener {
                 message += "  " + dataStore.getMessage(Messages.IgnoreClaimsAdvertisement);
             return message;
         };
-        Supplier<String> noContainersReason = claim.checkPermission(attacker, ClaimPermission.Container, event, override);
-        if (noContainersReason != null) {
+        // Breaking a vehicle destroys it, so it takes build trust rather than the container trust
+        // that opening a chest minecart takes. Otherwise a claim that grants container trust to
+        // everyone - a public shop or loot warp - lets any visitor break its carts and boats.
+        Supplier<String> noBuildReason = claim.checkPermission(attacker, ClaimPermission.Build, event, override);
+        if (noBuildReason != null) {
             event.setCancelled(true);
             preventInfiniteBounce(arrow, event.getVehicle());
-            GriefPrevention.sendRateLimitedErrorMessage(attacker, noContainersReason.get());
+            GriefPrevention.sendRateLimitedErrorMessage(attacker, noBuildReason.get());
         }
 
         // cache claim for later
