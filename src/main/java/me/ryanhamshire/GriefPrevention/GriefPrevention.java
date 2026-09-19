@@ -85,6 +85,7 @@ import me.ryanhamshire.GriefPrevention.compat.LegacyRightClickAirHandler;
 import me.ryanhamshire.GriefPrevention.events.SaveTrappedPlayerEvent;
 import me.ryanhamshire.GriefPrevention.events.TrustChangedEvent;
 import me.ryanhamshire.GriefPrevention.integration.DiscordSRVSoftMuteBridge;
+import me.ryanhamshire.GriefPrevention.integration.PlaceholderAPICompat;
 import me.ryanhamshire.GriefPrevention.integration.PlaceholderAPIExpansion;
 import me.ryanhamshire.GriefPrevention.util.SchedulerUtil;
 import me.ryanhamshire.GriefPrevention.util.TaskHandle;
@@ -4535,6 +4536,10 @@ public class GriefPrevention extends JavaPlugin {
     }
 
     public static void sendMessage(@Nullable CommandSender sender, @NotNull TextMode mode, @Nullable String message) {
+        if (sender instanceof Player)
+        {
+            message = PlaceholderAPICompat.parse((Player) sender, message);
+        }
         if (!hasVisibleMessageContent(message)) return;
 
         if (sender == null) {
@@ -6541,6 +6546,9 @@ public class GriefPrevention extends JavaPlugin {
     }
 
     public static void sendMessage(Player player, ChatColor color, String message) {
+        if (player != null) {
+            message = PlaceholderAPICompat.parse(player, message);
+        }
         if (!hasVisibleMessageContent(message)) return;
         if (player != null) {
             player.sendMessage(color + message);

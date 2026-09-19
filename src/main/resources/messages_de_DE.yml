@@ -12,6 +12,7 @@
 #
 # Format: Verwende $ oder & für Farbcodes.
 # Zeilenumbrüche: Verwende \n in Nachrichten.
+# PlaceholderAPI Platzhalter: %vault_eco_balance_fixed%, %player_name% alle funktionieren.
 # ============================================================
 
 Messages:

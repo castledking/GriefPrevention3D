@@ -29,6 +29,7 @@ import com.griefprevention.geometry.OrthogonalPoint2i;
 import com.griefprevention.geometry.OrthogonalPolygon;
 import com.griefprevention.visualization.BoundaryVisualization;
 import com.griefprevention.visualization.VisualizationType;
+import me.ryanhamshire.GriefPrevention.integration.PlaceholderAPICompat;
 import me.ryanhamshire.GriefPrevention.util.SchedulerUtil;
 import me.ryanhamshire.GriefPrevention.util.TaskHandle;
 import me.ryanhamshire.GriefPrevention.events.ClaimCreatedEvent;
@@ -3425,6 +3426,11 @@ public abstract class DataStore {
         {
             String param = args[i];
             message = message.replace("{" + i + "}", param);
+        }
+
+        if (player != null)
+        {
+            message = PlaceholderAPICompat.parse(player, message);
         }
 
         return message;

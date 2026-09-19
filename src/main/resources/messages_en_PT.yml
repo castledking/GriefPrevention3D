@@ -13,6 +13,7 @@
 #
 # Format: Use $ or & for color codes, like treasure markers.
 # Line breaks: Use \n in messages, just like a new tack.
+# PlaceholderAPI Placeholders: %vault_eco_balance_fixed%, %player_name% all work, matey.
 # ============================================================
 
 Messages:

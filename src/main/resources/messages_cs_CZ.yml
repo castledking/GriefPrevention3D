@@ -12,6 +12,7 @@
 #
 # Formátování: použij $ nebo & pro barevné kódy.
 # Nové řádky: použij \n ve zprávách.
+# Placeholdery PlaceholderAPI: %vault_eco_balance_fixed%, %player_name% vše funguje.
 # ============================================================
 
 Messages:

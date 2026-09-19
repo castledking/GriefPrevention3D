@@ -13,6 +13,7 @@
 #
 # Biçim: Renk kodları için $ veya & kullanın.
 # Satır sonları: Mesajlarda \n kullanın.
+# PlaceholderAPI yer tutucuları: %vault_eco_balance_fixed%, %player_name% hepsi çalışır.
 # ============================================================
 
 Messages:

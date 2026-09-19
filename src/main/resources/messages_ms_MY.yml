@@ -12,6 +12,7 @@
 #
 # Format: guna $ atau & untuk kod warna.
 # Baris baharu: guna \n dalam mesej.
+# Pemegang tempat PlaceholderAPI: %vault_eco_balance_fixed%, %player_name% semuanya berfungsi.
 # ============================================================
 
 Messages:

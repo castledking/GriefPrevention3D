@@ -12,6 +12,7 @@
 #
 # Format : utilisez $ ou & pour les codes couleur.
 # Sauts de ligne : utilisez \n dans les messages.
+# Placeholders PlaceholderAPI : %vault_eco_balance_fixed%, %player_name% fonctionnent tous.
 # ============================================================
 
 Messages:
