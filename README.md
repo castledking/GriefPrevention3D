@@ -65,7 +65,7 @@ Stop _responding_ to grief and prevent it instead. GriefPrevention stops grief b
   ```
   VisualizationGlow: false
   ```
-  Set to **true** to enable glowing claim boundary visualization. (Requires 1.19.3+)
+  Set to **true** to enable glowing claim boundary visualization. (Requires 1.19.4+)
 ####
 - **Unified Command Handler**
   In **GriefPreventionData/alias.yml**:

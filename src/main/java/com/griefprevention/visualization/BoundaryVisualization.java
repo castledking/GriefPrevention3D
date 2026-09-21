@@ -584,7 +584,7 @@ public abstract class BoundaryVisualization
             }
             catch (Exception exception)
             {
-                if (event.getProvider() == BoundaryVisualizationEvent.DEFAULT_PROVIDER)
+                if (BoundaryVisualizationEvent.isDefaultProvider(event.getProvider()))
                 {
                     // If the provider is our own, log normally.
                     GriefPrevention.instance.getLogger().log(Level.WARNING, "Exception visualizing claim", exception);
@@ -605,7 +605,8 @@ public abstract class BoundaryVisualization
                         exception);
 
                 // Fall through to default provider.
-                BoundaryVisualization fallback = BoundaryVisualizationEvent.DEFAULT_PROVIDER
+                BoundaryVisualization fallback = BoundaryVisualizationEvent
+                        .defaultProviderFor(event.getPlayer())
                         .create(event.getPlayer().getWorld(), event.getCenter(), event.getHeight());
                 event.getBoundaries().stream().filter(Objects::nonNull).forEach(fallback.elements::add);
                 fallback.apply(event.getPlayer(), playerData);

@@ -1,5 +1,6 @@
 package com.griefprevention.events;
 
+import com.griefprevention.compat.ClientVersionCompat;
 import com.griefprevention.util.IntVector;
 import com.griefprevention.visualization.Boundary;
 import com.griefprevention.visualization.BoundaryVisualization;
@@ -15,7 +16,9 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.player.PlayerEvent;
 import org.bukkit.util.BoundingBox;
+import org.bukkit.World;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Collection;
 import java.util.HashSet;
@@ -46,43 +49,88 @@ public class BoundaryVisualizationEvent extends PlayerEvent
         }
     }
 
-    public static final VisualizationProvider DEFAULT_PROVIDER = (world, visualizeFrom, height) -> {
-        // 1.8.8 fallback: use NMS packet-based visualization since BlockData doesn't exist.
-        // Ignores all config options (glow, anticheat) since those APIs do not exist on 1.8.8.
-        if (!hasBlockData()) {
-            return new LegacyFakeBlockVisualization(world, visualizeFrom, height);
+    /**
+     * The default provider, which picks a visualization from the server's configuration alone.
+     *
+     * @see #defaultProviderFor(Player) for one that also respects the viewer's client version
+     */
+    public static final VisualizationProvider DEFAULT_PROVIDER = new DefaultProvider(null);
+
+    /**
+     * Get the default provider for a particular viewer.
+     *
+     * @param player the {@link Player} receiving visuals, or null to consider only the configuration
+     * @return the provider
+     */
+    public static @NotNull VisualizationProvider defaultProviderFor(@Nullable Player player) {
+        return new DefaultProvider(player);
+    }
+
+    /**
+     * Whether a provider is GriefPrevention's own, rather than one supplied by another plugin.
+     *
+     * @param provider the provider
+     * @return true if the provider is GriefPrevention's
+     */
+    public static boolean isDefaultProvider(@Nullable VisualizationProvider provider) {
+        return provider instanceof DefaultProvider;
+    }
+
+    private static final class DefaultProvider implements VisualizationProvider {
+
+        private final @Nullable Player player;
+
+        private DefaultProvider(@Nullable Player player) {
+            this.player = player;
         }
 
-        // Glow requires BlockDisplay entities (1.19.3+). On older versions (1.13-1.19.2),
-        // fall through to non-glow visualizations even if config_visualizationGlow is true.
-        boolean anticheatEnabled = GriefPrevention.instance.config_visualizationAntiCheatCompat;
-        boolean glowEnabled = GriefPrevention.instance.config_visualizationGlow && hasBlockDisplay();
+        @Override
+        public @NotNull BoundaryVisualization create(
+                @NotNull World world,
+                @NotNull IntVector visualizeFrom,
+                int height) {
+            // 1.8.8 fallback: use NMS packet-based visualization since BlockData doesn't exist.
+            // Ignores all config options (glow, anticheat) since those APIs do not exist on 1.8.8.
+            if (!hasBlockData()) {
+                return new LegacyFakeBlockVisualization(world, visualizeFrom, height);
+            }
 
-        // If both AntiCheat compatibility and glow are enabled, create a custom visualization that combines both
-        if (anticheatEnabled && glowEnabled) {
-            return new GlowingVisualization(world, visualizeFrom, height) {
-                @Override
-                protected boolean isTransparent(@NotNull Block block) {
-                    if (isPathBlock(block.getType())) {
-                        return false;
+            // Glow requires BlockDisplay entities (1.19.4+) on both the server and the viewer's
+            // client - a server running ViaVersion may be showing this claim to an older client,
+            // which renders the displays as blocks nudged out of alignment. On older versions
+            // (1.13-1.19.3), fall through to non-glow visualizations even if config_visualizationGlow
+            // is true.
+            boolean anticheatEnabled = GriefPrevention.instance.config_visualizationAntiCheatCompat;
+            boolean glowEnabled = GriefPrevention.instance.config_visualizationGlow
+                    && hasBlockDisplay()
+                    && ClientVersionCompat.supportsBlockDisplay(player);
+
+            // If both AntiCheat compatibility and glow are enabled, create a custom visualization that combines both
+            if (anticheatEnabled && glowEnabled) {
+                return new GlowingVisualization(world, visualizeFrom, height) {
+                    @Override
+                    protected boolean isTransparent(@NotNull Block block) {
+                        if (isPathBlock(block.getType())) {
+                            return false;
+                        }
+
+                        // Use AntiCheat's transparency check
+                        return CompatUtil.hasPartialCollision(block);
                     }
-
-                    // Use AntiCheat's transparency check
-                    return CompatUtil.hasPartialCollision(block);
-                }
-            };
+                };
+            }
+            // If only AntiCheat compatibility is enabled
+            if (anticheatEnabled) {
+                return new AntiCheatCompatVisualization(world, visualizeFrom, height);
+            }
+            // If only glow is enabled
+            if (glowEnabled) {
+                return new GlowingVisualization(world, visualizeFrom, height);
+            }
+            // Default to FakeBlockVisualization (or AntiCheat/legacy variants selected above)
+            return new FakeBlockVisualization(world, visualizeFrom, height);
         }
-        // If only AntiCheat compatibility is enabled
-        if (anticheatEnabled) {
-            return new AntiCheatCompatVisualization(world, visualizeFrom, height);
-        }
-        // If only glow is enabled
-        if (glowEnabled) {
-            return new GlowingVisualization(world, visualizeFrom, height);
-        }
-        // Default to FakeBlockVisualization (or AntiCheat/legacy variants selected above)
-        return new FakeBlockVisualization(world, visualizeFrom, height);
-    };
+    }
 
     private final @NotNull Collection<Boundary> boundaries;
     private final int height;
@@ -101,7 +149,7 @@ public class BoundaryVisualizationEvent extends PlayerEvent
             @NotNull Collection<Boundary> boundaries,
             int height
     ) {
-        this(player, boundaries, height, DEFAULT_PROVIDER);
+        this(player, boundaries, height, defaultProviderFor(player));
     }
 
     /**
