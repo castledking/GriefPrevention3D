@@ -2408,7 +2408,19 @@ public class GriefPrevention extends JavaPlugin {
                 Predicate<String> isDeniedAccessor = id -> claim.isPermissionDenied(id, ClaimPermission.Access);
                 Predicate<String> isDeniedManager = id -> claim.isPermissionDenied(id, ClaimPermission.Manage);
 
+                // A denied level only blocks that level; lower levels it implies still inherit,
+                // so demote denied entries instead of dropping them.
+                for (String id : inheritedBuilders)
+                {
+                    if (!isDeniedBuilder.test(id)) continue;
+                    if (!isDeniedContainer.test(id)) inheritedContainers.add(id);
+                    else if (!isDeniedAccessor.test(id)) inheritedAccessors.add(id);
+                }
                 inheritedBuilders.removeIf(isDeniedBuilder);
+                for (String id : new ArrayList<>(inheritedContainers))
+                {
+                    if (isDeniedContainer.test(id) && !isDeniedAccessor.test(id)) inheritedAccessors.add(id);
+                }
                 inheritedContainers.removeIf(isDeniedContainer);
                 inheritedAccessors.removeIf(isDeniedAccessor);
                 inheritedManagers.removeIf(isDeniedManager);
