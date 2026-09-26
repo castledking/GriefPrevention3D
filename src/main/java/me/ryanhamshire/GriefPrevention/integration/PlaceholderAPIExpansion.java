@@ -63,7 +63,7 @@ public class PlaceholderAPIExpansion extends PlaceholderExpansion
             case "in_3d_subdivision":
                 return claim != null && claim.parent != null && claim.is3D() ? "true" : "false";
             case "is_trusted":
-                return claim != null && claim.checkPermission(player, ClaimPermission.Access, null) == null
+                return claim != null && claim.hasDefaultPermission(player, ClaimPermission.Access)
                         ? "true"
                         : "false";
             case "trust_level":
@@ -85,22 +85,22 @@ public class PlaceholderAPIExpansion extends PlaceholderExpansion
             return plugin.dataStore.getMessage(Messages.PlaceholderTrustLevelOwner);
         }
 
-        if (claim.checkPermission(player, ClaimPermission.Manage, null) == null)
+        if (claim.hasDefaultPermission(player, ClaimPermission.Manage))
         {
             return plugin.dataStore.getMessage(Messages.PlaceholderTrustLevelManager);
         }
 
-        if (claim.checkPermission(player, ClaimPermission.Build, null) == null)
+        if (claim.hasDefaultPermission(player, ClaimPermission.Build))
         {
             return plugin.dataStore.getMessage(Messages.PlaceholderTrustLevelBuilder);
         }
 
-        if (claim.checkPermission(player, ClaimPermission.Container, null) == null)
+        if (claim.hasDefaultPermission(player, ClaimPermission.Container))
         {
             return plugin.dataStore.getMessage(Messages.PlaceholderTrustLevelContainer);
         }
 
-        if (claim.checkPermission(player, ClaimPermission.Access, null) == null)
+        if (claim.hasDefaultPermission(player, ClaimPermission.Access))
         {
             return plugin.dataStore.getMessage(Messages.PlaceholderTrustLevelAccess);
         }

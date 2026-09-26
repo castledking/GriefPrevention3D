@@ -891,6 +891,21 @@ public class Claim
     }
 
     /**
+     * Check whether a Player has a certain level of trust without firing a
+     * {@link ClaimPermissionCheckEvent}, so it is safe to call off the main thread
+     * (e.g. from PlaceholderAPI requests). Listeners that modify the result are not consulted.
+     *
+     * @param player the Player being checked for permissions
+     * @param permission the ClaimPermission level required
+     * @return true if the default rules grant the permission
+     */
+    public boolean hasDefaultPermission(@NotNull Player player, @NotNull ClaimPermission permission)
+    {
+        if (this.isWilderness()) return !isPermissionDenied(player.getUniqueId().toString(), permission);
+        return getDefaultDenial(player, player.getUniqueId(), permission, null) == null;
+    }
+
+    /**
      * Checks if this claim represents a wilderness (unclaimed) area.
      * @return true if this is a wilderness claim, false otherwise
      */
