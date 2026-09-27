@@ -81,11 +81,10 @@ fun adapterPackages(adapter: UniversalAdapter): Pair<String, List<String>> {
     return adapter.rootPath to nested
 }
 
-// Releases ship the universal jar as GriefPrevention3D.jar, so the local build does too; the
-// Bukkit-only jar it is assembled from gets a name nobody will mistake for it.
-val bukkitJar = tasks.named<Jar>("jar") {
-    archiveBaseName.set("${project.name}-Bukkit")
-}
+// The root jar task keeps the GriefPrevention3D.jar name and stays Bukkit-only. The universal jar
+// is named apart from it, so the release build can name the artifact it ships without a
+// filesystem search that could pick either one.
+val bukkitJar = tasks.named<Jar>("jar")
 val bootstrapJar = project(":fabric-bootstrap").tasks.named<Jar>("jar")
 val fabric1211RemapJar = project(":fabric-1.21.11").tasks.named<AbstractArchiveTask>("remapJar")
 val fabric26AdapterJar = project(":fabric-26.1").tasks.named<AbstractArchiveTask>("universalAdapterJar")
@@ -136,8 +135,8 @@ val universalJar = tasks.register<Jar>("universalJar") {
     description = "Assembles one Bukkit and Fabric distribution jar covering every supported release."
     dependsOn(bukkitJar, bootstrapJar, fabric1211RemapJar, fabric26AdapterJar, generateUniversalFabricMetadata)
 
-    archiveBaseName.set(project.name)
-    archiveVersion.set("")
+    archiveBaseName.set("${project.name}-Universal")
+    archiveVersion.set(projectVersion)
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     isPreserveFileTimestamps = false
     isReproducibleFileOrder = true

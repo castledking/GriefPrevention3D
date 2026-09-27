@@ -38,12 +38,13 @@ both names under `@Pseudo`, with `@Group` requiring that exactly one alternative
 ## Building and verifying
 
 ```bash
-./gradlew universalJar            # build/libs/GriefPrevention3D.jar, for plugins/ and mods/ alike
+./gradlew universalJar            # build/libs/GriefPrevention3D-Universal-<version>.jar, for plugins/ and mods/ alike
 ./gradlew checkUniversal          # everything below
 ```
 
-`build/libs/GriefPrevention3D-Bukkit.jar` is only the Bukkit input the universal jar is assembled
-from; Fabric reports it as a "non-fabric mod" and ignores it.
+`build/libs/GriefPrevention3D.jar` is only the Bukkit input the universal jar is assembled
+from; Fabric reports it as a "non-fabric mod" and ignores it. A release renames the universal jar
+to `GriefPrevention3D.jar` when it publishes it.
 
 - `checkUniversalJar` — metadata, adapter index, mixin configs, bytecode levels, byte-identical Bukkit
   and adapter inputs, that each adapter only names Minecraft classes in its own namespace, and that the
