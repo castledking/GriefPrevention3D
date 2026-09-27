@@ -38,19 +38,47 @@ public final class PlayerDataDocumentCodec
     public @NotNull String replaceAccruedClaimBlocks(@NotNull String input, int accruedClaimBlocks)
             throws PlayerDataFormatException
     {
+        return replaceLine(input, 1, accruedClaimBlocks, "accrued-block");
+    }
+
+    /**
+     * Replaces only the bonus-block line, preserving everything else the same way
+     * {@link #replaceAccruedClaimBlocks} does.
+     */
+    public @NotNull String replaceBonusClaimBlocks(@NotNull String input, int bonusClaimBlocks)
+            throws PlayerDataFormatException
+    {
+        return replaceLine(input, 2, bonusClaimBlocks, "bonus-block");
+    }
+
+    private @NotNull String replaceLine(
+            @NotNull String input,
+            int lineIndex,
+            int value,
+            @NotNull String description)
+            throws PlayerDataFormatException
+    {
         decode(input);
 
-        int firstSeparator = lineSeparatorStart(input, 0);
-        int accruedStart = lineSeparatorEnd(input, firstSeparator);
-        int accruedEnd = lineSeparatorStart(input, accruedStart);
-        if (firstSeparator < 0 || accruedStart < 0 || accruedEnd < 0)
+        int lineStart = 0;
+        for (int i = 0; i < lineIndex; i++)
         {
-            throw new PlayerDataFormatException("Player data is missing the accrued-block line.");
+            lineStart = lineSeparatorEnd(input, lineSeparatorStart(input, lineStart));
+            if (lineStart < 0)
+            {
+                throw new PlayerDataFormatException("Player data is missing the " + description + " line.");
+            }
+        }
+        int lineEnd = lineSeparatorStart(input, lineStart);
+        if (lineEnd < 0)
+        {
+            // The last line need not end with a separator.
+            lineEnd = input.length();
         }
 
-        return input.substring(0, accruedStart)
-                + accruedClaimBlocks
-                + input.substring(accruedEnd);
+        return input.substring(0, lineStart)
+                + value
+                + input.substring(lineEnd);
     }
 
     private static int integer(@NotNull String input, @NotNull String field)

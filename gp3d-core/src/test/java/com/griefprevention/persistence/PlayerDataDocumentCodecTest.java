@@ -45,6 +45,31 @@ class PlayerDataDocumentCodecTest
     }
 
     @Test
+    void replacesOnlyBonusBlocksInALegacyOrAddonExtendedRecord() throws Exception
+    {
+        String input = "2014.01.02.03.04.05\r\n88\r\n12\r\nlegacy-claims\r\naddon-data\r\n";
+
+        assertEquals(
+                "2014.01.02.03.04.05\r\n88\r\n-40\r\nlegacy-claims\r\naddon-data\r\n",
+                this.codec.replaceBonusClaimBlocks(input, -40)
+        );
+    }
+
+    @Test
+    void replacesABonusLineThatEndsTheFile() throws Exception
+    {
+        assertEquals("\n88\n500", this.codec.replaceBonusClaimBlocks("\n88\n12", 500));
+        assertEquals("\n90\n12", this.codec.replaceAccruedClaimBlocks("\n88\n12", 90));
+    }
+
+    @Test
+    void refusesToReplaceLinesInAMalformedRecord()
+    {
+        assertThrows(PlayerDataFormatException.class, () -> this.codec.replaceBonusClaimBlocks("\n88\n", 5));
+        assertThrows(PlayerDataFormatException.class, () -> this.codec.replaceAccruedClaimBlocks("\nx\n1\n", 5));
+    }
+
+    @Test
     void rejectsIncompleteOrNonNumericBalances()
     {
         assertThrows(PlayerDataFormatException.class, () -> this.codec.decode("\n100\n"));

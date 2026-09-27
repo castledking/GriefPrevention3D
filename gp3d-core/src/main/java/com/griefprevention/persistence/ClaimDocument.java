@@ -28,6 +28,12 @@ import java.util.Set;
 @ApiStatus.Internal
 public final class ClaimDocument
 {
+    /**
+     * The field Paper writes when PvP was explicitly toggled on. A stored "PvP Enabled: false"
+     * already implies a toggle, so the marker only accompanies "on".
+     */
+    public static final String PVP_TOGGLE_SET_FIELD = "PvP Toggle Set";
+
     private final @NotNull ClaimSnapshot snapshot;
     private final @NotNull ClaimTrustSnapshot trust;
     private final @NotNull List<OrthogonalPoint2i> shapeCorners;
@@ -172,6 +178,15 @@ public final class ClaimDocument
         return this.alertsEnabled;
     }
 
+    /**
+     * @return whether PvP was explicitly toggled for this claim, which lets its own setting decide
+     *         when the /claimpvp feature is enabled
+     */
+    public boolean pvpToggled()
+    {
+        return !this.pvpEnabled || Boolean.TRUE.equals(this.extraFields.get(PVP_TOGGLE_SET_FIELD));
+    }
+
     public long modifiedDate()
     {
         return this.modifiedDate;
@@ -265,6 +280,38 @@ public final class ClaimDocument
                 this.modifiedDate,
                 this.storageKey,
                 this.extraFields
+        );
+    }
+
+    /**
+     * Returns a copy whose PvP setting was explicitly toggled, recording the toggle the way Paper
+     * does so both platforms read it back the same.
+     */
+    public @NotNull ClaimDocument withPvpToggle(boolean enabled)
+    {
+        Map<String, Object> extras = new LinkedHashMap<>(this.extraFields);
+        if (enabled)
+        {
+            extras.put(PVP_TOGGLE_SET_FIELD, true);
+        }
+        else
+        {
+            extras.remove(PVP_TOGGLE_SET_FIELD);
+        }
+        return new ClaimDocument(
+                this.snapshot,
+                this.trust,
+                this.shapeCorners,
+                this.inheritNothing,
+                this.inheritNothingForNewSubdivisions,
+                this.explosivesAllowed,
+                this.witherExplosionsAllowed,
+                this.allowAllNeighbors,
+                enabled,
+                this.alertsEnabled,
+                this.modifiedDate,
+                this.storageKey,
+                extras
         );
     }
 

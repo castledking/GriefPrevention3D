@@ -2,7 +2,7 @@ import java.util.zip.ZipFile
 
 plugins {
     `java-library`
-    id("com.gradleup.shadow") version "9.6.1"
+    id("com.gradleup.shadow")
 }
 
 group = rootProject.group

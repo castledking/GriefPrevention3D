@@ -46,7 +46,7 @@ public enum MessageKey
             "PvP cannot be toggled in this type of claim."),
     PVP_TOGGLE_USAGE(
             "PvpToggleUsage",
-            "Usage: /claimpvp [true|false|on|off] [confirm]"),
+            "Usage: /claim pvp [true|false|on|off] [confirm]"),
     PVP_TOGGLE_ALREADY_ENABLED(
             "PvpToggleAlreadyEnabled",
             "PvP is already enabled in this {0}."),
@@ -67,7 +67,7 @@ public enum MessageKey
             "Do you want to pay {0} to disable PvP in this {1}?"),
     CONFIRM_PVP_TOGGLE_INSTRUCTION(
             "ConfirmPvpToggleInstruction",
-            "Type /claimpvp {0} confirm to confirm."),
+            "Type /claim pvp {0} confirm or /claimpvpconfirm to confirm."),
     NO_PENDING_PVP_TOGGLE(
             "NoPendingPvpToggle",
             "No pending PvP toggle to confirm."),
@@ -76,10 +76,10 @@ public enum MessageKey
             "Your pending PvP toggle has expired. Please try again."),
     PVP_TOGGLE_ENABLED_WITH_FEE(
             "PvPToggleEnabledWithFee",
-            "PvP enabled in this {0}. Fee charged: {1}."),
+            "PvP enabled in this {0} for {1}."),
     PVP_TOGGLE_DISABLED_WITH_FEE(
             "PvPToggleDisabledWithFee",
-            "PvP disabled in this {0}. Fee charged: {1}."),
+            "PvP disabled in this {0} for {1}."),
     PVP_TOGGLE_ENABLED(
             "PvPToggleEnabled",
             "PvP enabled in this {0}."),
@@ -94,7 +94,98 @@ public enum MessageKey
             "subdivision"),
     NO_PERMISSION_FOR_COMMAND(
             "NoPermissionForCommand",
-            "You don't have permission to use this command.");
+            "You don't have permission to do that."),
+    COMMAND_REQUIRES_PLAYER("CommandRequiresPlayer", "This command can only be used by players."),
+    COMMAND_NOT_FOUND("CommandNotFound", "Unknown subcommand: {0}"),
+    PLAYER_NOT_FOUND_2("PlayerNotFound2", "No player by that name has logged in recently."),
+    INVALID_PERMISSION_ID("InvalidPermissionID", "Please specify a player name, or a permission in [brackets]."),
+    GRANT_PERMISSION_CONFIRMATION("GrantPermissionConfirmation", "Granted {0} permission to {1} {2}."),
+    COLLECTIVE_PUBLIC("CollectivePublic", "the public"),
+    BUILD_PERMISSION("BuildPermission", "build"),
+    CONTAINERS_PERMISSION("ContainersPermission", "access containers and animals"),
+    ACCESS_PERMISSION("AccessPermission", "use buttons and levers"),
+    MANAGE_PERMISSION("ManagePermission", "manage permissions"),
+    LOCATION_CURRENT_CLAIM("LocationCurrentClaim", "in this claim"),
+    LOCATION_ALL_CLAIMS("LocationAllClaims", "in all your claims"),
+    UNTRUST_INDIVIDUAL_ALL_CLAIMS(
+            "UntrustIndividualAllClaims",
+            "Revoked {0}'s access to ALL your claims.  To set permissions for a single claim, stand inside it."),
+    UNTRUST_EVERYONE_ALL_CLAIMS(
+            "UntrustEveryoneAllClaims",
+            "Cleared permissions in ALL your claims.  To set permissions for a single claim, stand inside it."),
+    CLEAR_PERMS_OWNER_ONLY("ClearPermsOwnerOnly", "Only the claim owner can clear all permissions."),
+    UNTRUST_ALL_OWNER_ONLY("UntrustAllOwnerOnly", "Only the claim owner can clear all its permissions."),
+    CLEAR_PERMISSIONS_ONE_CLAIM(
+            "ClearPermissionsOneClaim",
+            "Cleared permissions in this claim.  To set permission for ALL your claims, stand outside them."),
+    MANAGERS_DONT_UNTRUST_MANAGERS("ManagersDontUntrustManagers", "Only the claim owner can demote a manager."),
+    UNTRUST_INDIVIDUAL_SINGLE_CLAIM(
+            "UntrustIndividualSingleClaim",
+            "Revoked {0}'s access to this claim.  To set permissions for a ALL your claims, stand outside them."),
+    TRUST_LIST_NO_CLAIM("TrustListNoClaim", "Stand inside the claim you're curious about."),
+    TRUST_LIST_HEADER("TrustListHeader", "Explicit permissions here:"),
+    MANAGE("Manage", "Manage"),
+    BUILD("Build", "Build"),
+    CONTAINERS("Containers", "Containers"),
+    ACCESS("Access", "Access"),
+    NEIGHBOR("Neighbor", "Neighbor"),
+    HAS_SUBCLAIM_RESTRICTION("HasSubclaimRestriction", "This subclaim does not inherit permissions from the parent"),
+    START_BLOCK_MATH("StartBlockMath", "{0} blocks from play + {1} bonus = {2} total."),
+    CLAIMS_LIST_HEADER("ClaimsListHeader", "Claims:"),
+    CONTINUE_BLOCK_MATH("ContinueBlockMath", " (-{0} blocks)"),
+    END_BLOCK_MATH("EndBlockMath", " = {0} blocks left to spend"),
+    CLAIMS_LIST_NO_PERMISSION(
+            "ClaimsListNoPermission",
+            "You don't have permission to get information about another player's land claims."),
+    SUCCESSFUL_ABANDON("SuccessfulAbandon", "Claims abandoned.  You now have {0} available claim blocks."),
+    DELETE_TOP_LEVEL_CLAIM(
+            "DeleteTopLevelClaim",
+            "To delete a subdivision, stand inside it.  Otherwise, use /abandontoplevelclaim to delete this claim and all subdivisions."),
+    CONFIRM_ABANDON_ALL_CLAIMS(
+            "ConfirmAbandonAllClaims",
+            "Are you sure you want to abandon ALL of your claims?  Please confirm with /abandonallclaims confirm"),
+    YOU_HAVE_NO_CLAIMS("YouHaveNoClaims", "You don't have any land claims."),
+    ADJUST_BLOCKS_SUCCESS(
+            "AdjustBlocksSuccess",
+            "Adjusted {0}'s bonus claim blocks by {1}.  New total bonus blocks: {2}."),
+    ADJUST_BLOCKS_ALL_SUCCESS("AdjustBlocksAllSuccess", "Adjusted all online players' bonus claim blocks by {0}."),
+    ADJUST_GROUP_BLOCKS_SUCCESS(
+            "AdjustGroupBlocksSuccess",
+            "Adjusted bonus claim blocks for players with the {0} permission by {1}.  New total: {2}."),
+    SET_CLAIM_BLOCKS_SUCCESS("SetClaimBlocksSuccess", "Updated accrued claim blocks."),
+    ADMIN_CLAIMS_MODE(
+            "AdminClaimsMode",
+            "Administrative claims mode active.  Any claims created will be free and editable by other administrators."),
+    BASIC_CLAIMS_MODE("BasicClaimsMode", "Returned to basic claim creation mode."),
+    PLAYER_OFFLINE_TIME("PlayerOfflineTime", "  Last login: {0} days ago."),
+    MINIMUM_RADIUS("MinimumRadius", "Minimum radius is {0}."),
+    BLOCK_NOT_CLAIMED("BlockNotClaimed", "No one has claimed this block."),
+    BLOCK_CLAIMED("BlockClaimed", "That block has been claimed by {0}."),
+    SHOW_NEARBY_CLAIMS("ShowNearbyClaims", "Found {0} land claims."),
+    TOO_FAR_AWAY("TooFarAway", "That's too far away."),
+    CLAIMS_DISABLED_WORLD("ClaimsDisabledWorld", "Land claims are disabled in this world."),
+    NO_CREATE_CLAIM_PERMISSION("NoCreateClaimPermission", "You don't have permission to claim land."),
+    CLAIM_START(
+            "ClaimStart",
+            "Claim corner set!  Use the shovel again at the opposite corner to claim a rectangle of land.  To cancel, put your shovel away."),
+    CREATE_CLAIM_SUCCESS("CreateClaimSuccess", "Claim created!  Use /trust to share it with friends."),
+    CREATE_CLAIM_FAIL_OVERLAP(
+            "CreateClaimFailOverlap",
+            "You can't create a claim here because it would overlap your other claim.  Use /abandonclaim to delete it, or use your shovel at a corner to resize it."),
+    CREATE_CLAIM_FAIL_OVERLAP_OTHER_PLAYER(
+            "CreateClaimFailOverlapOtherPlayer",
+            "You can't create a claim here because it would overlap {0}'s claim."),
+    RESIZE_START("ResizeStart", "Resizing claim.  Use your shovel again at the new location for this corner."),
+    CLAIM_RESIZE_SUCCESS("ClaimResizeSuccess", "Claim resized.  {0} available claim blocks remaining."),
+    RESIZE_CLAIM_INSUFFICIENT_AREA(
+            "ResizeClaimInsufficientArea",
+            "This claim would be too small.  Any claim must use at least {0} total claim blocks."),
+    REMAINING_BLOCKS("RemainingBlocks", "You may claim up to {0} more blocks."),
+    ABANDON_SUCCESS("AbandonSuccess", "Claim abandoned.  You now have {0} available claim blocks."),
+    NO_DAMAGE_CLAIMED_ENTITY("NoDamageClaimedEntity", "That belongs to {0}."),
+    CANT_FIGHT_WHILE_IMMUNE("CantFightWhileImmune", "You can't fight someone while you're protected from PvP."),
+    PLAYER_IN_PVP_SAFE_ZONE("PlayerInPvPSafeZone", "That player is in a PvP safe zone."),
+    NO_PISTONS_OUTSIDE_CLAIMS("NoPistonsOutsideClaims", "Warning: Pistons won't move blocks outside land claims.");
 
     private final String key;
     private final String defaultValue;

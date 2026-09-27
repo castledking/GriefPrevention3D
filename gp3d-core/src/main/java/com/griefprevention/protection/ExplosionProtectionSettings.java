@@ -18,7 +18,7 @@ public final class ExplosionProtectionSettings
         CREATIVE,
         DISABLED;
 
-        static @NotNull ClaimWorldMode parse(@NotNull String value)
+        public static @NotNull ClaimWorldMode parse(@NotNull String value)
         {
             return valueOf(value.trim().toUpperCase(Locale.ROOT));
         }

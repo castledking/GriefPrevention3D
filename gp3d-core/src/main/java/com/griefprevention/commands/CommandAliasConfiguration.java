@@ -62,8 +62,23 @@ public final class CommandAliasConfiguration {
     public static @NotNull CommandAliasConfiguration load(@NotNull Path file, @NotNull Logger logger) {
         Map<String, Object> userConfig = loadYaml(file, logger);
         Map<String, Object> defaultConfig = loadDefaultYaml();
-        Map<String, Object> merged = mergeConfigurations(defaultConfig, userConfig);
+        return build(mergeConfigurations(defaultConfig, userConfig), logger);
+    }
 
+    /**
+     * Returns the bundled defaults alone: the English command names used when a server turns the
+     * alias system off.
+     *
+     * @param logger logging consumer for warnings
+     * @return the default configuration
+     */
+    public static @NotNull CommandAliasConfiguration defaults(@NotNull Logger logger) {
+        return build(loadDefaultYaml(), logger);
+    }
+
+    private static @NotNull CommandAliasConfiguration build(
+            @NotNull Map<String, Object> merged,
+            @NotNull Logger logger) {
         boolean globalEnabled = getBoolean(merged, "enabled", true);
         boolean standaloneEnabled = getBoolean(merged, "standalone", true);
 

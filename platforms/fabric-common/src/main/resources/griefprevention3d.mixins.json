@@ -1,0 +1,23 @@
+{
+  "required": true,
+  "package": "com.griefprevention.fabric.mixin",
+  "plugin": "com.griefprevention.fabric.bootstrap.AdapterMixinGate",
+  "compatibilityLevel": "JAVA_8",
+  "mixins": [
+    "BlockDisplayAccessor",
+    "DispenserBlockMixin",
+    "DisplayAccessor",
+    "DropperBlockMixin",
+    "EndermanTakeBlockGoalMixin",
+    "EntityMixin",
+    "FarmlandTrampleMixin",
+    "FireBlockMixin",
+    "FlowingFluidMixin",
+    "LavaFluidMixin",
+    "PistonBaseBlockMixin",
+    "ServerExplosionMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
