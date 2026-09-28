@@ -26,6 +26,17 @@ Messages:
   PlayerNotFound2: Żaden gracz o tej nazwie nie logował się ostatnio.
   TransferTopLevel: Tylko tereny główne (nie podziały) mogą być przenoszone. Stań poza podziałem i spróbuj ponownie.
   TransferSuccess: Teren przeniesiony.
+  TransferClaimNotEnabled: "Przekazywanie terenów innym graczom jest wyłączone na tym serwerze."
+  TransferClaimNoClaim: "Nie ma tu terenu. Stań na terenie, który chcesz przekazać."
+  TransferClaimSelf: "Ten teren już należy do ciebie."
+  TransferClaimRecipientNeedsBlocks: "{0} nie ma wystarczająco bloków terenu na ten teren. Brakuje {1}."
+  TransferClaimRecipientAtLimit: "{0} ma już maksymalną dozwoloną liczbę terenów."
+  ConfirmTransferClaimNoFee: "Czy chcesz przekazać ten teren graczowi {0}?"
+  ConfirmTransferClaimWithFee: "Czy chcesz zapłacić {0}, aby przekazać ten teren graczowi {1}?"
+  ConfirmTransferClaimInstruction: "Wpisz /transferclaim {0} confirm, aby potwierdzić."
+  TransferClaimSuccess: "Przekazano teren graczowi {0}."
+  TransferClaimSuccessWithFee: "Przekazano teren graczowi {0} za {1}."
+  TransferClaimReceived: "{0} przekazał ci swój teren w {1}."
   ConvertClaimMissing: Nie ma tu żadnego terenu. Stań w terenie, który chcesz przekonwertować.
   ConvertClaimAlreadyAdmin: Ten teren jest już terenem administracyjnym.
   ConvertClaimAlreadyBasic: Ten teren jest już podstawowym terenem.

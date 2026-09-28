@@ -1527,8 +1527,8 @@ public class PlayerEventHandler implements Listener {
         Player player = event.getPlayer();
         Entity entity = event.getEntity();
 
-        // Only handle boats
-        if (!entity.getType().name().contains("BOAT")) {
+        // Only handle boats; leashing them is theft protection, like leashing claimed creatures.
+        if (!instance.config_claims_preventTheft || !entity.getType().name().contains("BOAT")) {
             return;
         }
 

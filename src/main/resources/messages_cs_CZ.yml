@@ -26,6 +26,17 @@ Messages:
   PlayerNotFound2: Žádný hráč s tímto jménem se v poslední době nepřihlásil.
   TransferTopLevel: Převést lze pouze claimy nejvyšší úrovně (ne subdivize). Stůj mimo subdivizi a zkus to znovu.
   TransferSuccess: Claim převeden.
+  TransferClaimNotEnabled: "Předávání claimů jiným hráčům není na tomto serveru povoleno."
+  TransferClaimNoClaim: "Tady není žádný claim. Stoupni si do claimu, který chceš předat."
+  TransferClaimSelf: "Tento claim už vlastníš."
+  TransferClaimRecipientNeedsBlocks: "{0} nemá dost bloků claimu na tento claim. Chybí {1}."
+  TransferClaimRecipientAtLimit: "{0} už má maximální povolený počet claimů."
+  ConfirmTransferClaimNoFee: "Chceš předat tento claim hráči {0}?"
+  ConfirmTransferClaimWithFee: "Chceš zaplatit {0} za předání tohoto claimu hráči {1}?"
+  ConfirmTransferClaimInstruction: "Napiš /transferclaim {0} confirm pro potvrzení."
+  TransferClaimSuccess: "Claim předán hráči {0}."
+  TransferClaimSuccessWithFee: "Claim předán hráči {0} za {1}."
+  TransferClaimReceived: "{0} ti předal svůj claim na {1}."
   ConvertClaimMissing: Zde není žádný claim. Stůj v claimu, který chceš převést.
   ConvertClaimAlreadyAdmin: Tento claim je již administrativní claim.
   ConvertClaimAlreadyBasic: Tento claim je již běžný claim.

@@ -26,6 +26,17 @@ Messages:
   PlayerNotFound2: Kein Spieler mit diesem Namen hat sich kürzlich eingeloggt.
   TransferTopLevel: Nur Hauptgebiete (keine Unterteilungen) können übertragen werden. Stehe außerhalb der Unterteilung und versuche es erneut.
   TransferSuccess: Gebiet übertragen.
+  TransferClaimNotEnabled: "Das Übertragen von Gebieten an andere Spieler ist auf diesem Server nicht aktiviert."
+  TransferClaimNoClaim: "Hier gibt es kein Gebiet. Stelle dich in das Gebiet, das du weitergeben möchtest."
+  TransferClaimSelf: "Dieses Gebiet gehört bereits dir."
+  TransferClaimRecipientNeedsBlocks: "{0} hat nicht genug Schutzblöcke für dieses Gebiet. Es fehlen {1}."
+  TransferClaimRecipientAtLimit: "{0} hat bereits so viele Gebiete, wie erlaubt sind."
+  ConfirmTransferClaimNoFee: "Möchtest du dieses Gebiet an {0} übertragen?"
+  ConfirmTransferClaimWithFee: "Möchtest du {0} bezahlen, um dieses Gebiet an {1} zu übertragen?"
+  ConfirmTransferClaimInstruction: "Gib /transferclaim {0} confirm ein, um zu bestätigen."
+  TransferClaimSuccess: "Gebiet an {0} übertragen."
+  TransferClaimSuccessWithFee: "Gebiet für {1} an {0} übertragen."
+  TransferClaimReceived: "{0} hat dir sein Gebiet bei {1} übertragen."
   ConvertClaimMissing: "Hier gibt es kein Gebiet. Stehe in dem Gebiet, das du konvertieren möchtest."
   ConvertClaimAlreadyAdmin: Dieses Gebiet ist bereits ein administratives Gebiet.
   ConvertClaimAlreadyBasic: Dieses Gebiet ist bereits ein Basisgebiet.

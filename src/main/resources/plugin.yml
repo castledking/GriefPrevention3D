@@ -219,8 +219,8 @@ commands:
     usage: /<command>
     permission: griefprevention.adminclaimslist
   transferclaim:
-    description: Converts an administrative claim to a private claim.
-    usage: /<command> <player>
+    description: Transfers a claim to another player.
+    usage: /<command> <player> [confirm]
     aliases: giveclaim
     permission: griefprevention.transferclaim
   makeadmin:
@@ -355,7 +355,7 @@ permissions:
       griefprevention.debug: true
       griefprevention.visualizenearbyclaims: true
       griefprevention.overrideclaimcountlimit: true
-      griefprevention.transferclaim: true
+      griefprevention.transferclaim.others: true
       griefprevention.claimslistother: true
       griefprevention.separate: true
       griefprevention.eavesdrop.signs: true
@@ -404,7 +404,13 @@ permissions:
     description: Grants permission to use /claimslist to get another player's information.
     default: op
   griefprevention.transferclaim:
-    description: Grants permission to use /transferclaim.
+    description: Grants permission to use /transferclaim to give away your own claims, when Claims.TransferClaim.Enabled is on.
+    default: true
+  griefprevention.transferclaim.free:
+    description: Allows giving away a claim without paying Claims.TransferClaim.Price.
+    default: false
+  griefprevention.transferclaim.others:
+    description: Grants permission to transfer any claim, including administrative ones, for free with /transferclaim.
     default: op
   griefprevention.ignoreclaims:
     description: Grants permission to use /ignoreclaims.
@@ -496,6 +502,7 @@ permissions:
       griefprevention.checkclaimexpiry: true
       griefprevention.shapedclaims: true
       griefprevention.mergeclaims: true
+      griefprevention.transferclaim: true
       griefprevention.3dsubdivideclaims: true
       griefprevention.shapedsubdivideclaims: true
       griefprevention.scrollresize: true
@@ -632,6 +639,9 @@ permissions:
   griefprevention.claimpvp:
     description: Grants permission to use /claimpvp to toggle PvP in a claim.
     default: true
+  griefprevention.claimpvp.free:
+    description: Allows toggling claim PvP without paying the Claims.PvPToggle price.
+    default: false
   griefprevention.buysellclaimblocks:
     description: Grants permission to buy and sell claim blocks.
     default: true

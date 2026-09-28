@@ -26,6 +26,17 @@ Messages:
   PlayerNotFound2: Aucun joueur avec ce nom ne s'est connecté récemment.
   TransferTopLevel: "Seuls les terrains principaux (pas les subdivisions) peuvent être transférés. Placez-vous en dehors de la subdivision et réessayez."
   TransferSuccess: Terrain transféré.
+  TransferClaimNotEnabled: "Le transfert de terrains à d'autres joueurs n'est pas activé sur ce serveur."
+  TransferClaimNoClaim: "Il n'y a pas de terrain ici. Placez-vous dans le terrain que vous voulez transférer."
+  TransferClaimSelf: "Ce terrain vous appartient déjà."
+  TransferClaimRecipientNeedsBlocks: "{0} n'a pas assez de blocs de protection pour ce terrain. Il lui en manque {1}."
+  TransferClaimRecipientAtLimit: "{0} possède déjà le nombre maximum de terrains autorisé."
+  ConfirmTransferClaimNoFee: "Voulez-vous transférer ce terrain à {0} ?"
+  ConfirmTransferClaimWithFee: "Voulez-vous payer {0} pour transférer ce terrain à {1} ?"
+  ConfirmTransferClaimInstruction: "Tapez /transferclaim {0} confirm pour confirmer."
+  TransferClaimSuccess: "Terrain transféré à {0}."
+  TransferClaimSuccessWithFee: "Terrain transféré à {0} pour {1}."
+  TransferClaimReceived: "{0} vous a transféré son terrain à {1}."
   ConvertClaimMissing: "Il n'y a aucun terrain ici. Placez-vous dans le terrain que vous voulez convertir."
   ConvertClaimAlreadyAdmin: Ce terrain est déjà un terrain administratif.
   ConvertClaimAlreadyBasic: Ce terrain est déjà un terrain basique.

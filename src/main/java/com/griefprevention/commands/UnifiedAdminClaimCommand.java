@@ -771,56 +771,7 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
             sender.sendMessage("This command can only be used by players.");
             return true;
         }
-        Player player = (Player) sender;
-        if (!GriefPrevention.checkCommandPermission(player, "griefprevention.transferclaim")) return true;
-
-        // which claim is the user in?
-        Claim claim = plugin.dataStore.getClaimAt(player.getLocation(), false, null);
-        if (claim == null) {
-            GriefPrevention.sendMessage(player, TextMode.Instr, Messages.TransferClaimMissing);
-            return true;
-        }
-
-        // check additional permission for admin claims
-        if (claim.isAdminClaim() && !player.hasPermission("griefprevention.adminclaims")) {
-            GriefPrevention.sendMessage(player, TextMode.Err, Messages.TransferClaimPermission);
-            return true;
-        }
-
-        java.util.UUID newOwnerID = null; // no argument = make an admin claim
-        String ownerName = "admin";
-
-        if (args.length > 0) {
-            OfflinePlayer targetPlayer = plugin.resolvePlayerByName(args[0]);
-            if (targetPlayer == null) {
-                GriefPrevention.sendMessage(player, TextMode.Err, Messages.PlayerNotFound2);
-                return true;
-            }
-            newOwnerID = targetPlayer.getUniqueId();
-            ownerName = targetPlayer.getName();
-        }
-
-        // change ownership
-        try {
-            plugin.changeClaimOwnerPublic(claim, newOwnerID);
-        } catch (NoTransferException e) {
-            GriefPrevention.sendMessage(player, TextMode.Instr, Messages.TransferTopLevel);
-            return true;
-        }
-
-        // confirm
-        GriefPrevention.sendMessage(player, TextMode.Success, Messages.TransferSuccess);
-        GriefPrevention.AddLogEntry(
-            player.getName() +
-                " transferred a claim at " +
-                GriefPrevention.getfriendlyLocationString(claim.getLesserBoundaryCorner()) +
-                " to " +
-                ownerName +
-                ".",
-            CustomLogEntryTypes.AdminActivity
-        );
-
-        return true;
+        return plugin.handleTransferClaimCommand((Player) sender, args);
     }
 
     private boolean handleMakeAdmin(CommandSender sender, String[] args) {

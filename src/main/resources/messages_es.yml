@@ -26,6 +26,17 @@ Messages:
   PlayerNotFound2: Ningún jugador con ese nombre ha iniciado sesión recientemente.
   TransferTopLevel: Solo se pueden transferir terrenos protegidos principales, no subdivisiones. Colócate fuera de la subdivisión e inténtalo de nuevo.
   TransferSuccess: Terreno protegido transferido.
+  TransferClaimNotEnabled: "Transferir terrenos protegidos a otros jugadores no está habilitado en este servidor."
+  TransferClaimNoClaim: "No hay ningún terreno protegido aquí. Colócate en el terreno que quieres transferir."
+  TransferClaimSelf: "Ya eres el dueño de este terreno protegido."
+  TransferClaimRecipientNeedsBlocks: "{0} no tiene suficientes bloques de protección para este terreno. Le faltan {1}."
+  TransferClaimRecipientAtLimit: "{0} ya tiene tantos terrenos protegidos como se le permite."
+  ConfirmTransferClaimNoFee: "¿Quieres transferir este terreno protegido a {0}?"
+  ConfirmTransferClaimWithFee: "¿Quieres pagar {0} para transferir este terreno protegido a {1}?"
+  ConfirmTransferClaimInstruction: "Escribe /transferclaim {0} confirm para confirmar."
+  TransferClaimSuccess: "Terreno protegido transferido a {0}."
+  TransferClaimSuccessWithFee: "Terreno protegido transferido a {0} por {1}."
+  TransferClaimReceived: "{0} te transfirió su terreno protegido en {1}."
   ConvertClaimMissing: No hay ningun terreno aqui. Colocate dentro del terreno que quieres convertir.
   ConvertClaimAlreadyAdmin: Este terreno ya es un terreno administrativo.
   ConvertClaimAlreadyBasic: Este terreno ya es un terreno basico.

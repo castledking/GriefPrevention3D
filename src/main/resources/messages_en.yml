@@ -26,6 +26,17 @@ Messages:
   PlayerNotFound2: No player by that name has logged in recently.
   TransferTopLevel: Only top level claims (not subdivisions) may be transferred. Stand outside the subdivision and try again.
   TransferSuccess: Claim transferred.
+  TransferClaimNotEnabled: "Giving claims to other players is not enabled on this server."
+  TransferClaimNoClaim: "There's no claim here. Stand in the claim you want to give away."
+  TransferClaimSelf: "You already own this claim."
+  TransferClaimRecipientNeedsBlocks: "{0} doesn't have enough claim blocks for this claim. They need {1} more."
+  TransferClaimRecipientAtLimit: "{0} already has as many claims as they are allowed."
+  ConfirmTransferClaimNoFee: "Do you want to give this claim to {0}?"
+  ConfirmTransferClaimWithFee: "Do you want to pay {0} to give this claim to {1}?"
+  ConfirmTransferClaimInstruction: "Type /transferclaim {0} confirm to confirm."
+  TransferClaimSuccess: "Gave this claim to {0}."
+  TransferClaimSuccessWithFee: "Gave this claim to {0} for {1}."
+  TransferClaimReceived: "{0} gave you their claim at {1}."
   ConvertClaimMissing: There's no claim here.  Stand in the claim you want to convert.
   ConvertClaimAlreadyAdmin: This claim is already an administrative claim.
   ConvertClaimAlreadyBasic: This claim is already a basic claim.

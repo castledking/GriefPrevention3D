@@ -44,6 +44,7 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
         registerSubcommand("expand", requires("griefprevention.extendclaim", this::handleExpand));
         registerSubcommand("scrollresize", this::handleScrollResize);
         registerSubcommand("alerts", requires("griefprevention.claimalerts", createAlertsTabExecutor()));
+        registerSubcommand("transfer", this::handleTransfer);
         registerSubcommand("help", this::handleHelp);
 
         // Register standalone commands from Alias enum
@@ -755,6 +756,16 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
                 return executor.onTabComplete(sender, command, alias, args);
             }
         };
+    }
+
+    // /claim transfer shares /transferclaim's handler: players give away their own claims, and staff
+    // with griefprevention.transferclaim.others transfer any claim.
+    private boolean handleTransfer(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player)) {
+            sender.sendMessage(plugin.dataStore.getMessage(Messages.CommandRequiresPlayer));
+            return true;
+        }
+        return plugin.handleTransferClaimCommand((Player) sender, args);
     }
 
     private boolean handleSiege(CommandSender sender, String[] args) {

@@ -27,6 +27,17 @@ Messages:
   PlayerNotFound2: Bu isimde bir oyuncu yakın zamanda giriş yapmadı.
   TransferTopLevel: Yalnızca ana bölgeler (alt bölgeler değil) devredilebilir. Alt bölgenin dışında durun ve tekrar deneyin.
   TransferSuccess: Bölge devredildi.
+  TransferClaimNotEnabled: "Bu sunucuda bölgeleri diğer oyunculara devretmek etkin değil."
+  TransferClaimNoClaim: "Burada bölge yok. Devretmek istediğiniz bölgenin içinde durun."
+  TransferClaimSelf: "Bu bölge zaten sizin."
+  TransferClaimRecipientNeedsBlocks: "{0} bu bölge için yeterli bölge blokuna sahip değil. {1} tane daha gerekiyor."
+  TransferClaimRecipientAtLimit: "{0} izin verilen en fazla bölge sayısına zaten sahip."
+  ConfirmTransferClaimNoFee: "Bu bölgeyi {0} adlı oyuncuya devretmek istiyor musunuz?"
+  ConfirmTransferClaimWithFee: "Bu bölgeyi {1} adlı oyuncuya devretmek için {0} ödemek istiyor musunuz?"
+  ConfirmTransferClaimInstruction: "Onaylamak için /transferclaim {0} confirm yazın."
+  TransferClaimSuccess: "Bölge {0} adlı oyuncuya devredildi."
+  TransferClaimSuccessWithFee: "Bölge {1} karşılığında {0} adlı oyuncuya devredildi."
+  TransferClaimReceived: "{0} size {1} konumundaki bölgesini devretti."
   ConvertClaimMissing: Burada bölge yok. Dönüştürmek istediğiniz bölgenin içinde durun.
   ConvertClaimAlreadyAdmin: Bu bölge zaten bir yönetici bölgesi.
   ConvertClaimAlreadyBasic: Bu bölge zaten temel bir bölge.

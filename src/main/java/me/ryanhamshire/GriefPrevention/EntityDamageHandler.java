@@ -37,6 +37,7 @@ import org.bukkit.event.entity.EntityCombustEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityTargetEvent;
+import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
 import org.bukkit.event.entity.PotionSplashEvent;
 import org.bukkit.event.vehicle.VehicleDamageEvent;
 import org.bukkit.potion.PotionEffect;
@@ -210,6 +211,27 @@ public class EntityDamageHandler implements Listener {
 
     }
 
+    // Pets and polar bears choosing a target they would not be allowed to hurt, or be hurt by.
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGH)
+    public void onEntityTargetLivingEntity(@NotNull EntityTargetLivingEntityEvent event) {
+        LivingEntity target = event.getTarget();
+        if (target == null)
+            return;
+
+        Entity entity = event.getEntity();
+        if (entity instanceof Tameable && isProtectedFromPet(target, (Tameable) entity)) {
+            event.setCancelled(true);
+            return;
+        }
+
+        // Guarding cubs is the only reason a polar bear turns on a player who hasn't hit it.
+        if (target instanceof Player
+                && event.getReason() == EntityTargetEvent.TargetReason.CLOSEST_PLAYER
+                && isShieldedFromPolarBear(entity, (Player) target)) {
+            event.setCancelled(true);
+        }
+    }
+
     // when an entity is damaged
     @EventHandler(ignoreCancelled = true, priority = EventPriority.LOWEST)
     public void onEntityDamage(@NotNull EntityDamageEvent event) {
@@ -228,13 +250,7 @@ public class EntityDamageHandler implements Listener {
             return;
 
         // horse protections can be disabled
-        if (event.damaged() instanceof Horse && !instance.config_claims_protectHorses)
-            return;
-        if (CompatUtil.canCheckEntityType("Donkey") && event.damaged() instanceof Donkey && !instance.config_claims_protectDonkeys)
-            return;
-        if (CompatUtil.canCheckEntityType("Mule") && event.damaged() instanceof Mule && !instance.config_claims_protectDonkeys)
-            return;
-        if (CompatUtil.canCheckEntityType("Llama") && event.damaged() instanceof Llama && !instance.config_claims_protectLlamas)
+        if (isCreatureProtectionDisabled(event.damaged()))
             return;
         // protected death loot can't be destroyed, only picked up or despawned due to
         // expiration
@@ -257,6 +273,13 @@ public class EntityDamageHandler implements Listener {
         // environmental damage)
         if (event.damager() == null)
             return;
+
+        // a polar bear guarding its cubs may not maul a player who can't hit it back
+        if (event.damaged() instanceof Player && isShieldedFromPolarBear(event.damager(), (Player) event.damaged())) {
+            event.setCancelled(true);
+            CompatUtil.clearTarget(event.damager());
+            return;
+        }
 
         if (event.damager() instanceof LightningStrike && event.damager().hasMetadata("GP_TRIDENT")) {
             event.setCancelled(true);
@@ -333,6 +356,73 @@ public class EntityDamageHandler implements Listener {
         // above), or a vehicle
         if (handleCreatureDamageByEntity(event, attacker, arrow, sendMessages))
             return;
+    }
+
+    /** @return whether config turns claim protection off for this kind of animal */
+    private boolean isCreatureProtectionDisabled(@NotNull Entity entity) {
+        if (entity instanceof Horse && !instance.config_claims_protectHorses)
+            return true;
+        if (CompatUtil.canCheckEntityType("Donkey") && entity instanceof Donkey && !instance.config_claims_protectDonkeys)
+            return true;
+        if (CompatUtil.canCheckEntityType("Mule") && entity instanceof Mule && !instance.config_claims_protectDonkeys)
+            return true;
+        return CompatUtil.canCheckEntityType("Llama") && entity instanceof Llama && !instance.config_claims_protectLlamas;
+    }
+
+    /**
+     * Checks whether a tamed pet is kept away from a protected animal because its owner lacks the
+     * container trust that hurting the animal needs. Without this, a player whose own attack a claim
+     * refuses could simply let their wolves finish the job.
+     *
+     * @param victim the entity the pet wants to attack
+     * @param pet    the pet
+     * @return true if the pet may not attack the victim
+     */
+    private boolean isProtectedFromPet(@NotNull Entity victim, @NotNull Tameable pet) {
+        if (!pet.isTamed())
+            return false;
+        AnimalTamer owner = pet.getOwner();
+        if (owner == null)
+            return false;
+
+        if (!(victim instanceof Creature) || !instance.config_claims_protectCreatures || isHostile(victim))
+            return false;
+        if (isCreatureProtectionDisabled(victim))
+            return false;
+        // Pets fighting other pets follow the pet rules instead.
+        if (victim instanceof Tameable && ((Tameable) victim).isTamed())
+            return false;
+        if (!instance.claimsEnabledForWorld(victim.getWorld()))
+            return false;
+
+        Claim claim = this.dataStore.getClaimAt(victim.getLocation(), false, null);
+        if (claim == null)
+            return false;
+
+        Player onlineOwner = Bukkit.getPlayer(owner.getUniqueId());
+        return onlineOwner != null
+                ? claim.checkPermission(onlineOwner, ClaimPermission.Container, null) != null
+                : claim.checkPermission(owner.getUniqueId(), ClaimPermission.Container, null) != null;
+    }
+
+    /**
+     * A polar bear with cubs nearby attacks any player who comes close. Inside a claim, a player
+     * without container trust is not allowed to hit the bear back, so the bear is not allowed to
+     * attack them either.
+     *
+     * @param bear   the entity that would attack
+     * @param player the player it would attack
+     * @return true if the player is shielded from the bear
+     */
+    private boolean isShieldedFromPolarBear(@NotNull Entity bear, @NotNull Player player) {
+        if (!isNamedEntityType(bear.getType(), "POLAR_BEAR") || !instance.config_claims_protectCreatures)
+            return false;
+        if (!instance.claimsEnabledForWorld(bear.getWorld()))
+            return false;
+
+        PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
+        Claim claim = this.dataStore.getClaimAt(bear.getLocation(), false, playerData.lastClaim);
+        return claim != null && claim.checkPermission(player, ClaimPermission.Container, null) != null;
     }
 
     /**
@@ -807,6 +897,14 @@ public class EntityDamageHandler implements Listener {
         // Can't be hit, but for simplicity
         if (damageSource == null)
             return false;
+
+        // A tamed pet fights for its owner, so it needs the trust its owner would need.
+        if (attacker == null && damageSource instanceof Tameable
+                && isProtectedFromPet(event.damaged(), (Tameable) damageSource)) {
+            event.setCancelled(true);
+            CompatUtil.clearTarget(damageSource);
+            return true;
+        }
 
         EntityType damageSourceType = damageSource.getType();
         // if not a player, explosive, or ranged/area of effect attack, allow

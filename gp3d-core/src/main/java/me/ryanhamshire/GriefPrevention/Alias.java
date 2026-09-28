@@ -297,6 +297,22 @@ public enum Alias {
         "expandclaim"
     ),
 
+    ClaimTransfer(
+        "enable: true" + "\n" +
+"commands: [transfer]" + "\n" +
+"standalone: []" + "\n" +
+"usage: \"/claim transfer <player> [confirm]\"" + "\n" +
+"description: Give the claim you are standing in to another player." + "\n" +
+"permission: griefprevention.transferclaim" + "\n" +
+"arguments:" + "\n" +
+"  player:" + "\n" +
+"    type: player" + "\n" +
+"  confirm:" + "\n" +
+"    options:" + "\n" +
+"      confirm: [confirm]" + "\n" +
+"" + "\n"
+    ),
+
     ClaimHelp(
         "enable: true" + "\n" +
 "commands: [help]" + "\n" +
@@ -490,11 +506,14 @@ public enum Alias {
         "enable: true" + "\n" +
 "commands: [transfer]" + "\n" +
 "standalone: [transferclaim]" + "\n" +
-"usage: \"/aclaim transfer <player>\"" + "\n" +
-"description: Transfer the claim you are standing in to another player." + "\n" +
+"usage: \"/aclaim transfer <player> [confirm]\"" + "\n" +
+"description: Give the claim you are standing in to another player." + "\n" +
 "arguments:" + "\n" +
 "  player:" + "\n" +
 "    type: player" + "\n" +
+"  confirm:" + "\n" +
+"    options:" + "\n" +
+"      confirm: [confirm]" + "\n" +
 "" + "\n",
         "transferclaim"
     ),
@@ -761,6 +780,20 @@ public enum Alias {
 "        numberOfBlocks:" + "\n" +
 "          type: integer-negative" + "\n" +
 "" + "\n" +
+"    transfer:" + "\n" +
+"      enable: true" + "\n" +
+"      commands: [transfer]" + "\n" +
+"      standalone: []" + "\n" +
+"      usage: \"/claim transfer <player> [confirm]\"" + "\n" +
+"      description: Give the claim you are standing in to another player." + "\n" +
+"      permission: griefprevention.transferclaim" + "\n" +
+"      arguments:" + "\n" +
+"        player:" + "\n" +
+"          type: player" + "\n" +
+"        confirm:" + "\n" +
+"          options:" + "\n" +
+"            confirm: [confirm]" + "\n" +
+"" + "\n" +
 "    help:" + "\n" +
 "      enable: true" + "\n" +
 "      commands: [help]" + "\n" +
@@ -893,11 +926,14 @@ public enum Alias {
 "      enable: true" + "\n" +
 "      commands: [transfer]" + "\n" +
 "      standalone: [transferclaim]" + "\n" +
-"      usage: \"/aclaim transfer <player>\"" + "\n" +
-"      description: Transfer the claim you are standing in to another player." + "\n" +
+"      usage: \"/aclaim transfer <player> [confirm]\"" + "\n" +
+"      description: Give the claim you are standing in to another player." + "\n" +
 "      arguments:" + "\n" +
 "        player:" + "\n" +
 "          type: player" + "\n" +
+"        confirm:" + "\n" +
+"          options:" + "\n" +
+"            confirm: [confirm]" + "\n" +
 "" + "\n" +
 "    makeadmin:" + "\n" +
 "      enable: true" + "\n" +

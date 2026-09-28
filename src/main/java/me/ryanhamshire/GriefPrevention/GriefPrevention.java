@@ -39,6 +39,7 @@ import com.griefprevention.claims.editor.SegmentSelection;
 import com.griefprevention.commands.CommandAliasConfiguration;
 import com.griefprevention.commands.TabCompletions;
 import com.griefprevention.economy.VaultEconomyFormatting;
+import com.griefprevention.economy.VaultFees;
 import com.griefprevention.compat.Compat;
 import com.griefprevention.compat.WorldHeightCompatProvider;
 import com.griefprevention.geometry.OrthogonalDirection;
@@ -278,6 +279,8 @@ public class GriefPrevention extends JavaPlugin {
     public double config_pvp_toggleCostClaimPrice; // cost to toggle PvP in main claims
     public boolean config_pvp_toggleCostSubdivisionEnabled; // whether PvP toggle is enabled for subdivisions
     public double config_pvp_toggleCostSubdivisionPrice; // cost to toggle PvP in subdivisions
+    public boolean config_claims_transferClaimEnabled; // whether players may give their claims to other players
+    public double config_claims_transferClaimPrice; // what giving a claim away costs, through Vault
     public String config_pvp_subdivisionPvpState; // PvP state for new subdivisions: INHERIT or DEFAULT
 
     public boolean config_spam_enabled; // whether or not to monitor for spam
@@ -1471,6 +1474,16 @@ public class GriefPrevention extends JavaPlugin {
             "INHERIT"
         );
 
+        // players giving their own claims away with /transferclaim
+        this.config_claims_transferClaimEnabled = config.getBoolean(
+            "GriefPrevention.Claims.TransferClaim.Enabled",
+            false
+        );
+        this.config_claims_transferClaimPrice = Math.max(
+            0.0,
+            config.getDouble("GriefPrevention.Claims.TransferClaim.Price", 0.0)
+        );
+
         // optional database settings
         loadDatabaseSettings(config);
 
@@ -1705,6 +1718,8 @@ public class GriefPrevention extends JavaPlugin {
         );
         outConfig.set("GriefPrevention.Claims.PvPToggle.Subdivision.Price", this.config_pvp_toggleCostSubdivisionPrice);
         outConfig.set("GriefPrevention.Claims.PvPToggle.Subdivision.DefaultState", this.config_pvp_subdivisionPvpState);
+        outConfig.set("GriefPrevention.Claims.TransferClaim.Enabled", this.config_claims_transferClaimEnabled);
+        outConfig.set("GriefPrevention.Claims.TransferClaim.Price", this.config_claims_transferClaimPrice);
 
         outConfig.set("GriefPrevention.ProtectItemsDroppedOnDeath.PvPWorlds", this.config_lockDeathDropsInPvpWorlds);
         outConfig.set(
@@ -2310,54 +2325,7 @@ public class GriefPrevention extends JavaPlugin {
         }
         // transferclaim <player>
         else if (cmd.getName().equalsIgnoreCase("transferclaim") && player != null) {
-            if (!checkCommandPermission(player, "griefprevention.transferclaim")) return true;
-            // which claim is the user in?
-            Claim claim = getSelectedOrCurrentClaim(player, false);
-            if (claim == null) {
-                GriefPrevention.sendMessage(player, TextMode.Instr, Messages.TransferClaimMissing);
-                return true;
-            }
-
-            // check additional permission for admin claims
-            if (claim.isAdminClaim() && !player.hasPermission("griefprevention.adminclaims")) {
-                GriefPrevention.sendMessage(player, TextMode.Err, Messages.TransferClaimPermission);
-                return true;
-            }
-
-            UUID newOwnerID = null; // no argument = make an admin claim
-            String ownerName = "admin";
-
-            if (args.length > 0) {
-                OfflinePlayer targetPlayer = this.resolvePlayerByName(args[0]);
-                if (targetPlayer == null) {
-                    GriefPrevention.sendMessage(player, TextMode.Err, Messages.PlayerNotFound2);
-                    return true;
-                }
-                newOwnerID = targetPlayer.getUniqueId();
-                ownerName = targetPlayer.getName();
-            }
-
-            // change ownerhsip
-            try {
-                this.dataStore.changeClaimOwner(claim, newOwnerID);
-            } catch (NoTransferException e) {
-                GriefPrevention.sendMessage(player, TextMode.Instr, Messages.TransferTopLevel);
-                return true;
-            }
-
-            // confirm
-            GriefPrevention.sendMessage(player, TextMode.Success, Messages.TransferSuccess);
-            GriefPrevention.AddLogEntry(
-                player.getName() +
-                    " transferred a claim at " +
-                    GriefPrevention.getfriendlyLocationString(claim.getLesserBoundaryCorner()) +
-                    " to " +
-                    ownerName +
-                    ".",
-                CustomLogEntryTypes.AdminActivity
-            );
-
-            return true;
+            return this.handleTransferClaimCommand(player, args);
         }
         // trustlist
         else if (cmd.getName().equalsIgnoreCase("trustlist") && player != null) {
@@ -6175,6 +6143,9 @@ public class GriefPrevention extends JavaPlugin {
             GriefPrevention.sendMessage(player, TextMode.Err, Messages.PvpToggleNotEnabledForClaimType);
             return true;
         }
+        if (toggleContext.fee > 0.0 && player.hasPermission("griefprevention.claimpvp.free")) {
+            toggleContext = new PvpToggleContext(0.0, toggleContext.mainClaim);
+        }
 
         boolean toggleTo;
         if (args.length == 0) {
@@ -6395,6 +6366,216 @@ public class GriefPrevention extends JavaPlugin {
             this.fee = fee;
             this.mainClaim = mainClaim;
         }
+    }
+
+    /**
+     * Handles /transferclaim. Staff with {@code griefprevention.transferclaim.others} hand the claim
+     * they stand in to a player, or to administrators when no player is named, at once and for free.
+     * Everyone else may give away a top-level claim they own once {@code Claims.TransferClaim.Enabled}
+     * is on: they confirm first and pay {@code Claims.TransferClaim.Price}, unless they have
+     * {@code griefprevention.transferclaim.free}.
+     *
+     * @return false to show the command's usage
+     */
+    public boolean handleTransferClaimCommand(@NotNull Player player, @NotNull String[] args) {
+        if (!checkCommandPermission(player, "griefprevention.transferclaim")) return true;
+        if (player.hasPermission("griefprevention.transferclaim.others")) {
+            return this.transferClaimAsStaff(player, args);
+        }
+        return this.giveAwayOwnClaim(player, args);
+    }
+
+    private boolean transferClaimAsStaff(@NotNull Player player, @NotNull String[] args) {
+        Claim claim = getSelectedOrCurrentClaim(player, false);
+        if (claim == null) {
+            GriefPrevention.sendMessage(player, TextMode.Instr, Messages.TransferClaimMissing);
+            return true;
+        }
+
+        // check additional permission for admin claims
+        if (claim.isAdminClaim() && !player.hasPermission("griefprevention.adminclaims")) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.TransferClaimPermission);
+            return true;
+        }
+
+        UUID newOwnerID = null; // no argument = make an admin claim
+        String ownerName = "admin";
+
+        if (args.length > 0) {
+            OfflinePlayer targetPlayer = this.resolvePlayerByName(args[0]);
+            if (targetPlayer == null) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.PlayerNotFound2);
+                return true;
+            }
+            newOwnerID = targetPlayer.getUniqueId();
+            ownerName = targetPlayer.getName();
+        }
+
+        try {
+            this.dataStore.changeClaimOwner(claim, newOwnerID);
+        } catch (NoTransferException e) {
+            GriefPrevention.sendMessage(player, TextMode.Instr, Messages.TransferTopLevel);
+            return true;
+        }
+
+        GriefPrevention.sendMessage(player, TextMode.Success, Messages.TransferSuccess);
+        GriefPrevention.AddLogEntry(
+            player.getName() +
+                " transferred a claim at " +
+                GriefPrevention.getfriendlyLocationString(claim.getLesserBoundaryCorner()) +
+                " to " +
+                ownerName +
+                ".",
+            CustomLogEntryTypes.AdminActivity
+        );
+        return true;
+    }
+
+    private boolean giveAwayOwnClaim(@NotNull Player player, @NotNull String[] args) {
+        if (!this.config_claims_transferClaimEnabled) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.TransferClaimNotEnabled);
+            return true;
+        }
+        if (args.length < 1 || args.length > 2) return false;
+        boolean confirmed = args.length == 2;
+        if (confirmed && !"confirm".equalsIgnoreCase(args[1])) return false;
+
+        Claim claim = getSelectedOrCurrentClaim(player, false);
+        if (claim == null) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.TransferClaimNoClaim);
+            return true;
+        }
+        if (claim.parent != null) {
+            GriefPrevention.sendMessage(player, TextMode.Instr, Messages.TransferTopLevel);
+            return true;
+        }
+        if (!player.getUniqueId().equals(claim.ownerID)) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.NotYourClaim);
+            return true;
+        }
+
+        OfflinePlayer recipient = this.resolvePlayerByName(args[0]);
+        if (recipient == null) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.PlayerNotFound2);
+            return true;
+        }
+        UUID recipientId = recipient.getUniqueId();
+        String recipientName = recipient.getName() != null ? recipient.getName() : args[0];
+        if (recipientId.equals(player.getUniqueId())) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.TransferClaimSelf);
+            return true;
+        }
+
+        // The recipient takes on the claim's area and one of their claim slots, just as if they
+        // had claimed the land themselves.
+        PlayerData recipientData = this.dataStore.getPlayerData(recipientId);
+        long missingBlocks = (long) claim.getArea() - recipientData.getRemainingClaimBlocks();
+        if (missingBlocks > 0) {
+            GriefPrevention.sendMessage(
+                player,
+                TextMode.Err,
+                Messages.TransferClaimRecipientNeedsBlocks,
+                recipientName,
+                String.valueOf(missingBlocks)
+            );
+            return true;
+        }
+        if (this.isRecipientAtClaimCountLimit(recipient, recipientData)) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.TransferClaimRecipientAtLimit, recipientName);
+            return true;
+        }
+
+        double fee = player.hasPermission("griefprevention.transferclaim.free")
+            ? 0.0
+            : this.config_claims_transferClaimPrice;
+        if (!confirmed) {
+            if (fee > 0.0) {
+                GriefPrevention.sendMessage(
+                    player,
+                    TextMode.Instr,
+                    Messages.ConfirmTransferClaimWithFee,
+                    VaultEconomyFormatting.format(this.getServer(), fee),
+                    recipientName
+                );
+            } else {
+                GriefPrevention.sendMessage(player, TextMode.Instr, Messages.ConfirmTransferClaimNoFee, recipientName);
+            }
+            GriefPrevention.sendMessage(player, TextMode.Instr, Messages.ConfirmTransferClaimInstruction, recipientName);
+            return true;
+        }
+
+        String formattedFee = "";
+        if (fee > 0.0) {
+            VaultFees.Charge charge = VaultFees.withdraw(this.getServer(), player, fee);
+            if (charge.status() == VaultFees.Status.NO_ECONOMY) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.EconomyNoVault);
+                return true;
+            }
+            if (charge.status() == VaultFees.Status.NOT_ENOUGH_MONEY) {
+                GriefPrevention.sendMessage(
+                    player,
+                    TextMode.Err,
+                    Messages.EconomyNotEnoughMoney,
+                    charge.formattedFee(),
+                    charge.formattedBalance()
+                );
+                return true;
+            }
+            formattedFee = charge.formattedFee();
+        }
+
+        try {
+            this.dataStore.changeClaimOwner(claim, recipientId);
+        } catch (NoTransferException e) {
+            if (fee > 0.0) VaultFees.refund(this.getServer(), player, fee);
+            GriefPrevention.sendMessage(player, TextMode.Instr, Messages.TransferTopLevel);
+            return true;
+        }
+        if (!recipientId.equals(claim.ownerID)) {
+            // An addon cancelled the ClaimTransferEvent, so nothing was given away.
+            if (fee > 0.0) VaultFees.refund(this.getServer(), player, fee);
+            return true;
+        }
+
+        if (fee > 0.0) {
+            GriefPrevention.sendMessage(
+                player,
+                TextMode.Success,
+                Messages.TransferClaimSuccessWithFee,
+                recipientName,
+                formattedFee
+            );
+        } else {
+            GriefPrevention.sendMessage(player, TextMode.Success, Messages.TransferClaimSuccess, recipientName);
+        }
+        String location = GriefPrevention.getfriendlyLocationString(claim.getLesserBoundaryCorner());
+        Player onlineRecipient = recipient.getPlayer();
+        if (onlineRecipient != null) {
+            GriefPrevention.sendMessage(
+                onlineRecipient,
+                TextMode.Info,
+                Messages.TransferClaimReceived,
+                player.getName(),
+                location
+            );
+        }
+        GriefPrevention.AddLogEntry(
+            player.getName() + " gave their claim at " + location + " to " + recipientName +
+                (fee > 0.0 ? " for " + formattedFee : "") + ".",
+            CustomLogEntryTypes.AdminActivity
+        );
+        return true;
+    }
+
+    /** The claim-count limit for a player receiving a claim, who may be offline. */
+    private boolean isRecipientAtClaimCountLimit(@NotNull OfflinePlayer recipient, @NotNull PlayerData recipientData) {
+        Player online = recipient.getPlayer();
+        if (online != null) {
+            return this.isAtClaimCountLimit(online, recipientData);
+        }
+        // Offline, their permission-based limit is unknown, so the configured default applies.
+        int limit = this.config_claims_maxClaimsPerPlayer;
+        return limit > 0 && recipientData.getClaims().size() >= limit;
     }
 
     public boolean handleWitherExplosionsCommand(CommandSender sender, String[] args) {

@@ -26,6 +26,17 @@ Messages:
   PlayerNotFound2: 没有找到最近登录过的该名称玩家。
   TransferTopLevel: 只能转移顶层领地（非子领地）。请站在子领地外再试一次。
   TransferSuccess: 领地已转移。
+  TransferClaimNotEnabled: "本服务器未启用将领地转让给其他玩家的功能。"
+  TransferClaimNoClaim: "这里没有领地。请站在你想转让的领地内。"
+  TransferClaimSelf: "你已经拥有这块领地。"
+  TransferClaimRecipientNeedsBlocks: "{0} 没有足够的领地方块来接收这块领地，还差 {1} 个。"
+  TransferClaimRecipientAtLimit: "{0} 拥有的领地数量已达上限。"
+  ConfirmTransferClaimNoFee: "你想将这块领地转让给 {0} 吗？"
+  ConfirmTransferClaimWithFee: "你想支付 {0} 将这块领地转让给 {1} 吗？"
+  ConfirmTransferClaimInstruction: "输入 /transferclaim {0} confirm 以确认。"
+  TransferClaimSuccess: "已将这块领地转让给 {0}。"
+  TransferClaimSuccessWithFee: "已支付 {1} 将这块领地转让给 {0}。"
+  TransferClaimReceived: "{0} 将其位于 {1} 的领地转让给了你。"
   ConvertClaimMissing: 这里没有领地。请站在你要转换的领地内。
   ConvertClaimAlreadyAdmin: 该领地已经是管理员领地。
   ConvertClaimAlreadyBasic: 该领地已经是基础领地。

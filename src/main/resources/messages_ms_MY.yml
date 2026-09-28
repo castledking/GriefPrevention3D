@@ -26,6 +26,17 @@ Messages:
   PlayerNotFound2: Tiada pemain dengan nama itu log masuk baru-baru ini.
   TransferTopLevel: Hanya kawasan tuntutan peringkat atas (bukan subbahagian) boleh dipindahkan. Berdiri di luar subbahagian dan cuba lagi.
   TransferSuccess: Kawasan tuntutan telah dipindahkan.
+  TransferClaimNotEnabled: "Memindahkan kawasan tuntutan kepada pemain lain tidak didayakan pada pelayan ini."
+  TransferClaimNoClaim: "Tiada kawasan tuntutan di sini. Berdiri di dalam kawasan tuntutan yang anda mahu pindahkan."
+  TransferClaimSelf: "Anda sudah memiliki kawasan tuntutan ini."
+  TransferClaimRecipientNeedsBlocks: "{0} tidak mempunyai blok tuntutan yang mencukupi untuk kawasan tuntutan ini. Mereka memerlukan {1} lagi."
+  TransferClaimRecipientAtLimit: "{0} sudah mempunyai jumlah maksimum kawasan tuntutan yang dibenarkan."
+  ConfirmTransferClaimNoFee: "Adakah anda mahu memindahkan kawasan tuntutan ini kepada {0}?"
+  ConfirmTransferClaimWithFee: "Adakah anda mahu membayar {0} untuk memindahkan kawasan tuntutan ini kepada {1}?"
+  ConfirmTransferClaimInstruction: "Taip /transferclaim {0} confirm untuk mengesahkan."
+  TransferClaimSuccess: "Kawasan tuntutan telah dipindahkan kepada {0}."
+  TransferClaimSuccessWithFee: "Kawasan tuntutan telah dipindahkan kepada {0} dengan bayaran {1}."
+  TransferClaimReceived: "{0} telah memindahkan kawasan tuntutan mereka di {1} kepada anda."
   ConvertClaimMissing: Tiada kawasan tuntutan di sini.  Berdiri di dalam kawasan tuntutan yang ingin anda tukar.
   ConvertClaimAlreadyAdmin: Kawasan tuntutan ini sudah menjadi kawasan tuntutan pentadbiran.
   ConvertClaimAlreadyBasic: Kawasan tuntutan ini sudah menjadi kawasan tuntutan asas.

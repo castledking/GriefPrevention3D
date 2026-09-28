@@ -331,6 +331,24 @@ subcommands:
           type: integer-negative
 
     # ------------------------------------------------------------------------
+    # /claim transfer - Give a claim to another player
+    # Needs Claims.TransferClaim.Enabled; /transferclaim is the standalone form (see /aclaim transfer)
+    # ------------------------------------------------------------------------
+    transfer:
+      enable: true
+      commands: [transfer]
+      standalone: []
+      usage: "/claim transfer <player> [confirm]"
+      description: Give the claim you are standing in to another player.
+      permission: griefprevention.transferclaim
+      arguments:
+        player:
+          type: player
+        confirm:
+          options:
+            confirm: [confirm]
+
+    # ------------------------------------------------------------------------
     # /claim help - Show help
     # ------------------------------------------------------------------------
     help:
@@ -501,11 +519,14 @@ subcommands:
       enable: true
       commands: [transfer]
       standalone: [transferclaim]
-      usage: "/aclaim transfer <player>"
-      description: Transfer the claim you are standing in to another player.
+      usage: "/aclaim transfer <player> [confirm]"
+      description: Give the claim you are standing in to another player.
       arguments:
         player:
           type: player
+        confirm:
+          options:
+            confirm: [confirm]
 
     # ------------------------------------------------------------------------
     # /aclaim makeadmin - Convert current claim to admin claim

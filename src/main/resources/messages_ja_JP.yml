@@ -26,6 +26,17 @@ Messages:
   PlayerNotFound2: その名前のプレイヤーは最近ログインしていません。
   TransferTopLevel: 移行できるのはトップレベルのクレームのみです（サブディビジョンは不可）。サブディビジョンの外に立ってからもう一度試してください。
   TransferSuccess: クレームを移行しました。
+  TransferClaimNotEnabled: "このサーバーでは、クレームを他のプレイヤーに譲渡することはできません。"
+  TransferClaimNoClaim: "ここにはクレームがありません。譲渡したいクレームの中に立ってください。"
+  TransferClaimSelf: "このクレームはすでにあなたのものです。"
+  TransferClaimRecipientNeedsBlocks: "{0} にはこのクレームに必要なクレームブロックが足りません。あと {1} ブロック必要です。"
+  TransferClaimRecipientAtLimit: "{0} はすでに上限までクレームを所有しています。"
+  ConfirmTransferClaimNoFee: "このクレームを {0} に譲渡しますか？"
+  ConfirmTransferClaimWithFee: "{0} を支払ってこのクレームを {1} に譲渡しますか？"
+  ConfirmTransferClaimInstruction: "確認するには /transferclaim {0} confirm と入力してください。"
+  TransferClaimSuccess: "このクレームを {0} に譲渡しました。"
+  TransferClaimSuccessWithFee: "{1} を支払い、このクレームを {0} に譲渡しました。"
+  TransferClaimReceived: "{0} が {1} にあるクレームをあなたに譲渡しました。"
   ConvertClaimMissing: ここにはクレームがありません。変換したいクレームの中に立ってください。
   ConvertClaimAlreadyAdmin: このクレームはすでに管理用クレームです。
   ConvertClaimAlreadyBasic: このクレームはすでに基本クレームです。
