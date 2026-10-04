@@ -102,6 +102,9 @@ Stop _responding_ to grief and prevent it instead. GriefPrevention stops grief b
   `/witherexplosions`
   Use this command to toggle wither explosions inside your claim.
 ####
+- **Fabric Support**
+  18.2.16+ GriefPrevention3D builds now are a universal jar for fabric and paper/spigot servers. View the progress [here](https://github.com/castledking/GriefPrevention3D/blob/master/platforms/fabric-common/ROADMAP.md)
+####
 ### Subtle Changes
   - **Per-Player Locale**: Enabled by default. Players receive messages in their client language when a translation is available, falling back to English. See [Supported Languages](#supported-languages) for the full list. Disable with `PerPlayerLocale: false` in config.yml.
   - **Action Bar Messages**: You can now define a list of message keys that should be chosen to be shown in the action bar instead of chat.
@@ -145,8 +148,9 @@ falling back to English.
 See the [Locale guide](https://github.com/castledking/GriefPrevention3D/wiki/Locale) for how to customise messages or
 add a language of your own.
 
-## Supported Platforms: Spigot, Paper, Purpur, and Folia.
-### GriefPrevention3D targets and supports 1.8 - latest available version of these platforms.
+## Supported Platforms: Fabric, Spigot, Paper, Purpur, and Folia.
+### GriefPrevention3D targets and supports 1.8 - latest available version for non-fabric servers.
+### Fabric support currently only covers 1.21.11 - latest.
 
 ## Download
 ### [⬇ Download the GriefPrevention3D.jar plugin here.](https://github.com/castledking/GriefPrevention3D/releases)
