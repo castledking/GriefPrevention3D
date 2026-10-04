@@ -185,7 +185,55 @@ public enum MessageKey
     NO_DAMAGE_CLAIMED_ENTITY("NoDamageClaimedEntity", "That belongs to {0}."),
     CANT_FIGHT_WHILE_IMMUNE("CantFightWhileImmune", "You can't fight someone while you're protected from PvP."),
     PLAYER_IN_PVP_SAFE_ZONE("PlayerInPvPSafeZone", "That player is in a PvP safe zone."),
-    NO_PISTONS_OUTSIDE_CLAIMS("NoPistonsOutsideClaims", "Warning: Pistons won't move blocks outside land claims.");
+    NO_PISTONS_OUTSIDE_CLAIMS("NoPistonsOutsideClaims", "Warning: Pistons won't move blocks outside land claims."),
+    IGNORING_CLAIMS("IgnoringClaims", "Now ignoring claims."),
+    RESPECTING_CLAIMS("RespectingClaims", "Now respecting claims."),
+    DELETE_CLAIM_MISSING("DeleteClaimMissing", "There's no claim here."),
+    DELETION_SUBDIVISION_WARNING(
+            "DeletionSubdivisionWarning",
+            "This claim includes subdivisions.  If you're sure you want to delete it, use /deleteclaim again."),
+    DELETE_SUCCESS("DeleteSuccess", "Claim deleted."),
+    CANT_DELETE_ADMIN_CLAIM("CantDeleteAdminClaim", "You don't have permission to delete administrative claims."),
+    DELETE_ALL_SUCCESS("DeleteAllSuccess", "Deleted all of {0}'s claims."),
+    ALL_ADMIN_DELETED("AllAdminDeleted", "Deleted all administrative claims."),
+    WORLD_NOT_FOUND("WorldNotFound", "World not found."),
+    CONVERT_CLAIM_MISSING("ConvertClaimMissing", "There's no claim here.  Stand in the claim you want to convert."),
+    CONVERT_CLAIM_ALREADY_ADMIN("ConvertClaimAlreadyAdmin", "This claim is already an administrative claim."),
+    CONVERT_CLAIM_ALREADY_BASIC("ConvertClaimAlreadyBasic", "This claim is already a basic claim."),
+    CONVERT_CLAIM_ADMIN_SUCCESS("ConvertClaimAdminSuccess", "Claim converted to an administrative claim."),
+    CONVERT_CLAIM_BASIC_SUCCESS("ConvertClaimBasicSuccess", "Administrative claim converted to a basic claim you own."),
+    TRANSFER_TOP_LEVEL(
+            "TransferTopLevel",
+            "Only top level claims (not subdivisions) may be transferred.  Stand outside of the subdivision and try again."),
+    TRANSFER_CLAIM_MISSING(
+            "TransferClaimMissing",
+            "There's no claim here.  Stand in the administrative claim you want to transfer."),
+    TRANSFER_SUCCESS("TransferSuccess", "Claim transferred."),
+    TRANSFER_CLAIM_PERMISSION("TransferClaimPermission", "That command requires the administrative claims permission."),
+    TRANSFER_CLAIM_NOT_ENABLED("TransferClaimNotEnabled", "Giving claims to other players is not enabled on this server."),
+    TRANSFER_CLAIM_NO_CLAIM("TransferClaimNoClaim", "There's no claim here.  Stand in the claim you want to give away."),
+    TRANSFER_CLAIM_SELF("TransferClaimSelf", "You already own this claim."),
+    TRANSFER_CLAIM_RECIPIENT_NEEDS_BLOCKS(
+            "TransferClaimRecipientNeedsBlocks",
+            "{0} doesn't have enough claim blocks for this claim.  They need {1} more."),
+    TRANSFER_CLAIM_RECIPIENT_AT_LIMIT("TransferClaimRecipientAtLimit", "{0} already has as many claims as they are allowed."),
+    CONFIRM_TRANSFER_CLAIM_NO_FEE("ConfirmTransferClaimNoFee", "Do you want to give this claim to {0}?"),
+    CONFIRM_TRANSFER_CLAIM_INSTRUCTION("ConfirmTransferClaimInstruction", "Type /transferclaim {0} confirm to confirm."),
+    TRANSFER_CLAIM_SUCCESS("TransferClaimSuccess", "Gave this claim to {0}."),
+    TRANSFER_CLAIM_RECEIVED("TransferClaimReceived", "{0} gave you their claim at {1}."),
+    ECONOMY_NO_VAULT("EconomyNoVault", "Economy support requires Vault plugin to be installed."),
+    EXPLOSIVES_DISABLED(
+            "ExplosivesDisabled",
+            "This claim is now protected from explosions.  Use /claimexplosions again to disable."),
+    EXPLOSIVES_ENABLED(
+            "ExplosivesEnabled",
+            "This claim is now vulnerable to explosions.  Use /claimexplosions again to re-enable protections."),
+    WITHER_EXPLOSIONS_ENABLED(
+            "WitherExplosionsEnabled",
+            "This claim is now vulnerable to wither explosions.  Use /witherexplosions again to re-enable protections."),
+    WITHER_EXPLOSIONS_DISABLED(
+            "WitherExplosionsDisabled",
+            "This claim is now protected from wither explosions.  Use /witherexplosions again to disable protections.");
 
     private final String key;
     private final String defaultValue;

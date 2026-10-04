@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public final class FabricClaimRepository implements ClaimRepository
 {
@@ -43,6 +44,8 @@ public final class FabricClaimRepository implements ClaimRepository
     private final Logger logger;
     private final FabricPermissionResolver permissions;
     private final FabricClaimBlockService claimBlocks;
+    /** Players in {@code /ignoreclaims} mode; like Paper's, it lasts until they log out. */
+    private final Set<UUID> ignoringClaims = ConcurrentHashMap.newKeySet();
     private long nextClaimId;
 
     FabricClaimRepository(@NotNull Path dataFolder, @NotNull Logger logger)
@@ -221,6 +224,15 @@ public final class FabricClaimRepository implements ClaimRepository
         return CreateClaimResult.created(snapshot, remainingAfter);
     }
 
+    /**
+     * Whether a player may not take on another top-level claim, online or not. Paper's
+     * {@code overrideclaimcountlimit} permission is only read while the player is online.
+     */
+    synchronized boolean isAtClaimCountLimit(@NotNull UUID playerId, @Nullable ServerPlayer online)
+    {
+        return !bypassesClaimCountLimit(playerId, online) && hasReachedClaimCountLimit(playerId);
+    }
+
     synchronized boolean hasReachedClaimCountLimit(@NotNull ServerPlayer player)
     {
         UUID playerId = player.getUUID();
@@ -363,6 +375,61 @@ public final class FabricClaimRepository implements ClaimRepository
         }
         ClaimDeletedCallback.EVENT.invoker().onClaimDeleted(claim, player);
         return claim;
+    }
+
+    /**
+     * Gives a top-level claim a new owner, keeping its trust, flags and shape, as Paper's
+     * {@code changeClaimOwner}. Subdivisions that recorded the old owner follow the claim.
+     *
+     * @param newOwnerId the new owner, or null to make the claim administrative
+     * @return the claim under its new owner, or null when the claim is unknown
+     * @throws IllegalArgumentException for a subdivision, which only changes hands with its claim
+     */
+    synchronized @Nullable ClaimSnapshot changeOwner(
+            long claimId,
+            @Nullable UUID newOwnerId,
+            @Nullable ServerPlayer actor)
+            throws IOException
+    {
+        ClaimDocument document = this.documentsByClaimId.get(claimId);
+        if (document == null)
+        {
+            return null;
+        }
+        if (document.snapshot().parentId() != null)
+        {
+            throw new IllegalArgumentException("Only top-level claims change owner.");
+        }
+
+        UUID previousOwnerId = document.snapshot().ownerId();
+        long now = System.currentTimeMillis();
+        List<ClaimDocument> documents = mutableDocuments();
+        for (Long id : descendantIds(claimId, documents))
+        {
+            ClaimDocument member = this.documentsByClaimId.get(id);
+            if (id == claimId || (previousOwnerId != null && previousOwnerId.equals(member.snapshot().ownerId())))
+            {
+                replaceDocument(documents, member.withOwner(newOwnerId, now));
+            }
+        }
+        replaceAndSave(documents);
+        ClaimSnapshot updated = this.claimIndex.get(claimId);
+        ClaimTransferredCallback.EVENT.invoker().onClaimTransferred(updated, newOwnerId, actor);
+        return updated;
+    }
+
+    /** @return the administrative claims, not counting subdivisions */
+    synchronized @NotNull List<ClaimSnapshot> topLevelAdminClaims()
+    {
+        List<ClaimSnapshot> result = new ArrayList<>();
+        for (ClaimSnapshot claim : this.claimIndex.snapshots())
+        {
+            if (claim.parentId() == null && claim.ownerId() == null)
+            {
+                result.add(claim);
+            }
+        }
+        return result;
     }
 
     /**
@@ -645,13 +712,55 @@ public final class FabricClaimRepository implements ClaimRepository
             @NotNull Player player,
             @NotNull ClaimTrustLevel required)
     {
-        if (player instanceof ServerPlayer serverPlayer
-                && isAdminClaim(claim)
-                && hasPermission(serverPlayer, FabricPermissionDefaults.ADMIN_CLAIMS))
+        if (player instanceof ServerPlayer serverPlayer)
         {
-            return true;
+            if (isAdminClaim(claim))
+            {
+                if (hasPermission(serverPlayer, FabricPermissionDefaults.ADMIN_CLAIMS))
+                {
+                    return true;
+                }
+            }
+            // Anyone with deleteclaims may edit another player's claim at any time.
+            else if (required == ClaimTrustLevel.EDIT && hasPermission(serverPlayer, FabricPermissionDefaults.DELETE_CLAIMS))
+            {
+                return true;
+            }
+            // Staff in /ignoreclaims mode pass whatever their bypass permission covers.
+            if (isIgnoringClaims(serverPlayer.getUUID()) && hasPermission(serverPlayer,
+                    required == ClaimTrustLevel.EDIT ? FabricPermissionDefaults.DELETE_CLAIMS
+                            : FabricPermissionDefaults.IGNORE_CLAIMS))
+            {
+                return true;
+            }
         }
         return allows(claim, player.getUUID(), required);
+    }
+
+    /**
+     * Turns {@code /ignoreclaims} on or off for a player, as Paper's {@code PlayerData.ignoreClaims}.
+     *
+     * @return whether the player now ignores claims
+     */
+    boolean toggleIgnoringClaims(@NotNull UUID playerId)
+    {
+        if (this.ignoringClaims.remove(playerId))
+        {
+            return false;
+        }
+        this.ignoringClaims.add(playerId);
+        return true;
+    }
+
+    boolean isIgnoringClaims(@NotNull UUID playerId)
+    {
+        return this.ignoringClaims.contains(playerId);
+    }
+
+    /** Ends a player's {@code /ignoreclaims} mode, as logging out does on Paper. */
+    void stopIgnoringClaims(@NotNull UUID playerId)
+    {
+        this.ignoringClaims.remove(playerId);
     }
 
     /** @return whether a claim, or the claim a subdivision belongs to, has no owning player */

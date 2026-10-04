@@ -81,6 +81,15 @@ tasks.withType<JavaCompile>().configureEach {
     options.encoding = "UTF-8"
 }
 
+// FabricPermissionDefaults copies plugin.yml's permission tree; its test reads plugin.yml to check.
+val bukkitDescriptor = rootProject.file("src/main/resources/plugin.yml")
+
+dependencies {
+    "testImplementation"("org.yaml:snakeyaml:2.6")
+}
+
 tasks.named<Test>("test") {
     useJUnitPlatform()
+    inputs.file(bukkitDescriptor)
+    systemProperty("griefprevention3d.bukkitDescriptor", bukkitDescriptor.absolutePath)
 }

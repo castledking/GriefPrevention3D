@@ -147,6 +147,34 @@ class ClaimDocumentCodecTest
     }
 
     @Test
+    void aNewOwnerKeepsTheClaimsTrustFlagsAndShape() throws Exception
+    {
+        ClaimDocument root = byId(this.codec.decodeTree(completeClaimYaml(), 28L, 100L)).get(28L);
+
+        ClaimDocument given = root.withOwner(BUILDER, 200L);
+
+        assertEquals(BUILDER, given.snapshot().ownerId());
+        assertEquals(BUILDER, given.trust().ownerId());
+        assertEquals(root.trust().permissionsByIdentifier(), given.trust().permissionsByIdentifier());
+        assertEquals(root.trust().managerIdentifiers(), given.trust().managerIdentifiers());
+        assertEquals(root.shapeCorners(), given.shapeCorners());
+        assertEquals(root.explosivesAllowed(), given.explosivesAllowed());
+        assertEquals(root.snapshot().bounds(), given.snapshot().bounds());
+        assertTrue(this.codec.encodeTree(given, Collections.singletonList(given)).contains(BUILDER.toString()));
+    }
+
+    @Test
+    void withoutAnOwnerAClaimBecomesAdministrative() throws Exception
+    {
+        ClaimDocument root = byId(this.codec.decodeTree(completeClaimYaml(), 28L, 100L)).get(28L);
+
+        ClaimDocument admin = root.withOwner(null, 200L);
+
+        assertTrue(admin.snapshot().adminClaim());
+        assertEquals(null, admin.trust().ownerId());
+    }
+
+    @Test
     void refusesToEncodeDocumentsOutsideTheRequestedRoot() throws Exception
     {
         ClaimDocument root = ClaimDocument.create(snapshot(1L, null), 100L);

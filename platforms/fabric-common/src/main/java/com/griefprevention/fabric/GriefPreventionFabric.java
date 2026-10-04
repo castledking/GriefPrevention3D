@@ -41,10 +41,12 @@ public final class GriefPreventionFabric implements FabricPlatformAdapter
         FabricFakeBlockVisualization visualization = new FabricFakeBlockVisualization(claims, settings);
         visualization.register();
         new FabricClaimToolHooks(claims, visualization, feedback, settings, modes, lastSeen, LOGGER).register();
-        new FabricProtectionHooks(claims, feedback).register();
+        new FabricProtectionHooks(claims, feedback, settings).register();
 
         FabricClaimCommands claimCommands = new FabricClaimCommands(claims, feedback, settings, modes, visualization, LOGGER);
         claimCommands.register();
+        FabricAdminClaimCommands staffCommands = new FabricAdminClaimCommands(claims, feedback, settings, LOGGER);
+        staffCommands.register();
         new FabricCommandRegistrar(
                 claims,
                 messages,
@@ -53,6 +55,7 @@ public final class GriefPreventionFabric implements FabricPlatformAdapter
                 new FabricTrustCommands(claims, feedback),
                 claimCommands,
                 new FabricClaimBlockCommands(claims.claimBlockService(), LOGGER),
+                staffCommands,
                 dataFolder.resolve("alias.yml"),
                 LOGGER
         ).register();

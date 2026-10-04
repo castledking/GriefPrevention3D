@@ -3,6 +3,8 @@ package com.griefprevention.fabric;
 import com.griefprevention.claims.ClaimToolConfigCodec;
 import com.griefprevention.claims.ClaimToolConfigException;
 import com.griefprevention.claims.ClaimToolSettings;
+import com.griefprevention.claims.ClaimTransferSettings;
+import com.griefprevention.protection.BlockUseSettings;
 import com.griefprevention.protection.WorldProtectionConfigCodec;
 import com.griefprevention.protection.WorldProtectionConfigException;
 import com.griefprevention.protection.WorldProtectionSettings;
@@ -37,6 +39,8 @@ final class FabricSettings
 
     private volatile @NotNull ClaimToolSettings tools = ClaimToolSettings.upstreamDefaults();
     private volatile @NotNull WorldProtectionSettings world = WorldProtectionSettings.upstreamDefaults();
+    private volatile @NotNull BlockUseSettings blockUse = BlockUseSettings.upstreamDefaults();
+    private volatile @NotNull ClaimTransferSettings transfer = ClaimTransferSettings.upstreamDefaults();
     // Resolved on first use: registries are not guaranteed to be populated when the mod initializes.
     private volatile @Nullable Item investigationTool;
     private volatile @Nullable Item modificationTool;
@@ -91,8 +95,35 @@ final class FabricSettings
             loadedWorld = WorldProtectionSettings.upstreamDefaults();
         }
 
+        BlockUseSettings loadedBlockUse;
+        try
+        {
+            loadedBlockUse = this.worldCodec.decodeBlockUse(contents);
+        }
+        catch (WorldProtectionConfigException exception)
+        {
+            this.logger.error("Could not read the door, container and lectern settings from {}; "
+                    + "using the defaults.", this.configFile, exception);
+            loadedBlockUse = BlockUseSettings.upstreamDefaults();
+        }
+
+        ClaimTransferSettings loadedTransfer;
+        try
+        {
+            loadedTransfer = this.codec.decodeTransfer(contents);
+        }
+        catch (ClaimToolConfigException exception)
+        {
+            // Off is the safe default: nobody gives claims away until the config is fixed.
+            this.logger.error("Could not read Claims.TransferClaim from {}; claim giving stays off.",
+                    this.configFile, exception);
+            loadedTransfer = ClaimTransferSettings.upstreamDefaults();
+        }
+
         this.tools = loadedTools;
         this.world = loadedWorld;
+        this.blockUse = loadedBlockUse;
+        this.transfer = loadedTransfer;
         this.investigationTool = null;
         this.modificationTool = null;
     }
@@ -101,6 +132,18 @@ final class FabricSettings
     @NotNull WorldProtectionSettings world()
     {
         return this.world;
+    }
+
+    /** Which blocks a player needs trust to use, and how much. */
+    @NotNull BlockUseSettings blockUse()
+    {
+        return this.blockUse;
+    }
+
+    /** Whether players may give their claims away with /transferclaim, and the price. */
+    @NotNull ClaimTransferSettings transfer()
+    {
+        return this.transfer;
     }
 
     @NotNull ClaimToolSettings tools()

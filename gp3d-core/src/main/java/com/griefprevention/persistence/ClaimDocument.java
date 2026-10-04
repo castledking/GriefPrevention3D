@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * Internal, platform-neutral representation of one persisted claim section.
@@ -219,6 +220,20 @@ public final class ClaimDocument
                 this.storageKey,
                 this.extraFields
         );
+    }
+
+    /**
+     * The claim under a new owner, keeping its trust, flags and shape, as Paper's
+     * {@code DataStore.changeClaimOwner} does.
+     *
+     * @param updatedOwnerId the new owner, or null to make the claim administrative
+     */
+    public @NotNull ClaimDocument withOwner(@Nullable UUID updatedOwnerId, long updatedModifiedDate)
+    {
+        ClaimSnapshot current = this.snapshot;
+        ClaimSnapshot updated = new ClaimSnapshot(current.id(), current.worldKey(), updatedOwnerId,
+                current.parentId(), current.bounds(), current.threeDimensional(), current.subdivision());
+        return withSnapshot(updated, updatedModifiedDate).withTrust(this.trust.withOwner(updatedOwnerId));
     }
 
     public @NotNull ClaimDocument withTrust(@NotNull ClaimTrustSnapshot updatedTrust)

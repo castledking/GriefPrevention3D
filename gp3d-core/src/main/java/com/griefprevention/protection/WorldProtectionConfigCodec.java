@@ -36,15 +36,7 @@ public final class WorldProtectionConfigCodec
     public synchronized @NotNull WorldProtectionSettings decode(@NotNull String input)
             throws WorldProtectionConfigException
     {
-        final Object loaded;
-        try
-        {
-            loaded = this.yaml.load(input);
-        }
-        catch (YAMLException exception)
-        {
-            throw new WorldProtectionConfigException("Invalid config YAML: " + exception.getMessage(), exception);
-        }
+        final Object loaded = load(input);
         if (loaded == null)
         {
             return WorldProtectionSettings.upstreamDefaults();
@@ -88,6 +80,40 @@ public final class WorldProtectionConfigCodec
                         "Claims.PvPToggle.Subdivision.Enabled"),
                 worldModes(optionalMap(claims.get("Mode"), ROOT + ".Claims.Mode"))
         );
+    }
+
+    /** Reads the switches behind {@link BlockUseSettings}, with Paper's defaults. */
+    public synchronized @NotNull BlockUseSettings decodeBlockUse(@NotNull String input)
+            throws WorldProtectionConfigException
+    {
+        final Object loaded = load(input);
+        if (loaded == null)
+        {
+            return BlockUseSettings.upstreamDefaults();
+        }
+
+        Map<String, Object> root = optionalMap(stringMap(loaded, "config root").get(ROOT), ROOT);
+        Map<String, Object> claims = optionalMap(root.get(CLAIMS), ROOT + "." + CLAIMS);
+        return new BlockUseSettings(
+                bool(claims.get("PreventTheft"), true, "Claims.PreventTheft"),
+                bool(claims.get("LockWoodenDoors"), false, "Claims.LockWoodenDoors"),
+                bool(claims.get("LockTrapDoors"), false, "Claims.LockTrapDoors"),
+                bool(claims.get("LockFenceGates"), true, "Claims.LockFenceGates"),
+                bool(claims.get("PreventButtonsSwitches"), true, "Claims.PreventButtonsSwitches"),
+                bool(claims.get("LecternReadingRequiresAccessTrust"), true, "Claims.LecternReadingRequiresAccessTrust")
+        );
+    }
+
+    private @Nullable Object load(@NotNull String input) throws WorldProtectionConfigException
+    {
+        try
+        {
+            return this.yaml.load(input);
+        }
+        catch (YAMLException exception)
+        {
+            throw new WorldProtectionConfigException("Invalid config YAML: " + exception.getMessage(), exception);
+        }
     }
 
     private static @NotNull Map<String, ClaimWorldMode> worldModes(@NotNull Map<String, Object> modes)

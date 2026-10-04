@@ -14,6 +14,8 @@
     "FireBlockMixin",
     "FlowingFluidMixin",
     "LavaFluidMixin",
+    "LecternBlockEntityMixin",
+    "LecternMenuMixin",
     "PistonBaseBlockMixin",
     "ServerExplosionMixin"
   ],

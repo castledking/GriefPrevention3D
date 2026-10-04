@@ -68,4 +68,30 @@ class ClaimToolConfigCodecTest
         assertThrows(ClaimToolConfigException.class, () -> this.codec.decode(
                 "GriefPrevention:\n  Claims:\n    Mode:\n      world: Sometimes\n"));
     }
+
+    @Test
+    void transferringClaimsIsOffAndFreeByDefault() throws Exception
+    {
+        ClaimTransferSettings settings = this.codec.decodeTransfer("GriefPrevention: {}\n");
+
+        assertFalse(settings.enabled());
+        assertEquals(0.0, settings.price());
+    }
+
+    @Test
+    void readsPapersTransferClaimSection() throws Exception
+    {
+        ClaimTransferSettings settings = this.codec.decodeTransfer(
+                "GriefPrevention:\n  Claims:\n    TransferClaim:\n      Enabled: true\n      Price: 250\n");
+
+        assertTrue(settings.enabled());
+        assertEquals(250.0, settings.price());
+    }
+
+    @Test
+    void rejectsANegativeTransferPrice()
+    {
+        assertThrows(ClaimToolConfigException.class, () -> this.codec
+                .decodeTransfer("GriefPrevention:\n  Claims:\n    TransferClaim:\n      Price: -5\n"));
+    }
 }

@@ -3,6 +3,8 @@ package com.griefprevention.fabric;
 import com.griefprevention.claims.ClaimSnapshot;
 import com.griefprevention.claims.ClaimTrustLevel;
 import com.griefprevention.messages.MessageKey;
+import com.griefprevention.protection.BlockUseKind;
+import net.fabricmc.fabric.api.event.player.AttackBlockCallback;
 import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
@@ -13,7 +15,9 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.ItemTags;
+import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.Entity;
@@ -44,16 +48,26 @@ import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.AbstractCauldronBlock;
 import net.minecraft.world.level.block.AnvilBlock;
+import net.minecraft.world.level.block.BeaconBlock;
+import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.BeehiveBlock;
+import net.minecraft.world.level.block.BellBlock;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.ButtonBlock;
 import net.minecraft.world.level.block.CakeBlock;
 import net.minecraft.world.level.block.CandleCakeBlock;
 import net.minecraft.world.level.block.CaveVinesBlock;
 import net.minecraft.world.level.block.CaveVinesPlantBlock;
+import net.minecraft.world.level.block.ComparatorBlock;
+import net.minecraft.world.level.block.DaylightDetectorBlock;
 import net.minecraft.world.level.block.DoorBlock;
+import net.minecraft.world.level.block.DragonEggBlock;
 import net.minecraft.world.level.block.FenceGateBlock;
+import net.minecraft.world.level.block.LecternBlock;
 import net.minecraft.world.level.block.LeverBlock;
+import net.minecraft.world.level.block.NoteBlock;
 import net.minecraft.world.level.block.PumpkinBlock;
+import net.minecraft.world.level.block.RepeaterBlock;
 import net.minecraft.world.level.block.RespawnAnchorBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.SignBlockEntity;
@@ -65,6 +79,7 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Player-driven protection: breaking, placing, using blocks, items and entities, and melee attacks.
@@ -75,11 +90,16 @@ final class FabricProtectionHooks
 {
     private final FabricClaimRepository claims;
     private final FabricDenialFeedback feedback;
+    private final FabricSettings settings;
 
-    FabricProtectionHooks(@NotNull FabricClaimRepository claims, @NotNull FabricDenialFeedback feedback)
+    FabricProtectionHooks(
+            @NotNull FabricClaimRepository claims,
+            @NotNull FabricDenialFeedback feedback,
+            @NotNull FabricSettings settings)
     {
         this.claims = claims;
         this.feedback = feedback;
+        this.settings = settings;
     }
 
     void register()
@@ -89,6 +109,13 @@ final class FabricProtectionHooks
 
         UseBlockCallback.EVENT.register((player, level, hand, hitResult) ->
                 handleBlockUse(player, level, hand, hitResult));
+
+        // Hitting a dragon egg teleports it, which Paper treats as building.
+        AttackBlockCallback.EVENT.register((player, level, hand, pos, direction) ->
+                !(level.getBlockState(pos).getBlock() instanceof DragonEggBlock)
+                        || canUseClaim(level, player, pos, ClaimTrustLevel.BUILD)
+                        ? InteractionResult.PASS
+                        : InteractionResult.FAIL);
 
         UseItemCallback.EVENT.register(this::handleItemUse);
 
@@ -138,13 +165,13 @@ final class FabricProtectionHooks
             }
             requiredTrust = ClaimTrustLevel.BUILD;
         }
-        else if (blockEntity != null || isContainerLike(clicked))
-        {
-            requiredTrust = ClaimTrustLevel.CONTAINER;
-        }
         else
         {
-            requiredTrust = ClaimTrustLevel.ACCESS;
+            requiredTrust = this.settings.blockUse().requiredTrust(useKind(clickedState, blockEntity, stack));
+            if (requiredTrust == null)
+            {
+                return InteractionResult.PASS;
+            }
         }
         return canUseClaim(level, player, clickedPos, requiredTrust)
                 ? InteractionResult.PASS
@@ -328,10 +355,73 @@ final class FabricProtectionHooks
                 || block instanceof LeverBlock;
     }
 
-    /** Blocks with no block entity that Paper still guards with container trust. */
+    /** Sorts a right-clicked block into the groups Paper's interaction rules tell apart. */
+    private static @NotNull BlockUseKind useKind(
+            @NotNull BlockState state,
+            @Nullable BlockEntity blockEntity,
+            @NotNull ItemStack stack)
+    {
+        Block block = state.getBlock();
+        if (block instanceof LecternBlock)
+        {
+            // An empty lectern takes the book in hand; any other click opens its book to read.
+            return !state.getValue(LecternBlock.HAS_BOOK) && stack.is(ItemTags.LECTERN_BOOKS)
+                    ? BlockUseKind.LECTERN_BOOK
+                    : BlockUseKind.LECTERN;
+        }
+        // Inventories, as Bukkit's InventoryHolder blocks: ender chests, campfires and lecterns are not.
+        if (blockEntity instanceof Container || isContainerLike(block))
+        {
+            return BlockUseKind.CONTAINER;
+        }
+        if (block instanceof DoorBlock)
+        {
+            return BlockUseKind.DOOR;
+        }
+        if (block instanceof TrapDoorBlock)
+        {
+            return BlockUseKind.TRAPDOOR;
+        }
+        if (block instanceof FenceGateBlock)
+        {
+            return BlockUseKind.FENCE_GATE;
+        }
+        if (block instanceof BedBlock)
+        {
+            return BlockUseKind.BED;
+        }
+        if (block instanceof ButtonBlock || block instanceof LeverBlock)
+        {
+            return BlockUseKind.SWITCH;
+        }
+        if (block instanceof NoteBlock
+                || block instanceof RepeaterBlock
+                || block instanceof ComparatorBlock
+                || block instanceof DaylightDetectorBlock
+                || isRedstoneWire(block)
+                || block instanceof DragonEggBlock
+                || state.is(BlockTags.FLOWER_POTS)
+                || state.is(BlockTags.CANDLES)
+                || state.is(BlockTags.COPPER_GOLEM_STATUES))
+        {
+            return BlockUseKind.BUILD;
+        }
+        return BlockUseKind.UNPROTECTED;
+    }
+
+    /** By id: 26.3 renamed {@code RedStoneWireBlock} to {@code RedstoneWireBlock}. */
+    private static boolean isRedstoneWire(@NotNull Block block)
+    {
+        return "minecraft:redstone_wire".equals(BuiltInRegistries.BLOCK.getKey(block).toString());
+    }
+
+    /** Blocks with no inventory that Paper still guards with container trust. */
     private static boolean isContainerLike(@NotNull Block block)
     {
-        return block instanceof CakeBlock
+        return block instanceof BeaconBlock
+                || block instanceof BeehiveBlock
+                || block instanceof BellBlock
+                || block instanceof CakeBlock
                 || block instanceof CandleCakeBlock
                 || block instanceof AbstractCauldronBlock
                 || block instanceof RespawnAnchorBlock

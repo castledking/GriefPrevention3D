@@ -28,7 +28,7 @@ final class FabricDataFolder
     private static final String DEFAULT_CONFIG_TEMPLATE = """
             # GriefPrevention3D Fabric uses the same data folder name and top-level config shape as the Paper plugin.
             # Only the options wired by the Fabric port are active right now; /gpreload rereads the claim tool,
-            # visualization, fire, fluid, piston and combat options.
+            # visualization, fire, fluid, piston, combat and block-use options.
             GriefPrevention:
               ConfigVersion: 1
               BlockLandClaimExplosions: true
@@ -69,6 +69,15 @@ final class FabricDataFolder
                 FireSpreadsInClaims: false
                 FireDamagesInClaims: false
                 ProtectCreatures: true
+                PreventTheft: true
+                LockWoodenDoors: false
+                LockTrapDoors: false
+                LockFenceGates: true
+                PreventButtonsSwitches: true
+                LecternReadingRequiresAccessTrust: true
+                TransferClaim:
+                  Enabled: false
+                  Price: 0.0
                 PvPToggle:
                   Claim:
                     Enabled: false
@@ -189,6 +198,36 @@ final class FabricDataFolder
               BasicClaimsMode: "Returned to basic claim creation mode."
               PlayerOfflineTime: "  Last login: {0} days ago."
               MinimumRadius: "Minimum radius is {0}."
+              IgnoringClaims: "Now ignoring claims."
+              RespectingClaims: "Now respecting claims."
+              DeletionSubdivisionWarning: "This claim includes subdivisions.  If you're sure you want to delete it, use /deleteclaim again."
+              CantDeleteAdminClaim: "You don't have permission to delete administrative claims."
+              DeleteAllSuccess: "Deleted all of {0}'s claims."
+              AllAdminDeleted: "Deleted all administrative claims."
+              WorldNotFound: "World not found."
+              ConvertClaimMissing: "There's no claim here.  Stand in the claim you want to convert."
+              ConvertClaimAlreadyAdmin: "This claim is already an administrative claim."
+              ConvertClaimAlreadyBasic: "This claim is already a basic claim."
+              ConvertClaimAdminSuccess: "Claim converted to an administrative claim."
+              ConvertClaimBasicSuccess: "Administrative claim converted to a basic claim you own."
+              TransferTopLevel: "Only top level claims (not subdivisions) may be transferred.  Stand outside of the subdivision and try again."
+              TransferClaimMissing: "There's no claim here.  Stand in the administrative claim you want to transfer."
+              TransferSuccess: "Claim transferred."
+              TransferClaimPermission: "That command requires the administrative claims permission."
+              TransferClaimNotEnabled: "Giving claims to other players is not enabled on this server."
+              TransferClaimNoClaim: "There's no claim here.  Stand in the claim you want to give away."
+              TransferClaimSelf: "You already own this claim."
+              TransferClaimRecipientNeedsBlocks: "{0} doesn't have enough claim blocks for this claim.  They need {1} more."
+              TransferClaimRecipientAtLimit: "{0} already has as many claims as they are allowed."
+              ConfirmTransferClaimNoFee: "Do you want to give this claim to {0}?"
+              ConfirmTransferClaimInstruction: "Type /transferclaim {0} confirm to confirm."
+              TransferClaimSuccess: "Gave this claim to {0}."
+              TransferClaimReceived: "{0} gave you their claim at {1}."
+              EconomyNoVault: "Economy support requires Vault plugin to be installed."
+              ExplosivesDisabled: "This claim is now protected from explosions.  Use /claimexplosions again to disable."
+              ExplosivesEnabled: "This claim is now vulnerable to explosions.  Use /claimexplosions again to re-enable protections."
+              WitherExplosionsEnabled: "This claim is now vulnerable to wither explosions.  Use /witherexplosions again to re-enable protections."
+              WitherExplosionsDisabled: "This claim is now protected from wither explosions.  Use /witherexplosions again to disable protections."
             """;
 
     private FabricDataFolder()

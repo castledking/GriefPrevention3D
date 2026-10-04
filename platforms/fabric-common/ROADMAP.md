@@ -92,12 +92,20 @@ Still open:
 - [x] Claim blocks: `/acb` (players and `[permission]` groups), `/acball`, `/scb`, `/scball`,
       `/aclaim blocks`.
 - [x] `/gpreload` also rereads `alias.yml`.
+- [x] Staff claim management: `/ignoreclaims`, `/deleteclaim` (and `/aclaim delete claim|player|world|
+      userworld|alladmin`), `/deleteallclaims`, `/deletealladminclaims`, `/adminclaimslist`, `/makeadmin`,
+      `/makebasic`. As on Paper, `griefprevention.deleteclaims` may edit other players' claims, and
+      `/ignoreclaims` passes whatever the player's bypass permission covers.
+- [x] `/transferclaim` (`/giveclaim`, `/claim transfer`, `/aclaim transfer`): staff with
+      `griefprevention.transferclaim.others` hand any claim over or make it administrative; players give
+      their own claims away under `Claims.TransferClaim`. Fabric has no economy, so a configured price
+      refuses the transfer, as Paper does without Vault, unless the player has `.free`.
+- [x] `/claimexplosions`, `/witherexplosions`.
+- [x] `FabricPermissionDefaults` is checked against plugin.yml by `FabricPermissionTreeParityTest`.
 
 ### Still missing
 
-- [ ] `/ignoreclaims`, `/deleteclaim`, `/deleteallclaims`, `/deletealladminclaims`, `/transferclaim`,
-      `/adminclaimslist`, `/makeadmin`, `/makebasic`.
-- [ ] `/claimexplosions`, `/witherexplosions`, `/restrictsubclaim`, `/claim alerts`.
+- [ ] `/restrictsubclaim`, `/claim alerts`.
 - [ ] `/trapped`, `/siege`, `/extendclaim`, restore nature, buying and selling claim blocks.
 - [ ] Subdivision trust inheritance in protection checks (trust commands already copy grants to
       inheriting subdivisions, as Paper does).
@@ -124,6 +132,8 @@ Still open:
 | Dispensers and droppers across claim borders | `dispenseFrom` mixins |
 | Farmland trampling | `FarmBlock`/`FarmlandBlock` mixin |
 | Endermen taking blocks | enderman take-block goal mixin |
+| Block use as Paper decides it (`BlockUseSettings`): containers with `PreventTheft`; doors, trapdoors, fence gates, beds, buttons and levers behind `LockWoodenDoors`, `LockTrapDoors`, `LockFenceGates` and `PreventButtonsSwitches`; redstone and decorations need build trust; crafting tables and other workstations are free | `UseBlockCallback`, dragon eggs `AttackBlockCallback` |
+| Lecterns: reading needs access trust with `LecternReadingRequiresAccessTrust` (otherwise anyone may read); taking or placing the book needs container trust | `UseBlockCallback`, `LecternMenu.clickMenuButton` and `LecternBlockEntity.createMenu` mixins |
 
 The rules live in `gp3d-core` (`com.griefprevention.protection`) as platform-neutral, unit-tested
 policies; the Fabric side only maps positions and entities to claims.

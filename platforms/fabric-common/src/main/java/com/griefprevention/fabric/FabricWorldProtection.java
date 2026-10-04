@@ -29,10 +29,12 @@ import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.entity.vehicle.VehicleEntity;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.BaseFireBlock;
 import net.minecraft.world.level.block.DispenserBlock;
+import net.minecraft.world.level.block.entity.LecternBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
@@ -40,6 +42,8 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 /**
  * What the world-protection mixins ask: may this fluid flow, this piston move, this fire spread,
@@ -460,6 +464,44 @@ public final class FabricWorldProtection
                 || target instanceof ArmorStand
                 || target instanceof EndCrystal
                 || target instanceof VehicleEntity;
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Lecterns
+    // ---------------------------------------------------------------------------------------------
+
+    /** The lectern behind each open lectern menu: the menu itself only holds the book. */
+    private static final Map<AbstractContainerMenu, LecternBlockEntity> LECTERN_MENUS = new WeakHashMap<>();
+
+    public static void lecternMenuOpened(@NotNull AbstractContainerMenu menu, @NotNull LecternBlockEntity lectern)
+    {
+        LECTERN_MENUS.put(menu, lectern);
+    }
+
+    /**
+     * Paper's PlayerTakeLecternBookEvent rule: reading may only take access trust, but taking the
+     * book off the lectern takes container trust.
+     */
+    public static boolean mayTakeLecternBook(@NotNull AbstractContainerMenu menu, @NotNull Player player)
+    {
+        FabricWorldProtection protection = active;
+        LecternBlockEntity lectern = LECTERN_MENUS.get(menu);
+        if (protection == null || lectern == null || !(lectern.getLevel() instanceof ServerLevel level))
+        {
+            return true;
+        }
+
+        ClaimSnapshot claim = protection.claims.findClaimAt(level, lectern.getBlockPos());
+        if (claim == null || protection.claims.allows(claim, player, ClaimTrustLevel.CONTAINER))
+        {
+            return true;
+        }
+        protection.feedback.denied(player, claim, ClaimTrustLevel.CONTAINER);
+        if (player instanceof ServerPlayer serverPlayer)
+        {
+            serverPlayer.closeContainer();
+        }
+        return false;
     }
 
     // ---------------------------------------------------------------------------------------------

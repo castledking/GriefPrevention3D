@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -42,8 +43,18 @@ final class FabricPermissionDefaults
     static final String BASIC_CLAIMS = "griefprevention.basicclaims";
     static final String CREATE_CLAIMS = "griefprevention.createclaims";
     static final String CLAIM_PVP = "griefprevention.claimpvp";
+    static final String CLAIM_EXPLOSIONS = "griefprevention.claimexplosions";
+    static final String WITHER_EXPLOSIONS = "griefprevention.witherexplosions";
+    static final String TRANSFER_CLAIM = "griefprevention.transferclaim";
+    static final String TRANSFER_CLAIM_FREE = "griefprevention.transferclaim.free";
+    static final String TRANSFER_CLAIM_OTHERS = "griefprevention.transferclaim.others";
     static final String ADJUST_CLAIM_BLOCKS = "griefprevention.adjustclaimblocks";
     static final String DELETE_CLAIMS = "griefprevention.deleteclaims";
+    static final String DELETE_CLAIMS_IN_WORLD = "griefprevention.deleteclaimsinworld";
+    static final String DELETE_ALL_ADMIN_CLAIMS = "griefprevention.deletealladminclaims";
+    static final String ADMIN_CLAIMS_LIST = "griefprevention.adminclaimslist";
+    static final String CONVERT_CLAIMS = "griefprevention.adminclaims.convert";
+    static final String IGNORE_CLAIMS = "griefprevention.ignoreclaims";
     static final String SEE_INACTIVITY = "griefprevention.seeinactivity";
     static final String RELOAD = "griefprevention.reload";
 
@@ -57,7 +68,7 @@ final class FabricPermissionDefaults
         for (String child : Arrays.asList(
                 TRUST, UNTRUST, TRUST_LIST, ACCESS_TRUST, CONTAINER_TRUST, MANAGE_TRUST, CLAIMS_LIST,
                 ABANDON_CLAIM, ABANDON_TOP_LEVEL_CLAIM, ABANDON_ALL_CLAIMS, BASIC_CLAIMS, CREATE_CLAIMS,
-                CLAIM_PVP))
+                CLAIM_PVP, CLAIM_EXPLOSIONS, WITHER_EXPLOSIONS, TRANSFER_CLAIM))
         {
             node(child, Default.TRUE, CLAIMS);
         }
@@ -65,16 +76,17 @@ final class FabricPermissionDefaults
 
         for (String child : Arrays.asList(
                 ADMIN_CLAIMS, ADJUST_CLAIM_BLOCKS, DELETE_CLAIMS, SEE_INACTIVITY, RELOAD, CLAIMS_LIST_OTHER,
-                "griefprevention.ignoreclaims", "griefprevention.seeclaimsize",
-                "griefprevention.overrideclaimcountlimit", "griefprevention.transferclaim",
-                "griefprevention.adminclaims.convert", "griefprevention.deleteclaimsinworld"))
+                IGNORE_CLAIMS, "griefprevention.seeclaimsize", "griefprevention.overrideclaimcountlimit",
+                TRANSFER_CLAIM_OTHERS, CONVERT_CLAIMS, DELETE_CLAIMS_IN_WORLD))
         {
             node(child, Default.OP, ADMIN);
         }
 
         node(PERMISSION_TRUST, Default.FALSE, ADMIN_CLAIMS);
-        node("griefprevention.adminclaimslist", Default.OP, ADMIN_CLAIMS);
-        node("griefprevention.deletealladminclaims", Default.OP, ADMIN_CLAIMS);
+        node(ADMIN_CLAIMS_LIST, Default.OP, ADMIN_CLAIMS);
+        node(DELETE_ALL_ADMIN_CLAIMS, Default.OP, ADMIN_CLAIMS);
+        node(TRANSFER_CLAIM_FREE, Default.FALSE);
+        node("griefprevention.claimpvp.free", Default.FALSE);
     }
 
     private FabricPermissionDefaults()
@@ -152,6 +164,24 @@ final class FabricPermissionDefaults
             }
         }
         return false;
+    }
+
+    /** The nodes declared here, which must match plugin.yml. */
+    static @NotNull Set<String> declared()
+    {
+        return Collections.unmodifiableSet(NODES.keySet());
+    }
+
+    /** @return the node's default as plugin.yml writes it: true, op or false */
+    static @NotNull String declaredDefault(@NotNull String permission)
+    {
+        return NODES.get(permission).value.name().toLowerCase(Locale.ROOT);
+    }
+
+    /** @return the nodes that list this one as a child */
+    static @NotNull List<String> declaredParents(@NotNull String permission)
+    {
+        return NODES.get(permission).parents;
     }
 
     private static void node(@NotNull String permission, @NotNull Default value, @NotNull String... parents)

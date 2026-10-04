@@ -539,6 +539,84 @@ final class FabricClaimCommands
         }
     }
 
+    /** {@code /claimexplosions [on|off]}: whether explosions may damage the claim. */
+    boolean claimExplosions(@NotNull FabricCommandSender sender, @NotNull String @NotNull [] args)
+    {
+        return toggleExplosions(sender, args, ClaimFlag.EXPLOSIONS);
+    }
+
+    /** {@code /witherexplosions [on|off]}: whether wither explosions may damage the claim. */
+    boolean witherExplosions(@NotNull FabricCommandSender sender, @NotNull String @NotNull [] args)
+    {
+        return toggleExplosions(sender, args, ClaimFlag.WITHER_EXPLOSIONS);
+    }
+
+    private boolean toggleExplosions(
+            @NotNull FabricCommandSender sender,
+            @NotNull String @NotNull [] args,
+            @NotNull ClaimFlag flag)
+    {
+        boolean wither = flag == ClaimFlag.WITHER_EXPLOSIONS;
+        ServerPlayer player = sender.requirePlayer();
+        if (player == null || !sender.checkPermission(
+                wither ? FabricPermissionDefaults.WITHER_EXPLOSIONS : FabricPermissionDefaults.CLAIM_EXPLOSIONS))
+        {
+            return true;
+        }
+
+        ClaimSnapshot claim = this.claims.findClaimAt((ServerLevel) player.level(), player.blockPosition());
+        if (claim == null || claim.id() == null)
+        {
+            sender.sendError(MessageKey.DELETE_CLAIM_MISSING);
+            return true;
+        }
+        // As on Paper, anyone who may build in the claim may decide what explosions do to it.
+        if (!this.claims.allows(claim, player, ClaimTrustLevel.BUILD))
+        {
+            sender.sendError(MessageKey.NO_BUILD_PERMISSION, this.feedback.ownerName(player, claim));
+            return true;
+        }
+        if (args.length > 1)
+        {
+            return false;
+        }
+
+        boolean allowed;
+        if (args.length == 1 && "on".equalsIgnoreCase(args[0]))
+        {
+            allowed = true;
+        }
+        else if (args.length == 1 && "off".equalsIgnoreCase(args[0]))
+        {
+            allowed = false;
+        }
+        else if (args.length == 1)
+        {
+            return false;
+        }
+        else
+        {
+            allowed = !Boolean.TRUE.equals(this.claims.flag(claim.id(), flag));
+        }
+
+        try
+        {
+            this.claims.setFlag(claim.id(), flag, allowed);
+        }
+        catch (IOException exception)
+        {
+            this.logger.error("Could not save claim {} after {} changed its explosion setting.",
+                    claim.id(), sender.name(), exception);
+            sender.sendText(TextMode.ERROR, "Could not save the claim: " + exception.getMessage());
+            return true;
+        }
+        MessageKey result = wither
+                ? allowed ? MessageKey.WITHER_EXPLOSIONS_ENABLED : MessageKey.WITHER_EXPLOSIONS_DISABLED
+                : allowed ? MessageKey.EXPLOSIVES_ENABLED : MessageKey.EXPLOSIVES_DISABLED;
+        sender.send(TextMode.SUCCESS, result);
+        return true;
+    }
+
     /** Paper's {@code getfriendlyLocationString} for a claim's lesser corner. */
     static @NotNull String friendlyLocation(@NotNull ClaimSnapshot claim)
     {

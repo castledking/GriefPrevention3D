@@ -36,6 +36,42 @@ public final class ClaimToolConfigCodec
         this.yaml = new Yaml(new SafeConstructor(options));
     }
 
+    /** Reads {@code Claims.TransferClaim}, with Paper's defaults. */
+    public synchronized @NotNull ClaimTransferSettings decodeTransfer(@NotNull String input)
+            throws ClaimToolConfigException
+    {
+        final Object loaded;
+        try
+        {
+            loaded = this.yaml.load(input);
+        }
+        catch (YAMLException exception)
+        {
+            throw new ClaimToolConfigException("Invalid config YAML: " + exception.getMessage(), exception);
+        }
+        if (loaded == null)
+        {
+            return ClaimTransferSettings.upstreamDefaults();
+        }
+
+        Map<String, Object> root = optionalMap(stringMap(loaded, "config root").get(ROOT), ROOT);
+        Map<String, Object> claims = optionalMap(root.get(CLAIMS), ROOT + "." + CLAIMS);
+        Map<String, Object> transfer = optionalMap(claims.get("TransferClaim"), ROOT + ".Claims.TransferClaim");
+        Object price = transfer.get("Price");
+        if (price != null && !(price instanceof Number))
+        {
+            throw new ClaimToolConfigException("Claims.TransferClaim.Price must be a number.");
+        }
+        double parsedPrice = price == null ? 0.0 : ((Number) price).doubleValue();
+        if (parsedPrice < 0.0 || Double.isNaN(parsedPrice) || Double.isInfinite(parsedPrice))
+        {
+            throw new ClaimToolConfigException("Claims.TransferClaim.Price must not be negative.");
+        }
+        return new ClaimTransferSettings(
+                bool(transfer.get("Enabled"), false, "Claims.TransferClaim.Enabled"),
+                parsedPrice);
+    }
+
     public synchronized @NotNull ClaimToolSettings decode(@NotNull String input) throws ClaimToolConfigException
     {
         final Object loaded;

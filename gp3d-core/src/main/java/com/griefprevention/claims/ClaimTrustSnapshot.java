@@ -73,6 +73,14 @@ public final class ClaimTrustSnapshot
         return new ClaimTrustSnapshot(ownerId, Collections.emptyMap(), Collections.emptySet(), Collections.emptySet());
     }
 
+    /** The same trust under a new owner, or none for an administrative claim. */
+    public @NotNull ClaimTrustSnapshot withOwner(@Nullable UUID updatedOwnerId)
+    {
+        return new ClaimTrustSnapshot(updatedOwnerId, this.permissionsByIdentifier, this.managerIdentifiers,
+                this.neighborIdentifiers, this.deniedIdentifiers, this.pvpTrustedIdentifiers,
+                this.pveTrustedIdentifiers);
+    }
+
     public static @NotNull String normalizeIdentifier(@Nullable String identifier)
     {
         if (identifier == null)

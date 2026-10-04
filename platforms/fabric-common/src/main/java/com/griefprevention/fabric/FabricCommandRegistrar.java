@@ -83,6 +83,7 @@ final class FabricCommandRegistrar
             @NotNull FabricTrustCommands trust,
             @NotNull FabricClaimCommands claimCommands,
             @NotNull FabricClaimBlockCommands blocks,
+            @NotNull FabricAdminClaimCommands staff,
             @NotNull Path aliasFile,
             @NotNull Logger logger)
     {
@@ -125,6 +126,8 @@ final class FabricCommandRegistrar
         claim.put("abandon", new Action(claimCommands::abandon, FabricPermissionDefaults.ABANDON_CLAIM)
                 .standalone(claimCommands::abandonClaim));
         claim.put("pvp", new Action(claimCommands::claimPvp, FabricPermissionDefaults.CLAIM_PVP));
+        claim.put("explosions", new Action(claimCommands::claimExplosions, FabricPermissionDefaults.CLAIM_EXPLOSIONS));
+        claim.put("transfer", new Action(staff::transfer, FabricPermissionDefaults.TRANSFER_CLAIM));
         this.actions.put(CLAIM_ROOT, claim);
 
         Map<String, Action> admin = new LinkedHashMap<>();
@@ -132,6 +135,12 @@ final class FabricCommandRegistrar
                 .standalone(trust::permissionTrust));
         admin.put("mode", new Action(claimCommands::adminMode, FabricPermissionDefaults.ADMIN_CLAIMS));
         admin.put("blocks", new Action(blocks::adjust, FabricPermissionDefaults.ADJUST_CLAIM_BLOCKS));
+        admin.put("ignore", new Action(staff::ignoreClaims, FabricPermissionDefaults.IGNORE_CLAIMS));
+        admin.put("adminlist", new Action(staff::adminClaimsList, FabricPermissionDefaults.ADMIN_CLAIMS_LIST));
+        admin.put("delete", new Action(staff::delete, FabricPermissionDefaults.DELETE_CLAIMS));
+        admin.put("transfer", new Action(staff::transfer, FabricPermissionDefaults.TRANSFER_CLAIM));
+        admin.put("makeadmin", new Action(staff::makeAdmin, FabricPermissionDefaults.CONVERT_CLAIMS));
+        admin.put("makebasic", new Action(staff::makeBasic, FabricPermissionDefaults.CONVERT_CLAIMS));
         this.actions.put(ADMIN_ROOT, admin);
 
         legacy("trust", trust::trust, FabricPermissionDefaults.TRUST,
@@ -175,6 +184,24 @@ final class FabricCommandRegistrar
                 "/%s <player> <amount>", players, "scb");
         legacy("setaccruedclaimblocksall", blocks::setAccruedForAll, FabricPermissionDefaults.ADJUST_CLAIM_BLOCKS,
                 "/%s <amount>", null, "scball");
+        legacy("claimexplosions", claimCommands::claimExplosions, FabricPermissionDefaults.CLAIM_EXPLOSIONS,
+                "/%s [on|off]", (sender, previous) -> previous.length == 0 ? List.of("on", "off") : List.of(),
+                "claimexplosion");
+        legacy("witherexplosions", claimCommands::witherExplosions, FabricPermissionDefaults.WITHER_EXPLOSIONS,
+                "/%s [on|off]", (sender, previous) -> previous.length == 0 ? List.of("on", "off") : List.of(),
+                "witherexplosion");
+        legacy("transferclaim", staff::transfer, FabricPermissionDefaults.TRANSFER_CLAIM, "/%s <player> [confirm]",
+                (sender, previous) -> previous.length == 0 ? onlinePlayers(sender)
+                        : previous.length == 1 ? List.of("confirm") : List.of(),
+                "giveclaim");
+        legacy("ignoreclaims", staff::ignoreClaims, FabricPermissionDefaults.IGNORE_CLAIMS, "/%s", null, "ic");
+        legacy("deleteclaim", staff::delete, FabricPermissionDefaults.DELETE_CLAIMS, "/%s", null);
+        legacy("deleteallclaims", staff::deleteAllClaims, FabricPermissionDefaults.DELETE_CLAIMS, "/%s <player>", players);
+        legacy("deletealladminclaims", staff::deleteAllAdminClaims, FabricPermissionDefaults.DELETE_ALL_ADMIN_CLAIMS,
+                "/%s", null);
+        legacy("adminclaimslist", staff::adminClaimsList, FabricPermissionDefaults.ADMIN_CLAIMS_LIST, "/%s", null);
+        legacy("makeadmin", staff::makeAdmin, FabricPermissionDefaults.CONVERT_CLAIMS, "/%s", null);
+        legacy("makebasic", staff::makeBasic, FabricPermissionDefaults.CONVERT_CLAIMS, "/%s", null);
         legacy("gpreload", this::reload, FabricPermissionDefaults.RELOAD, "/%s", null);
         legacy("gpstatus", this::status, FabricPermissionDefaults.RELOAD, "/%s", null);
     }

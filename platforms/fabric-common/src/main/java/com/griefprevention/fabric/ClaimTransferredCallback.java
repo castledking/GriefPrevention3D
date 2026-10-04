@@ -8,7 +8,8 @@ import net.fabricmc.fabric.api.event.EventFactory;
 import java.util.UUID;
 
 /**
- * Callback for when a claim is transferred to a new owner.
+ * Callback for when a claim is transferred to a new owner, by {@code /transferclaim},
+ * {@code /makeadmin} or {@code /makebasic}.
  */
 @FunctionalInterface
 public interface ClaimTransferredCallback {
@@ -23,6 +24,7 @@ public interface ClaimTransferredCallback {
 
     void onClaimTransferred(
             @org.jetbrains.annotations.NotNull ClaimSnapshot claim,
-            @org.jetbrains.annotations.NotNull UUID newOwner,
+            /* null when the claim became an administrative claim */
+            @org.jetbrains.annotations.Nullable UUID newOwner,
             @org.jetbrains.annotations.Nullable ServerPlayer player);
 }
