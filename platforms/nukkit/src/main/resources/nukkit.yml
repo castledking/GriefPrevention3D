@@ -1,0 +1,12 @@
+# Nukkit reads nukkit.yml in preference to plugin.yml, so the universal jar serves both. The build
+# fills in the version and appends plugin.yml's permissions section. Commands are not declared here:
+# like on Fabric, the adapter will register them from alias.yml.
+name: GriefPrevention3D
+main: com.griefprevention.nukkit.GriefPreventionNukkit
+version: "${version}"
+api: ["${api}"]
+description: The self-service anti-griefing plugin for Minecraft servers — now with full 3D subdivisions
+website: https://castled.codes
+authors: [castledking, RoboMWM, BigScary]
+
+${permissions}

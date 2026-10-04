@@ -60,6 +60,8 @@ to `GriefPrevention3D.jar` when it publishes it.
   `NoSuchFieldError`. `FabricLinkageCheck` resolves every class, field, method, lambda and mixin
   (targets, `@Shadow`, injector selectors, `@At` targets, invokers) of each adapter against the server
   jar, libraries, Fabric Loader and Fabric API of every release in its range, the way the JVM would.
+- `checkUniversalNukkit` and `checkNukkitBoot` — the Nukkit adapter the same jar carries; see
+  [`platforms/nukkit/README.md`](../nukkit/README.md).
 
 To claim a new release, add it to `fabricTargets` and widen the adapter's range in `gradle.properties`.
 If the linkage check or boot fails, either keep the shared code on APIs every release has, or add a new

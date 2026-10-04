@@ -345,9 +345,11 @@ sourceSets {
     }
 }
 
-// The Fabric modules are left out of JitPack builds; everything universal-jar related lives with them.
+// The Fabric and Nukkit modules are left out of JitPack builds; everything universal-jar related
+// lives with them.
 if (findProject(":fabric-1.21.11") != null) {
     apply(from = "platforms/fabric-universal.gradle.kts")
+    apply(from = "platforms/nukkit-universal.gradle.kts")
 }
 
 publishing {

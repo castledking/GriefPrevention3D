@@ -36,4 +36,7 @@ if (providers.gradleProperty("jitpack").orElse("false").get() != "true") {
 
     include("fabric-linkage-check")
     project(":fabric-linkage-check").projectDir = file("platforms/fabric-linkage-check")
+
+    include("nukkit")
+    project(":nukkit").projectDir = file("platforms/nukkit")
 }

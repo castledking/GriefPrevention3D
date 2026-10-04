@@ -51,7 +51,8 @@ tasks {
                 "net.minecraft",
                 "net.fabricmc",
                 "net.minecraftforge",
-                "net.neoforged"
+                "net.neoforged",
+                "cn.nukkit"
             )
             val violations = fileTree("src/main/java") {
                 include("**/*.java")
