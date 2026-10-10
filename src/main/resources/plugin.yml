@@ -2,8 +2,11 @@ name: GriefPrevention3D
 prefix: GriefPrevention3D
 main: me.ryanhamshire.GriefPrevention.GriefPrevention
 provides: [GriefPrevention]
+# Iris is intentionally absent. Nothing here integrates with it, and Iris softdepends eco
+# while eco softdepends GriefPrevention, so naming Iris closed the loop
+# eco -> Iris -> GriefPrevention -> eco and stopped the server booting.
 softdepend:
-  [Multiverse-Core, MyCommand, My_Worlds, MystCraft, Transporter, WorldGuard, WorldEdit, RoyalCommands, MultiWorld, Denizen, CommandHelper, Iris, PlaceholderAPI, Vault]
+  [Multiverse-Core, MyCommand, My_Worlds, MystCraft, Transporter, WorldGuard, WorldEdit, RoyalCommands, MultiWorld, Denizen, CommandHelper, PlaceholderAPI, Vault]
 dev-url: https://github.com/castledking/GriefPrevention3D
 version: "${project.version}"
 description: The self-service anti-griefing plugin for Minecraft servers — now with full 3D subdivisions
