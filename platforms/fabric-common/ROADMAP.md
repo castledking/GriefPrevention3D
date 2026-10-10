@@ -1,7 +1,7 @@
 # Fabric Platform Roadmap
 
-Shipping: **one universal jar** for Bukkit/Paper, Fabric **1.21.11**, and Fabric **26.1 – 26.3.x**
-(26.1, 26.1.1, 26.1.2, 26.2 and 26.3 are each boot-smoked and linkage-checked by the build). It is about
+Shipping: **one universal jar** for Bukkit/Paper, Fabric **1.21.2 – 1.21.11**, and Fabric **26.1 – 26.3.x**
+(every one of the 15 releases is boot-smoked and linkage-checked by the build). It is about
 1.9 MB; `checkUniversalJar` fails the build past 5 MB. See `README.md` for the layout and the checks.
 
 ---
@@ -24,6 +24,10 @@ Shipping: **one universal jar** for Bukkit/Paper, Fabric **1.21.11**, and Fabric
 - [x] Precise Fabric API module dependencies instead of all of `fabric-api`, as LuckPerms declares them.
 - [x] Mixin configs at `compatibilityLevel: JAVA_8`, as LuckPerms ships them, so a config never demands
       a newer Java than the release it is gated to runs on.
+- [x] 1.21.2 – 1.21.10 without a new module: the 1.21.11 binary links there except for the calls 1.21.11
+      reshaped, which `FabricVersionCompat` routes to the earlier methods (permission levels, PvP, the
+      `Transformation` constructor). Player names no longer use `NameAndId`, and the copper golem tag and
+      `Entity.level()` are avoided.
 
 ### Next: 26.4 and later
 
@@ -31,7 +35,7 @@ Add the release to `fabricTargets` and widen `fabricMinecraft26Range` in `gradle
 linkage check or boot fails, prefer id/tag lookups and `@Pseudo` alternatives in the shared code; only add
 a new adapter module when a release breaks too much for one binary.
 
-### Later: older Fabric releases (1.14 → 1.21.10)
+### Later: older Fabric releases (1.14 → 1.21.1)
 
 Fabric's first stable release was 1.14; there is no official Fabric for 1.8 (Legacy Fabric is a separate
 project and out of scope). Each older range becomes another adapter module compiled from the same shared
@@ -39,7 +43,6 @@ sources, with version-specific sources only where the API diverges:
 
 | Range | Java | Differences to expect (to be confirmed by compiling and linkage-checking) |
 |-------|------|-----------------------------------------------------------------------------|
-| 1.21.2 – 1.21.10 | 21 | Closest to 1.21.11; `ResourceLocation` rather than `Identifier`, older player-name and permission APIs. |
 | 1.20.5 – 1.21.1 | 21 | Explosions and entity damage use the pre-1.21.2 `Explosion`/`hurt` shapes; `UseItemCallback` returns `InteractionResultHolder`. |
 | 1.17 – 1.20.4 | 16/17 | Display entities arrived in 1.19.4, so no glowing visualization before it. |
 | 1.14 – 1.16.5 | 8 | Oldest Fabric API event set. |

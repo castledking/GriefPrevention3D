@@ -12,7 +12,6 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.players.NameAndId;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -403,7 +402,7 @@ final class FabricTrustCommands
                     false);
         }
 
-        NameAndId player = FabricPlayerLookup.find(sender.server(), recipient);
+        FabricPlayerLookup.KnownPlayer player = FabricPlayerLookup.find(sender.server(), recipient);
         if (player != null)
         {
             return new Recipient(player.id().toString(), player.name(), false);

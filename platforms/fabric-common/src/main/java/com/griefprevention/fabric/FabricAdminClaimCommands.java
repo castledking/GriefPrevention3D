@@ -7,7 +7,6 @@ import com.griefprevention.messages.MessageKey;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.players.NameAndId;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -183,7 +182,7 @@ final class FabricAdminClaimCommands
 
     private boolean deleteOwnedBy(@NotNull FabricCommandSender sender, @NotNull String name)
     {
-        NameAndId owner = FabricPlayerLookup.find(sender.server(), name);
+        FabricPlayerLookup.KnownPlayer owner = FabricPlayerLookup.find(sender.server(), name);
         if (owner == null)
         {
             sender.sendError(MessageKey.PLAYER_NOT_FOUND_2);
@@ -337,7 +336,7 @@ final class FabricAdminClaimCommands
         String newOwnerName = "admin";
         if (args.length > 0)
         {
-            NameAndId target = FabricPlayerLookup.find(sender.server(), args[0]);
+            FabricPlayerLookup.KnownPlayer target = FabricPlayerLookup.find(sender.server(), args[0]);
             if (target == null)
             {
                 sender.sendError(MessageKey.PLAYER_NOT_FOUND_2);
@@ -404,7 +403,7 @@ final class FabricAdminClaimCommands
             return true;
         }
 
-        NameAndId recipient = FabricPlayerLookup.find(sender.server(), args[0]);
+        FabricPlayerLookup.KnownPlayer recipient = FabricPlayerLookup.find(sender.server(), args[0]);
         if (recipient == null)
         {
             sender.sendError(MessageKey.PLAYER_NOT_FOUND_2);
@@ -467,7 +466,7 @@ final class FabricAdminClaimCommands
         if (onlineRecipient != null)
         {
             this.feedback.send(onlineRecipient, TextMode.INFO, MessageKey.TRANSFER_CLAIM_RECEIVED,
-                    player.nameAndId().name(), location);
+                    FabricPlayerLookup.nameOf(player), location);
         }
         this.logger.info("{} gave their claim at {} to {}.", sender.name(), location, recipient.name());
         return true;

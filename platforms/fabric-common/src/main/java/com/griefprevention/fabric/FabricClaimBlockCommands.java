@@ -3,7 +3,6 @@ package com.griefprevention.fabric;
 import com.griefprevention.fabric.FabricDenialFeedback.TextMode;
 import com.griefprevention.messages.MessageKey;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.players.NameAndId;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -54,7 +53,7 @@ final class FabricClaimBlockCommands
             return true;
         }
 
-        NameAndId target = FabricPlayerLookup.find(sender.server(), args[0]);
+        FabricPlayerLookup.KnownPlayer target = FabricPlayerLookup.find(sender.server(), args[0]);
         if (target == null)
         {
             sender.sendError(MessageKey.PLAYER_NOT_FOUND_2);
@@ -111,7 +110,7 @@ final class FabricClaimBlockCommands
             return false;
         }
 
-        NameAndId target = FabricPlayerLookup.find(sender.server(), args[0]);
+        FabricPlayerLookup.KnownPlayer target = FabricPlayerLookup.find(sender.server(), args[0]);
         if (target == null)
         {
             sender.sendError(MessageKey.PLAYER_NOT_FOUND_2);
@@ -197,7 +196,7 @@ final class FabricClaimBlockCommands
             return true;
         }
 
-        NameAndId target = FabricPlayerLookup.find(sender.server(), args[1]);
+        FabricPlayerLookup.KnownPlayer target = FabricPlayerLookup.find(sender.server(), args[1]);
         if (target == null)
         {
             sender.sendError(MessageKey.PLAYER_NOT_FOUND_2);
@@ -242,7 +241,7 @@ final class FabricClaimBlockCommands
             UUID playerId = player.getUUID();
             if (change(sender, () -> playerChange.apply(playerId)) != null)
             {
-                changed.add(player.nameAndId().name());
+                changed.add(FabricPlayerLookup.nameOf(player));
             }
         }
         return changed;

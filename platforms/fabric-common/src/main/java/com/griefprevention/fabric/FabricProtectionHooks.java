@@ -12,11 +12,14 @@ import net.fabricmc.fabric.api.event.player.UseEntityCallback;
 import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.ItemTags;
+import net.minecraft.tags.TagKey;
 import net.minecraft.world.Container;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -88,6 +91,10 @@ import org.jetbrains.annotations.Nullable;
  */
 final class FabricProtectionHooks
 {
+    /** By id: the tag and its BlockTags field only exist from 1.21.9; earlier releases have no statues. */
+    private static final TagKey<Block> COPPER_GOLEM_STATUES =
+            TagKey.create(Registries.BLOCK, Identifier.withDefaultNamespace("copper_golem_statues"));
+
     private final FabricClaimRepository claims;
     private final FabricDenialFeedback feedback;
     private final FabricSettings settings;
@@ -120,7 +127,7 @@ final class FabricProtectionHooks
         UseItemCallback.EVENT.register(this::handleItemUse);
 
         AttackEntityCallback.EVENT.register((player, level, hand, entity, hitResult) ->
-                level.isClientSide() || FabricWorldProtection.mayAttack(entity, player)
+                level.isClientSide() || FabricWorldProtection.mayAttack(entity, level, player)
                         ? InteractionResult.PASS
                         : InteractionResult.FAIL);
 
@@ -402,7 +409,7 @@ final class FabricProtectionHooks
                 || block instanceof DragonEggBlock
                 || state.is(BlockTags.FLOWER_POTS)
                 || state.is(BlockTags.CANDLES)
-                || state.is(BlockTags.COPPER_GOLEM_STATUES))
+                || state.is(COPPER_GOLEM_STATUES))
         {
             return BlockUseKind.BUILD;
         }

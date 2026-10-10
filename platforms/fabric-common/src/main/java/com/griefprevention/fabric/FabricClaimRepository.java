@@ -10,7 +10,6 @@ import com.griefprevention.claims.ClaimSnapshotIndex;
 import com.griefprevention.claims.ClaimTrustLevel;
 import com.griefprevention.claims.ClaimTrustSnapshot;
 import com.griefprevention.persistence.ClaimDocument;
-import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -802,7 +801,7 @@ public final class FabricClaimRepository implements ClaimRepository
      */
     static boolean isOperator(@NotNull ServerPlayer player)
     {
-        return Commands.LEVEL_GAMEMASTERS.check(player.permissions());
+        return FabricVersionCompat.isGameMaster(player);
     }
 
     synchronized @Nullable ClaimDocument documentFor(long claimId)
@@ -954,7 +953,7 @@ public final class FabricClaimRepository implements ClaimRepository
         {
             return false;
         }
-        boolean operatorDefault = Commands.LEVEL_GAMEMASTERS.check(player.permissions());
+        boolean operatorDefault = FabricVersionCompat.isGameMaster(player);
         return this.claimBlocks.permissionOrDefault(
                 ownerId,
                 OVERRIDE_CLAIM_COUNT_PERMISSION,

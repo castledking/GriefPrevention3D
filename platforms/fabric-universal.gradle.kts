@@ -59,11 +59,28 @@ val adapters = listOf(
 
 // Every release the jar is proven on: booted in a real Fabric server, and linkage-checked so that
 // code paths the boot never reaches still resolve. Each entry names the newest Fabric API for it.
-class FabricTarget(val minecraft: String, val fabricApi: String, val java: Int, val adapter: String) {
+// Releases before 1.21.11 reach the calls 1.21.11 changed through FabricVersionCompat's intermediary
+// lookups, which the boot verifies; its Modern half, never loaded there, is left out of their check.
+class FabricTarget(
+    val minecraft: String,
+    val fabricApi: String,
+    val java: Int,
+    val adapter: String,
+    val before1_21_11: Boolean = false
+) {
     val taskSuffix get() = minecraft.replace('.', '_')
 }
 
 val fabricTargets = listOf(
+    FabricTarget("1.21.2", "0.106.1+1.21.2", 21, "mc1_21_11", before1_21_11 = true),
+    FabricTarget("1.21.3", "0.114.1+1.21.3", 21, "mc1_21_11", before1_21_11 = true),
+    FabricTarget("1.21.4", "0.119.4+1.21.4", 21, "mc1_21_11", before1_21_11 = true),
+    FabricTarget("1.21.5", "0.128.2+1.21.5", 21, "mc1_21_11", before1_21_11 = true),
+    FabricTarget("1.21.6", "0.128.2+1.21.6", 21, "mc1_21_11", before1_21_11 = true),
+    FabricTarget("1.21.7", "0.129.0+1.21.7", 21, "mc1_21_11", before1_21_11 = true),
+    FabricTarget("1.21.8", "0.136.1+1.21.8", 21, "mc1_21_11", before1_21_11 = true),
+    FabricTarget("1.21.9", "0.134.1+1.21.9", 21, "mc1_21_11", before1_21_11 = true),
+    FabricTarget("1.21.10", "0.138.4+1.21.10", 21, "mc1_21_11", before1_21_11 = true),
     FabricTarget("1.21.11", "0.141.6+1.21.11", 21, "mc1_21_11"),
     FabricTarget("26.1", "0.145.1+26.1", 25, "mc26_1"),
     FabricTarget("26.1.1", "0.145.4+26.1.1", 25, "mc26_1"),
@@ -487,6 +504,9 @@ for (target in fabricTargets) {
                 "--optional", "org/jetbrains/annotations/"
             )
             nested.filter { it != "com/griefprevention/fabric/bootstrap/" }.forEach { arguments += listOf("--exclude", it) }
+            if (target.before1_21_11) {
+                arguments += listOf("--exclude", rootPath + "FabricVersionCompat\$Modern")
+            }
             fabricApi.files.forEach { arguments += listOf("--classpath", it.absolutePath) }
             args(arguments)
         }

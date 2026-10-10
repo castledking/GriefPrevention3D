@@ -150,7 +150,7 @@ add a language of your own.
 
 ## Supported Platforms: Fabric, Spigot, Paper, Purpur, and Folia.
 ### GriefPrevention3D targets and supports 1.8 - latest available version for non-fabric servers.
-### Fabric support currently only covers 1.21.11 - latest.
+### Fabric support currently covers 1.21.2 - latest.
 
 ## Download
 ### [⬇ Download the GriefPrevention3D.jar plugin here.](https://github.com/castledking/GriefPrevention3D/releases)

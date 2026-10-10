@@ -10,7 +10,6 @@ import com.griefprevention.protection.WorldProtectionSettings;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.players.NameAndId;
 import org.jetbrains.annotations.NotNull;
 import org.slf4j.Logger;
 
@@ -159,7 +158,7 @@ final class FabricClaimCommands
             return false;
         }
 
-        NameAndId target;
+        FabricPlayerLookup.KnownPlayer target;
         if (args.length == 1 && (player == null || sender.hasPermission(FabricPermissionDefaults.CLAIMS_LIST_OTHER)))
         {
             target = FabricPlayerLookup.find(sender.server(), args[0]);
@@ -172,7 +171,7 @@ final class FabricClaimCommands
         else if (player != null)
         {
             // As on Paper, a player without the claimslistother permission always sees their own.
-            target = player.nameAndId();
+            target = FabricPlayerLookup.of(player);
         }
         else
         {

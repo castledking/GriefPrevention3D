@@ -682,7 +682,7 @@ final class FabricCommandRegistrar
         List<String> names = new ArrayList<>();
         for (ServerPlayer player : sender.server().getPlayerList().getPlayers())
         {
-            names.add(player.nameAndId().name());
+            names.add(FabricPlayerLookup.nameOf(player));
         }
         return names;
     }

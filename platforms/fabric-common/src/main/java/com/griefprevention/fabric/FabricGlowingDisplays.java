@@ -2,7 +2,6 @@ package com.griefprevention.fabric;
 
 import com.griefprevention.fabric.mixin.BlockDisplayAccessor;
 import com.griefprevention.fabric.mixin.DisplayAccessor;
-import com.mojang.math.Transformation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.protocol.game.ClientboundAddEntityPacket;
@@ -58,7 +57,7 @@ final class FabricGlowingDisplays
         ((BlockDisplayAccessor) display).griefPrevention$setBlockState(state);
 
         DisplayAccessor accessor = (DisplayAccessor) display;
-        accessor.griefPrevention$setTransformation(new Transformation(
+        accessor.griefPrevention$setTransformation(FabricVersionCompat.transformation(
                 new Vector3f(OUTLINE_OFFSET, OUTLINE_OFFSET, OUTLINE_OFFSET),
                 new Quaternionf(),
                 new Vector3f(OUTLINE_SCALE, OUTLINE_SCALE, OUTLINE_SCALE),

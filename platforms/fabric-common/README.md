@@ -5,7 +5,7 @@ adapter per Minecraft range and starts the one that matches the running game:
 
 | Minecraft | Adapter | Compiled against | Java | Package in the universal jar |
 |-----------|---------|------------------|------|------------------------------|
-| 1.21.11 | `mc1_21_11` | 1.21.11 (Mojang names, remapped to intermediary) | 21 | `com.griefprevention.fabric` |
+| 1.21.2 – 1.21.11 | `mc1_21_11` | 1.21.11 (Mojang names, remapped to intermediary) | 21 | `com.griefprevention.fabric` |
 | 26.1 – 26.3.x | `mc26_1` | 26.1 (unobfuscated) | 25 | `com.griefprevention.fabric.mc26_1` |
 
 The jar needs Fabric Loader `>=0.18.2` and these Fabric API modules, all part of the regular Fabric API
@@ -21,7 +21,7 @@ download: `fabric-api-base`, `fabric-command-api-v2`, `fabric-events-interaction
   a single target class.
 - `platforms/fabric-common` — the adapter sources, tests and resources shared by every Minecraft target.
 - `platforms/fabric-1.21.11` — compiles the shared sources against 1.21.11 with the remapping Loom
-  plugin.
+  plugin. The same binary serves 1.21.2 – 1.21.10 too (see below).
 - `platforms/fabric-26.1` — compiles the same sources against 26.1 with the unobfuscated Loom plugin, and
   relocates the result under `com.griefprevention.fabric.mc26_1` for the universal jar.
 - `platforms/fabric-linkage-check` — a build-time tool, never shipped (see below).
@@ -34,6 +34,16 @@ types are looked up by id (26.2 removed fields such as `Blocks.WHITE_WOOL` and m
 `EntityTypes`), tools are recognized by item tag (26.3 removed `AxeItem`, `HoeItem` and `ShovelItem`),
 and mixins whose target class was renamed (`FarmBlock` → `FarmlandBlock`, `EnderMan` → `Enderman`) list
 both names under `@Pseudo`, with `@Group` requiring that exactly one alternative applies.
+
+Intermediary names do not change between releases, so the 1.21.11 binary links on 1.21.2 – 1.21.10 except
+for the few calls 1.21.11 reshaped. Those go through `FabricVersionCompat`: permission levels (permission
+sets since 1.21.11), whether PvP is on (a per-world game rule since 1.21.11) and the `Transformation`
+constructor. Before 1.21.11 it calls the earlier methods by their intermediary names through Fabric
+Loader's `MappingResolver`, resolved when the adapter starts so a missing one fails the boot smoke; its
+`Modern` half, which only 1.21.11 and later load, is left out of those releases' linkage checks. Player
+names come from the player and `usercache.json` rather than `NameAndId` (1.21.9+), the copper golem
+statue tag is looked up by id, and the entity damage mixin hands over the entity's level, since
+`Entity.level()` moved in 1.21.9.
 
 ## Building and verifying
 
@@ -51,7 +61,8 @@ to `GriefPrevention3D.jar` when it publishes it.
   jar stays under 5 MB (it is about 1.9 MB).
 - `checkUniversalLegacyClassLoading` — loads the Bukkit entry classes on a real Java 8 runtime.
 - `checkFabricBoot` — boots the exact jar on every release in `fabricTargets`
-  (`platforms/fabric-universal.gradle.kts`): 1.21.11, 26.1, 26.1.1, 26.1.2, 26.2 and 26.3. Each server
+  (`platforms/fabric-universal.gradle.kts`): every release from 1.21.2 to 1.21.11, and 26.1, 26.1.1,
+  26.1.2, 26.2 and 26.3. Each server
   is installed once, by the official Fabric server launcher, under
   `~/.gradle/caches/griefprevention3d/fabric-servers/` and reused. The boot runs with
   `-Dgriefprevention3d.verifyMixins=true`, which loads every class the selected adapter's mixins target
@@ -294,7 +305,7 @@ Manual explosion/migration gate:
 1. Back up a Paper `plugins/GriefPreventionData` fixture. Leave it in place when switching the same server to
    Fabric. Include a shaped top-level claim, nested 3D subdivisions, trust, non-default policy flags, and player
    balances.
-2. Boot Fabric (1.21.11 or any 26.x release) and confirm the claims with `/claimslist <owner>` and the stick
+2. Boot Fabric (any release from 1.21.2 to 1.21.11, or any 26.x release) and confirm the claims with `/claimslist <owner>` and the stick
    inspection tool.
 3. Test TNT and creeper damage with `Explosives Allowed` both `false` and `true`; test wither and wither-skull
    damage independently with `Wither Explosions Allowed` both `false` and `true`.

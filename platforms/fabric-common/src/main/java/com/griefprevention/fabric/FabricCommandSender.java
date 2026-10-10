@@ -4,7 +4,6 @@ import com.griefprevention.fabric.FabricDenialFeedback.TextMode;
 import com.griefprevention.messages.LegacyText;
 import com.griefprevention.messages.MessageKey;
 import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
@@ -74,7 +73,7 @@ final class FabricCommandSender
         return FabricPermissionDefaults.resolve(
                 permission,
                 node -> null,
-                Commands.LEVEL_GAMEMASTERS.check(this.source.permissions()));
+                FabricVersionCompat.isGameMaster(this.source));
     }
 
     /**

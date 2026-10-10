@@ -5,7 +5,6 @@ import com.griefprevention.claims.ClaimBlockSettings;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
-import net.minecraft.commands.Commands;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.NotNull;
@@ -92,7 +91,7 @@ final class FabricClaimBlockAccrual
                 thresholdSquared
         );
 
-        boolean operatorDefault = Commands.LEVEL_GAMEMASTERS.check(player.permissions());
+        boolean operatorDefault = FabricVersionCompat.isGameMaster(player);
         boolean bypassesAfk = this.claimBlocks.permissionOrDefault(
                 playerId,
                 AFK_BYPASS_PERMISSION,

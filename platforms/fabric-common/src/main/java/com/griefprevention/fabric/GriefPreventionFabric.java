@@ -18,6 +18,8 @@ public final class GriefPreventionFabric implements FabricPlatformAdapter
     @Override
     public void onInitialize()
     {
+        // Resolve the calls that differ between the releases this adapter serves before anything uses them.
+        FabricVersionCompat.verify();
         FabricLoader loader = FabricLoader.getInstance();
         Path dataFolder = FabricDataFolder.resolveSharedDataFolder(
                 loader.getGameDir(),

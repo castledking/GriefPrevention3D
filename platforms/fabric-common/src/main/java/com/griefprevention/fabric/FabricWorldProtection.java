@@ -311,22 +311,30 @@ public final class FabricWorldProtection
      * rules; frames, stands, crystals, paintings, vehicles and villagers in a claim need build trust;
      * other creatures in a claim need container trust.
      */
-    public static boolean mayDamage(@NotNull Entity target, @NotNull DamageSource source)
+    public static boolean mayDamage(@NotNull Entity target, @NotNull Level targetLevel, @NotNull DamageSource source)
     {
         Player attacker = source.getEntity() instanceof Player player ? player : null;
-        return mayDamage(target, attacker, source.getDirectEntity());
+        return mayDamage(target, targetLevel, attacker, source.getDirectEntity());
     }
 
     /** The same rules for a player's melee attack, checked before the attack runs. */
-    public static boolean mayAttack(@NotNull Entity target, @NotNull Player attacker)
+    public static boolean mayAttack(@NotNull Entity target, @NotNull Level targetLevel, @NotNull Player attacker)
     {
-        return mayDamage(target, attacker, attacker);
+        return mayDamage(target, targetLevel, attacker, attacker);
     }
 
-    private static boolean mayDamage(@NotNull Entity target, @Nullable Player attacker, @Nullable Entity direct)
+    /**
+     * @param targetLevel the target's level, passed in: {@code Entity.level()} moved to an interface
+     *                    in 1.21.9, so no one call reaches it on every release this adapter serves
+     */
+    private static boolean mayDamage(
+            @NotNull Entity target,
+            @NotNull Level targetLevel,
+            @Nullable Player attacker,
+            @Nullable Entity direct)
     {
         FabricWorldProtection protection = active;
-        if (protection == null || !(target.level() instanceof ServerLevel level) || target instanceof Enemy)
+        if (protection == null || !(targetLevel instanceof ServerLevel level) || target instanceof Enemy)
         {
             return true;
         }
@@ -395,7 +403,7 @@ public final class FabricWorldProtection
     private boolean mayFight(@NotNull ServerLevel level, @NotNull Player attacker, @NotNull Player defender)
     {
         // Leave combat to vanilla where PvP is off anyway, and where claims do not apply.
-        if (!level.isPvpAllowed() || !applies(level))
+        if (!FabricVersionCompat.isPvpAllowed(level) || !applies(level))
         {
             return true;
         }

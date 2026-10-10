@@ -3,7 +3,9 @@ package com.griefprevention.fabric.mixin;
 import com.griefprevention.fabric.FabricWorldProtection;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.Level;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
@@ -15,13 +17,16 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(Entity.class)
 abstract class EntityMixin
 {
+    @Shadow
+    private Level level;
+
     @Inject(method = "hurtOrSimulate", at = @At("HEAD"), cancellable = true)
     private void griefPrevention$protectClaimedEntities(
             DamageSource source,
             float amount,
             CallbackInfoReturnable<Boolean> callback)
     {
-        if (!FabricWorldProtection.mayDamage((Entity) (Object) this, source))
+        if (!FabricWorldProtection.mayDamage((Entity) (Object) this, this.level, source))
         {
             callback.setReturnValue(false);
         }

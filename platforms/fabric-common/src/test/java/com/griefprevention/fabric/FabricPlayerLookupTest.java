@@ -1,6 +1,5 @@
 package com.griefprevention.fabric;
 
-import net.minecraft.server.players.NameAndId;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -27,7 +26,7 @@ class FabricPlayerLookupTest
                  {"uuid":"99999999-8888-7777-6666-555555555555","name":"steve","expiresOn":"2026-09-01 10:00:00 -0700"}]
                 """);
 
-        NameAndId steve = FabricPlayerLookup.findInUserCache(cache, "STEVE");
+        FabricPlayerLookup.KnownPlayer steve = FabricPlayerLookup.findInUserCache(cache, "STEVE");
         assertEquals(UUID.fromString("5627dd98-e6be-3c21-b8a8-e92344183641"), steve.id());
         assertEquals("Steve", steve.name());
         assertEquals(UUID.fromString("11111111-2222-3333-4444-555555555555"),
@@ -44,6 +43,27 @@ class FabricPlayerLookupTest
 
         Files.writeString(cache, "{not json", StandardCharsets.UTF_8);
         assertNull(FabricPlayerLookup.findInUserCache(cache, "Steve"));
+    }
+
+    @Test
+    void namesSeenPlayersByTheirId() throws Exception
+    {
+        Path cache = writeCache("[{\"uuid\":\"5627dd98-e6be-3c21-b8a8-e92344183641\",\"name\":\"Steve\"}]");
+
+        assertEquals("Steve", FabricPlayerLookup.findNameInUserCache(cache, UUID.fromString("5627dd98-e6be-3c21-b8a8-e92344183641")));
+        assertNull(FabricPlayerLookup.findNameInUserCache(cache, UUID.fromString("11111111-2222-3333-4444-555555555555")));
+    }
+
+    @Test
+    void aRewrittenCacheIsReadAgain() throws Exception
+    {
+        Path cache = writeCache("[{\"uuid\":\"5627dd98-e6be-3c21-b8a8-e92344183641\",\"name\":\"Steve\"}]");
+        assertEquals("Steve", FabricPlayerLookup.findInUserCache(cache, "Steve").name());
+
+        writeCache("[{\"uuid\":\"5627dd98-e6be-3c21-b8a8-e92344183641\",\"name\":\"Stephen\"}]");
+
+        assertNull(FabricPlayerLookup.findInUserCache(cache, "Steve"));
+        assertEquals("Stephen", FabricPlayerLookup.findNameInUserCache(cache, UUID.fromString("5627dd98-e6be-3c21-b8a8-e92344183641")));
     }
 
     private Path writeCache(String contents) throws Exception

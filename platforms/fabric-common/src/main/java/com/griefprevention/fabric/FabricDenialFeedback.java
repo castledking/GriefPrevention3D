@@ -11,11 +11,9 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.players.NameAndId;
 import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -138,22 +136,9 @@ final class FabricDenialFeedback
         }
 
         MinecraftServer server = viewer.level().getServer();
-        if (server != null)
-        {
-            ServerPlayer online = server.getPlayerList().getPlayer(ownerId);
-            if (online != null)
-            {
-                return online.nameAndId().name();
-            }
-
-            // Only the local seen-player cache is consulted; a profile fetch would block the tick.
-            Optional<NameAndId> cached = server.services().nameToIdCache().get(ownerId);
-            if (cached.isPresent())
-            {
-                return cached.get().name();
-            }
-        }
-        return ownerId.toString();
+        // Only local data is consulted; a profile fetch would block the tick.
+        String known = server == null ? null : FabricPlayerLookup.knownName(server, ownerId);
+        return known != null ? known : ownerId.toString();
     }
 
     /** Clears throttles on reload so an operator testing message edits sees them immediately. */
