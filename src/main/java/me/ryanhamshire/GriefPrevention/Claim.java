@@ -973,7 +973,27 @@ public class Claim
              // Admin claims need adminclaims permission only.
              if (this.isAdminClaim())
              {
-                 if (player.hasPermission("griefprevention.adminclaims")) return null;
+                 if (player.hasPermission("griefprevention.adminclaims"))
+                 {
+                     // Optionally, staff must also be ignoring claims to build in an admin claim,
+                     // so that building in admin land is always a deliberate act. The refusal is the
+                     // ordinary one for this permission, with the usual pointer at /ignoreclaims,
+                     // exactly as every other protection reports it.
+                     boolean needsIgnoreClaims =
+                         GriefPrevention.instance.config_requireIgnoreClaimsInAdminClaims
+                             && (permission == ClaimPermission.Build || permission == ClaimPermission.Container);
+
+                     if (!needsIgnoreClaims
+                         || GriefPrevention.instance.dataStore.getPlayerData(uuid).isIgnoringClaims()) return null;
+
+                     return () ->
+                     {
+                         String reason = GriefPrevention.instance.dataStore.getMessage(permission.getDenialMessage(), this.getOwnerName());
+                         if (hasBypassPermission(player, permission))
+                             reason += "  " + GriefPrevention.instance.dataStore.getMessage(Messages.IgnoreClaimsAdvertisement);
+                         return reason;
+                     };
+                 }
              }
 
              // Anyone with deleteclaims permission can edit non-admin claims at any time.
@@ -983,7 +1003,7 @@ public class Claim
 
          // Claim owner and admins in ignoreclaims mode have access.
          if (uuid.equals(this.getOwnerID())
-                 || GriefPrevention.instance.dataStore.getPlayerData(uuid).ignoreClaims
+                 || GriefPrevention.instance.dataStore.getPlayerData(uuid).isIgnoringClaims()
                  && hasBypassPermission(player, permission))
              return null;
 

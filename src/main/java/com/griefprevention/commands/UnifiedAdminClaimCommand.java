@@ -392,15 +392,8 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
             GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
             return true;
         }
+        plugin.toggleIgnoreClaims(player);
 
-        PlayerData playerData = plugin.dataStore.getPlayerData(player.getUniqueId());
-        playerData.ignoreClaims = !playerData.ignoreClaims;
-
-        if (!playerData.ignoreClaims) {
-            GriefPrevention.sendMessage(player, TextMode.Success, Messages.RespectingClaims);
-        } else {
-            GriefPrevention.sendMessage(player, TextMode.Success, Messages.IgnoringClaims);
-        }
         return true;
     }
 

@@ -147,8 +147,21 @@ public class PlayerData
     public SiegeData siegeData = null;
     public long lastSiegeEndTimeStamp = 0;
 
-    //ignore claims mode
-    public boolean ignoreClaims = false;
+//ignore claims mode
+public boolean ignoreClaims = false;
+
+//session-only automatic ignore claims mode, granted on join when GriefPrevention.AutoIgnoreClaims
+//is on and the player holds griefprevention.autoignoreclaims. Like ignoreClaims, never persisted.
+public boolean autoIgnoreClaims = false;
+
+/**
+ * Whether this player is currently bypassing claim protections, either by having run /ignoreclaims
+ * or by being granted automatic ignoring for the session on join.
+ */
+public boolean isIgnoringClaims()
+{
+    return this.ignoreClaims || this.autoIgnoreClaims;
+}
 
     //the last claim this player was in, that we know of
     public Claim lastClaim = null;

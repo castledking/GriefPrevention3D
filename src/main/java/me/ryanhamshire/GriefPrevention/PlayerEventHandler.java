@@ -790,6 +790,11 @@ public class PlayerEventHandler implements Listener {
         // detect player's client locale for per-player message support
         playerData.locale = CompatUtil.getLocale(player);
 
+        // Staff who are set up for it get a session with claim protections bypassed, so they can
+        // build wherever they need to without touching every claim first. /ignoreclaims turns
+        // protections back on for the rest of the session.
+        applyAutoIgnoreClaims(player, playerData);
+
         // if newish, prevent chat until he's moved a bit to prove he's not a bot
         if (GriefPrevention.isNewToServer(player) && !player.hasPermission("griefprevention.premovementchat")) {
             playerData.noChatLocation = player.getLocation();
@@ -990,6 +995,22 @@ public class PlayerEventHandler implements Listener {
                 }
             }
         }
+    }
+
+    /**
+     * Grants a session of bypassed claim protections to staff who hold
+     * {@code griefprevention.autoignoreclaims} while {@code GriefPrevention.AutoIgnoreClaims} is
+     * enabled. The grant is never written to storage, so it lasts exactly one session.
+     *
+     * @param player The player who just joined
+     * @param playerData That player's data
+     */
+    void applyAutoIgnoreClaims(Player player, PlayerData playerData) {
+        if (!instance.config_autoIgnoreClaims) return;
+        if (!player.hasPermission("griefprevention.autoignoreclaims")) return;
+
+        playerData.autoIgnoreClaims = true;
+        GriefPrevention.sendMessage(player, TextMode.Success, Messages.IgnoringClaims);
     }
 
     // when a player spawns, conditionally apply temporary pvp protection
@@ -1566,7 +1587,7 @@ public class PlayerEventHandler implements Listener {
         }
 
         PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
-        if (playerData.ignoreClaims) {
+        if (playerData.isIgnoringClaims()) {
             return;
         }
 
@@ -1645,7 +1666,7 @@ public class PlayerEventHandler implements Listener {
 
                     // if the player interacting is the owner or an admin in ignore claims mode,
                     // always allow
-                    if (player.getUniqueId().equals(ownerID) || playerData.ignoreClaims) {
+                    if (player.getUniqueId().equals(ownerID) || playerData.isIgnoringClaims()) {
                         //if giving away pet, do that instead
                         if (playerData.petGiveawayRecipient != null) {
                             tameable.setOwner(playerData.petGiveawayRecipient);
@@ -1688,7 +1709,7 @@ public class PlayerEventHandler implements Listener {
         }
 
         // always allow interactions when player is in ignore claims mode
-        if (playerData.ignoreClaims) return;
+        if (playerData.isIgnoringClaims()) return;
 
         if (playerData.siegeData != null
                 && (entity instanceof StorageMinecart || entity instanceof PoweredMinecart)) {
@@ -1842,7 +1863,7 @@ public class PlayerEventHandler implements Listener {
         Claim claim = this.dataStore.getClaimAt(event.getEgg().getLocation(), false, playerData.lastClaim);
 
         // allow throw egg if player is in ignore claims mode
-        if (playerData.ignoreClaims || claim == null) return;
+        if (playerData.isIgnoringClaims() || claim == null) return;
 
         Supplier<String> failureReason = claim.checkPermission(player, ClaimPermission.Container, event);
         if (failureReason != null) {

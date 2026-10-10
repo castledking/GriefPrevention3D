@@ -619,7 +619,7 @@ public class EntityDamageHandler implements Listener {
         // Ignoring claims bypasses this feature.
         boolean perClaimToggleEnabled = instance.config_pvp_toggleCostClaimEnabled
                 || instance.config_pvp_toggleCostSubdivisionEnabled;
-        if (attackerData.ignoreClaims
+        if (attackerData.isIgnoringClaims()
                 || !perClaimToggleEnabled
                         && !instance.config_pvp_noCombatInPlayerLandClaims
                                 && !instance.config_pvp_noCombatInAdminLandClaims) {
@@ -700,7 +700,7 @@ public class EntityDamageHandler implements Listener {
 
         // Allow admin override.
         PlayerData attackerData = this.dataStore.getPlayerData(attacker.getUniqueId());
-        if (attackerData.ignoreClaims)
+        if (attackerData.isIgnoringClaims())
             return true;
 
         // Disallow provocations while PVP-immune.
@@ -1014,7 +1014,7 @@ public class EntityDamageHandler implements Listener {
 
         // allow for admin override
         PlayerData attackerData = this.dataStore.getPlayerData(attacker.getUniqueId());
-        if (attackerData.ignoreClaims)
+        if (attackerData.isIgnoringClaims())
             return true;
 
         // Allow players to attack wolves (dogs) if under attack by them.

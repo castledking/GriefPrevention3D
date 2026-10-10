@@ -42,7 +42,7 @@ public class SulfurCubeHandler implements Listener
             return;
 
         PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
-        if (playerData.ignoreClaims)
+        if (playerData.isIgnoringClaims())
             return;
 
         Claim claim = this.dataStore.getClaimAt(target.getLocation(), false, playerData.lastClaim);

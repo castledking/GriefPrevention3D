@@ -39,7 +39,7 @@ public final class EntityMountEventHandler implements Listener {
         }
 
         PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
-        if (playerData.ignoreClaims) {
+        if (playerData.isIgnoringClaims()) {
             return;
         }
 

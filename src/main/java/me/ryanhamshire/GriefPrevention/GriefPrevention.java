@@ -337,6 +337,8 @@ public class GriefPrevention extends JavaPlugin {
 
     public boolean config_whisperNotifications; // whether whispered messages will broadcast to administrators in game
     public boolean config_signNotifications; // whether sign content will broadcast to administrators in game
+    public boolean config_autoIgnoreClaims; // whether admins with griefprevention.autoignoreclaims ignore claims all session
+    public boolean config_requireIgnoreClaimsInAdminClaims; // whether building in an admin claim requires ignoring claims
     public ArrayList<String> config_eavesdrop_whisperCommands; // list of whisper commands to eavesdrop on
 
     public boolean config_visualizationAntiCheatCompat; // whether to engage compatibility mode for anti-cheat plugins
@@ -1348,6 +1350,11 @@ public class GriefPrevention extends JavaPlugin {
 
         this.config_whisperNotifications = config.getBoolean("GriefPrevention.AdminsGetWhispers", true);
         this.config_signNotifications = config.getBoolean("GriefPrevention.AdminsGetSignNotifications", true);
+        this.config_autoIgnoreClaims = config.getBoolean("GriefPrevention.AutoIgnoreClaims", false);
+        this.config_requireIgnoreClaimsInAdminClaims = config.getBoolean(
+            "GriefPrevention.RequireIgnoreClaimsInAdminClaims",
+            false
+        );
         String whisperCommandsToMonitor = config.getString(
             "GriefPrevention.WhisperCommands",
             "/tell;/pm;/r;/whisper;/msg"
@@ -1742,6 +1749,11 @@ public class GriefPrevention extends JavaPlugin {
 
         outConfig.set("GriefPrevention.AdminsGetWhispers", this.config_whisperNotifications);
         outConfig.set("GriefPrevention.AdminsGetSignNotifications", this.config_signNotifications);
+        outConfig.set("GriefPrevention.AutoIgnoreClaims", this.config_autoIgnoreClaims);
+        outConfig.set(
+            "GriefPrevention.RequireIgnoreClaimsInAdminClaims",
+            this.config_requireIgnoreClaimsInAdminClaims
+        );
 
         outConfig.set("GriefPrevention.VisualizationAntiCheatCompatMode", this.config_visualizationAntiCheatCompat);
         outConfig.set("GriefPrevention.VisualizationGlow", this.config_visualizationGlow);
@@ -2233,15 +2245,8 @@ public class GriefPrevention extends JavaPlugin {
         // ignoreclaims
         if (cmd.getName().equalsIgnoreCase("ignoreclaims") && player != null) {
             if (!checkCommandPermission(player, "griefprevention.ignoreclaims")) return true;
-            PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
-            playerData.ignoreClaims = !playerData.ignoreClaims;
 
-            // toggle ignore claims mode on or off
-            if (!playerData.ignoreClaims) {
-                GriefPrevention.sendMessage(player, TextMode.Success, Messages.RespectingClaims);
-            } else {
-                GriefPrevention.sendMessage(player, TextMode.Success, Messages.IgnoringClaims);
-            }
+            this.toggleIgnoreClaims(player);
 
             return true;
         }
@@ -5620,7 +5625,7 @@ public class GriefPrevention extends JavaPlugin {
         if (claim.parent == null) {
             Supplier<String> noManageReason = claim.checkPermission(player, ClaimPermission.Manage, null);
             if (
-                !playerData.ignoreClaims &&
+                !playerData.isIgnoringClaims() &&
                 (claim.isAdminClaim() ? !player.hasPermission("griefprevention.adminclaims") : noManageReason != null)
             ) {
                 GriefPrevention.sendMessage(
@@ -7581,5 +7586,37 @@ public class GriefPrevention extends JavaPlugin {
      */
     public boolean tryChangeClaimOwnerPublic(Claim claim, UUID newOwnerID) throws DataStore.NoTransferException {
         return this.dataStore.tryChangeClaimOwner(claim, newOwnerID);
+    }
+
+    /**
+     * Bypasses or restores claim protections for a player, as /ignoreclaims does.
+     *
+     * <p>A player granted automatic ignoring on join already has protections off, so their first
+     * /ignoreclaims turns them back on for the rest of the session instead of toggling the flag a
+     * second time into the ignoring state they are already in.</p>
+     *
+     * @param player The player running /ignoreclaims
+     */
+    public void toggleIgnoreClaims(@NotNull Player player)
+    {
+        PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
+
+        if (playerData.autoIgnoreClaims)
+        {
+            playerData.autoIgnoreClaims = false;
+            GriefPrevention.sendMessage(player, TextMode.Success, Messages.RespectingClaims);
+            return;
+        }
+
+        playerData.ignoreClaims = !playerData.ignoreClaims;
+
+        if (playerData.ignoreClaims)
+        {
+            GriefPrevention.sendMessage(player, TextMode.Success, Messages.IgnoringClaims);
+        }
+        else
+        {
+            GriefPrevention.sendMessage(player, TextMode.Success, Messages.RespectingClaims);
+        }
     }
 }

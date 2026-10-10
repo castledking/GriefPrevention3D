@@ -93,7 +93,7 @@ public abstract class KnockbackProtectionHandler implements Listener
         PlayerData defenderData = this.dataStore.getPlayerData(defender.getUniqueId());
         PlayerData attackerData = this.dataStore.getPlayerData(attacker.getUniqueId());
 
-        if (attackerData.ignoreClaims)
+        if (attackerData.isIgnoringClaims())
         {
             debug("allow: attacker " + attacker.getName() + " has ignoreClaims on");
             return;
@@ -241,7 +241,7 @@ public abstract class KnockbackProtectionHandler implements Listener
 
         PlayerData attackerData = this.dataStore.getPlayerData(attacker.getUniqueId());
 
-        if (attackerData.ignoreClaims) return;
+        if (attackerData.isIgnoringClaims()) return;
 
         Claim claim = this.dataStore.getClaimAt(entity.getLocation(), false, attackerData.lastClaim);
 

@@ -48,7 +48,7 @@ public final class ProtectionHelper
         PlayerData playerData = GriefPrevention.instance.dataStore.getPlayerData(player.getUniqueId());
 
         // Administrators ignoring claims always have permission.
-        if (playerData.ignoreClaims) return null;
+        if (playerData.isIgnoringClaims()) return null;
 
         // Get claim at location, respecting 3D boundaries (ignoreHeight = false)
         Claim claim = GriefPrevention.instance.dataStore.getClaimAt(location, false, playerData.lastClaim);

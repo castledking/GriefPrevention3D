@@ -418,6 +418,9 @@ permissions:
   griefprevention.ignoreclaims:
     description: Grants permission to use /ignoreclaims.
     default: op
+  griefprevention.autoignoreclaims:
+    description: Grants a session with claim protections bypassed, when GriefPrevention.AutoIgnoreClaims is enabled. Intentionally not a child of griefprevention.adminclaims; /ignoreclaims turns protections back on.
+    default: op
   griefprevention.adminclaims:
     description: Grants permission to create and manage administrative claims, including every administrative claim command below.
     default: op
