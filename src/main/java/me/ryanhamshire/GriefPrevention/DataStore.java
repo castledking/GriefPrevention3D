@@ -388,6 +388,10 @@ public abstract class DataStore {
     }
 
     synchronized public void changeClaimOwner(Claim claim, UUID newOwnerID) {
+        tryChangeClaimOwner(claim, newOwnerID);
+    }
+
+    synchronized boolean tryChangeClaimOwner(Claim claim, UUID newOwnerID) {
         // if it's a subdivision, throw an exception
         if (claim.parent != null) {
             throw new NoTransferException(
@@ -408,7 +412,7 @@ public abstract class DataStore {
 
         // return if event is cancelled
         if (event.isCancelled())
-            return;
+            return false;
 
         // determine new owner
         PlayerData newOwnerData = null;
@@ -432,6 +436,8 @@ public abstract class DataStore {
                 newOwnerClaims.add(claim);
             }
         }
+
+        return true;
     }
 
     // adds a claim to the datastore, making it an effective claim

@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.RETURNS_DEFAULTS;
@@ -70,7 +71,7 @@ class ClaimTransferCommandTest {
 
         assertTrue(fixture.transfer(RECIPIENT_NAME, "confirm"));
 
-        verify(fixture.dataStore, never()).changeClaimOwner(any(), any());
+        verify(fixture.dataStore, never()).tryChangeClaimOwner(any(), any());
     }
 
     @Test
@@ -79,7 +80,7 @@ class ClaimTransferCommandTest {
 
         assertTrue(fixture.transfer(RECIPIENT_NAME, "confirm"));
 
-        verify(fixture.dataStore, never()).changeClaimOwner(any(), any());
+        verify(fixture.dataStore, never()).tryChangeClaimOwner(any(), any());
         assertEquals(STRANGER_ID, fixture.claim.ownerID);
     }
 
@@ -89,7 +90,7 @@ class ClaimTransferCommandTest {
 
         assertTrue(fixture.transfer(RECIPIENT_NAME, "confirm"));
 
-        verify(fixture.dataStore, never()).changeClaimOwner(any(), any());
+        verify(fixture.dataStore, never()).tryChangeClaimOwner(any(), any());
     }
 
     @Test
@@ -98,7 +99,7 @@ class ClaimTransferCommandTest {
 
         assertTrue(fixture.transfer(RECIPIENT_NAME));
 
-        verify(fixture.dataStore, never()).changeClaimOwner(any(), any());
+        verify(fixture.dataStore, never()).tryChangeClaimOwner(any(), any());
     }
 
     @Test
@@ -107,7 +108,7 @@ class ClaimTransferCommandTest {
 
         assertTrue(fixture.transfer(RECIPIENT_NAME, "confirm"));
 
-        verify(fixture.dataStore).changeClaimOwner(fixture.claim, RECIPIENT_ID);
+        verify(fixture.dataStore).tryChangeClaimOwner(fixture.claim, RECIPIENT_ID);
         assertEquals(RECIPIENT_ID, fixture.claim.ownerID);
     }
 
@@ -118,7 +119,7 @@ class ClaimTransferCommandTest {
 
         assertTrue(fixture.transfer(RECIPIENT_NAME, "confirm"));
 
-        verify(fixture.dataStore, never()).changeClaimOwner(any(), any());
+        verify(fixture.dataStore, never()).tryChangeClaimOwner(any(), any());
         assertEquals(OWNER_ID, fixture.claim.ownerID);
     }
 
@@ -142,6 +143,29 @@ class ClaimTransferCommandTest {
         assertTrue(fixture.transfer(RECIPIENT_NAME));
 
         assertEquals(RECIPIENT_ID, fixture.claim.ownerID);
+    }
+
+    @Test
+    void aCancelledStaffTransferIsNotReportedAsSuccess() {
+        Fixture fixture = new Fixture(STRANGER_ID, 0);
+        when(fixture.owner.hasPermission("griefprevention.transferclaim.others")).thenReturn(true);
+        fixture.cancelTransfers();
+
+        assertTrue(fixture.transfer(RECIPIENT_NAME));
+
+        assertEquals(STRANGER_ID, fixture.claim.ownerID);
+        verify(fixture.owner, never()).sendMessage(anyString());
+    }
+
+    @Test
+    void aCancelledGiveAwayIsNotReportedAsSuccess() {
+        Fixture fixture = new Fixture(OWNER_ID, 1000);
+        fixture.cancelTransfers();
+
+        assertTrue(fixture.transfer(RECIPIENT_NAME, "confirm"));
+
+        assertEquals(OWNER_ID, fixture.claim.ownerID);
+        verify(fixture.owner, never()).sendMessage(anyString());
     }
 
     @Test
@@ -191,8 +215,8 @@ class ClaimTransferCommandTest {
             doReturn(this.claim).when(this.dataStore).getClaimAt(any(Location.class), anyBoolean(), any());
             doAnswer(invocation -> {
                 this.claim.ownerID = invocation.getArgument(1);
-                return null;
-            }).when(this.dataStore).changeClaimOwner(eq(this.claim), any());
+                return true;
+            }).when(this.dataStore).tryChangeClaimOwner(eq(this.claim), any());
 
             OfflinePlayer recipient = mock(OfflinePlayer.class);
             when(recipient.getUniqueId()).thenReturn(RECIPIENT_ID);
@@ -210,6 +234,10 @@ class ClaimTransferCommandTest {
 
         private boolean transfer(String... args) {
             return this.plugin.handleTransferClaimCommand(this.owner, args);
+        }
+
+        private void cancelTransfers() {
+            doReturn(false).when(this.dataStore).tryChangeClaimOwner(eq(this.claim), any());
         }
     }
 }

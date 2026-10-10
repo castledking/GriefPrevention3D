@@ -806,7 +806,7 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
         }
 
         try {
-            plugin.changeClaimOwnerPublic(claim, null);
+            if (!plugin.tryChangeClaimOwnerPublic(claim, null)) return true;
         } catch (NoTransferException e) {
             GriefPrevention.sendMessage(player, TextMode.Instr, Messages.TransferTopLevel);
             return true;
@@ -855,7 +855,7 @@ public class UnifiedAdminClaimCommand extends UnifiedCommandHandler {
         }
 
         try {
-            plugin.changeClaimOwnerPublic(claim, player.getUniqueId());
+            if (!plugin.tryChangeClaimOwnerPublic(claim, player.getUniqueId())) return true;
         } catch (NoTransferException e) {
             GriefPrevention.sendMessage(player, TextMode.Instr, Messages.TransferTopLevel);
             return true;

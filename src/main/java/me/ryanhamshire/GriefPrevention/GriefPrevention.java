@@ -6412,7 +6412,7 @@ public class GriefPrevention extends JavaPlugin {
         }
 
         try {
-            this.dataStore.changeClaimOwner(claim, newOwnerID);
+            if (!this.dataStore.tryChangeClaimOwner(claim, newOwnerID)) return true;
         } catch (NoTransferException e) {
             GriefPrevention.sendMessage(player, TextMode.Instr, Messages.TransferTopLevel);
             return true;
@@ -6525,15 +6525,14 @@ public class GriefPrevention extends JavaPlugin {
         }
 
         try {
-            this.dataStore.changeClaimOwner(claim, recipientId);
+            if (!this.dataStore.tryChangeClaimOwner(claim, recipientId)) {
+                // An addon cancelled the ClaimTransferEvent, so nothing was given away.
+                if (fee > 0.0) VaultFees.refund(this.getServer(), player, fee);
+                return true;
+            }
         } catch (NoTransferException e) {
             if (fee > 0.0) VaultFees.refund(this.getServer(), player, fee);
             GriefPrevention.sendMessage(player, TextMode.Instr, Messages.TransferTopLevel);
-            return true;
-        }
-        if (!recipientId.equals(claim.ownerID)) {
-            // An addon cancelled the ClaimTransferEvent, so nothing was given away.
-            if (fee > 0.0) VaultFees.refund(this.getServer(), player, fee);
             return true;
         }
 
@@ -7570,5 +7569,17 @@ public class GriefPrevention extends JavaPlugin {
      */
     public void changeClaimOwnerPublic(Claim claim, UUID newOwnerID) throws DataStore.NoTransferException {
         this.dataStore.changeClaimOwner(claim, newOwnerID);
+    }
+
+    /**
+     * Changes the owner of a claim, reporting whether the transfer actually happened.
+     * For use by command handlers in other packages.
+     * @param claim The claim to transfer
+     * @param newOwnerID The UUID of the new owner (null for admin claim)
+     * @return false if a listener cancelled the transfer, so nothing was changed
+     * @throws DataStore.NoTransferException if the claim cannot be transferred
+     */
+    public boolean tryChangeClaimOwnerPublic(Claim claim, UUID newOwnerID) throws DataStore.NoTransferException {
+        return this.dataStore.tryChangeClaimOwner(claim, newOwnerID);
     }
 }
