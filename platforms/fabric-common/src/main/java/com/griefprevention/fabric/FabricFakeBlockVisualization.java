@@ -4,10 +4,12 @@ import com.griefprevention.claims.ClaimBounds;
 import com.griefprevention.claims.ClaimSnapshot;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
+import net.fabricmc.fabric.api.event.player.AttackBlockCallback;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.world.InteractionResult;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.protocol.game.ClientboundBlockUpdatePacket;
 import net.minecraft.resources.Identifier;
@@ -73,6 +75,13 @@ final class FabricFakeBlockVisualization
         ServerTickEvents.END_SERVER_TICK.register(this::expireVisualizations);
         ServerPlayConnectionEvents.DISCONNECT.register((handler, disconnected) ->
                 this.activeVisualizations.remove(handler.getPlayer().getUUID()));
+        AttackBlockCallback.EVENT.register((player, level, hand, pos, direction) -> {
+            if (player instanceof ServerPlayer serverPlayer && handleBlockAttack(serverPlayer, pos))
+            {
+                return InteractionResult.SUCCESS;
+            }
+            return InteractionResult.PASS;
+        });
         PlayerBlockBreakEvents.AFTER.register((world, player, pos, state, blockEntity) -> {
             if (player instanceof ServerPlayer)
             {
@@ -259,6 +268,33 @@ final class FabricFakeBlockVisualization
                         glowIds,
                         this.tick + VISUALIZATION_TICKS,
                         this.tick + 1L));
+    }
+
+    private boolean handleBlockAttack(@NotNull ServerPlayer player, @NotNull BlockPos pos)
+    {
+        ActiveVisualization active = this.activeVisualizations.get(player.getUUID());
+        if (active == null || player.level() != active.level)
+        {
+            return false;
+        }
+
+        BlockPos immutablePos = pos.immutable();
+        if (active.fakeBlocks.remove(immutablePos) == null)
+        {
+            return false;
+        }
+
+        sendBlock(player, immutablePos, active.level.getBlockState(immutablePos));
+        Integer glowId = active.glowIds.remove(immutablePos);
+        if (glowId != null)
+        {
+            FabricGlowingDisplays.remove(player, glowId);
+        }
+        if (active.fakeBlocks.isEmpty())
+        {
+            this.activeVisualizations.remove(player.getUUID());
+        }
+        return true;
     }
 
     private void handleBlockBreak(@NotNull ServerPlayer player, @NotNull BlockPos pos)
@@ -512,13 +548,16 @@ final class FabricFakeBlockVisualization
             add3D(level, displayZone, new BlockPos(bounds.maxX(), y, bounds.maxZ() - 1), side, fakeBlocks);
         }
 
-        int verticalY = bottom ? y + 1 : y - 1;
-        if (verticalY >= level.getMinY() && verticalY <= level.getMaxY())
+        if (bounds.yHeight() > 2)
         {
-            add3D(level, displayZone, new BlockPos(bounds.minX(), verticalY, bounds.maxZ()), side, fakeBlocks);
-            add3D(level, displayZone, new BlockPos(bounds.maxX(), verticalY, bounds.maxZ()), side, fakeBlocks);
-            add3D(level, displayZone, new BlockPos(bounds.minX(), verticalY, bounds.minZ()), side, fakeBlocks);
-            add3D(level, displayZone, new BlockPos(bounds.maxX(), verticalY, bounds.minZ()), side, fakeBlocks);
+            int verticalY = bottom ? y + 1 : y - 1;
+            if (verticalY >= level.getMinY() && verticalY <= level.getMaxY())
+            {
+                add3D(level, displayZone, new BlockPos(bounds.minX(), verticalY, bounds.maxZ()), side, fakeBlocks);
+                add3D(level, displayZone, new BlockPos(bounds.maxX(), verticalY, bounds.maxZ()), side, fakeBlocks);
+                add3D(level, displayZone, new BlockPos(bounds.minX(), verticalY, bounds.minZ()), side, fakeBlocks);
+                add3D(level, displayZone, new BlockPos(bounds.maxX(), verticalY, bounds.minZ()), side, fakeBlocks);
+            }
         }
     }
 

@@ -121,6 +121,26 @@ class FabricClaimRepositorySubdivisionTest
     }
 
     @Test
+    void oneBlockSubdivisionsCanBeCreated() throws Exception
+    {
+        FabricClaimRepository repository = repository(dataStore(""));
+
+        ClaimSnapshot sub3d = repository.createSubdivision(1L,
+                ClaimBounds.rectangle(15, 64, 15, 15, 64, 15), true, null).createdClaim();
+        ClaimSnapshot sub2d = repository.createSubdivision(1L,
+                ClaimBounds.rectangle(16, FLOOR, 16, 16, TOP, 16), false, null).createdClaim();
+
+        assertNotNull(sub3d);
+        assertEquals(1, sub3d.bounds().area());
+        assertEquals(1, sub3d.bounds().yHeight());
+        assertTrue(sub3d.threeDimensional());
+
+        assertNotNull(sub2d);
+        assertEquals(1, sub2d.bounds().area());
+        assertFalse(sub2d.threeDimensional());
+    }
+
+    @Test
     void aSubdivisionMustStayInItsParentAndOffItsSiblings() throws Exception
     {
         FabricClaimRepository repository = repository(dataStore(""));

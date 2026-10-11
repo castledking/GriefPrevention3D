@@ -21,12 +21,15 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -38,6 +41,8 @@ final class FabricClaimToolHooks
 {
     /** How far away a tool can inspect or edit, as with Paper's {@code getTargetBlock(player, 100)}. */
     private static final double TOOL_REACH = 100.0D;
+    /** How far past the view line a claim must reach before its corners can no longer be aimed at. */
+    private static final double CORNER_VIEW_MARGIN = 2.0D;
     /** Paper waits this long after a hotbar switch, so scrolling past the shovel stays quiet. */
     private static final long EQUIP_DELAY_TICKS = 15L;
     private static final String VISUALIZE_NEARBY_PERMISSION = "griefprevention.visualizenearbyclaims";
@@ -105,7 +110,17 @@ final class FabricClaimToolHooks
             return InteractionResult.SUCCESS;
         }
 
-        return useTool(tool, serverPlayer, serverLevel, hitResult.getBlockPos());
+        BlockPos clicked = hitResult.getBlockPos();
+        if (tool == ClaimTool.MODIFICATION)
+        {
+            BlockPos corner = snapToClaimCorner(serverPlayer, serverLevel, clicked);
+            if (corner != null)
+            {
+                clicked = corner;
+            }
+        }
+
+        return useTool(tool, serverPlayer, serverLevel, clicked);
     }
 
     /**
@@ -137,6 +152,18 @@ final class FabricClaimToolHooks
                 return InteractionResult.PASS;
             }
             target = blockHit.getBlockPos();
+        }
+
+        // A corner of a claim is often water or air, so the pick can miss it altogether, or land
+        // on the seabed behind it. Looking for the corner the player aims at keeps those clicks on
+        // the claim, as on Paper.
+        if (tool == ClaimTool.MODIFICATION)
+        {
+            BlockPos corner = snapToClaimCorner(serverPlayer, serverLevel, target);
+            if (corner != null)
+            {
+                target = corner;
+            }
         }
 
         if (target == null && !(tool == ClaimTool.INVESTIGATION && serverPlayer.isShiftKeyDown()))
@@ -442,12 +469,6 @@ final class FabricClaimToolHooks
             this.visualization.clear(player);
             return;
         }
-        if (clicked.equals(session.firstCorner))
-        {
-            // The same block again is no second corner: wait for one.
-            return;
-        }
-
         BlockPos first = session.firstCorner;
         // A 2D subdivision reaches from its parent's floor to the top of the world, as on Paper.
         ClaimBounds bounds = session.threeDimensional
@@ -647,6 +668,56 @@ final class FabricClaimToolHooks
     // ---------------------------------------------------------------------------------------------
     // Helpers
     // ---------------------------------------------------------------------------------------------
+
+    /**
+     * The extra raytrace Paper plays for the modification tool. A claim's corner is often water,
+     * air or a gap, so a click on a faraway corner comes back as no block at all, or as the seabed
+     * behind it: the click lands skewed away from the claim and a new claim starts instead of the
+     * corner being selected. Looking along the view for the corner the player aims at keeps the
+     * click on it, as on Paper. Half-finished selections are left alone, so the second corner of a
+     * selection stays where the player clicked.
+     *
+     * @return the corner block the player aims at, or null when the click stays where it is
+     */
+    private @Nullable BlockPos snapToClaimCorner(
+            @NotNull ServerPlayer player,
+            @NotNull ServerLevel level,
+            @Nullable BlockPos clicked)
+    {
+        if (this.sessions.containsKey(player.getUUID()))
+        {
+            return null;
+        }
+
+        Vec3 eye = player.getEyePosition();
+        Vec3 view = player.getViewVector(1.0F);
+        Vec3 far = eye.add(view.scale(TOOL_REACH));
+        String worldKey = this.claims.worldKey(level);
+        ClaimBounds nearView = ClaimBounds.rectangle(
+                (int) Math.floor(Math.min(eye.x, far.x) - CORNER_VIEW_MARGIN),
+                (int) Math.floor(Math.min(eye.y, far.y) - CORNER_VIEW_MARGIN),
+                (int) Math.floor(Math.min(eye.z, far.z) - CORNER_VIEW_MARGIN),
+                (int) Math.ceil(Math.max(eye.x, far.x) + CORNER_VIEW_MARGIN),
+                (int) Math.ceil(Math.max(eye.y, far.y) + CORNER_VIEW_MARGIN),
+                (int) Math.ceil(Math.max(eye.z, far.z) + CORNER_VIEW_MARGIN));
+        // Only the claims the view line could touch, widened past the aim a corner forgives.
+        List<ClaimSnapshot> candidates = new ArrayList<>(this.claims.candidates(worldKey, nearView));
+
+        CornerRaycast.CornerHit corner = CornerRaycast.closestCorner(
+                candidates,
+                worldKey,
+                eye,
+                view,
+                TOOL_REACH,
+                level.getMinY(),
+                level.getMaxY());
+        if (corner == null || !CornerRaycast.beatsClickedBlock(eye, view, clicked, corner.distanceAlongView()))
+        {
+            return null;
+        }
+
+        return corner.pos();
+    }
 
     /** Paper only answers the main hand, so a tool in the off hand never double-fires. */
     private @Nullable ClaimTool claimTool(@NotNull Player player, @NotNull InteractionHand hand)
