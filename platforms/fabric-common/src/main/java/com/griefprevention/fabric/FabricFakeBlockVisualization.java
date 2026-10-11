@@ -130,8 +130,20 @@ final class FabricFakeBlockVisualization
             @NotNull ClaimBounds bounds,
             @NotNull BlockPos clicked)
     {
+        visualizeInitializeBounds(player, level, bounds, clicked, false);
+    }
+
+    /** @param threeDimensional shows the corner at its own height, as for a 3D subdivision's first corner */
+    void visualizeInitializeBounds(
+            @NotNull ServerPlayer player,
+            @NotNull ServerLevel level,
+            @NotNull ClaimBounds bounds,
+            @NotNull BlockPos clicked,
+            boolean threeDimensional)
+    {
+        VisualizationStyle style = threeDimensional ? VisualizationStyle.INITIALIZE_3D : VisualizationStyle.INITIALIZE;
         render(player, level, new BoundsRequest(List.of(
-                new VisualizationTarget(bounds, VisualizationStyle.INITIALIZE, null))), player.blockPosition(), clicked.getY());
+                new VisualizationTarget(bounds, style, null))), player.blockPosition(), clicked.getY());
     }
 
     void visualizeConflictBounds(
@@ -794,6 +806,7 @@ final class FabricFakeBlockVisualization
         SUBDIVISION("iron_block", GlowColor.WHITE, "white_wool", GlowColor.WHITE, false),
         SUBDIVISION_3D("iron_block", GlowColor.WHITE, "white_wool", GlowColor.WHITE, true),
         INITIALIZE("diamond_block", GlowColor.AQUA, "diamond_block", GlowColor.AQUA, false),
+        INITIALIZE_3D("diamond_block", GlowColor.AQUA, "diamond_block", GlowColor.AQUA, true),
         CONFLICT("redstone_ore", GlowColor.RED, "netherrack", GlowColor.RED, false);
 
         private final @NotNull String cornerBlock;

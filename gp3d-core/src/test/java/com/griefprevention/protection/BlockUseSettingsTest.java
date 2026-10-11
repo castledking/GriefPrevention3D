@@ -4,8 +4,10 @@ import com.griefprevention.claims.ClaimTrustLevel;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class BlockUseSettingsTest
 {
@@ -74,6 +76,19 @@ class BlockUseSettingsTest
 
         assertEquals(ClaimTrustLevel.ACCESS, settings.requiredTrust(BlockUseKind.LECTERN));
         assertNull(settings.requiredTrust(BlockUseKind.DOOR));
+    }
+
+    @Test
+    void enderPearlsNeedAccessTrustAndComeBackByDefault() throws Exception
+    {
+        EnderPearlSettings defaults = this.codec.decodeEnderPearls("GriefPrevention: {}\n");
+        EnderPearlSettings configured = this.codec.decodeEnderPearls(
+                "GriefPrevention:\n  Claims:\n    EnderPearlsRequireAccessTrust: false\n    RefundDeniedEnderPearls: false\n");
+
+        assertTrue(defaults.requireAccessTrust());
+        assertTrue(defaults.refundDenied());
+        assertFalse(configured.requireAccessTrust());
+        assertFalse(configured.refundDenied());
     }
 
     @Test

@@ -104,6 +104,23 @@ public final class WorldProtectionConfigCodec
         );
     }
 
+    /** Reads the switches behind {@link EnderPearlSettings}, with Paper's defaults. */
+    public synchronized @NotNull EnderPearlSettings decodeEnderPearls(@NotNull String input)
+            throws WorldProtectionConfigException
+    {
+        final Object loaded = load(input);
+        if (loaded == null)
+        {
+            return EnderPearlSettings.upstreamDefaults();
+        }
+
+        Map<String, Object> root = optionalMap(stringMap(loaded, "config root").get(ROOT), ROOT);
+        Map<String, Object> claims = optionalMap(root.get(CLAIMS), ROOT + "." + CLAIMS);
+        return new EnderPearlSettings(
+                bool(claims.get("EnderPearlsRequireAccessTrust"), true, "Claims.EnderPearlsRequireAccessTrust"),
+                bool(claims.get("RefundDeniedEnderPearls"), true, "Claims.RefundDeniedEnderPearls"));
+    }
+
     private @Nullable Object load(@NotNull String input) throws WorldProtectionConfigException
     {
         try

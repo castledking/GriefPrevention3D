@@ -115,7 +115,8 @@ public final class ClaimToolConfigCodec
                 integer(claims.get(MINIMUM_WIDTH), ClaimToolSettings.DEFAULT_MINIMUM_WIDTH, MINIMUM_WIDTH),
                 integer(claims.get(MINIMUM_AREA), ClaimToolSettings.DEFAULT_MINIMUM_AREA, MINIMUM_AREA),
                 bool(root.get(VISUALIZATION_GLOW), false, VISUALIZATION_GLOW),
-                modes
+                modes,
+                bool(claims.get("Allow3DSubdivisions"), true, "Claims.Allow3DSubdivisions")
         );
     }
 

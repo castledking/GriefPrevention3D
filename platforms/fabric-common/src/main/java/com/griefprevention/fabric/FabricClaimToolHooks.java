@@ -269,13 +269,11 @@ final class FabricClaimToolHooks
         }
         if (session != null)
         {
-            if (session.mode == SessionMode.CREATE)
+            switch (session.mode)
             {
-                finishCreate(player, level, session, clicked);
-            }
-            else
-            {
-                finishResize(player, level, session, clicked);
+                case CREATE -> finishCreate(player, level, session, clicked);
+                case SUBDIVIDE -> finishSubdivision(player, level, session, clicked);
+                default -> finishResize(player, level, session, clicked);
             }
             return;
         }
@@ -287,7 +285,10 @@ final class FabricClaimToolHooks
             return;
         }
 
-        if (!canModify(player, claim))
+        // As on Paper, managers may subdivide a claim they cannot reshape.
+        boolean subdividing = this.modes.mode(player.getUUID()).subdivides();
+        boolean canEdit = canModify(player, claim);
+        if (!canEdit && !(subdividing && this.claims.allows(claim, player, ClaimTrustLevel.MANAGE)))
         {
             this.feedback.sendError(player, MessageKey.CREATE_CLAIM_FAIL_OVERLAP_OTHER_PLAYER,
                     this.feedback.ownerName(player, claim));
@@ -295,10 +296,16 @@ final class FabricClaimToolHooks
             return;
         }
 
-        CornerSelection corner = cornerSelection(claim, clicked);
+        // Sneaking at a corner in subdivision mode starts a subdivision there instead of a resize.
+        CornerSelection corner = canEdit && !(subdividing && player.isShiftKeyDown()) ? cornerSelection(claim, clicked) : null;
         if (corner != null)
         {
             startResize(player, level, claim, corner, clicked);
+            return;
+        }
+        if (subdividing)
+        {
+            startSubdivision(player, level, claim, clicked);
             return;
         }
 
@@ -393,6 +400,91 @@ final class FabricClaimToolHooks
         }
     }
 
+    private void startSubdivision(
+            @NotNull ServerPlayer player,
+            @NotNull ServerLevel level,
+            @NotNull ClaimSnapshot claim,
+            @NotNull BlockPos clicked)
+    {
+        boolean threeDimensional = this.modes.mode(player.getUUID()) == FabricClaimModes.Mode.SUBDIVIDE_3D;
+        if (threeDimensional && !this.settings.tools().allow3DSubdivisions())
+        {
+            this.feedback.sendError(player, MessageKey.SUBDIVISIONS_3D_DISABLED);
+            return;
+        }
+        // Paper nests subdivisions only with AllowNestedSubClaims, which Fabric does not offer yet.
+        if (claim.parentId() != null || claim.id() == null)
+        {
+            this.feedback.sendError(player, MessageKey.RESIZE_FAIL_OVERLAP_SUBDIVISION);
+            this.visualization.visualizeConflictBounds(player, level, claim.bounds(), clicked);
+            return;
+        }
+
+        this.sessions.put(player.getUUID(),
+                ClaimToolSession.subdivide(this.claims.worldKey(level), claim.id(), clicked, threeDimensional));
+        ClaimBounds start = threeDimensional
+                ? ClaimBounds.rectangle(clicked.getX(), clicked.getY(), clicked.getZ(), clicked.getX(), clicked.getY(), clicked.getZ())
+                : create2DBounds(level, clicked, clicked);
+        this.visualization.visualizeInitializeBounds(player, level, start, clicked, threeDimensional);
+        this.feedback.send(player, TextMode.INSTRUCTION, MessageKey.SUBDIVISION_START);
+    }
+
+    private void finishSubdivision(
+            @NotNull ServerPlayer player,
+            @NotNull ServerLevel level,
+            @NotNull ClaimToolSession session,
+            @NotNull BlockPos clicked)
+    {
+        ClaimSnapshot parent = this.claims.claimById(session.claimId);
+        if (parent == null)
+        {
+            this.sessions.remove(player.getUUID());
+            this.visualization.clear(player);
+            return;
+        }
+        if (clicked.equals(session.firstCorner))
+        {
+            // The same block again is no second corner: wait for one.
+            return;
+        }
+
+        BlockPos first = session.firstCorner;
+        // A 2D subdivision reaches from its parent's floor to the top of the world, as on Paper.
+        ClaimBounds bounds = session.threeDimensional
+                ? ClaimBounds.rectangle(first.getX(), first.getY(), first.getZ(), clicked.getX(), clicked.getY(), clicked.getZ())
+                : ClaimBounds.rectangle(first.getX(), parent.bounds().minY(), first.getZ(),
+                        clicked.getX(), level.getMaxY(), clicked.getZ());
+        try
+        {
+            FabricClaimRepository.SubdivisionResult result =
+                    this.claims.createSubdivision(session.claimId, bounds, session.threeDimensional, player);
+            ClaimSnapshot created = result.createdClaim();
+            if (created == null)
+            {
+                ClaimSnapshot conflicting = result.conflictingClaim();
+                if (result.problem() == FabricClaimRepository.PlacementProblem.OVERLAPS_SIBLING && conflicting != null)
+                {
+                    this.feedback.sendError(player, MessageKey.CREATE_SUBDIVISION_OVERLAP);
+                    this.visualization.visualizeConflictBounds(player, level, conflicting.bounds(), clicked);
+                }
+                else
+                {
+                    this.feedback.sendError(player, MessageKey.CREATE_CLAIM_FAIL_OVERLAP_REGION);
+                    this.visualization.visualizeConflictBounds(player, level, bounds, clicked);
+                }
+                return;
+            }
+
+            this.sessions.remove(player.getUUID());
+            this.feedback.send(player, TextMode.SUCCESS, MessageKey.SUBDIVISION_SUCCESS);
+            this.visualization.visualizeClaim(player, level, created, clicked);
+        }
+        catch (IOException e)
+        {
+            player.sendSystemMessage(Component.literal("Could not save subdivision: " + e.getMessage()), true);
+        }
+    }
+
     private void startResize(
             @NotNull ServerPlayer player,
             @NotNull ServerLevel level,
@@ -417,16 +509,19 @@ final class FabricClaimToolHooks
             @NotNull ClaimToolSession session,
             @NotNull BlockPos clicked)
     {
-        ClaimBounds bounds = resizedBounds(level, session, clicked);
+        ClaimBounds bounds = resizedBounds(session, clicked);
+        // The minimum size is for claims; subdivisions may be any size, as on Paper.
+        ClaimSnapshot resizing = this.claims.claimById(session.claimId);
+        boolean subdivision = resizing != null && resizing.parentId() != null;
         int minimumWidth = this.settings.tools().minimumWidth();
-        if (bounds.xLength() < minimumWidth || bounds.zLength() < minimumWidth)
+        if (!subdivision && (bounds.xLength() < minimumWidth || bounds.zLength() < minimumWidth))
         {
             this.visualization.visualizeInitializeBounds(player, level, bounds, clicked);
             this.feedback.sendError(player, MessageKey.RESIZE_CLAIM_TOO_NARROW, String.valueOf(minimumWidth));
             return;
         }
         int minimumArea = this.settings.tools().minimumArea();
-        if (bounds.area() < minimumArea)
+        if (!subdivision && bounds.area() < minimumArea)
         {
             this.visualization.visualizeInitializeBounds(player, level, bounds, clicked);
             this.feedback.sendError(player, MessageKey.RESIZE_CLAIM_INSUFFICIENT_AREA, String.valueOf(minimumArea));
@@ -449,6 +544,20 @@ final class FabricClaimToolHooks
                         player,
                         MessageKey.RESIZE_NEED_MORE_BLOCKS,
                         String.valueOf(result.blocksNeeded()));
+                return;
+            }
+            FabricClaimRepository.PlacementProblem problem = result.placementProblem();
+            if (problem != null)
+            {
+                ClaimSnapshot conflicting = result.overlappingClaim();
+                this.visualization.visualizeConflictBounds(
+                        player, level, conflicting == null ? bounds : conflicting.bounds(), clicked);
+                this.feedback.sendError(player, switch (problem)
+                {
+                    case OUTSIDE_PARENT -> MessageKey.RESIZE_FAIL_SUBDIVISION_EXCEEDS_PARENT;
+                    case OVERLAPS_SIBLING -> MessageKey.RESIZE_FAIL_OVERLAP_SUBDIVISION;
+                    case EXCLUDES_SUBDIVISION -> MessageKey.RESIZE_FAIL_SUBDIVISION;
+                });
                 return;
             }
             ClaimSnapshot updated = result.updatedClaim();
@@ -572,8 +681,8 @@ final class FabricClaimToolHooks
                 second.getZ());
     }
 
+    /** A 3D claim's clicked corner moves its height too; any other claim keeps its heights, as on Paper. */
     private static @NotNull ClaimBounds resizedBounds(
-            @NotNull ServerLevel level,
             @NotNull ClaimToolSession session,
             @NotNull BlockPos clicked)
     {
@@ -592,8 +701,8 @@ final class FabricClaimToolHooks
         }
         else
         {
-            y1 = level.getMinY();
-            y2 = level.getMaxY();
+            y1 = original.minY();
+            y2 = original.maxY();
         }
 
         return ClaimBounds.rectangle(x1, y1, z1, x2, y2, z2);
@@ -648,7 +757,8 @@ final class FabricClaimToolHooks
     private enum SessionMode
     {
         CREATE,
-        RESIZE
+        RESIZE,
+        SUBDIVIDE
     }
 
     private static final class ClaimToolSession
@@ -659,6 +769,8 @@ final class FabricClaimToolHooks
         private final long claimId;
         private final @NotNull ClaimBounds originalBounds;
         private final @NotNull CornerSelection cornerSelection;
+        /** For a subdivision: whether it is height-limited. */
+        private final boolean threeDimensional;
 
         private ClaimToolSession(
                 @NotNull SessionMode mode,
@@ -666,7 +778,8 @@ final class FabricClaimToolHooks
                 @NotNull BlockPos firstCorner,
                 long claimId,
                 @NotNull ClaimBounds originalBounds,
-                @NotNull CornerSelection cornerSelection)
+                @NotNull CornerSelection cornerSelection,
+                boolean threeDimensional)
         {
             this.mode = mode;
             this.worldKey = worldKey;
@@ -674,6 +787,24 @@ final class FabricClaimToolHooks
             this.claimId = claimId;
             this.originalBounds = originalBounds;
             this.cornerSelection = cornerSelection;
+            this.threeDimensional = threeDimensional;
+        }
+
+        /** @param parentId the claim the subdivision goes in */
+        private static @NotNull ClaimToolSession subdivide(
+                @NotNull String worldKey,
+                long parentId,
+                @NotNull BlockPos firstCorner,
+                boolean threeDimensional)
+        {
+            return new ClaimToolSession(
+                    SessionMode.SUBDIVIDE,
+                    worldKey,
+                    firstCorner.immutable(),
+                    parentId,
+                    ClaimBounds.rectangle(0, 0, 0, 0, 0, 0),
+                    new CornerSelection(true, true, null),
+                    threeDimensional);
         }
 
         private static @NotNull ClaimToolSession create(
@@ -686,7 +817,8 @@ final class FabricClaimToolHooks
                     firstCorner.immutable(),
                     -1L,
                     ClaimBounds.rectangle(0, 0, 0, 0, 0, 0),
-                    new CornerSelection(true, true, null));
+                    new CornerSelection(true, true, null),
+                    false);
         }
 
         private static @NotNull ClaimToolSession resize(
@@ -701,7 +833,8 @@ final class FabricClaimToolHooks
                     BlockPos.ZERO,
                     claimId,
                     originalBounds,
-                    cornerSelection);
+                    cornerSelection,
+                    false);
         }
     }
 

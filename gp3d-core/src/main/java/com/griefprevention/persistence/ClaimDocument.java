@@ -236,6 +236,46 @@ public final class ClaimDocument
         return withSnapshot(updated, updatedModifiedDate).withTrust(this.trust.withOwner(updatedOwnerId));
     }
 
+    /** The subdivision with {@code /restrictsubclaim} on or off: whether it inherits its parent's trust. */
+    public @NotNull ClaimDocument withInheritNothing(boolean updatedInheritNothing)
+    {
+        return new ClaimDocument(
+                this.snapshot,
+                this.trust,
+                this.shapeCorners,
+                updatedInheritNothing,
+                this.inheritNothingForNewSubdivisions,
+                this.explosivesAllowed,
+                this.witherExplosionsAllowed,
+                this.allowAllNeighbors,
+                this.pvpEnabled,
+                this.alertsEnabled,
+                this.modifiedDate,
+                this.storageKey,
+                this.extraFields
+        );
+    }
+
+    /** The top-level claim with {@code /restrictsubclaim} on or off for the subdivisions made in it from now on. */
+    public @NotNull ClaimDocument withInheritNothingForNewSubdivisions(boolean updated)
+    {
+        return new ClaimDocument(
+                this.snapshot,
+                this.trust,
+                this.shapeCorners,
+                this.inheritNothing,
+                updated,
+                this.explosivesAllowed,
+                this.witherExplosionsAllowed,
+                this.allowAllNeighbors,
+                this.pvpEnabled,
+                this.alertsEnabled,
+                this.modifiedDate,
+                this.storageKey,
+                this.extraFields
+        );
+    }
+
     public @NotNull ClaimDocument withTrust(@NotNull ClaimTrustSnapshot updatedTrust)
     {
         return new ClaimDocument(

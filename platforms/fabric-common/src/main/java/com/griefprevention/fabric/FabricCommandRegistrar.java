@@ -127,6 +127,7 @@ final class FabricCommandRegistrar
                 .standalone(claimCommands::abandonClaim));
         claim.put("pvp", new Action(claimCommands::claimPvp, FabricPermissionDefaults.CLAIM_PVP));
         claim.put("explosions", new Action(claimCommands::claimExplosions, FabricPermissionDefaults.CLAIM_EXPLOSIONS));
+        claim.put("restrictsubclaim", new Action(claimCommands::restrictSubclaim, FabricPermissionDefaults.RESTRICT_SUBCLAIM));
         claim.put("transfer", new Action(staff::transfer, FabricPermissionDefaults.TRANSFER_CLAIM));
         this.actions.put(CLAIM_ROOT, claim);
 
@@ -174,6 +175,12 @@ final class FabricCommandRegistrar
                         : previous.length == 1 ? List.of("confirm") : List.of());
         legacy("claimpvpconfirm", claimCommands::claimPvpConfirm, FabricPermissionDefaults.CLAIM_PVP, "/%s", null);
         legacy("basicclaims", claimCommands::claimMode, FabricPermissionDefaults.BASIC_CLAIMS, "/%s", null, "bc");
+        legacy("subdivideclaims", claimCommands::subdivideMode, FabricPermissionDefaults.SUBDIVIDE_CLAIMS, "/%s", null,
+                "sc", "subdivideclaim");
+        legacy("3dsubdivideclaims", claimCommands::subdivide3DMode, FabricPermissionDefaults.SUBDIVIDE_CLAIMS_3D, "/%s",
+                null, "3dsubdivideclaim", "3dsc", "sc3d", "subdivide3d", "3dsubdivide");
+        legacy("restrictsubclaim", claimCommands::restrictSubclaim, FabricPermissionDefaults.RESTRICT_SUBCLAIM, "/%s",
+                null, "rsc");
         legacy("adminclaims", claimCommands::adminMode, FabricPermissionDefaults.ADMIN_CLAIMS, "/%s", null,
                 "ac", "aclaims");
         legacy("adjustbonusclaimblocks", blocks::adjustBonus, FabricPermissionDefaults.ADJUST_CLAIM_BLOCKS,

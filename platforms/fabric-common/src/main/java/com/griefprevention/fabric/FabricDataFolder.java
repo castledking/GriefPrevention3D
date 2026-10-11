@@ -228,6 +228,23 @@ final class FabricDataFolder
               ExplosivesEnabled: "This claim is now vulnerable to explosions.  Use /claimexplosions again to re-enable protections."
               WitherExplosionsEnabled: "This claim is now vulnerable to wither explosions.  Use /witherexplosions again to re-enable protections."
               WitherExplosionsDisabled: "This claim is now protected from wither explosions.  Use /witherexplosions again to disable protections."
+              SubdivisionMode: "Subdivision mode.  Use your shovel to create subdivisions in your existing claims.  Use /basicclaims to exit."
+              SubdivisionMode3D: "3D Subdivision mode.  Use your shovel to create 3D subdivisions in your existing claims.  Use /basicclaims to exit."
+              SubdivisionVideo2: "Click for Subdivision Help: {0}"
+              SubdivisionStart: "Subdivision corner set!  Use your shovel at the location for the opposite corner of this new subdivision."
+              SubdivisionSuccess: "Subdivision created!  Use /trust to share it with friends."
+              CreateSubdivisionOverlap: "Your selected area overlaps another subdivision."
+              CreateClaimFailOverlapRegion: "You can't claim all of this because you're not allowed to build here."
+              ResizeFailOverlapSubdivision: "You can't create a subdivision here because it would overlap another subdivision.  Consider /abandonclaim to delete it, or use your shovel at a corner to resize it."
+              ResizeFailSubdivisionExceedsParent: "Could not resize: Subdivision was not kept within the parent's confines on all sides causing a conflict zone appearance on the main claim."
+              ResizeFailSubdivision: "Cannot resize claim: The new boundaries would exclude an existing subdivision. Please remove or move the subdivision first."
+              Subdivisions3DDisabled: "3D subdivisions are disabled on this server."
+              SubclaimRestricted: "This subclaim's permissions will no longer inherit from the parent claim"
+              SubclaimUnrestricted: "This subclaim's permissions will now inherit from the parent claim"
+              StandInSubclaim: "You need to be standing in a subclaim to restrict it"
+              MainClaimSubdivisionInheritEnabled: "All subdivisions in this claim will inherit permissions."
+              MainClaimSubdivisionInheritDisabled: "All subdivisions in this claim will NOT inherit permissions."
+              AdminSubdivisionRestricted: "That subdivision is administered by staff.  Talk to staff if you need it changed."
             """;
 
     private FabricDataFolder()

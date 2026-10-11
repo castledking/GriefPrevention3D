@@ -25,6 +25,8 @@ final class FabricClaimCommands
 {
     /** Keeps a typed radius inside the world border, where claim arithmetic cannot overflow. */
     private static final int MAXIMUM_RADIUS = 30_000_000;
+    /** Paper's {@code DataStore.SUBDIVISION_VIDEO_URL}, underlined in dark aqua. */
+    private static final String SUBDIVISION_VIDEO_URL = "\u00A73\u00A7nbit.ly/mcgpsub\u00A7r";
 
     private final FabricClaimRepository claims;
     private final FabricDenialFeedback feedback;
@@ -493,7 +495,119 @@ final class FabricClaimCommands
             }
             return true;
         }
+        if ("2d".equalsIgnoreCase(args[0]) || "subdivide".equalsIgnoreCase(args[0]))
+        {
+            return subdivideMode(sender, new String[0]);
+        }
+        if ("3d".equalsIgnoreCase(args[0]))
+        {
+            return subdivide3DMode(sender, new String[0]);
+        }
         FabricCommandRegistrar.sendUnavailable(sender);
+        return true;
+    }
+
+    /** {@code /subdivideclaims} and {@code /claim mode 2d}: the shovel draws subdivisions. */
+    boolean subdivideMode(@NotNull FabricCommandSender sender, @NotNull String @NotNull [] args)
+    {
+        ServerPlayer player = sender.requirePlayer();
+        if (player == null || !sender.checkPermission(FabricPermissionDefaults.SUBDIVIDE_CLAIMS))
+        {
+            return true;
+        }
+        this.modes.set(player.getUUID(), FabricClaimModes.Mode.SUBDIVIDE);
+        sender.send(TextMode.INSTRUCTION, MessageKey.SUBDIVISION_MODE);
+        sender.send(TextMode.INSTRUCTION, MessageKey.SUBDIVISION_VIDEO_2, SUBDIVISION_VIDEO_URL);
+        return true;
+    }
+
+    /** {@code /3dsubdivideclaims} and {@code /claim mode 3d}: the shovel draws height-limited subdivisions. */
+    boolean subdivide3DMode(@NotNull FabricCommandSender sender, @NotNull String @NotNull [] args)
+    {
+        ServerPlayer player = sender.requirePlayer();
+        if (player == null)
+        {
+            return true;
+        }
+        if (!this.settings.tools().allow3DSubdivisions())
+        {
+            sender.sendError(MessageKey.SUBDIVISIONS_3D_DISABLED);
+            return true;
+        }
+        if (!sender.checkPermission(FabricPermissionDefaults.SUBDIVIDE_CLAIMS_3D))
+        {
+            return true;
+        }
+        this.modes.set(player.getUUID(), FabricClaimModes.Mode.SUBDIVIDE_3D);
+        sender.send(TextMode.INSTRUCTION, MessageKey.SUBDIVISION_MODE_3D);
+        sender.send(TextMode.INSTRUCTION, MessageKey.SUBDIVISION_VIDEO_2, SUBDIVISION_VIDEO_URL);
+        return true;
+    }
+
+    /**
+     * {@code /restrictsubclaim}: in a subdivision, stops it inheriting its parent's trust or lets it
+     * again; in a claim, does that for all of its subdivisions, now and to come. It takes manage
+     * trust in the claim, or the administrative claims permission in staff space.
+     */
+    boolean restrictSubclaim(@NotNull FabricCommandSender sender, @NotNull String @NotNull [] args)
+    {
+        ServerPlayer player = sender.requirePlayer();
+        if (player == null || !sender.checkPermission(FabricPermissionDefaults.RESTRICT_SUBCLAIM))
+        {
+            return true;
+        }
+        if (args.length > 0)
+        {
+            return false;
+        }
+
+        ClaimSnapshot claim = this.claims.findClaimAt((ServerLevel) player.level(), player.blockPosition());
+        if (claim == null || claim.id() == null)
+        {
+            sender.sendError(MessageKey.STAND_IN_SUBCLAIM);
+            return true;
+        }
+        if (this.claims.isAdminSubdivision(claim) && !sender.hasPermission(FabricPermissionDefaults.ADMIN_CLAIMS))
+        {
+            sender.sendError(MessageKey.ADMIN_SUBDIVISION_RESTRICTED);
+            return true;
+        }
+        ClaimSnapshot decides = claim.parentId() == null ? claim : this.claims.claimById(claim.parentId());
+        if (decides == null || !this.claims.allows(decides, player, ClaimTrustLevel.MANAGE))
+        {
+            sender.sendError(MessageKey.ONLY_OWNERS_MODIFY_CLAIMS,
+                    this.feedback.ownerName(player, decides == null ? claim : decides));
+            return true;
+        }
+
+        try
+        {
+            if (claim.parentId() == null)
+            {
+                Boolean restricted = this.claims.toggleNewSubdivisionRestriction(claim.id());
+                if (restricted != null)
+                {
+                    sender.send(TextMode.SUCCESS, restricted
+                            ? MessageKey.MAIN_CLAIM_SUBDIVISION_INHERIT_DISABLED
+                            : MessageKey.MAIN_CLAIM_SUBDIVISION_INHERIT_ENABLED);
+                }
+            }
+            else
+            {
+                Boolean restricted = this.claims.toggleSubdivisionRestriction(claim.id());
+                if (restricted != null)
+                {
+                    sender.send(TextMode.SUCCESS,
+                            restricted ? MessageKey.SUBCLAIM_RESTRICTED : MessageKey.SUBCLAIM_UNRESTRICTED);
+                }
+            }
+        }
+        catch (IOException exception)
+        {
+            this.logger.error("Could not save claim {} after {} changed its subdivision restriction.",
+                    claim.id(), sender.name(), exception);
+            sender.sendText(TextMode.ERROR, "Could not save the claim: " + exception.getMessage());
+        }
         return true;
     }
 

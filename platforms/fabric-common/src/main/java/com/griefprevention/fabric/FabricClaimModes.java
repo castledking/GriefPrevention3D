@@ -17,7 +17,16 @@ final class FabricClaimModes
     enum Mode
     {
         BASIC,
-        ADMIN
+        ADMIN,
+        /** The shovel draws 2D subdivisions inside claims, as Paper's {@code /subdivideclaims}. */
+        SUBDIVIDE,
+        /** The shovel draws height-limited subdivisions, as Paper's {@code /3dsubdivideclaims}. */
+        SUBDIVIDE_3D;
+
+        boolean subdivides()
+        {
+            return this == SUBDIVIDE || this == SUBDIVIDE_3D;
+        }
     }
 
     private final Map<UUID, Mode> modes = new ConcurrentHashMap<>();

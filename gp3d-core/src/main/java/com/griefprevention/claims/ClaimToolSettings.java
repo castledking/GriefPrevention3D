@@ -22,6 +22,7 @@ public final class ClaimToolSettings
     private final int minimumArea;
     private final boolean visualizationGlow;
     private final @NotNull Map<String, ClaimWorldMode> worldModes;
+    private final boolean allow3DSubdivisions;
 
     public ClaimToolSettings(
             @NotNull String investigationTool,
@@ -29,7 +30,8 @@ public final class ClaimToolSettings
             int minimumWidth,
             int minimumArea,
             boolean visualizationGlow,
-            @NotNull Map<String, ClaimWorldMode> worldModes)
+            @NotNull Map<String, ClaimWorldMode> worldModes,
+            boolean allow3DSubdivisions)
     {
         this.investigationTool = investigationTool;
         this.modificationTool = modificationTool;
@@ -37,6 +39,7 @@ public final class ClaimToolSettings
         this.minimumArea = minimumArea;
         this.visualizationGlow = visualizationGlow;
         this.worldModes = Collections.unmodifiableMap(new LinkedHashMap<>(worldModes));
+        this.allow3DSubdivisions = allow3DSubdivisions;
     }
 
     public static @NotNull ClaimToolSettings upstreamDefaults()
@@ -47,8 +50,15 @@ public final class ClaimToolSettings
                 DEFAULT_MINIMUM_WIDTH,
                 DEFAULT_MINIMUM_AREA,
                 false,
-                Collections.<String, ClaimWorldMode>emptyMap()
+                Collections.<String, ClaimWorldMode>emptyMap(),
+                true
         );
+    }
+
+    /** @return whether {@code Claims.Allow3DSubdivisions} lets players make height-limited subdivisions */
+    public boolean allow3DSubdivisions()
+    {
+        return this.allow3DSubdivisions;
     }
 
     /**

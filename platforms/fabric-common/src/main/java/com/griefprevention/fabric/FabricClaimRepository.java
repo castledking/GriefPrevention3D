@@ -1,9 +1,11 @@
 package com.griefprevention.fabric;
 
+import com.griefprevention.claims.ClaimAccessSubject;
 import com.griefprevention.claims.ClaimBounds;
 import com.griefprevention.claims.ClaimBlockBalance;
 import com.griefprevention.claims.ClaimFlag;
 import com.griefprevention.claims.ClaimOwnership;
+import com.griefprevention.claims.ClaimPlacement;
 import com.griefprevention.claims.ClaimRepository;
 import com.griefprevention.claims.ClaimSnapshot;
 import com.griefprevention.claims.ClaimSnapshotIndex;
@@ -245,15 +247,7 @@ public final class FabricClaimRepository implements ClaimRepository
             @Nullable ServerPlayer player)
             throws IOException
     {
-        ClaimSnapshot existing = null;
-        for (ClaimSnapshot snapshot : this.claimIndex.snapshots())
-        {
-            if (Long.valueOf(claimId).equals(snapshot.id()))
-            {
-                existing = snapshot;
-                break;
-            }
-        }
+        ClaimSnapshot existing = this.claimIndex.get(claimId);
         if (existing == null)
         {
             return UpdateClaimResult.missingResult();
@@ -269,15 +263,35 @@ public final class FabricClaimRepository implements ClaimRepository
                 existing.subdivision()
         );
 
-        for (ClaimSnapshot candidate : this.claimIndex.candidates(updated.worldKey(), updated.bounds()))
+        // A claim keeps its own subdivisions inside, as Paper requires.
+        ClaimSnapshot leftOutside = ClaimPlacement.subdivisionLeftOutside(updated, subdivisionsOf(claimId));
+        if (leftOutside != null)
         {
-            if (Long.valueOf(claimId).equals(candidate.id()))
+            return UpdateClaimResult.placement(PlacementProblem.EXCLUDES_SUBDIVISION, leftOutside);
+        }
+        ClaimSnapshot parent = existing.parentId() == null ? null : this.claimIndex.get(existing.parentId());
+        if (parent != null)
+        {
+            // A subdivision stays in its parent and clear of its siblings; other claims cannot reach it there.
+            if (!ClaimPlacement.fitsInParent(parent, bounds, existing.threeDimensional()))
             {
-                continue;
+                return UpdateClaimResult.placement(PlacementProblem.OUTSIDE_PARENT, parent);
             }
-            if (updated.overlaps(candidate))
+            ClaimSnapshot sibling = ClaimPlacement.overlappingSibling(updated, subdivisionsOf(parent.id()));
+            if (sibling != null)
             {
-                return UpdateClaimResult.overlap(candidate);
+                return UpdateClaimResult.placement(PlacementProblem.OVERLAPS_SIBLING, sibling);
+            }
+        }
+        else
+        {
+            Set<Long> family = descendantIds(claimId, this.documentsByClaimId.values());
+            for (ClaimSnapshot candidate : this.claimIndex.candidates(updated.worldKey(), updated.bounds()))
+            {
+                if (!family.contains(candidate.id()) && updated.overlaps(candidate))
+                {
+                    return UpdateClaimResult.overlap(candidate);
+                }
             }
         }
 
@@ -581,6 +595,168 @@ public final class FabricClaimRepository implements ClaimRepository
         return Boolean.TRUE.equals(document.extraFields().get(ADMIN_SUBDIVISION_FIELD));
     }
 
+    /** @return whether a subdivision is staff space inside a player's claim, as Paper marks it */
+    synchronized boolean isAdminSubdivision(@NotNull ClaimSnapshot claim)
+    {
+        Long id = claim.id();
+        ClaimDocument document = id == null || claim.parentId() == null ? null : this.documentsByClaimId.get(id);
+        return document != null && isAdminSubdivision(document);
+    }
+
+    /** @return a claim's own subdivisions, one level down */
+    synchronized @NotNull List<ClaimSnapshot> subdivisionsOf(long claimId)
+    {
+        List<ClaimSnapshot> result = new ArrayList<>();
+        for (ClaimSnapshot snapshot : this.claimIndex.snapshots())
+        {
+            if (Long.valueOf(claimId).equals(snapshot.parentId()))
+            {
+                result.add(snapshot);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Creates a subdivision in a claim, as Paper's {@code createClaim} does with a parent: inside the
+     * parent's columns, clear of its other subdivisions and free of claim blocks. It inherits the
+     * parent's trust unless the parent restricts new subdivisions.
+     *
+     * @param bounds a 2D subdivision spans from the parent's floor to the top of the world
+     */
+    synchronized @NotNull SubdivisionResult createSubdivision(
+            long parentId,
+            @NotNull ClaimBounds bounds,
+            boolean threeDimensional,
+            @Nullable ServerPlayer player)
+            throws IOException
+    {
+        ClaimSnapshot parent = this.claimIndex.get(parentId);
+        ClaimDocument parentDocument = this.documentsByClaimId.get(parentId);
+        if (parent == null || parentDocument == null || !ClaimPlacement.fitsInParent(parent, bounds, threeDimensional))
+        {
+            return SubdivisionResult.failed(PlacementProblem.OUTSIDE_PARENT, parent);
+        }
+
+        ClaimSnapshot snapshot = new ClaimSnapshot(
+                this.nextClaimId, parent.worldKey(), null, parentId, bounds, threeDimensional, true);
+        ClaimSnapshot sibling = ClaimPlacement.overlappingSibling(snapshot, subdivisionsOf(parentId));
+        if (sibling != null)
+        {
+            return SubdivisionResult.failed(PlacementProblem.OVERLAPS_SIBLING, sibling);
+        }
+
+        ClaimDocument document = ClaimDocument.create(snapshot, System.currentTimeMillis());
+        if (parentDocument.inheritNothingForNewSubdivisions())
+        {
+            document = document.withInheritNothing(true);
+        }
+        List<ClaimDocument> documents = mutableDocuments();
+        documents.add(document);
+        long previousNextClaimId = this.nextClaimId;
+        this.nextClaimId = Math.max(this.nextClaimId + 1L, snapshot.id() + 1L);
+        try
+        {
+            replaceAndSave(documents);
+        }
+        catch (IOException e)
+        {
+            this.nextClaimId = previousNextClaimId;
+            throw e;
+        }
+        ClaimCreatedCallback.EVENT.invoker().onClaimCreated(snapshot, player);
+        return SubdivisionResult.created(snapshot);
+    }
+
+    /**
+     * {@code /restrictsubclaim} in a subdivision: it stops, or starts again, inheriting its parent's
+     * trust. Restricting also drops the copies of the parent's grants that the trust commands placed
+     * in it, as Paper does.
+     *
+     * @return whether the subdivision is now restricted, or null when it is not a subdivision
+     */
+    synchronized @Nullable Boolean toggleSubdivisionRestriction(long subdivisionId) throws IOException
+    {
+        ClaimDocument document = this.documentsByClaimId.get(subdivisionId);
+        Long parentId = document == null ? null : document.snapshot().parentId();
+        ClaimDocument parent = parentId == null ? null : this.documentsByClaimId.get(parentId);
+        if (document == null || parent == null)
+        {
+            return null;
+        }
+        boolean restricted = !document.inheritNothing();
+        List<ClaimDocument> documents = mutableDocuments();
+        replaceDocument(documents, restricted(document, parent, restricted));
+        replaceAndSave(documents);
+        return restricted;
+    }
+
+    /**
+     * {@code /restrictsubclaim} in a top-level claim: whether its subdivisions inherit its trust, now
+     * and when they are made from here on.
+     *
+     * @return whether its subdivisions are now restricted, or null for an unknown claim
+     */
+    synchronized @Nullable Boolean toggleNewSubdivisionRestriction(long claimId) throws IOException
+    {
+        ClaimDocument document = this.documentsByClaimId.get(claimId);
+        if (document == null)
+        {
+            return null;
+        }
+        boolean restricted = !document.inheritNothingForNewSubdivisions();
+        List<ClaimDocument> documents = mutableDocuments();
+        replaceDocument(documents, document.withInheritNothingForNewSubdivisions(restricted));
+        for (ClaimSnapshot child : subdivisionsOf(claimId))
+        {
+            ClaimDocument childDocument = this.documentsByClaimId.get(child.id());
+            if (childDocument != null)
+            {
+                replaceDocument(documents, restricted(childDocument, document, restricted));
+            }
+        }
+        replaceAndSave(documents);
+        return restricted;
+    }
+
+    private static @NotNull ClaimDocument restricted(
+            @NotNull ClaimDocument subdivision,
+            @NotNull ClaimDocument parent,
+            boolean restricted)
+    {
+        if (!restricted)
+        {
+            return subdivision.withInheritNothing(false);
+        }
+        ClaimDocument updated = subdivision.withInheritNothing(true);
+        return subdivision.inheritNothing() ? updated : updated.withTrust(withoutInheritedTrust(subdivision.trust(), parent.trust()));
+    }
+
+    /** The subdivision's trust less the grants it holds at the same level as its parent: the inherited copies. */
+    static @NotNull ClaimTrustSnapshot withoutInheritedTrust(
+            @NotNull ClaimTrustSnapshot subdivision,
+            @NotNull ClaimTrustSnapshot parent)
+    {
+        Map<String, ClaimTrustLevel> permissions = new LinkedHashMap<>(subdivision.permissionsByIdentifier());
+        for (Map.Entry<String, ClaimTrustLevel> grant : parent.permissionsByIdentifier().entrySet())
+        {
+            if (grant.getValue() == permissions.get(grant.getKey()))
+            {
+                permissions.remove(grant.getKey());
+            }
+        }
+        Set<String> managers = new LinkedHashSet<>(subdivision.managerIdentifiers());
+        managers.removeAll(parent.managerIdentifiers());
+        return new ClaimTrustSnapshot(
+                subdivision.ownerId(),
+                permissions,
+                managers,
+                subdivision.neighborIdentifiers(),
+                subdivision.deniedIdentifiers(),
+                subdivision.pvpTrustedIdentifiers(),
+                subdivision.pveTrustedIdentifiers());
+    }
+
     /** @return the top-level claims a player owns, which Paper's all-claims commands act on */
     synchronized @NotNull List<ClaimSnapshot> topLevelClaimsOwnedBy(@NotNull UUID ownerId)
     {
@@ -692,13 +868,42 @@ public final class FabricClaimRepository implements ClaimRepository
         return document == null ? null : document.trust();
     }
 
+    /**
+     * Trust as Paper's {@code Claim.checkPermission} decides it, staff overrides aside. The owner, of
+     * the claim or of the claim a subdivision belongs to, may do anything. Otherwise trust granted in
+     * the claim itself or to the public counts, and a first-level subdivision that is not restricted
+     * also honours its parent's trust, unless the player is denied in the subdivision. Nobody but
+     * staff reshapes an administrative subdivision or hands out trust in it.
+     */
     synchronized boolean allows(
             @NotNull ClaimSnapshot claim,
             @NotNull UUID playerId,
             @NotNull ClaimTrustLevel required)
     {
+        if (isAdminSubdivision(claim) && (required == ClaimTrustLevel.EDIT || required == ClaimTrustLevel.MANAGE))
+        {
+            return false;
+        }
+        if (playerId.equals(effectiveOwnerId(claim)))
+        {
+            return true;
+        }
+
         ClaimTrustSnapshot trust = trustForOrEmpty(claim);
-        return FabricClaimTrustEvaluator.allows(playerId, trust, required, this.permissions);
+        if (FabricClaimTrustEvaluator.allows(playerId, trust, required, this.permissions))
+        {
+            return true;
+        }
+
+        Long parentId = claim.parentId();
+        ClaimSnapshot parent = parentId == null ? null : this.claimIndex.get(parentId);
+        // First-level subdivisions inherit from their parent; nested and restricted ones do not.
+        if (parent == null || parent.parentId() != null || isRestrictedSubdivision(claim))
+        {
+            return false;
+        }
+        ClaimAccessSubject subject = FabricClaimTrustEvaluator.subject(playerId, trust, this.permissions);
+        return !trust.isPermissionDenied(subject, required) && allows(parent, playerId, required);
     }
 
     /**
@@ -713,6 +918,18 @@ public final class FabricClaimRepository implements ClaimRepository
     {
         if (player instanceof ServerPlayer serverPlayer)
         {
+            // Staff run an administrative subdivision as they run an administrative claim.
+            if (isAdminSubdivision(claim))
+            {
+                if (hasPermission(serverPlayer, FabricPermissionDefaults.ADMIN_CLAIMS))
+                {
+                    return true;
+                }
+                if (required == ClaimTrustLevel.EDIT || required == ClaimTrustLevel.MANAGE)
+                {
+                    return false;
+                }
+            }
             if (isAdminClaim(claim))
             {
                 if (hasPermission(serverPlayer, FabricPermissionDefaults.ADMIN_CLAIMS))
@@ -1087,6 +1304,57 @@ public final class FabricClaimRepository implements ClaimRepository
         }
     }
 
+    /** Why a subdivision could not go where it was drawn, or a claim could not take its new shape. */
+    enum PlacementProblem
+    {
+        OUTSIDE_PARENT,
+        OVERLAPS_SIBLING,
+        EXCLUDES_SUBDIVISION
+    }
+
+    static final class SubdivisionResult
+    {
+        private final @Nullable ClaimSnapshot created;
+        private final @Nullable PlacementProblem problem;
+        private final @Nullable ClaimSnapshot conflicting;
+
+        private SubdivisionResult(
+                @Nullable ClaimSnapshot created,
+                @Nullable PlacementProblem problem,
+                @Nullable ClaimSnapshot conflicting)
+        {
+            this.created = created;
+            this.problem = problem;
+            this.conflicting = conflicting;
+        }
+
+        static @NotNull SubdivisionResult created(@NotNull ClaimSnapshot subdivision)
+        {
+            return new SubdivisionResult(subdivision, null, null);
+        }
+
+        static @NotNull SubdivisionResult failed(@NotNull PlacementProblem problem, @Nullable ClaimSnapshot conflicting)
+        {
+            return new SubdivisionResult(null, problem, conflicting);
+        }
+
+        @Nullable ClaimSnapshot createdClaim()
+        {
+            return this.created;
+        }
+
+        @Nullable PlacementProblem problem()
+        {
+            return this.problem;
+        }
+
+        /** The parent it left, or the sibling it overlapped. */
+        @Nullable ClaimSnapshot conflictingClaim()
+        {
+            return this.conflicting;
+        }
+    }
+
     static final class UpdateClaimResult
     {
         private final @Nullable ClaimSnapshot updated;
@@ -1095,6 +1363,7 @@ public final class FabricClaimRepository implements ClaimRepository
         private final boolean insufficientClaimBlocks;
         private final int blocksNeeded;
         private final @Nullable Integer remainingBlocks;
+        private final @Nullable PlacementProblem problem;
 
         private UpdateClaimResult(
                 @Nullable ClaimSnapshot updated,
@@ -1104,12 +1373,37 @@ public final class FabricClaimRepository implements ClaimRepository
                 int blocksNeeded,
                 @Nullable Integer remainingBlocks)
         {
+            this(updated, overlapping, missing, insufficientClaimBlocks, blocksNeeded, remainingBlocks, null);
+        }
+
+        private UpdateClaimResult(
+                @Nullable ClaimSnapshot updated,
+                @Nullable ClaimSnapshot overlapping,
+                boolean missing,
+                boolean insufficientClaimBlocks,
+                int blocksNeeded,
+                @Nullable Integer remainingBlocks,
+                @Nullable PlacementProblem problem)
+        {
             this.updated = updated;
             this.overlapping = overlapping;
             this.missing = missing;
             this.insufficientClaimBlocks = insufficientClaimBlocks;
             this.blocksNeeded = blocksNeeded;
             this.remainingBlocks = remainingBlocks;
+            this.problem = problem;
+        }
+
+        /** @param conflicting the parent left, the sibling overlapped or the subdivision left outside */
+        static @NotNull UpdateClaimResult placement(@NotNull PlacementProblem problem, @NotNull ClaimSnapshot conflicting)
+        {
+            return new UpdateClaimResult(null, conflicting, false, false, 0, null, problem);
+        }
+
+        /** @return why a subdivision rule refused the new shape, or null */
+        @Nullable PlacementProblem placementProblem()
+        {
+            return this.problem;
         }
 
         static @NotNull UpdateClaimResult updated(

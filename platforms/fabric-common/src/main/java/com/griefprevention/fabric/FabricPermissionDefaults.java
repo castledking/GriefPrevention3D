@@ -44,6 +44,9 @@ final class FabricPermissionDefaults
     static final String CREATE_CLAIMS = "griefprevention.createclaims";
     static final String CLAIM_PVP = "griefprevention.claimpvp";
     static final String CLAIM_EXPLOSIONS = "griefprevention.claimexplosions";
+    static final String SUBDIVIDE_CLAIMS = "griefprevention.subdivideclaims";
+    static final String SUBDIVIDE_CLAIMS_3D = "griefprevention.3dsubdivideclaims";
+    static final String RESTRICT_SUBCLAIM = "griefprevention.restrictsubclaim";
     static final String WITHER_EXPLOSIONS = "griefprevention.witherexplosions";
     static final String TRANSFER_CLAIM = "griefprevention.transferclaim";
     static final String TRANSFER_CLAIM_FREE = "griefprevention.transferclaim.free";
@@ -68,7 +71,8 @@ final class FabricPermissionDefaults
         for (String child : Arrays.asList(
                 TRUST, UNTRUST, TRUST_LIST, ACCESS_TRUST, CONTAINER_TRUST, MANAGE_TRUST, CLAIMS_LIST,
                 ABANDON_CLAIM, ABANDON_TOP_LEVEL_CLAIM, ABANDON_ALL_CLAIMS, BASIC_CLAIMS, CREATE_CLAIMS,
-                CLAIM_PVP, CLAIM_EXPLOSIONS, WITHER_EXPLOSIONS, TRANSFER_CLAIM))
+                CLAIM_PVP, CLAIM_EXPLOSIONS, WITHER_EXPLOSIONS, TRANSFER_CLAIM, SUBDIVIDE_CLAIMS,
+                SUBDIVIDE_CLAIMS_3D, RESTRICT_SUBCLAIM))
         {
             node(child, Default.TRUE, CLAIMS);
         }

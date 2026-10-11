@@ -210,15 +210,23 @@ public enum MessageKey
             "There's no claim here.  Stand in the administrative claim you want to transfer."),
     TRANSFER_SUCCESS("TransferSuccess", "Claim transferred."),
     TRANSFER_CLAIM_PERMISSION("TransferClaimPermission", "That command requires the administrative claims permission."),
-    TRANSFER_CLAIM_NOT_ENABLED("TransferClaimNotEnabled", "Giving claims to other players is not enabled on this server."),
-    TRANSFER_CLAIM_NO_CLAIM("TransferClaimNoClaim", "There's no claim here.  Stand in the claim you want to give away."),
+    TRANSFER_CLAIM_NOT_ENABLED(
+            "TransferClaimNotEnabled",
+            "Giving claims to other players is not enabled on this server."),
+    TRANSFER_CLAIM_NO_CLAIM(
+            "TransferClaimNoClaim",
+            "There's no claim here.  Stand in the claim you want to give away."),
     TRANSFER_CLAIM_SELF("TransferClaimSelf", "You already own this claim."),
     TRANSFER_CLAIM_RECIPIENT_NEEDS_BLOCKS(
             "TransferClaimRecipientNeedsBlocks",
             "{0} doesn't have enough claim blocks for this claim.  They need {1} more."),
-    TRANSFER_CLAIM_RECIPIENT_AT_LIMIT("TransferClaimRecipientAtLimit", "{0} already has as many claims as they are allowed."),
+    TRANSFER_CLAIM_RECIPIENT_AT_LIMIT(
+            "TransferClaimRecipientAtLimit",
+            "{0} already has as many claims as they are allowed."),
     CONFIRM_TRANSFER_CLAIM_NO_FEE("ConfirmTransferClaimNoFee", "Do you want to give this claim to {0}?"),
-    CONFIRM_TRANSFER_CLAIM_INSTRUCTION("ConfirmTransferClaimInstruction", "Type /transferclaim {0} confirm to confirm."),
+    CONFIRM_TRANSFER_CLAIM_INSTRUCTION(
+            "ConfirmTransferClaimInstruction",
+            "Type /transferclaim {0} confirm to confirm."),
     TRANSFER_CLAIM_SUCCESS("TransferClaimSuccess", "Gave this claim to {0}."),
     TRANSFER_CLAIM_RECEIVED("TransferClaimReceived", "{0} gave you their claim at {1}."),
     ECONOMY_NO_VAULT("EconomyNoVault", "Economy support requires Vault plugin to be installed."),
@@ -233,7 +241,46 @@ public enum MessageKey
             "This claim is now vulnerable to wither explosions.  Use /witherexplosions again to re-enable protections."),
     WITHER_EXPLOSIONS_DISABLED(
             "WitherExplosionsDisabled",
-            "This claim is now protected from wither explosions.  Use /witherexplosions again to disable protections.");
+            "This claim is now protected from wither explosions.  Use /witherexplosions again to disable protections."),
+    SUBDIVISION_MODE(
+            "SubdivisionMode",
+            "Subdivision mode.  Use your shovel to create subdivisions in your existing claims.  Use /basicclaims to exit."),
+    SUBDIVISION_MODE_3D(
+            "SubdivisionMode3D",
+            "3D Subdivision mode.  Use your shovel to create 3D subdivisions in your existing claims.  Use /basicclaims to exit."),
+    SUBDIVISION_VIDEO_2("SubdivisionVideo2", "Click for Subdivision Help: {0}"),
+    SUBDIVISION_START(
+            "SubdivisionStart",
+            "Subdivision corner set!  Use your shovel at the location for the opposite corner of this new subdivision."),
+    SUBDIVISION_SUCCESS("SubdivisionSuccess", "Subdivision created!  Use /trust to share it with friends."),
+    CREATE_SUBDIVISION_OVERLAP("CreateSubdivisionOverlap", "Your selected area overlaps another subdivision."),
+    CREATE_CLAIM_FAIL_OVERLAP_REGION(
+            "CreateClaimFailOverlapRegion",
+            "You can't claim all of this because you're not allowed to build here."),
+    RESIZE_FAIL_OVERLAP_SUBDIVISION(
+            "ResizeFailOverlapSubdivision",
+            "You can't create a subdivision here because it would overlap another subdivision.  Consider /abandonclaim to delete it, or use your shovel at a corner to resize it."),
+    RESIZE_FAIL_SUBDIVISION_EXCEEDS_PARENT(
+            "ResizeFailSubdivisionExceedsParent",
+            "Could not resize: Subdivision was not kept within the parent's confines on all sides causing a conflict zone appearance on the main claim."),
+    RESIZE_FAIL_SUBDIVISION(
+            "ResizeFailSubdivision",
+            "Cannot resize claim: The new boundaries would exclude an existing subdivision. Please remove or move the subdivision first."),
+    SUBDIVISIONS_3D_DISABLED("Subdivisions3DDisabled", "3D subdivisions are disabled on this server."),
+    SUBCLAIM_RESTRICTED(
+            "SubclaimRestricted",
+            "This subclaim's permissions will no longer inherit from the parent claim"),
+    SUBCLAIM_UNRESTRICTED("SubclaimUnrestricted", "This subclaim's permissions will now inherit from the parent claim"),
+    STAND_IN_SUBCLAIM("StandInSubclaim", "You need to be standing in a subclaim to restrict it"),
+    MAIN_CLAIM_SUBDIVISION_INHERIT_ENABLED(
+            "MainClaimSubdivisionInheritEnabled",
+            "All subdivisions in this claim will inherit permissions."),
+    MAIN_CLAIM_SUBDIVISION_INHERIT_DISABLED(
+            "MainClaimSubdivisionInheritDisabled",
+            "All subdivisions in this claim will NOT inherit permissions."),
+    ADMIN_SUBDIVISION_RESTRICTED(
+            "AdminSubdivisionRestricted",
+            "That subdivision is administered by staff.  Talk to staff if you need it changed.");
 
     private final String key;
     private final String defaultValue;
