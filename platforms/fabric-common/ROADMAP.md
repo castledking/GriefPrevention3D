@@ -74,16 +74,11 @@ design points for that work:
 - [x] `PlayerOfflineTime` on inspection, from a last-seen store (`LastSeen.yml`) kept as players join
       and leave.
 - [x] Administrative claims mode for the shovel and `/claim create` (`/adminclaims`, `/basicclaims`).
-
-Still open:
-
-- [ ] Subdivision, 3D and shaped claim modes for the shovel (`/claim mode`).
+- [x] Subdivision, 3D and shaped claim modes for the shovel (`/claim mode`).
 
 ---
 
-## Commands (Phase 2)
-
-### Done
+## Commands (Phase 2) — done
 
 - [x] LuckPerms-style registration: one greedy argument per command, Bukkit-style parsing, so
       `alias.yml` names, option aliases and usage work as on Paper; failures are logged.
@@ -105,13 +100,16 @@ Still open:
       refuses the transfer, as Paper does without Vault, unless the player has `.free`.
 - [x] `/claimexplosions`, `/witherexplosions`.
 - [x] `FabricPermissionDefaults` is checked against plugin.yml by `FabricPermissionTreeParityTest`.
+- [x] `/restrictsubclaim` toggles inheritance for subdivisions
+- [x] Subdivision trust inheritance in protection checks (trust commands already copy grants to
+       inheriting subdivisions, as Paper does).
 
 ### Still missing
 
-- [ ] `/restrictsubclaim`, `/claim alerts`.
+- [ ] `/claim alerts` to toggle boundary violation alerts
 - [ ] `/trapped`, `/siege`, `/extendclaim`, restore nature, buying and selling claim blocks.
-- [ ] Subdivision trust inheritance in protection checks (trust commands already copy grants to
-      inheriting subdivisions, as Paper does).
+- [ ] `/scrollresize` to resize using scroll wheel
+- [ ] `/claim mode shaped` Shaped claims and subdivisions
 
 ---
 
@@ -137,6 +135,8 @@ Still open:
 | Endermen taking blocks | enderman take-block goal mixin |
 | Block use as Paper decides it (`BlockUseSettings`): containers with `PreventTheft`; doors, trapdoors, fence gates, beds, buttons and levers behind `LockWoodenDoors`, `LockTrapDoors`, `LockFenceGates` and `PreventButtonsSwitches`; redstone and decorations need build trust; crafting tables and other workstations are free | `UseBlockCallback`, dragon eggs `AttackBlockCallback` |
 | Lecterns: reading needs access trust with `LecternReadingRequiresAccessTrust` (otherwise anyone may read); taking or placing the book needs container trust | `UseBlockCallback`, `LecternMenu.clickMenuButton` and `LecternBlockEntity.createMenu` mixins |
+| Subdivision trust inheritance, restriction, and admin handling: first-level subdivisions inherit parent trust unless restricted, admin subdivisions modifiable only by staff | Modified trust evaluation in `allows()` method, `isAdminSubdivision()`, `toggleSubdivisionRestriction()`, `toggleNewSubdivisionRestriction()`, subdivision placement validation |
+
 
 The rules live in `gp3d-core` (`com.griefprevention.protection`) as platform-neutral, unit-tested
 policies; the Fabric side only maps positions and entities to claims.
