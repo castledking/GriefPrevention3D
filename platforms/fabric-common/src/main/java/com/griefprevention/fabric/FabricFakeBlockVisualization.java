@@ -165,6 +165,41 @@ final class FabricFakeBlockVisualization
                 new VisualizationTarget(bounds, VisualizationStyle.CONFLICT, null))), player.blockPosition(), clicked.getY());
     }
 
+    /**
+     * The outline a {@code /scrollresize} session would give a claim, drawn with the claims around it
+     * so the player can see what it would run into: the claim's parent and siblings, its own
+     * subdivisions, and other top-level claims nearby.
+     *
+     * @param resizing the claim as it is stored
+     * @param conflict whether the outline breaks a placement rule, which draws it as a conflict
+     */
+    void visualizeResizePreview(
+            @NotNull ServerPlayer player,
+            @NotNull ServerLevel level,
+            @NotNull ClaimSnapshot resizing,
+            @NotNull ClaimBounds preview,
+            boolean conflict,
+            @NotNull Collection<ClaimSnapshot> around)
+    {
+        List<VisualizationTarget> targets = new ArrayList<>();
+        VisualizationStyle previewStyle = conflict
+                ? resizing.threeDimensional() ? VisualizationStyle.CONFLICT_3D : VisualizationStyle.CONFLICT
+                : styleFor(resizing);
+        targets.add(new VisualizationTarget(preview, previewStyle, null));
+        for (ClaimSnapshot claim : around)
+        {
+            if (Objects.equals(claim.id(), resizing.id()))
+            {
+                continue;
+            }
+            VisualizationStyle style = claim.parentId() == null && resizing.parentId() == null
+                    ? nearbyStyleFor(claim)
+                    : styleFor(claim);
+            targets.add(new VisualizationTarget(claim.bounds(), style, null));
+        }
+        render(player, level, new BoundsRequest(targets), player.blockPosition(), (int) Math.floor(player.getEyeY()));
+    }
+
     void clear(@NotNull ServerPlayer player)
     {
         ActiveVisualization active = this.activeVisualizations.remove(player.getUUID());
@@ -846,7 +881,8 @@ final class FabricFakeBlockVisualization
         SUBDIVISION_3D("iron_block", GlowColor.WHITE, "white_wool", GlowColor.WHITE, true),
         INITIALIZE("diamond_block", GlowColor.AQUA, "diamond_block", GlowColor.AQUA, false),
         INITIALIZE_3D("diamond_block", GlowColor.AQUA, "diamond_block", GlowColor.AQUA, true),
-        CONFLICT("redstone_ore", GlowColor.RED, "netherrack", GlowColor.RED, false);
+        CONFLICT("redstone_ore", GlowColor.RED, "netherrack", GlowColor.RED, false),
+        CONFLICT_3D("redstone_ore", GlowColor.RED, "netherrack", GlowColor.RED, true);
 
         private final @NotNull String cornerBlock;
         private final int cornerGlow;

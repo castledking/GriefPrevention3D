@@ -11,9 +11,11 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -728,6 +730,127 @@ final class FabricClaimCommands
                 : allowed ? MessageKey.EXPLOSIVES_ENABLED : MessageKey.EXPLOSIVES_DISABLED;
         sender.send(TextMode.SUCCESS, result);
         return true;
+    }
+
+    /**
+     * {@code /claim alerts [on|off]}: whether the owner hears about pistons and fluids stopped at the
+     * border of the claim the player stands in. Paper lets anyone standing in a claim mute its alerts;
+     * here it takes someone who may edit the claim.
+     */
+    boolean claimAlerts(@NotNull FabricCommandSender sender, @NotNull String @NotNull [] args)
+    {
+        ServerPlayer player = sender.requirePlayer();
+        if (player == null || !sender.checkPermission(FabricPermissionDefaults.CLAIM_ALERTS))
+        {
+            return true;
+        }
+
+        ClaimSnapshot claim = this.claims.findClaimAt((ServerLevel) player.level(), player.blockPosition());
+        Boolean requested = alertsSwitch(args);
+        if (claim == null || claim.id() == null || (args.length > 0 && requested == null))
+        {
+            sender.sendError(MessageKey.CLAIM_ALERTS_USAGE);
+            return true;
+        }
+        if (!this.claims.allows(claim, player, ClaimTrustLevel.EDIT))
+        {
+            sender.sendError(MessageKey.NOT_YOUR_CLAIM);
+            return true;
+        }
+
+        boolean enable = requested != null ? requested : !Boolean.TRUE.equals(this.claims.flag(claim.id(), ClaimFlag.ALERTS));
+        try
+        {
+            this.claims.setFlag(claim.id(), ClaimFlag.ALERTS, enable);
+        }
+        catch (IOException exception)
+        {
+            this.logger.error("Could not save claim {} after {} changed its alerts.", claim.id(), sender.name(), exception);
+            sender.sendText(TextMode.ERROR, "Could not save the claim: " + exception.getMessage());
+            return true;
+        }
+        sender.send(enable ? TextMode.SUCCESS : TextMode.WARNING,
+                enable ? MessageKey.CLAIM_ALERTS_ENABLED : MessageKey.CLAIM_ALERTS_DISABLED);
+        return true;
+    }
+
+    /**
+     * {@code /claimtogglealerts [on|off]}: alerts for every claim the player owns, subdivisions
+     * included. Without an argument it flips the claim the player stands in, and turns alerts off
+     * when they stand in none, as on Paper.
+     */
+    boolean toggleAllClaimAlerts(@NotNull FabricCommandSender sender, @NotNull String @NotNull [] args)
+    {
+        ServerPlayer player = sender.requirePlayer();
+        if (player == null || !sender.checkPermission(FabricPermissionDefaults.TOGGLE_CLAIM_ALERTS))
+        {
+            return true;
+        }
+
+        Boolean requested = alertsSwitch(args);
+        if (args.length > 0 && requested == null)
+        {
+            sender.sendError(MessageKey.CLAIM_ALERTS_USAGE);
+            return true;
+        }
+        boolean enable;
+        if (requested != null)
+        {
+            enable = requested;
+        }
+        else
+        {
+            ClaimSnapshot current = this.claims.findClaimAt((ServerLevel) player.level(), player.blockPosition());
+            enable = current != null && current.id() != null
+                    && !Boolean.TRUE.equals(this.claims.flag(current.id(), ClaimFlag.ALERTS));
+        }
+
+        List<Long> claimIds = new ArrayList<>();
+        for (ClaimSnapshot owned : this.claims.topLevelClaimsOwnedBy(player.getUUID()))
+        {
+            claimIds.add(owned.id());
+            for (ClaimSnapshot subdivision : this.claims.subdivisionsOf(owned.id()))
+            {
+                claimIds.add(subdivision.id());
+            }
+        }
+        try
+        {
+            this.claims.setFlag(claimIds, ClaimFlag.ALERTS, enable);
+        }
+        catch (IOException exception)
+        {
+            this.logger.error("Could not save the claims of {} after they changed their alerts.", sender.name(), exception);
+            sender.sendText(TextMode.ERROR, "Could not save your claims: " + exception.getMessage());
+            return true;
+        }
+        sender.send(enable ? TextMode.SUCCESS : TextMode.WARNING,
+                enable ? MessageKey.CLAIM_ALERTS_ENABLED_GLOBAL : MessageKey.CLAIM_ALERTS_DISABLED_GLOBAL);
+        return true;
+    }
+
+    /** @return the on or off the player typed, or null for no argument or one Paper does not know */
+    private static @Nullable Boolean alertsSwitch(@NotNull String @NotNull [] args)
+    {
+        if (args.length == 0)
+        {
+            return null;
+        }
+        switch (args[0].toLowerCase(Locale.ROOT))
+        {
+            case "on", "enable", "true" ->
+            {
+                return Boolean.TRUE;
+            }
+            case "off", "disable", "false" ->
+            {
+                return Boolean.FALSE;
+            }
+            default ->
+            {
+                return null;
+            }
+        }
     }
 
     /** Paper's {@code getfriendlyLocationString} for a claim's lesser corner. */

@@ -103,13 +103,26 @@ design points for that work:
 - [x] `/restrictsubclaim` toggles inheritance for subdivisions
 - [x] Subdivision trust inheritance in protection checks (trust commands already copy grants to
        inheriting subdivisions, as Paper does).
+- [x] `/scrollresize` (`/claim scrollresize`, `sr`, `src`): the mouse wheel pushes or pulls the side of
+      the claim or subdivision the camera points at, with a live preview of the outline and the claims
+      around it and the size and claim blocks left above the hotbar. Right-click applies it through the
+      golden shovel's checks; left-clicking a block or entity, Q, F, a number key, putting the shovel
+      away or a minute idle cancels. A corner selected with the shovel limits it to that corner's sides.
+      A mixin on the hotbar packet stands in for `PlayerItemHeldEvent`. Left-clicking the air cannot
+      cancel: 26.3 removed the swing handler that would report it.
+- [x] `/trapped` (`/claim trapped`): ten seconds standing still in a claim the player cannot build in
+      moves them past the claim's west and north corner to the surface, as on Paper. Overworld only;
+      administrative claims only with `Claims.AllowTrappedInAdminClaims`.
+- [x] `/claim alerts [on|off]` for the claim the player stands in, `/claimtogglealerts [on|off]` for all
+      their claims; owners are warned when pistons or fluids are stopped at their claim's border, with
+      Paper's deduplication and burst summaries (`BoundaryViolationAlerts`).
 
 ### Still missing
 
-- [ ] `/claim alerts` to toggle boundary violation alerts
-- [ ] `/trapped`, `/siege`, `/extendclaim`, restore nature, buying and selling claim blocks.
-- [ ] `/scrollresize` to resize using scroll wheel
-- [ ] `/claim mode shaped` Shaped claims and subdivisions
+- [ ] `/siege`, `/extendclaim`, restore nature, buying and selling claim blocks.
+- [ ] `/claim mode shaped` Shaped claims and subdivisions (and scroll-resizing them).
+- [ ] The chat hint that points players who say "trapped" or "stuck" at `/trapped` (needs Fabric's
+      message API module).
 
 ---
 
@@ -135,6 +148,11 @@ design points for that work:
 | Endermen taking blocks | enderman take-block goal mixin |
 | Block use as Paper decides it (`BlockUseSettings`): containers with `PreventTheft`; doors, trapdoors, fence gates, beds, buttons and levers behind `LockWoodenDoors`, `LockTrapDoors`, `LockFenceGates` and `PreventButtonsSwitches`; redstone and decorations need build trust; crafting tables and other workstations are free | `UseBlockCallback`, dragon eggs `AttackBlockCallback` |
 | Lecterns: reading needs access trust with `LecternReadingRequiresAccessTrust` (otherwise anyone may read); taking or placing the book needs container trust | `UseBlockCallback`, `LecternMenu.clickMenuButton` and `LecternBlockEntity.createMenu` mixins |
+| Ender pearls and chorus fruit into claims need access trust (`EnderPearlsRequireAccessTrust`); a refused pearl breaks and comes back with `RefundDeniedEnderPearls` (not in creative, where it was never spent); a refused chorus jump is undone and vanilla tries another spot | `ThrownEnderpearl.onHit` mixin; `randomTeleport` wrapped in `TeleportRandomlyConsumeEffect.apply` (the 26.3 overload too) |
+| Lightning starts no fire in claims | `LightningBolt.spawnFire` mixin |
+| Fishing rods pulling claimed animals or armor stands need container trust | `FishingHook.pullEntity` mixin |
+| Falling blocks that drifted sideways (sand cannons) only land in a claim holding their origin, or in an unrestricted subdivision of the claim they fell from; otherwise they drop as items | `setBlock`/`setBlockAndUpdate` wrapped in `FallingBlockEntity.tick` |
+| Boundary alerts to claim owners for stopped pistons and fluids, unless turned off with `/claim alerts` | piston and fluid hooks above, `BoundaryViolationAlerts` |
 | Subdivision trust inheritance, restriction, and admin handling: first-level subdivisions inherit parent trust unless restricted, admin subdivisions modifiable only by staff | Modified trust evaluation in `allows()` method, `isAdminSubdivision()`, `toggleSubdivisionRestriction()`, `toggleNewSubdivisionRestriction()`, subdivision placement validation |
 
 
@@ -145,19 +163,23 @@ Found while porting: Paper's own `isFluidFlowAllowed` does not follow its docume
 top-level claim, even another owner's, flow into an unrestricted subdivision that touches its border,
 and lets a parent flow into a restricted subdivision. The Fabric policy follows the matrix.
 
+Also found while porting, and handled more strictly on Fabric:
+
+- Paper's `/restrictsubclaim` lets anyone standing in a subdivision restrict or unrestrict it, and
+  unrestricting hands it the parent's trust. Fabric asks for manage trust in the claim that decides.
+- Paper's `/claim alerts` lets anyone standing in a claim mute its owner's alerts. Fabric asks for
+  permission to edit the claim. `/claimtogglealerts` also covers the subdivisions of the player's
+  claims, which Paper leaves as they were.
+
 ### Still missing
 
 | Protection | Paper event | Likely Fabric hook |
 |-----------|-------------|--------------------|
 | Tree and structure growth into claims (`LimitTreeGrowth`) | `StructureGrowEvent` | sapling/feature placement mixin |
-| Ender pearls / chorus fruit into claims (`EnderPearlsRequireAccessTrust`) | `PlayerTeleportEvent` | pearl hit / teleport mixin |
-| Lightning-caused fire in claims | `BlockIgniteEvent` | `LightningBolt.spawnFire` mixin |
 | Nether portal creation over claims | `PortalCreateEvent` | portal shape mixin |
 | Silverfish, rabbits, ravagers, withers changing blocks | `EntityChangeBlockEvent` | per-mob goal mixins |
-| Falling-block sand cannons into claims | `EntityChangeBlockEvent` | `FallingBlockEntity` landing mixin |
 | Mob melee on frames/stands/armor stands, cactus and other environmental damage | `EntityDamageEvent` | `hurtServer` mixins per class |
 | Splash/lingering potions on claimed creatures and players | `PotionSplashEvent`, `AreaEffectCloudApplyEvent` | potion/cloud mixins |
-| Fishing rods pulling claimed entities | `PlayerFishEvent` | `FishingHook` mixin |
 | Raid triggers, sulfur cubes, hoppers taking death loot, pet damage by environment | various | various |
 | Fresh-spawn PvP immunity, siege, creative-world rules | various | — |
 

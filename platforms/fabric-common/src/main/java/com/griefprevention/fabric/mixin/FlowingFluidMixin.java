@@ -25,7 +25,7 @@ abstract class FlowingFluidMixin
             FluidState fluidState,
             CallbackInfo callback)
     {
-        if (!FabricWorldProtection.mayFlow(level, pos, direction))
+        if (!FabricWorldProtection.mayFlow(level, pos, direction, fluidState))
         {
             callback.cancel();
         }

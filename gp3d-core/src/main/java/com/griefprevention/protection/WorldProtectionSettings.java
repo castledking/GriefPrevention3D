@@ -163,4 +163,10 @@ public final class WorldProtectionSettings
     {
         return this.worldModes.get(worldKey) != ClaimWorldMode.DISABLED;
     }
+
+    /** Whether a world runs Paper's creative rules, which protect the land outside claims too. */
+    public boolean creativeRulesApply(@NotNull String worldKey)
+    {
+        return this.worldModes.get(worldKey) == ClaimWorldMode.CREATIVE;
+    }
 }

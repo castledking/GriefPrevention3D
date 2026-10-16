@@ -280,7 +280,59 @@ public enum MessageKey
             "All subdivisions in this claim will NOT inherit permissions."),
     ADMIN_SUBDIVISION_RESTRICTED(
             "AdminSubdivisionRestricted",
-            "That subdivision is administered by staff.  Talk to staff if you need it changed.");
+            "That subdivision is administered by staff.  Talk to staff if you need it changed."),
+    NOT_TRAPPED_HERE("NotTrappedHere", "You can build here.  Save yourself."),
+    RESCUE_PENDING("RescuePending", "If you stay put for 10 seconds, you'll be teleported out.  Please wait."),
+    RESCUE_ABORTED_MOVED("RescueAbortedMoved", "You moved!  Rescue cancelled."),
+    TRAPPED_WONT_WORK_HERE(
+            "TrappedWontWorkHere",
+            "Sorry, unable to find a safe location to teleport you to.  Contact an admin."),
+    CLAIM_ALERTS_ENABLED("ClaimAlertsEnabled", "Alerts enabled for this claim."),
+    CLAIM_ALERTS_DISABLED("ClaimAlertsDisabled", "Alerts disabled for this claim."),
+    CLAIM_ALERTS_ENABLED_GLOBAL("ClaimAlertsEnabledGlobal", "Alerts enabled for all claims."),
+    CLAIM_ALERTS_DISABLED_GLOBAL("ClaimAlertsDisabledGlobal", "Alerts disabled for all claims."),
+    CLAIM_ALERTS_USAGE(
+            "ClaimAlertsUsage",
+            "Use /claimtogglealerts on|off to toggle alerts for ALL claims, or stand in a specific claim and try again."),
+    EXTERNAL_PISTON_BOUNDARY_VIOLATION(
+            "ExternalPistonBoundaryViolation",
+            "&6Warning: A piston tried to push a block into your claim @ x:{0} y:{1} z:{2}!"),
+    INTERNAL_PISTON_BOUNDARY_VIOLATION(
+            "InternalPistonBoundaryViolation",
+            "&6Warning: A piston tried to push a block outside your claim @ x:{0} y:{1} z:{2}!"),
+    EXTERNAL_LIQUID_BOUNDARY_VIOLATION(
+            "ExternalLiquidBoundaryViolation",
+            "&6Warning: Liquid tried to flow into your claim @ x:{0} y:{1} z:{2}!"),
+    INTERNAL_LIQUID_BOUNDARY_VIOLATION(
+            "InternalLiquidBoundaryViolation",
+            "&6Warning: Liquid tried to flow out of your claim @ x:{0} y:{1} z:{2}!"),
+    BOUNDARY_VIOLATION_BURST_SUMMARY(
+            "BoundaryViolationBurstSummary",
+            "&6Warning: {0} {1} violations near your claim @ x:{2} y:{3} z:{4}!"),
+    SCROLL_RESIZE_START(
+            "ScrollResizeStart",
+            "Scroll resize: look at a side, then scroll up to push it away from you or down to pull it toward you. Right-click to apply; left-click or drop (Q) to cancel."),
+    SCROLL_RESIZE_START_CORNER(
+            "ScrollResizeStartCorner",
+            "Scroll resize: look along a side at the corner you selected, then scroll up to push it away from you or down to pull it toward you. Right-click to apply; left-click or drop (Q) to cancel."),
+    SCROLL_RESIZE_NEED_TOOL("ScrollResizeNeedTool", "Hold your claim tool to use scroll resize."),
+    SCROLL_RESIZE_NO_CLAIM(
+            "ScrollResizeNoClaim",
+            "Stand in a claim, or right-click one of its corners with your claim tool, then run /scrollresize."),
+    SCROLL_RESIZE_SIZE("ScrollResizeSize", "{0} x {1}"),
+    SCROLL_RESIZE_SIZE_3D("ScrollResizeSize3D", "{0} x {1} x {2}"),
+    SCROLL_RESIZE_BLOCKS_LEFT("ScrollResizeBlocksLeft", "{0} ({1} claim blocks left)"),
+    SCROLL_RESIZE_CONFLICT(
+            "ScrollResizeConflict",
+            "That outline overlaps another claim or doesn't fit its parent or subdivisions. Scroll back or left-click to cancel."),
+    SCROLL_RESIZE_NOT_ENOUGH_BLOCKS(
+            "ScrollResizeNotEnoughBlocks",
+            "You need {0} more claim blocks for that. Scroll back or left-click to cancel."),
+    SCROLL_RESIZE_LIMIT("ScrollResizeLimit", "That side can't move any further."),
+    SCROLL_RESIZE_CANCELLED("ScrollResizeCancelled", "Scroll resize cancelled."),
+    SCROLL_RESIZE_TIMED_OUT("ScrollResizeTimedOut", "Scroll resize cancelled after a minute without scrolling."),
+    SCROLL_RESIZE_UNCHANGED("ScrollResizeUnchanged", "Scroll resize closed without changes."),
+    SCROLL_RESIZE_CLAIM_GONE("ScrollResizeClaimGone", "That claim no longer exists.");
 
     private final String key;
     private final String defaultValue;

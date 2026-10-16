@@ -2,10 +2,13 @@ package com.griefprevention.fabric;
 
 import com.griefprevention.claims.ClaimSnapshot;
 import com.griefprevention.claims.ClaimTrustLevel;
+import com.griefprevention.fabric.mixin.EntityAccessor;
 import com.griefprevention.messages.MessageKey;
 import com.griefprevention.persistence.ClaimDocument;
 import com.griefprevention.protection.BlockPoint;
+import com.griefprevention.protection.BoundaryViolationAlerts;
 import com.griefprevention.protection.ClaimLookup;
+import com.griefprevention.protection.EnderPearlSettings;
 import com.griefprevention.protection.FirePolicy;
 import com.griefprevention.protection.FluidFlowPolicy;
 import com.griefprevention.protection.PistonMode;
@@ -14,13 +17,18 @@ import com.griefprevention.protection.PvpProtectionPolicy;
 import com.griefprevention.protection.WorldProtectionSettings;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.tags.BlockTags;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.TamableAnimal;
+import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.boss.enderdragon.EndCrystal;
 import net.minecraft.world.entity.decoration.ArmorStand;
 import net.minecraft.world.entity.decoration.HangingEntity;
@@ -30,12 +38,15 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.entity.vehicle.VehicleEntity;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LevelAccessor;
 import net.minecraft.world.level.block.BaseFireBlock;
 import net.minecraft.world.level.block.DispenserBlock;
 import net.minecraft.world.level.block.entity.LecternBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.material.FluidState;
+import net.minecraft.world.phys.HitResult;
 import org.jetbrains.annotations.ApiStatus;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -61,31 +72,42 @@ public final class FabricWorldProtection
     private final @NotNull FabricClaimRepository claims;
     private final @NotNull FabricSettings settings;
     private final @NotNull FabricDenialFeedback feedback;
+    private final @NotNull FabricClaimAlerts alerts;
 
     private FabricWorldProtection(
             @NotNull FabricClaimRepository claims,
             @NotNull FabricSettings settings,
-            @NotNull FabricDenialFeedback feedback)
+            @NotNull FabricDenialFeedback feedback,
+            @NotNull FabricClaimAlerts alerts)
     {
         this.claims = claims;
         this.settings = settings;
         this.feedback = feedback;
+        this.alerts = alerts;
     }
 
     static void install(
             @NotNull FabricClaimRepository claims,
             @NotNull FabricSettings settings,
-            @NotNull FabricDenialFeedback feedback)
+            @NotNull FabricDenialFeedback feedback,
+            @NotNull FabricClaimAlerts alerts)
     {
-        active = new FabricWorldProtection(claims, settings, feedback);
+        active = new FabricWorldProtection(claims, settings, feedback, alerts);
     }
 
     // ---------------------------------------------------------------------------------------------
     // Fluids
     // ---------------------------------------------------------------------------------------------
 
-    /** @param direction the way the fluid flows into {@code to} */
-    public static boolean mayFlow(@NotNull LevelAccessor level, @NotNull BlockPos to, @NotNull Direction direction)
+    /**
+     * @param direction the way the fluid flows into {@code to}
+     * @param fluid the fluid that would flow there
+     */
+    public static boolean mayFlow(
+            @NotNull LevelAccessor level,
+            @NotNull BlockPos to,
+            @NotNull Direction direction,
+            @NotNull FluidState fluid)
     {
         FabricWorldProtection protection = active;
         // Fluids may always fall straight down, as on Paper: claims span every height.
@@ -104,11 +126,19 @@ public final class FabricWorldProtection
             return true;
         }
         ClaimSnapshot fromClaim = protection.claims.findClaimAt(serverLevel, to.relative(direction.getOpposite()));
-        return FluidFlowPolicy.mayFlow(
+        boolean allowed = FluidFlowPolicy.mayFlow(
                 fromClaim,
                 toClaim,
                 protection.claims.isRestrictedSubdivision(toClaim),
                 protection.claims::claimById);
+        // As on Paper, the owner hears about fluids flowing in from the wilderness.
+        if (!allowed && fromClaim == null)
+        {
+            protection.alerts.record(serverLevel, toClaim, to, BoundaryViolationAlerts.Kind.LIQUID,
+                    BoundaryViolationAlerts.Direction.EXTERNAL,
+                    BoundaryViolationAlerts.liquidRadius(fluid.is(FluidTags.LAVA), serverLevel.dimension() == Level.NETHER));
+        }
+        return allowed;
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -150,13 +180,27 @@ public final class FabricWorldProtection
             affected.add(point(pos));
         }
         BlockPoint invaded = affected.isEmpty() && extending ? point(pistonPos.relative(facing)) : null;
-        return PistonMovementPolicy.mayMove(
+        PistonMovementPolicy.Decision decision = PistonMovementPolicy.decide(
                 mode,
                 protection.claims.worldKey(serverLevel),
                 protection.claims.findClaimAt(serverLevel, pistonPos),
                 affected,
                 invaded,
                 protection.lookup(serverLevel));
+        ClaimSnapshot violated = decision.violatedClaim();
+        if (violated != null && decision.violation() != null)
+        {
+            // Where Paper points the owner: the piston for a push into their claim, the block in front
+            // of it otherwise.
+            boolean leaving = decision.violation() == PistonMovementPolicy.Violation.LEFT_CLAIM;
+            BlockPos at = decision.violation() == PistonMovementPolicy.Violation.ENTERED_CLAIM
+                    ? pistonPos
+                    : pistonPos.relative(facing);
+            protection.alerts.record(serverLevel, violated, at, BoundaryViolationAlerts.Kind.PISTON,
+                    leaving ? BoundaryViolationAlerts.Direction.INTERNAL : BoundaryViolationAlerts.Direction.EXTERNAL,
+                    BoundaryViolationAlerts.PISTON_RADIUS);
+        }
+        return decision.allowed();
     }
 
     /** Whether pistons only work inside claims in this world, which Paper warns piston placers about. */
@@ -472,6 +516,150 @@ public final class FabricWorldProtection
                 || target instanceof ArmorStand
                 || target instanceof EndCrystal
                 || target instanceof VehicleEntity;
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Ender pearls, chorus fruit, lightning, fishing rods and falling blocks
+    // ---------------------------------------------------------------------------------------------
+
+    /**
+     * Paper's {@code EnderPearlsRequireAccessTrust}: a pearl may not carry its thrower into a claim
+     * they have no access trust in. A refused pearl is given back with {@code RefundDeniedEnderPearls},
+     * unless the thrower is in creative mode and never spent it.
+     */
+    public static boolean mayPearlLand(@NotNull Projectile pearl, @NotNull HitResult hit)
+    {
+        FabricWorldProtection protection = active;
+        if (protection == null || !(pearl.getOwner() instanceof ServerPlayer player))
+        {
+            return true;
+        }
+        EnderPearlSettings pearls = protection.settings.enderPearls();
+        if (!pearls.requireAccessTrust()
+                || !(((EntityAccessor) pearl).griefPrevention$getLevel() instanceof ServerLevel level)
+                || !protection.applies(level))
+        {
+            return true;
+        }
+
+        ClaimSnapshot claim = protection.claims.findClaimAt(level, BlockPos.containing(hit.getLocation()));
+        if (claim == null || protection.claims.allows(claim, player, ClaimTrustLevel.ACCESS))
+        {
+            return true;
+        }
+        protection.feedback.denied(player, claim, ClaimTrustLevel.ACCESS);
+        if (pearls.refundDenied() && !player.getAbilities().instabuild)
+        {
+            player.getInventory().add(new ItemStack(
+                    BuiltInRegistries.ITEM.getValue(Identifier.withDefaultNamespace("ender_pearl"))));
+        }
+        return false;
+    }
+
+    /**
+     * Chorus fruit falls under the same rule: a jump that landed in a claim the eater has no access
+     * trust in is undone, so vanilla tries another spot.
+     *
+     * @return false when the jump was undone
+     */
+    public static boolean mayChorusLand(@NotNull LivingEntity entity, double fromX, double fromY, double fromZ)
+    {
+        FabricWorldProtection protection = active;
+        if (protection == null || !(entity instanceof ServerPlayer player)
+                || !protection.settings.enderPearls().requireAccessTrust())
+        {
+            return true;
+        }
+        ServerLevel level = (ServerLevel) player.level();
+        if (!protection.applies(level))
+        {
+            return true;
+        }
+
+        ClaimSnapshot claim = protection.claims.findClaimAt(level, player.blockPosition());
+        if (claim == null || protection.claims.allows(claim, player, ClaimTrustLevel.ACCESS))
+        {
+            return true;
+        }
+        protection.feedback.denied(player, claim, ClaimTrustLevel.ACCESS);
+        player.teleportTo(fromX, fromY, fromZ);
+        return false;
+    }
+
+    /** Paper cancels the fire a lightning strike would start in a claim. */
+    public static boolean mayLightningStartFire(@NotNull Level level, @NotNull Entity bolt)
+    {
+        FabricWorldProtection protection = active;
+        if (protection == null || !(level instanceof ServerLevel serverLevel) || !protection.applies(serverLevel))
+        {
+            return true;
+        }
+        return protection.claims.findClaimAt(serverLevel, bolt.blockPosition()) == null;
+    }
+
+    /** Paper's PlayerFishEvent rule: reeling a claimed animal or armor stand in takes container trust. */
+    public static boolean mayReelIn(@Nullable Player angler, @NotNull Entity hooked)
+    {
+        FabricWorldProtection protection = active;
+        if (protection == null || !(angler instanceof ServerPlayer player)
+                || !(hooked instanceof ArmorStand || hooked instanceof Animal))
+        {
+            return true;
+        }
+        ServerLevel level = (ServerLevel) player.level();
+        if (!protection.applies(level))
+        {
+            return true;
+        }
+
+        ClaimSnapshot claim = protection.claims.findClaimAt(level, hooked.blockPosition());
+        if (claim == null || protection.claims.allows(claim, player, ClaimTrustLevel.CONTAINER))
+        {
+            return true;
+        }
+        protection.feedback.sendRateLimitedError(player, MessageKey.NO_DAMAGE_CLAIMED_ENTITY,
+                protection.feedback.ownerName(player, claim));
+        return false;
+    }
+
+    /**
+     * Paper's rule against sand cannons. A block that fell straight down always lands. One that
+     * drifted sideways may land in the wilderness, or in a claim that holds where it fell from, or in
+     * an unrestricted subdivision when it fell from the parent claim around it; anywhere else, and
+     * anywhere at all in a creative-rules world, it drops as an item.
+     *
+     * @param start where the block fell from
+     */
+    public static boolean mayFallingBlockLand(@NotNull Level level, @NotNull BlockPos start, @NotNull BlockPos landing)
+    {
+        FabricWorldProtection protection = active;
+        if (protection == null || !(level instanceof ServerLevel serverLevel) || !protection.applies(serverLevel))
+        {
+            return true;
+        }
+        // A falling block that was summoned rather than dropped has no origin; Paper lets those land.
+        if (start.equals(BlockPos.ZERO) || (start.getX() == landing.getX() && start.getZ() == landing.getZ()))
+        {
+            return true;
+        }
+        String worldKey = protection.claims.worldKey(serverLevel);
+        if (protection.settings.world().creativeRulesApply(worldKey))
+        {
+            return false;
+        }
+
+        ClaimSnapshot claim = protection.claims.findClaimAt(serverLevel, landing);
+        if (claim == null || claim.contains(worldKey, start.getX(), start.getY(), start.getZ(), false))
+        {
+            return true;
+        }
+        Long parentId = claim.parentId();
+        if (parentId == null || protection.claims.isRestrictedSubdivision(claim))
+        {
+            return false;
+        }
+        ClaimSnapshot origin = protection.claims.findClaimAt(serverLevel, start);
+        return origin != null && parentId.equals(origin.id());
     }
 
     // ---------------------------------------------------------------------------------------------

@@ -5,6 +5,7 @@ import com.griefprevention.claims.ClaimToolConfigException;
 import com.griefprevention.claims.ClaimToolSettings;
 import com.griefprevention.claims.ClaimTransferSettings;
 import com.griefprevention.protection.BlockUseSettings;
+import com.griefprevention.protection.EnderPearlSettings;
 import com.griefprevention.protection.WorldProtectionConfigCodec;
 import com.griefprevention.protection.WorldProtectionConfigException;
 import com.griefprevention.protection.WorldProtectionSettings;
@@ -41,6 +42,8 @@ final class FabricSettings
     private volatile @NotNull WorldProtectionSettings world = WorldProtectionSettings.upstreamDefaults();
     private volatile @NotNull BlockUseSettings blockUse = BlockUseSettings.upstreamDefaults();
     private volatile @NotNull ClaimTransferSettings transfer = ClaimTransferSettings.upstreamDefaults();
+    private volatile @NotNull EnderPearlSettings enderPearls = EnderPearlSettings.upstreamDefaults();
+    private volatile boolean allowTrappedInAdminClaims;
     // Resolved on first use: registries are not guaranteed to be populated when the mod initializes.
     private volatile @Nullable Item investigationTool;
     private volatile @Nullable Item modificationTool;
@@ -120,10 +123,36 @@ final class FabricSettings
             loadedTransfer = ClaimTransferSettings.upstreamDefaults();
         }
 
+        EnderPearlSettings loadedEnderPearls;
+        try
+        {
+            loadedEnderPearls = this.worldCodec.decodeEnderPearls(contents);
+        }
+        catch (WorldProtectionConfigException exception)
+        {
+            this.logger.error("Could not read the ender pearl settings from {}; using the defaults.",
+                    this.configFile, exception);
+            loadedEnderPearls = EnderPearlSettings.upstreamDefaults();
+        }
+
+        boolean loadedAllowTrappedInAdminClaims;
+        try
+        {
+            loadedAllowTrappedInAdminClaims = this.codec.decodeAllowTrappedInAdminClaims(contents);
+        }
+        catch (ClaimToolConfigException exception)
+        {
+            this.logger.error("Could not read Claims.AllowTrappedInAdminClaims from {}; /trapped stays out of "
+                    + "administrative claims.", this.configFile, exception);
+            loadedAllowTrappedInAdminClaims = false;
+        }
+
         this.tools = loadedTools;
         this.world = loadedWorld;
         this.blockUse = loadedBlockUse;
         this.transfer = loadedTransfer;
+        this.enderPearls = loadedEnderPearls;
+        this.allowTrappedInAdminClaims = loadedAllowTrappedInAdminClaims;
         this.investigationTool = null;
         this.modificationTool = null;
     }
@@ -144,6 +173,18 @@ final class FabricSettings
     @NotNull ClaimTransferSettings transfer()
     {
         return this.transfer;
+    }
+
+    /** Whether ender pearls and chorus fruit need access trust to land in a claim, and refunds. */
+    @NotNull EnderPearlSettings enderPearls()
+    {
+        return this.enderPearls;
+    }
+
+    /** Whether /trapped rescues players from administrative claims too. */
+    boolean allowTrappedInAdminClaims()
+    {
+        return this.allowTrappedInAdminClaims;
     }
 
     @NotNull ClaimToolSettings tools()

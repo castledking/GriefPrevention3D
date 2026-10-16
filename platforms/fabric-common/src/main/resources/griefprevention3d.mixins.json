@@ -9,15 +9,23 @@
     "DisplayAccessor",
     "DropperBlockMixin",
     "EndermanTakeBlockGoalMixin",
+    "EntityAccessor",
     "EntityMixin",
+    "FallingBlockEntityMixin",
     "FarmlandTrampleMixin",
     "FireBlockMixin",
+    "FishingHookMixin",
     "FlowingFluidMixin",
+    "InventoryAccessor",
     "LavaFluidMixin",
     "LecternBlockEntityMixin",
     "LecternMenuMixin",
+    "LightningBoltMixin",
     "PistonBaseBlockMixin",
-    "ServerExplosionMixin"
+    "ServerExplosionMixin",
+    "ServerGamePacketListenerImplMixin",
+    "TeleportRandomlyConsumeEffectMixin",
+    "ThrownEnderpearlMixin"
   ],
   "injectors": {
     "defaultRequire": 1

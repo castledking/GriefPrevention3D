@@ -1,4 +1,4 @@
-package me.ryanhamshire.GriefPrevention;
+package com.griefprevention.claims.editor;
 
 import com.griefprevention.geometry.OrthogonalEdge2i;
 import com.griefprevention.geometry.OrthogonalPoint2i;
@@ -14,19 +14,19 @@ import java.util.Set;
  * Geometry for {@code /scrollresize}: how a hotbar scroll maps to a resize step, which side of a claim the
  * camera picks, and how box bounds change. Bounds are {@code {minX, minY, minZ, maxX, maxY, maxZ}}.
  */
-final class ScrollResizeGeometry
+public final class ScrollResizeGeometry
 {
-    static final int MIN_X = 0;
-    static final int MIN_Y = 1;
-    static final int MIN_Z = 2;
-    static final int MAX_X = 3;
-    static final int MAX_Y = 4;
-    static final int MAX_Z = 5;
+    public static final int MIN_X = 0;
+    public static final int MIN_Y = 1;
+    public static final int MIN_Z = 2;
+    public static final int MAX_X = 3;
+    public static final int MAX_Y = 4;
+    public static final int MAX_Z = 5;
 
     // Matches /extendclaim: looking further up or down than this targets the top or bottom of a 3D claim.
     private static final double VERTICAL_LOOK_THRESHOLD = 0.75;
 
-    enum Face
+    public enum Face
     {
         WEST(-1, 0, 0),
         EAST(1, 0, 0),
@@ -35,9 +35,9 @@ final class ScrollResizeGeometry
         NORTH(0, 0, -1),
         SOUTH(0, 0, 1);
 
-        final int dx;
-        final int dy;
-        final int dz;
+        public final int dx;
+        public final int dy;
+        public final int dz;
 
         Face(int dx, int dy, int dz)
         {
@@ -46,7 +46,7 @@ final class ScrollResizeGeometry
             this.dz = dz;
         }
 
-        @NotNull Face opposite()
+        public @NotNull Face opposite()
         {
             switch (this)
             {
@@ -76,7 +76,7 @@ final class ScrollResizeGeometry
      * @param clientSlot the slot the client most recently asked for
      * @return {@code +1} for scroll up, {@code -1} for scroll down, or {@code 0} when this was not a scroll
      */
-    static int scrollStep(int previousSlot, int newSlot, int clientSlot)
+    public static int scrollStep(int previousSlot, int newSlot, int clientSlot)
     {
         int fromClient = wrapSlotDelta(newSlot - clientSlot);
         if (Math.abs(fromClient) == 1) return -fromClient;
@@ -95,7 +95,7 @@ final class ScrollResizeGeometry
         return wrapped;
     }
 
-    static @NotNull EnumSet<Face> allFaces(boolean is3D)
+    public static @NotNull EnumSet<Face> allFaces(boolean is3D)
     {
         return is3D ? EnumSet.allOf(Face.class) : EnumSet.of(Face.WEST, Face.EAST, Face.NORTH, Face.SOUTH);
     }
@@ -105,7 +105,7 @@ final class ScrollResizeGeometry
      * block thick on an axis has both of that axis's sides at every corner, so a 1x1x1 claim keeps all six. A point
      * that isn't a corner of the bounds leaves every side available.
      */
-    static @NotNull EnumSet<Face> cornerFaces(int @NotNull [] bounds, int x, int y, int z, boolean is3D)
+    public static @NotNull EnumSet<Face> cornerFaces(int @NotNull [] bounds, int x, int y, int z, boolean is3D)
     {
         EnumSet<Face> faces = EnumSet.noneOf(Face.class);
         boolean onXSide = addCornerSides(faces, x, bounds[MIN_X], bounds[MAX_X], Face.WEST, Face.EAST);
@@ -154,7 +154,7 @@ final class ScrollResizeGeometry
      * otherwise the dominant horizontal axis decides, and the side facing the camera wins when both sides of that
      * axis are allowed.
      */
-    static @Nullable Face pickFace(double lookX, double lookY, double lookZ, @NotNull Set<Face> allowed)
+    public static @Nullable Face pickFace(double lookX, double lookY, double lookZ, @NotNull Set<Face> allowed)
     {
         if (Math.abs(lookY) > VERTICAL_LOOK_THRESHOLD)
         {
@@ -187,7 +187,7 @@ final class ScrollResizeGeometry
      *
      * @return the new bounds, or {@code null} if the claim would be less than one block thick
      */
-    static int @Nullable [] step(int @NotNull [] bounds, @NotNull Face face, int amount)
+    public static int @Nullable [] step(int @NotNull [] bounds, @NotNull Face face, int amount)
     {
         int[] next = bounds.clone();
         switch (face)
@@ -211,7 +211,7 @@ final class ScrollResizeGeometry
      *
      * @return the targeted side, or {@code null} if the ray misses the claim or only runs along its height
      */
-    static @Nullable Face rayFace(
+    public static @Nullable Face rayFace(
             double eyeX,
             double eyeY,
             double eyeZ,
@@ -265,12 +265,12 @@ final class ScrollResizeGeometry
      * toward them. {@code facing} is how far the side's outward direction points along the camera; when the player
      * looks back at a side the step flips, so scrolling up still moves it away.
      */
-    static int directedStep(int scroll, double facing)
+    public static int directedStep(int scroll, double facing)
     {
         return facing < 0 ? -scroll : scroll;
     }
 
-    static double facing(@NotNull Face face, double lookX, double lookY, double lookZ)
+    public static double facing(@NotNull Face face, double lookX, double lookY, double lookZ)
     {
         return face.dx * lookX + face.dy * lookY + face.dz * lookZ;
     }
@@ -279,7 +279,7 @@ final class ScrollResizeGeometry
      * The outward direction of a shaped outline's edge as {@code {dx, dz}}: the direction the claim editor moves the
      * edge for a positive expansion. Z grows southward, so a positive signed area is a clockwise loop on the map.
      */
-    static int @NotNull [] outwardNormal(@NotNull OrthogonalPolygon polygon, int edgeIndex)
+    public static int @NotNull [] outwardNormal(@NotNull OrthogonalPolygon polygon, int edgeIndex)
     {
         List<OrthogonalPoint2i> corners = polygon.corners();
         long area2 = 0L;
@@ -300,7 +300,7 @@ final class ScrollResizeGeometry
      * Picks which of the two edges meeting at a shaped claim's corner the camera points along: looking along X moves
      * the edge that runs north-south, looking along Z moves the edge that runs east-west.
      */
-    static @Nullable Integer cornerEdge(
+    public static @Nullable Integer cornerEdge(
             @NotNull OrthogonalPolygon polygon,
             @NotNull OrthogonalPoint2i corner,
             double lookX,
@@ -324,7 +324,7 @@ final class ScrollResizeGeometry
     }
 
     /** Finds where a selected corner ended up after its edge moved, within {@code maxDistance} blocks. */
-    static @Nullable OrthogonalPoint2i nearestCorner(
+    public static @Nullable OrthogonalPoint2i nearestCorner(
             @NotNull OrthogonalPolygon polygon,
             @NotNull OrthogonalPoint2i previous,
             int maxDistance)

@@ -1,7 +1,7 @@
 package me.ryanhamshire.GriefPrevention;
 
-import static me.ryanhamshire.GriefPrevention.ScrollResizeGeometry.MAX_X;
-import static me.ryanhamshire.GriefPrevention.ScrollResizeGeometry.MIN_X;
+import static com.griefprevention.claims.editor.ScrollResizeGeometry.MAX_X;
+import static com.griefprevention.claims.editor.ScrollResizeGeometry.MIN_X;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -9,6 +9,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.CALLS_REAL_METHODS;
 import static org.mockito.Mockito.mock;
 
+import com.griefprevention.claims.editor.ScrollResizeGeometry;
+import com.griefprevention.claims.editor.ScrollResizeGeometry.Face;
 import com.griefprevention.geometry.OrthogonalEdge2i;
 import com.griefprevention.geometry.OrthogonalPoint2i;
 import com.griefprevention.geometry.OrthogonalPolygon;
@@ -16,7 +18,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.UUID;
-import me.ryanhamshire.GriefPrevention.ScrollResizeGeometry.Face;
 import org.bukkit.Location;
 import org.junit.jupiter.api.Test;
 

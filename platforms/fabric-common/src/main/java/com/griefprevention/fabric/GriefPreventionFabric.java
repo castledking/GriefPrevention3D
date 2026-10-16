@@ -39,11 +39,22 @@ public final class GriefPreventionFabric implements FabricPlatformAdapter
         modes.register();
         FabricLastSeenStore lastSeen = new FabricLastSeenStore(dataFolder, LOGGER);
         lastSeen.register();
-        FabricWorldProtection.install(claims, settings, feedback);
+        FabricClaimAlerts alerts = new FabricClaimAlerts(claims, feedback);
+        alerts.register();
+        FabricWorldProtection.install(claims, settings, feedback, alerts);
         FabricFakeBlockVisualization visualization = new FabricFakeBlockVisualization(claims, settings);
+        FabricClaimResizer resizer = new FabricClaimResizer(claims, visualization, feedback, settings);
+        FabricClaimToolHooks toolHooks =
+                new FabricClaimToolHooks(claims, visualization, feedback, settings, modes, lastSeen, resizer, LOGGER);
+        FabricScrollResize scrollResize =
+                new FabricScrollResize(claims, visualization, feedback, settings, resizer, toolHooks, LOGGER);
+        // A scroll resize session answers clicks before the visualization and the claim tool do.
+        scrollResize.register();
         visualization.register();
-        new FabricClaimToolHooks(claims, visualization, feedback, settings, modes, lastSeen, LOGGER).register();
+        toolHooks.register();
         new FabricProtectionHooks(claims, feedback, settings).register();
+        FabricPlayerRescue rescue = new FabricPlayerRescue(claims, feedback, settings, LOGGER);
+        rescue.register();
 
         FabricClaimCommands claimCommands = new FabricClaimCommands(claims, feedback, settings, modes, visualization, LOGGER);
         claimCommands.register();
@@ -58,6 +69,8 @@ public final class GriefPreventionFabric implements FabricPlatformAdapter
                 claimCommands,
                 new FabricClaimBlockCommands(claims.claimBlockService(), LOGGER),
                 staffCommands,
+                scrollResize,
+                rescue,
                 dataFolder.resolve("alias.yml"),
                 LOGGER
         ).register();

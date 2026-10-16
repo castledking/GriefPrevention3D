@@ -94,4 +94,12 @@ class ClaimToolConfigCodecTest
         assertThrows(ClaimToolConfigException.class, () -> this.codec
                 .decodeTransfer("GriefPrevention:\n  Claims:\n    TransferClaim:\n      Price: -5\n"));
     }
+
+    @Test
+    void trappedStaysOutOfAdminClaimsUnlessAllowed() throws Exception
+    {
+        assertFalse(this.codec.decodeAllowTrappedInAdminClaims("GriefPrevention: {}\n"));
+        assertTrue(this.codec.decodeAllowTrappedInAdminClaims(
+                "GriefPrevention:\n  Claims:\n    AllowTrappedInAdminClaims: true\n"));
+    }
 }

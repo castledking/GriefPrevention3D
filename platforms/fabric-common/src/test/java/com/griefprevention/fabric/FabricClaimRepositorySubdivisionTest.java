@@ -1,6 +1,7 @@
 package com.griefprevention.fabric;
 
 import com.griefprevention.claims.ClaimBounds;
+import com.griefprevention.claims.ClaimFlag;
 import com.griefprevention.claims.ClaimSnapshot;
 import com.griefprevention.claims.ClaimTrustLevel;
 import org.junit.jupiter.api.Test;
@@ -210,6 +211,34 @@ class FabricClaimRepositorySubdivisionTest
         assertTrue(repository.isRestrictedSubdivision(later));
         assertEquals(Boolean.FALSE, repository.toggleNewSubdivisionRestriction(1L));
         assertFalse(repository.isRestrictedSubdivision(repository.getClaim(2L).orElseThrow()));
+    }
+
+    @Test
+    void aPreviewIsCheckedLikeAResizeWithoutSavingIt() throws Exception
+    {
+        FabricClaimRepository repository = repository(dataStore(""));
+        ClaimBounds original = repository.getClaim(2L).orElseThrow().bounds();
+
+        assertNull(repository.checkPlacement(2L, ClaimBounds.rectangle(1, FLOOR, 1, 15, TOP, 15)));
+        assertEquals(FabricClaimRepository.PlacementProblem.OUTSIDE_PARENT,
+                repository.checkPlacement(2L, ClaimBounds.rectangle(1, FLOOR, 1, 45, TOP, 5)).placementProblem());
+        assertEquals(FabricClaimRepository.PlacementProblem.EXCLUDES_SUBDIVISION,
+                repository.checkPlacement(1L, ClaimBounds.rectangle(4, FLOOR, 4, 45, TOP, 45)).placementProblem());
+        assertTrue(repository.checkPlacement(99L, original).isMissing());
+        assertEquals(original, repository.getClaim(2L).orElseThrow().bounds());
+    }
+
+    @Test
+    void alertsCanBeTurnedOffForAClaimAndItsSubdivisionsAtOnce() throws Exception
+    {
+        Path dataFolder = dataStore("");
+        FabricClaimRepository repository = repository(dataFolder);
+
+        assertEquals(2, repository.setFlag(List.of(1L, 2L, 99L), ClaimFlag.ALERTS, false));
+
+        FabricClaimRepository reloaded = repository(dataFolder);
+        assertEquals(Boolean.FALSE, reloaded.flag(1L, ClaimFlag.ALERTS));
+        assertEquals(Boolean.FALSE, reloaded.flag(2L, ClaimFlag.ALERTS));
     }
 
     private FabricClaimRepository repository(Path dataFolder)

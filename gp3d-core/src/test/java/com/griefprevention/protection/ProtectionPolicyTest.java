@@ -127,6 +127,32 @@ class ProtectionPolicyTest
     }
 
     @Test
+    void aRefusedPushNamesTheClaimWhoseOwnerIsAlerted()
+    {
+        List<BlockPoint> crossing = Arrays.asList(new BlockPoint(99, 64, 50), new BlockPoint(100, 64, 50));
+        List<BlockPoint> intoA1 = Arrays.asList(new BlockPoint(-1, 64, 50), new BlockPoint(0, 64, 50));
+
+        PistonMovementPolicy.Decision leaving = PistonMovementPolicy.decide(
+                PistonMode.CLAIMS_ONLY, WORLD, this.a1, crossing, null, this.claims);
+        assertEquals(PistonMovementPolicy.Violation.LEFT_CLAIM, leaving.violation());
+        assertEquals(this.a1, leaving.violatedClaim());
+
+        PistonMovementPolicy.Decision entering = PistonMovementPolicy.decide(
+                PistonMode.EVERYWHERE, WORLD, this.b, intoA1, null, this.claims);
+        assertEquals(PistonMovementPolicy.Violation.ENTERED_CLAIM, entering.violation());
+        assertEquals(this.a1, entering.violatedClaim());
+
+        PistonMovementPolicy.Decision head = PistonMovementPolicy.decide(
+                PistonMode.EVERYWHERE, WORLD, null, new ArrayList<>(), new BlockPoint(0, 64, 0), this.claims);
+        assertEquals(PistonMovementPolicy.Violation.HEAD_ENTERED, head.violation());
+
+        PistonMovementPolicy.Decision wilderness = PistonMovementPolicy.decide(
+                PistonMode.CLAIMS_ONLY, WORLD, null, crossing, null, this.claims);
+        assertFalse(wilderness.allowed());
+        assertEquals(null, wilderness.violatedClaim());
+    }
+
+    @Test
     void claimsProtectPlayersByDefaultAndToggledClaimsDecideForThemselves()
     {
         WorldProtectionSettings defaults = WorldProtectionSettings.upstreamDefaults();

@@ -1,12 +1,13 @@
 package me.ryanhamshire.GriefPrevention;
 
+import com.griefprevention.claims.editor.ScrollResizeGeometry;
+import com.griefprevention.claims.editor.ScrollResizeGeometry.Face;
 import com.griefprevention.events.BoundaryVisualizationEvent;
 import com.griefprevention.geometry.OrthogonalPoint2i;
 import com.griefprevention.geometry.OrthogonalPolygon;
 import com.griefprevention.visualization.Boundary;
 import com.griefprevention.visualization.BoundaryVisualization;
 import com.griefprevention.visualization.VisualizationType;
-import me.ryanhamshire.GriefPrevention.ScrollResizeGeometry.Face;
 import me.ryanhamshire.GriefPrevention.compat.CompatUtil;
 import me.ryanhamshire.GriefPrevention.util.SchedulerUtil;
 import org.bukkit.ChatColor;
@@ -44,12 +45,12 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static me.ryanhamshire.GriefPrevention.ScrollResizeGeometry.MAX_X;
-import static me.ryanhamshire.GriefPrevention.ScrollResizeGeometry.MAX_Y;
-import static me.ryanhamshire.GriefPrevention.ScrollResizeGeometry.MAX_Z;
-import static me.ryanhamshire.GriefPrevention.ScrollResizeGeometry.MIN_X;
-import static me.ryanhamshire.GriefPrevention.ScrollResizeGeometry.MIN_Y;
-import static me.ryanhamshire.GriefPrevention.ScrollResizeGeometry.MIN_Z;
+import static com.griefprevention.claims.editor.ScrollResizeGeometry.MAX_X;
+import static com.griefprevention.claims.editor.ScrollResizeGeometry.MAX_Y;
+import static com.griefprevention.claims.editor.ScrollResizeGeometry.MAX_Z;
+import static com.griefprevention.claims.editor.ScrollResizeGeometry.MIN_X;
+import static com.griefprevention.claims.editor.ScrollResizeGeometry.MIN_Y;
+import static com.griefprevention.claims.editor.ScrollResizeGeometry.MIN_Z;
 
 /**
  * Runs {@code /scrollresize} sessions. While a session is active the mouse wheel pushes the side of the claim the

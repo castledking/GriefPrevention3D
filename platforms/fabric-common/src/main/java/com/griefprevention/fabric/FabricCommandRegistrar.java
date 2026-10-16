@@ -84,6 +84,8 @@ final class FabricCommandRegistrar
             @NotNull FabricClaimCommands claimCommands,
             @NotNull FabricClaimBlockCommands blocks,
             @NotNull FabricAdminClaimCommands staff,
+            @NotNull FabricScrollResize scrollResize,
+            @NotNull FabricPlayerRescue rescue,
             @NotNull Path aliasFile,
             @NotNull Logger logger)
     {
@@ -104,6 +106,7 @@ final class FabricCommandRegistrar
             }
             return previous.length == 1 ? TRUST_TYPES : List.of();
         };
+        Completer onOff = (sender, previous) -> previous.length == 0 ? List.of("on", "off") : List.of();
         Completer untrustTargets = (sender, previous) -> {
             if (previous.length != 0)
             {
@@ -129,6 +132,11 @@ final class FabricCommandRegistrar
         claim.put("explosions", new Action(claimCommands::claimExplosions, FabricPermissionDefaults.CLAIM_EXPLOSIONS));
         claim.put("restrictsubclaim", new Action(claimCommands::restrictSubclaim, FabricPermissionDefaults.RESTRICT_SUBCLAIM));
         claim.put("transfer", new Action(staff::transfer, FabricPermissionDefaults.TRANSFER_CLAIM));
+        claim.put("trapped", new Action(rescue::trapped, FabricPermissionDefaults.TRAPPED));
+        claim.put("alerts", new Action(claimCommands::claimAlerts, FabricPermissionDefaults.CLAIM_ALERTS)
+                .standalone(claimCommands::toggleAllClaimAlerts, FabricPermissionDefaults.TOGGLE_CLAIM_ALERTS));
+        // Paper registers this one outside alias.yml.
+        claim.put("scrollresize", new Action(scrollResize::start, FabricPermissionDefaults.SCROLL_RESIZE));
         this.actions.put(CLAIM_ROOT, claim);
 
         Map<String, Action> admin = new LinkedHashMap<>();
@@ -209,6 +217,11 @@ final class FabricCommandRegistrar
         legacy("adminclaimslist", staff::adminClaimsList, FabricPermissionDefaults.ADMIN_CLAIMS_LIST, "/%s", null);
         legacy("makeadmin", staff::makeAdmin, FabricPermissionDefaults.CONVERT_CLAIMS, "/%s", null);
         legacy("makebasic", staff::makeBasic, FabricPermissionDefaults.CONVERT_CLAIMS, "/%s", null);
+        legacy("trapped", rescue::trapped, FabricPermissionDefaults.TRAPPED, "/%s", null);
+        legacy("scrollresize", scrollResize::start, FabricPermissionDefaults.SCROLL_RESIZE, "/%s", null,
+                "scrollresizeclaim", "sr", "src");
+        legacy("claimtogglealerts", claimCommands::toggleAllClaimAlerts, FabricPermissionDefaults.TOGGLE_CLAIM_ALERTS,
+                "/%s [on|off]", onOff, "toggleclaimalerts");
         legacy("gpreload", this::reload, FabricPermissionDefaults.RELOAD, "/%s", null);
         legacy("gpstatus", this::status, FabricPermissionDefaults.RELOAD, "/%s", null);
     }
@@ -421,7 +434,7 @@ final class FabricCommandRegistrar
                 Handler standalone = action.standaloneHandler;
                 Spec spec = new Spec(
                         (sender, args) -> standalone.run(sender, sub.translate(args)),
-                        permission(sub, action),
+                        action.standalonePermission != null ? action.standalonePermission : permission(sub, action),
                         usage(rootKey, sub),
                         (sender, previous) -> completeArguments(sub, sender, previous));
                 for (String name : sub.getStandalone())
@@ -477,7 +490,7 @@ final class FabricCommandRegistrar
         }
 
         String typed = args[0].toLowerCase(Locale.ROOT);
-        String key = subcommandKey(root, typed);
+        String key = subcommandKey(root, rootActions, typed);
         if (key == null)
         {
             sender.sendError(MessageKey.COMMAND_NOT_FOUND, typed);
@@ -519,9 +532,19 @@ final class FabricCommandRegistrar
         return true;
     }
 
-    /** @return the subcommand a typed name or alias.yml alias stands for, or null if none */
-    private static @Nullable String subcommandKey(@NotNull RootCommand root, @NotNull String typed)
+    /**
+     * @return the subcommand a typed name or alias.yml alias stands for, or null if none; a
+     *         subcommand alias.yml does not list goes by its own name
+     */
+    private static @Nullable String subcommandKey(
+            @NotNull RootCommand root,
+            @NotNull Map<String, Action> rootActions,
+            @NotNull String typed)
     {
+        if (rootActions.containsKey(typed) && root.getSubcommand(typed) == null)
+        {
+            return typed;
+        }
         for (Map.Entry<String, Subcommand> entry : root.getSubcommands().entrySet())
         {
             Subcommand sub = entry.getValue();
@@ -564,10 +587,14 @@ final class FabricCommandRegistrar
                             ? List.of(key) : entry.getValue().getCommands());
                 }
             }
+            for (String key : unlisted(root, rootActions, sender))
+            {
+                names.add(key);
+            }
             return names;
         }
 
-        String key = subcommandKey(root, previous[0].toLowerCase(Locale.ROOT));
+        String key = subcommandKey(root, rootActions, previous[0].toLowerCase(Locale.ROOT));
         Subcommand sub = key == null ? null : root.getSubcommand(key);
         Action action = key == null ? null : rootActions.get(key);
         if (sub == null || action == null || !permitted(sender, sub, action))
@@ -628,7 +655,30 @@ final class FabricCommandRegistrar
             }
             sender.sendComponent(line);
         }
+        for (String key : unlisted(root, rootActions, sender))
+        {
+            sender.sendComponent(Component.literal("/" + root.getKey() + " " + key).withStyle(ChatFormatting.YELLOW));
+        }
         return true;
+    }
+
+    /** The subcommands alias.yml does not list that the sender may use, by name. */
+    private static @NotNull List<String> unlisted(
+            @NotNull RootCommand root,
+            @NotNull Map<String, Action> rootActions,
+            @NotNull FabricCommandSender sender)
+    {
+        List<String> keys = new ArrayList<>();
+        for (Map.Entry<String, Action> entry : rootActions.entrySet())
+        {
+            String permission = entry.getValue().permission;
+            if (root.getSubcommand(entry.getKey()) == null
+                    && (permission == null || sender.hasPermission(permission)))
+            {
+                keys.add(entry.getKey());
+            }
+        }
+        return keys;
     }
 
     private static @NotNull Map<String, Subcommand> sortedSubcommands(@NotNull RootCommand root)
@@ -772,6 +822,7 @@ final class FabricCommandRegistrar
         private final @NotNull Handler handler;
         private final @Nullable String permission;
         private @Nullable Handler standaloneHandler;
+        private @Nullable String standalonePermission;
 
         private Action(@NotNull Handler handler, @Nullable String permission)
         {
@@ -784,6 +835,14 @@ final class FabricCommandRegistrar
         private @NotNull Action standalone(@Nullable Handler handler)
         {
             this.standaloneHandler = handler;
+            return this;
+        }
+
+        /** Sets what the standalone names run and the permission they take, when both differ. */
+        private @NotNull Action standalone(@NotNull Handler handler, @NotNull String permission)
+        {
+            this.standaloneHandler = handler;
+            this.standalonePermission = permission;
             return this;
         }
     }

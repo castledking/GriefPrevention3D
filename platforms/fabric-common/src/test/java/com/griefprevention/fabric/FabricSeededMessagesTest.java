@@ -1,5 +1,6 @@
 package com.griefprevention.fabric;
 
+import com.griefprevention.messages.LegacyText;
 import com.griefprevention.messages.MessageCatalog;
 import com.griefprevention.messages.MessageCatalogCodec;
 import com.griefprevention.messages.MessageKey;
@@ -35,7 +36,9 @@ class FabricSeededMessagesTest
         for (MessageKey key : MessageKey.values())
         {
             assertNotNull(seeded.template(key.key()), "messages.yml is missing " + key.key());
-            assertEquals(key.defaultValue(), seeded.template(key.key()), "text differs for " + key.key());
+            // The catalog reads color codes as it loads, so compare what players would see.
+            assertEquals(LegacyText.translate(key.defaultValue()), seeded.template(key.key()),
+                    "text differs for " + key.key());
         }
     }
 

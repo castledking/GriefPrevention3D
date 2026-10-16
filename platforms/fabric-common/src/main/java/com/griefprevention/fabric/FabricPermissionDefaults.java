@@ -47,6 +47,10 @@ final class FabricPermissionDefaults
     static final String SUBDIVIDE_CLAIMS = "griefprevention.subdivideclaims";
     static final String SUBDIVIDE_CLAIMS_3D = "griefprevention.3dsubdivideclaims";
     static final String RESTRICT_SUBCLAIM = "griefprevention.restrictsubclaim";
+    static final String SCROLL_RESIZE = "griefprevention.scrollresize";
+    static final String TRAPPED = "griefprevention.trapped";
+    static final String CLAIM_ALERTS = "griefprevention.claimalerts";
+    static final String TOGGLE_CLAIM_ALERTS = "griefprevention.toggleclaimalerts";
     static final String WITHER_EXPLOSIONS = "griefprevention.witherexplosions";
     static final String TRANSFER_CLAIM = "griefprevention.transferclaim";
     static final String TRANSFER_CLAIM_FREE = "griefprevention.transferclaim.free";
@@ -72,7 +76,8 @@ final class FabricPermissionDefaults
                 TRUST, UNTRUST, TRUST_LIST, ACCESS_TRUST, CONTAINER_TRUST, MANAGE_TRUST, CLAIMS_LIST,
                 ABANDON_CLAIM, ABANDON_TOP_LEVEL_CLAIM, ABANDON_ALL_CLAIMS, BASIC_CLAIMS, CREATE_CLAIMS,
                 CLAIM_PVP, CLAIM_EXPLOSIONS, WITHER_EXPLOSIONS, TRANSFER_CLAIM, SUBDIVIDE_CLAIMS,
-                SUBDIVIDE_CLAIMS_3D, RESTRICT_SUBCLAIM))
+                SUBDIVIDE_CLAIMS_3D, RESTRICT_SUBCLAIM, SCROLL_RESIZE, TRAPPED, CLAIM_ALERTS,
+                TOGGLE_CLAIM_ALERTS))
         {
             node(child, Default.TRUE, CLAIMS);
         }

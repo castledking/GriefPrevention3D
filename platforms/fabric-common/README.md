@@ -33,7 +33,9 @@ Minecraft renamed or removed something within a range, the shared code avoids it
 types are looked up by id (26.2 removed fields such as `Blocks.WHITE_WOOL` and moved entity types to
 `EntityTypes`), tools are recognized by item tag (26.3 removed `AxeItem`, `HoeItem` and `ShovelItem`),
 and mixins whose target class was renamed (`FarmBlock` → `FarmlandBlock`, `EnderMan` → `Enderman`) list
-both names under `@Pseudo`, with `@Group` requiring that exactly one alternative applies.
+both names under `@Pseudo`, with `@Group` requiring that exactly one alternative applies. The same group
+covers calls 26.3 swapped: falling blocks land through `setBlockAndUpdate` and chorus fruit teleports
+through a `randomTeleport` overload that takes the blocks to avoid.
 
 Intermediary names do not change between releases, so the 1.21.11 binary links on 1.21.2 – 1.21.10 except
 for the few calls 1.21.11 reshaped. Those go through `FabricVersionCompat`: permission levels (permission
@@ -43,7 +45,8 @@ Loader's `MappingResolver`, resolved when the adapter starts so a missing one fa
 `Modern` half, which only 1.21.11 and later load, is left out of those releases' linkage checks. Player
 names come from the player and `usercache.json` rather than `NameAndId` (1.21.9+), the copper golem
 statue tag is looked up by id, and the entity damage mixin hands over the entity's level, since
-`Entity.level()` moved in 1.21.9.
+`Entity.level()` moved in 1.21.9; other mixins read it through `EntityAccessor`. The held hotbar slot is
+read through `InventoryAccessor`, as `Inventory.getSelectedSlot()` only arrived in 1.21.5.
 
 ## Building and verifying
 
@@ -197,6 +200,9 @@ registered after other mods', so a name another mod already uses (such as `/crea
 | `/adjustbonusclaimblocksall <amount>` (`/acball`) | Adds bonus blocks to every online player. |
 | `/setaccruedclaimblocks <player> <amount>` (`/scb`), `/setaccruedclaimblocksall <amount>` (`/scball`) | Sets accrued blocks, ignoring the accrual cap as Bukkit does. |
 | `/aclaim blocks <bonus\|accrued> <player\|all> <amount>` | Adds to either balance. |
+| `/scrollresize` (`/claim scrollresize`, `/sr`) | Resizes the claim you stand in, look at or selected a corner of with the mouse wheel; right-click applies. |
+| `/trapped` (`/claim trapped`) | Moves you out of a claim you cannot build in after ten seconds standing still. |
+| `/claim alerts [on\|off]`, `/claimtogglealerts [on\|off]` | Piston and fluid border warnings for the claim you stand in, or for all your claims. |
 | `/gpreload`, `/gpstatus` | Reloads claims, messages, settings and `alias.yml`; shows the loaded claim count. |
 
 Player names resolve from online players, then the players the server has seen (vanilla's `usercache.json`), then
@@ -205,8 +211,8 @@ the UUID the player actually joins with. A name no player has, containing a dot,
 
 The balance commands need `griefprevention.adjustclaimblocks`, work from the console, and change only the accrued
 and bonus lines of `PlayerData/<uuid>`, so unknown addon data survives. Paper subcommands Fabric does not have yet
-(subdivision and shaped modes, restore nature, siege, trapped, explosion toggles, buying and selling blocks, admin
-deletion and transfer) answer that they are not available on Fabric.
+(shaped modes, restore nature, siege, `/extendclaim`, buying and selling blocks) answer that they are not available
+on Fabric.
 
 Administrative claims are free, count toward nobody's claim limit, and are drawn in Paper's admin colors. Staff
 with `griefprevention.adminclaims` hold every permission in them: they can build, resize, trust and abandon. The

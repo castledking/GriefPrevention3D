@@ -63,7 +63,11 @@ final class FabricDataFolder
                 MinimumWidth: 5
                 MinimumArea: 100
                 AllowNestedSubClaims: false
+                Allow3DSubdivisions: true
                 AllowShapedClaims: false
+                AllowTrappedInAdminClaims: false
+                EnderPearlsRequireAccessTrust: true
+                RefundDeniedEnderPearls: true
                 UseClaimSelectSessions: true
                 UseClaimSelectedMessages: false
                 FireSpreadsInClaims: false
@@ -245,6 +249,34 @@ final class FabricDataFolder
               MainClaimSubdivisionInheritEnabled: "All subdivisions in this claim will inherit permissions."
               MainClaimSubdivisionInheritDisabled: "All subdivisions in this claim will NOT inherit permissions."
               AdminSubdivisionRestricted: "That subdivision is administered by staff.  Talk to staff if you need it changed."
+              NotTrappedHere: "You can build here.  Save yourself."
+              RescuePending: "If you stay put for 10 seconds, you'll be teleported out.  Please wait."
+              RescueAbortedMoved: "You moved!  Rescue cancelled."
+              TrappedWontWorkHere: "Sorry, unable to find a safe location to teleport you to.  Contact an admin."
+              ClaimAlertsEnabled: "Alerts enabled for this claim."
+              ClaimAlertsDisabled: "Alerts disabled for this claim."
+              ClaimAlertsEnabledGlobal: "Alerts enabled for all claims."
+              ClaimAlertsDisabledGlobal: "Alerts disabled for all claims."
+              ClaimAlertsUsage: "Use /claimtogglealerts on|off to toggle alerts for ALL claims, or stand in a specific claim and try again."
+              ExternalPistonBoundaryViolation: "&6Warning: A piston tried to push a block into your claim @ x:{0} y:{1} z:{2}!"
+              InternalPistonBoundaryViolation: "&6Warning: A piston tried to push a block outside your claim @ x:{0} y:{1} z:{2}!"
+              ExternalLiquidBoundaryViolation: "&6Warning: Liquid tried to flow into your claim @ x:{0} y:{1} z:{2}!"
+              InternalLiquidBoundaryViolation: "&6Warning: Liquid tried to flow out of your claim @ x:{0} y:{1} z:{2}!"
+              BoundaryViolationBurstSummary: "&6Warning: {0} {1} violations near your claim @ x:{2} y:{3} z:{4}!"
+              ScrollResizeStart: "Scroll resize: look at a side, then scroll up to push it away from you or down to pull it toward you. Right-click to apply; left-click or drop (Q) to cancel."
+              ScrollResizeStartCorner: "Scroll resize: look along a side at the corner you selected, then scroll up to push it away from you or down to pull it toward you. Right-click to apply; left-click or drop (Q) to cancel."
+              ScrollResizeNeedTool: "Hold your claim tool to use scroll resize."
+              ScrollResizeNoClaim: "Stand in a claim, or right-click one of its corners with your claim tool, then run /scrollresize."
+              ScrollResizeSize: "{0} x {1}"
+              ScrollResizeSize3D: "{0} x {1} x {2}"
+              ScrollResizeBlocksLeft: "{0} ({1} claim blocks left)"
+              ScrollResizeConflict: "That outline overlaps another claim or doesn't fit its parent or subdivisions. Scroll back or left-click to cancel."
+              ScrollResizeNotEnoughBlocks: "You need {0} more claim blocks for that. Scroll back or left-click to cancel."
+              ScrollResizeLimit: "That side can't move any further."
+              ScrollResizeCancelled: "Scroll resize cancelled."
+              ScrollResizeTimedOut: "Scroll resize cancelled after a minute without scrolling."
+              ScrollResizeUnchanged: "Scroll resize closed without changes."
+              ScrollResizeClaimGone: "That claim no longer exists."
             """;
 
     private FabricDataFolder()

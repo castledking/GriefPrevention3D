@@ -72,6 +72,29 @@ public final class ClaimToolConfigCodec
                 parsedPrice);
     }
 
+    /** Reads {@code Claims.AllowTrappedInAdminClaims}: whether /trapped works in administrative claims. */
+    public synchronized boolean decodeAllowTrappedInAdminClaims(@NotNull String input)
+            throws ClaimToolConfigException
+    {
+        final Object loaded;
+        try
+        {
+            loaded = this.yaml.load(input);
+        }
+        catch (YAMLException exception)
+        {
+            throw new ClaimToolConfigException("Invalid config YAML: " + exception.getMessage(), exception);
+        }
+        if (loaded == null)
+        {
+            return false;
+        }
+
+        Map<String, Object> root = optionalMap(stringMap(loaded, "config root").get(ROOT), ROOT);
+        Map<String, Object> claims = optionalMap(root.get(CLAIMS), ROOT + "." + CLAIMS);
+        return bool(claims.get("AllowTrappedInAdminClaims"), false, "Claims.AllowTrappedInAdminClaims");
+    }
+
     public synchronized @NotNull ClaimToolSettings decode(@NotNull String input) throws ClaimToolConfigException
     {
         final Object loaded;

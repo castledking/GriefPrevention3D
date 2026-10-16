@@ -41,6 +41,25 @@ class FabricSettingsTest
         assertTrue(settings.world().noCombatInPlayerClaims());
         assertFalse(settings.world().pvpToggleForClaims());
         assertFalse(settings.world().appliesTo("world_the_end"));
+        assertTrue(settings.tools().allow3DSubdivisions());
+        assertTrue(settings.enderPearls().requireAccessTrust());
+        assertTrue(settings.enderPearls().refundDenied());
+        assertFalse(settings.allowTrappedInAdminClaims());
+    }
+
+    @Test
+    void readsThePearlAndTrappedSwitches() throws Exception
+    {
+        Files.writeString(this.dataFolder.resolve("config.yml"), "GriefPrevention:\n  Claims:\n"
+                + "    EnderPearlsRequireAccessTrust: false\n"
+                + "    RefundDeniedEnderPearls: false\n"
+                + "    AllowTrappedInAdminClaims: true\n", StandardCharsets.UTF_8);
+
+        FabricSettings settings = new FabricSettings(this.dataFolder, LOGGER);
+
+        assertFalse(settings.enderPearls().requireAccessTrust());
+        assertFalse(settings.enderPearls().refundDenied());
+        assertTrue(settings.allowTrappedInAdminClaims());
     }
 
     @Test

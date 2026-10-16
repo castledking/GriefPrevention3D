@@ -100,6 +100,22 @@ final class FabricDenialFeedback
         player.sendSystemMessage(FabricLegacyComponents.toComponent(message, mode.color));
     }
 
+    /** @return a message's text, for callers that combine it with other text before sending it */
+    @NotNull String format(@NotNull MessageKey key, @NotNull String @NotNull... args)
+    {
+        return this.messages.format(key, args);
+    }
+
+    /** Shows text above the hotbar, as Paper's scroll resize shows a claim's changing size. */
+    void sendActionBar(@NotNull ServerPlayer player, @NotNull TextMode mode, @NotNull String message)
+    {
+        if (LegacyText.isDisabled(message))
+        {
+            return;
+        }
+        player.sendSystemMessage(FabricLegacyComponents.toComponent(message, mode.color), true);
+    }
+
     /**
      * Sends a throttled error that no protection hook produced, sharing the denial budget, as
      * Paper's {@code sendRateLimitedErrorMessage} does.

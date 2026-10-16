@@ -28,6 +28,7 @@ import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -253,46 +254,11 @@ public final class FabricClaimRepository implements ClaimRepository
             return UpdateClaimResult.missingResult();
         }
 
-        ClaimSnapshot updated = new ClaimSnapshot(
-                existing.id(),
-                existing.worldKey(),
-                existing.ownerId(),
-                existing.parentId(),
-                bounds,
-                existing.threeDimensional(),
-                existing.subdivision()
-        );
-
-        // A claim keeps its own subdivisions inside, as Paper requires.
-        ClaimSnapshot leftOutside = ClaimPlacement.subdivisionLeftOutside(updated, subdivisionsOf(claimId));
-        if (leftOutside != null)
+        ClaimSnapshot updated = reshaped(existing, bounds);
+        UpdateClaimResult refused = placementRefusal(existing, updated);
+        if (refused != null)
         {
-            return UpdateClaimResult.placement(PlacementProblem.EXCLUDES_SUBDIVISION, leftOutside);
-        }
-        ClaimSnapshot parent = existing.parentId() == null ? null : this.claimIndex.get(existing.parentId());
-        if (parent != null)
-        {
-            // A subdivision stays in its parent and clear of its siblings; other claims cannot reach it there.
-            if (!ClaimPlacement.fitsInParent(parent, bounds, existing.threeDimensional()))
-            {
-                return UpdateClaimResult.placement(PlacementProblem.OUTSIDE_PARENT, parent);
-            }
-            ClaimSnapshot sibling = ClaimPlacement.overlappingSibling(updated, subdivisionsOf(parent.id()));
-            if (sibling != null)
-            {
-                return UpdateClaimResult.placement(PlacementProblem.OVERLAPS_SIBLING, sibling);
-            }
-        }
-        else
-        {
-            Set<Long> family = descendantIds(claimId, this.documentsByClaimId.values());
-            for (ClaimSnapshot candidate : this.claimIndex.candidates(updated.worldKey(), updated.bounds()))
-            {
-                if (!family.contains(candidate.id()) && updated.overlaps(candidate))
-                {
-                    return UpdateClaimResult.overlap(candidate);
-                }
-            }
+            return refused;
         }
 
         ClaimDocument existingDocument = this.documentsByClaimId.get(claimId);
@@ -330,6 +296,73 @@ public final class FabricClaimRepository implements ClaimRepository
         replaceAndSave(documents);
         ClaimModifiedCallback.EVENT.invoker().onClaimModified(existing, updated, player);
         return UpdateClaimResult.updated(updated, remainingAfter);
+    }
+
+    /**
+     * The placement checks of {@link #updateClaimBounds} without the claim-block check or saving, for
+     * previewing a resize as it is drawn.
+     *
+     * @return why the claim may not take these bounds, or null when it may
+     */
+    synchronized @Nullable UpdateClaimResult checkPlacement(long claimId, @NotNull ClaimBounds bounds)
+    {
+        ClaimSnapshot existing = this.claimIndex.get(claimId);
+        if (existing == null)
+        {
+            return UpdateClaimResult.missingResult();
+        }
+        return placementRefusal(existing, reshaped(existing, bounds));
+    }
+
+    private static @NotNull ClaimSnapshot reshaped(@NotNull ClaimSnapshot existing, @NotNull ClaimBounds bounds)
+    {
+        return new ClaimSnapshot(
+                existing.id(),
+                existing.worldKey(),
+                existing.ownerId(),
+                existing.parentId(),
+                bounds,
+                existing.threeDimensional(),
+                existing.subdivision()
+        );
+    }
+
+    private @Nullable UpdateClaimResult placementRefusal(
+            @NotNull ClaimSnapshot existing,
+            @NotNull ClaimSnapshot updated)
+    {
+        long claimId = Objects.requireNonNull(existing.id());
+        // A claim keeps its own subdivisions inside, as Paper requires.
+        ClaimSnapshot leftOutside = ClaimPlacement.subdivisionLeftOutside(updated, subdivisionsOf(claimId));
+        if (leftOutside != null)
+        {
+            return UpdateClaimResult.placement(PlacementProblem.EXCLUDES_SUBDIVISION, leftOutside);
+        }
+        ClaimSnapshot parent = existing.parentId() == null ? null : this.claimIndex.get(existing.parentId());
+        if (parent != null)
+        {
+            // A subdivision stays in its parent and clear of its siblings; other claims cannot reach it there.
+            if (!ClaimPlacement.fitsInParent(parent, updated.bounds(), existing.threeDimensional()))
+            {
+                return UpdateClaimResult.placement(PlacementProblem.OUTSIDE_PARENT, parent);
+            }
+            ClaimSnapshot sibling = ClaimPlacement.overlappingSibling(updated, subdivisionsOf(parent.id()));
+            if (sibling != null)
+            {
+                return UpdateClaimResult.placement(PlacementProblem.OVERLAPS_SIBLING, sibling);
+            }
+            return null;
+        }
+
+        Set<Long> family = descendantIds(claimId, this.documentsByClaimId.values());
+        for (ClaimSnapshot candidate : this.claimIndex.candidates(updated.worldKey(), updated.bounds()))
+        {
+            if (!family.contains(candidate.id()) && updated.overlaps(candidate))
+            {
+                return UpdateClaimResult.overlap(candidate);
+            }
+        }
+        return null;
     }
 
     synchronized @Nullable ClaimSnapshot deleteClaim(long claimId, @Nullable ServerPlayer player)
@@ -830,6 +863,38 @@ public final class FabricClaimRepository implements ClaimRepository
         replaceDocument(documents, document.withFlag(flag, value));
         replaceAndSave(documents);
         return value;
+    }
+
+    /**
+     * Writes one policy flag on several claims and persists them together.
+     *
+     * @return how many of the claims are known
+     */
+    synchronized int setFlag(@NotNull Collection<Long> claimIds, @NotNull ClaimFlag flag, boolean value)
+            throws IOException
+    {
+        List<ClaimDocument> documents = mutableDocuments();
+        int found = 0;
+        boolean changed = false;
+        for (Long claimId : claimIds)
+        {
+            ClaimDocument document = this.documentsByClaimId.get(claimId);
+            if (document == null)
+            {
+                continue;
+            }
+            found++;
+            if (document.flag(flag) != value)
+            {
+                replaceDocument(documents, document.withFlag(flag, value));
+                changed = true;
+            }
+        }
+        if (changed)
+        {
+            replaceAndSave(documents);
+        }
+        return found;
     }
 
     /**

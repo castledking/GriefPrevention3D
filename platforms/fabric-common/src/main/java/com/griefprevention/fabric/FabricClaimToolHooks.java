@@ -56,6 +56,7 @@ final class FabricClaimToolHooks
     private final FabricSettings settings;
     private final FabricClaimModes modes;
     private final FabricLastSeenStore lastSeen;
+    private final FabricClaimResizer resizer;
     private final Logger logger;
     private final Map<UUID, ClaimToolSession> sessions = new HashMap<>();
     /** Server tick at which each player last took the modification tool in hand. */
@@ -69,6 +70,7 @@ final class FabricClaimToolHooks
             @NotNull FabricSettings settings,
             @NotNull FabricClaimModes modes,
             @NotNull FabricLastSeenStore lastSeen,
+            @NotNull FabricClaimResizer resizer,
             @NotNull Logger logger)
     {
         this.claims = claims;
@@ -77,6 +79,7 @@ final class FabricClaimToolHooks
         this.settings = settings;
         this.modes = modes;
         this.lastSeen = lastSeen;
+        this.resizer = resizer;
         this.logger = logger;
     }
 
@@ -519,7 +522,8 @@ final class FabricClaimToolHooks
             return;
         }
 
-        this.sessions.put(player.getUUID(), ClaimToolSession.resize(this.claims.worldKey(level), id, claim.bounds(), corner));
+        this.sessions.put(player.getUUID(),
+                ClaimToolSession.resize(this.claims.worldKey(level), id, claim.bounds(), corner, clicked));
         this.visualization.visualizeClaim(player, level, claim, clicked);
         this.feedback.send(player, TextMode.INSTRUCTION, MessageKey.RESIZE_START);
     }
@@ -530,81 +534,31 @@ final class FabricClaimToolHooks
             @NotNull ClaimToolSession session,
             @NotNull BlockPos clicked)
     {
-        ClaimBounds bounds = resizedBounds(session, clicked);
-        // The minimum size is for claims; subdivisions may be any size, as on Paper.
-        ClaimSnapshot resizing = this.claims.claimById(session.claimId);
-        boolean subdivision = resizing != null && resizing.parentId() != null;
-        int minimumWidth = this.settings.tools().minimumWidth();
-        if (!subdivision && (bounds.xLength() < minimumWidth || bounds.zLength() < minimumWidth))
+        if (this.resizer.resize(player, level, session.claimId, resizedBounds(session, clicked), clicked))
         {
-            this.visualization.visualizeInitializeBounds(player, level, bounds, clicked);
-            this.feedback.sendError(player, MessageKey.RESIZE_CLAIM_TOO_NARROW, String.valueOf(minimumWidth));
-            return;
-        }
-        int minimumArea = this.settings.tools().minimumArea();
-        if (!subdivision && bounds.area() < minimumArea)
-        {
-            this.visualization.visualizeInitializeBounds(player, level, bounds, clicked);
-            this.feedback.sendError(player, MessageKey.RESIZE_CLAIM_INSUFFICIENT_AREA, String.valueOf(minimumArea));
-            return;
-        }
-
-        try
-        {
-            FabricClaimRepository.UpdateClaimResult result = this.claims.updateClaimBounds(session.claimId, bounds, player);
-            if (result.isMissing())
-            {
-                this.sessions.remove(player.getUUID());
-                this.visualization.clear(player);
-                return;
-            }
-            if (result.hasInsufficientClaimBlocks())
-            {
-                this.visualization.visualizeInitializeBounds(player, level, bounds, clicked);
-                this.feedback.sendError(
-                        player,
-                        MessageKey.RESIZE_NEED_MORE_BLOCKS,
-                        String.valueOf(result.blocksNeeded()));
-                return;
-            }
-            FabricClaimRepository.PlacementProblem problem = result.placementProblem();
-            if (problem != null)
-            {
-                ClaimSnapshot conflicting = result.overlappingClaim();
-                this.visualization.visualizeConflictBounds(
-                        player, level, conflicting == null ? bounds : conflicting.bounds(), clicked);
-                this.feedback.sendError(player, switch (problem)
-                {
-                    case OUTSIDE_PARENT -> MessageKey.RESIZE_FAIL_SUBDIVISION_EXCEEDS_PARENT;
-                    case OVERLAPS_SIBLING -> MessageKey.RESIZE_FAIL_OVERLAP_SUBDIVISION;
-                    case EXCLUDES_SUBDIVISION -> MessageKey.RESIZE_FAIL_SUBDIVISION;
-                });
-                return;
-            }
-            ClaimSnapshot updated = result.updatedClaim();
-            if (updated == null)
-            {
-                ClaimSnapshot overlapping = result.overlappingClaim();
-                this.visualization.visualizeConflictBounds(
-                        player, level, overlapping == null ? bounds : overlapping.bounds(), clicked);
-                this.feedback.sendError(player, MessageKey.RESIZE_FAIL_OVERLAP);
-                return;
-            }
-
             this.sessions.remove(player.getUUID());
-            // An administrative claim costs nothing, so report the resizer's own balance, as Paper does.
-            Integer remaining = result.remainingBlocks();
-            if (remaining == null)
-            {
-                remaining = this.claims.claimBlockBalance(player.getUUID()).remaining();
-            }
-            this.feedback.send(player, TextMode.SUCCESS, MessageKey.CLAIM_RESIZE_SUCCESS, String.valueOf(remaining));
-            this.visualization.visualizeClaim(player, level, updated, clicked);
         }
-        catch (IOException e)
+    }
+
+    /**
+     * The corner a player selected for a resize by right-clicking it, which {@code /scrollresize}
+     * limits itself to, as Paper's {@code claimResizing} and {@code lastShovelLocation}.
+     */
+    @Nullable SelectedCorner selectedCorner(@NotNull ServerPlayer player)
+    {
+        ClaimToolSession session = this.sessions.get(player.getUUID());
+        if (session == null || session.mode != SessionMode.RESIZE
+                || !session.worldKey.equals(this.claims.worldKey((ServerLevel) player.level())))
         {
-            player.sendSystemMessage(Component.literal("Could not save resized claim: " + e.getMessage()), true);
+            return null;
         }
+        return new SelectedCorner(session.claimId, session.firstCorner);
+    }
+
+    /** Drops a half-made claim, subdivision or resize, as starting {@code /scrollresize} does on Paper. */
+    void clearSelection(@NotNull ServerPlayer player)
+    {
+        this.sessions.remove(player.getUUID());
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -819,6 +773,11 @@ final class FabricClaimToolHooks
         return null;
     }
 
+    /** A claim and the corner of it the player clicked to resize it. */
+    record SelectedCorner(long claimId, @NotNull BlockPos corner)
+    {
+    }
+
     private enum ClaimTool
     {
         INVESTIGATION,
@@ -892,16 +851,18 @@ final class FabricClaimToolHooks
                     false);
         }
 
+        /** @param selectedCorner the corner block that was clicked to start the resize */
         private static @NotNull ClaimToolSession resize(
                 @NotNull String worldKey,
                 long claimId,
                 @NotNull ClaimBounds originalBounds,
-                @NotNull CornerSelection cornerSelection)
+                @NotNull CornerSelection cornerSelection,
+                @NotNull BlockPos selectedCorner)
         {
             return new ClaimToolSession(
                     SessionMode.RESIZE,
                     worldKey,
-                    BlockPos.ZERO,
+                    selectedCorner.immutable(),
                     claimId,
                     originalBounds,
                     cornerSelection,
