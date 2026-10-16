@@ -67,6 +67,8 @@ import java.util.WeakHashMap;
 @ApiStatus.Internal
 public final class FabricWorldProtection
 {
+    private static final Identifier SULFUR_CUBE = Identifier.withDefaultNamespace("sulfur_cube");
+
     private static volatile @Nullable FabricWorldProtection active;
 
     private final @NotNull FabricClaimRepository claims;
@@ -510,6 +512,15 @@ public final class FabricWorldProtection
         }
     }
 
+    /**
+     * Sulfur cubes (26.2+) are creatures but not animals. They are recognized by id: the 1.21.11 and
+     * 26.1 adapters are compiled before the class existed.
+     */
+    private static boolean isSulfurCube(@NotNull Entity entity)
+    {
+        return SULFUR_CUBE.equals(BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()));
+    }
+
     private static boolean isBuildProtected(@NotNull Entity target)
     {
         return target instanceof HangingEntity
@@ -597,12 +608,15 @@ public final class FabricWorldProtection
         return protection.claims.findClaimAt(serverLevel, bolt.blockPosition()) == null;
     }
 
-    /** Paper's PlayerFishEvent rule: reeling a claimed animal or armor stand in takes container trust. */
+    /**
+     * Paper's PlayerFishEvent rule: reeling a claimed animal, armor stand or sulfur cube in takes
+     * container trust.
+     */
     public static boolean mayReelIn(@Nullable Player angler, @NotNull Entity hooked)
     {
         FabricWorldProtection protection = active;
         if (protection == null || !(angler instanceof ServerPlayer player)
-                || !(hooked instanceof ArmorStand || hooked instanceof Animal))
+                || !(hooked instanceof ArmorStand || hooked instanceof Animal || isSulfurCube(hooked)))
         {
             return true;
         }

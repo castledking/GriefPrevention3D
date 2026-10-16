@@ -1890,8 +1890,10 @@ public class PlayerEventHandler implements Listener {
         Entity entity = event.getCaught();
         if (entity == null) return; // if nothing pulled, uninteresting event
 
-        // if should be protected from pulling in land claims without permission
-        if (entity.getType() == EntityType.ARMOR_STAND || entity instanceof Animals) {
+        // if should be protected from pulling in land claims without permission; a sulfur cube
+        // (Minecraft 26.2+) is a creature but not an animal, so it is named
+        if (entity.getType() == EntityType.ARMOR_STAND || entity instanceof Animals
+                || CompatUtil.isEntityType(entity, "SULFUR_CUBE")) {
             Player player = event.getPlayer();
             PlayerData playerData = instance.dataStore.getPlayerData(player.getUniqueId());
             Claim claim = instance.dataStore.getClaimAt(entity.getLocation(), false, playerData.lastClaim);

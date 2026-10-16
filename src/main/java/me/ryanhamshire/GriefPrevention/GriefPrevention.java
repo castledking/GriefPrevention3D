@@ -623,6 +623,10 @@ public class GriefPrevention extends JavaPlugin {
         // PlayerAnimationEvent exists on all Bukkit versions; the handler is a no-op on pre-26.2 servers
         // because no entity will match the "SULFUR_CUBE" type name.
         pluginManager.registerEvents(new SulfurCubeHandler(this, this.dataStore), this);
+        // Paper reports a melee hit before it lands, which also stops the knockback and fire aspect
+        // a block-holding cube takes without a damage event.
+        registerIfClassPresent(pluginManager, "io.papermc.paper.event.player.PrePlayerAttackEntityEvent", () ->
+            new PaperSulfurCubeAttackHandler(this, this.dataStore));
 
         // Conditionally register modern event handlers (only if the event classes exist at runtime).
         // Note: use lambdas (not method references) so the target handler class is loaded lazily,

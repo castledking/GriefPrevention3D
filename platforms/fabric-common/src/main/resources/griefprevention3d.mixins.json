@@ -22,6 +22,7 @@
     "LecternMenuMixin",
     "LightningBoltMixin",
     "PistonBaseBlockMixin",
+    "PlayerSweepAttackMixin",
     "ServerExplosionMixin",
     "ServerGamePacketListenerImplMixin",
     "TeleportRandomlyConsumeEffectMixin",

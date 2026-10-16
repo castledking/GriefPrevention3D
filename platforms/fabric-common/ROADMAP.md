@@ -150,7 +150,9 @@ design points for that work:
 | Lecterns: reading needs access trust with `LecternReadingRequiresAccessTrust` (otherwise anyone may read); taking or placing the book needs container trust | `UseBlockCallback`, `LecternMenu.clickMenuButton` and `LecternBlockEntity.createMenu` mixins |
 | Ender pearls and chorus fruit into claims need access trust (`EnderPearlsRequireAccessTrust`); a refused pearl breaks and comes back with `RefundDeniedEnderPearls` (not in creative, where it was never spent); a refused chorus jump is undone and vanilla tries another spot | `ThrownEnderpearl.onHit` mixin; `randomTeleport` wrapped in `TeleportRandomlyConsumeEffect.apply` (the 26.3 overload too) |
 | Lightning starts no fire in claims | `LightningBolt.spawnFire` mixin |
-| Fishing rods pulling claimed animals or armor stands need container trust | `FishingHook.pullEntity` mixin |
+| Fishing rods pulling claimed animals, armor stands or sulfur cubes need container trust | `FishingHook.pullEntity` mixin |
+| Sword sweeps get the same protection as a direct hit: claimed creatures, villagers, stands and players in safe zones beside the target are neither hurt nor knocked back | sweep damage call in `Player.attack`/`doSweepAttack` wrapped, three shapes across 1.21.2 – 26.3 |
+| Sulfur cubes (26.2+) are protected like other creatures: hits, burning arrows and fire aspect cannot reach a claimed one, so a TNT cube cannot be lit, and using one takes container trust | `hurtOrSimulate` runs before the cube's own damage handling; `UseEntityCallback` |
 | Falling blocks that drifted sideways (sand cannons) only land in a claim holding their origin, or in an unrestricted subdivision of the claim they fell from; otherwise they drop as items | `setBlock`/`setBlockAndUpdate` wrapped in `FallingBlockEntity.tick` |
 | Boundary alerts to claim owners for stopped pistons and fluids, unless turned off with `/claim alerts` | piston and fluid hooks above, `BoundaryViolationAlerts` |
 | Subdivision trust inheritance, restriction, and admin handling: first-level subdivisions inherit parent trust unless restricted, admin subdivisions modifiable only by staff | Modified trust evaluation in `allows()` method, `isAdminSubdivision()`, `toggleSubdivisionRestriction()`, `toggleNewSubdivisionRestriction()`, subdivision placement validation |
@@ -180,7 +182,7 @@ Also found while porting, and handled more strictly on Fabric:
 | Silverfish, rabbits, ravagers, withers changing blocks | `EntityChangeBlockEvent` | per-mob goal mixins |
 | Mob melee on frames/stands/armor stands, cactus and other environmental damage | `EntityDamageEvent` | `hurtServer` mixins per class |
 | Splash/lingering potions on claimed creatures and players | `PotionSplashEvent`, `AreaEffectCloudApplyEvent` | potion/cloud mixins |
-| Raid triggers, sulfur cubes, hoppers taking death loot, pet damage by environment | various | various |
+| Raid triggers, hoppers taking death loot, pet damage by environment, walking a sulfur cube out of a claim | various | various |
 | Fresh-spawn PvP immunity, siege, creative-world rules | various | — |
 
 Known difference: holding a block item while right-clicking a container asks for build trust on Fabric
