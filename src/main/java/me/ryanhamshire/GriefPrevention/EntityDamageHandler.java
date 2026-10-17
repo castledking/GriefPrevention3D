@@ -805,9 +805,9 @@ public class EntityDamageHandler implements Listener {
                 && !isEndCrystal(entityType)
                 // Item Displays have no hitbox, but display plugins may manually fire events
                 // where appropriate.
-                && !isNamedEntityType(entityType, "ITEM_DISPLAY")
-                // Cushions are placed and broken like decorations, so breaking one needs build trust.
-                && !isNamedEntityType(entityType, "CUSHION")) {
+                && !isNamedEntityType(entityType, "ITEM_DISPLAY")) {
+            // A cushion is not listed here: it is an entity but not a living one, so a hit on it
+            // raises no damage event at all. PaperCushionBreakHandler handles it instead.
             return false;
         }
 

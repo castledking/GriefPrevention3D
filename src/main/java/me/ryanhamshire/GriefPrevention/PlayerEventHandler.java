@@ -1893,7 +1893,10 @@ public class PlayerEventHandler implements Listener {
         // if should be protected from pulling in land claims without permission; a sulfur cube
         // (Minecraft 26.2+) is a creature but not an animal, so it is named
         if (entity.getType() == EntityType.ARMOR_STAND || entity instanceof Animals
-                || CompatUtil.isEntityType(entity, "SULFUR_CUBE")) {
+                || CompatUtil.isEntityType(entity, "SULFUR_CUBE")
+                // A cushion (26.3+) is a decoration like an armor stand, so reeling one in takes
+                // the same container trust.
+                || ContentCompat.isCushionEntity(entity)) {
             Player player = event.getPlayer();
             PlayerData playerData = instance.dataStore.getPlayerData(player.getUniqueId());
             Claim claim = instance.dataStore.getClaimAt(entity.getLocation(), false, playerData.lastClaim);

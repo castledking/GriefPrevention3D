@@ -627,6 +627,9 @@ public class GriefPrevention extends JavaPlugin {
         // a block-holding cube takes without a damage event.
         registerIfClassPresent(pluginManager, "io.papermc.paper.event.player.PrePlayerAttackEntityEvent", () ->
             new PaperSulfurCubeAttackHandler(this, this.dataStore));
+        // A cushion is an entity but not a living one, so a hit on it raises a break event instead
+        // of a damage event and the entity damage handler never sees it.
+        CushionBreakHandler.registerIfAvailable(this, this.dataStore);
 
         // Conditionally register modern event handlers (only if the event classes exist at runtime).
         // Note: use lambdas (not method references) so the target handler class is loaded lazily,

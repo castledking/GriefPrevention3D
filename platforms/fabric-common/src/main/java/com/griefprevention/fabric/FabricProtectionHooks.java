@@ -4,6 +4,7 @@ import com.griefprevention.claims.ClaimSnapshot;
 import com.griefprevention.claims.ClaimTrustLevel;
 import com.griefprevention.messages.MessageKey;
 import com.griefprevention.protection.BlockUseKind;
+import com.griefprevention.fabric.FabricWorldProtection;
 import net.fabricmc.fabric.api.event.player.AttackBlockCallback;
 import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
@@ -255,6 +256,12 @@ final class FabricProtectionHooks
             @NotNull Entity entity)
     {
         // Frames and stands change what is on display; Paper treats that as building.
+        // Cushions can be sat on by anyone, like on Paper with PreventCushionMount=false (the default).
+        if (FabricWorldProtection.isCushion(entity))
+        {
+            return InteractionResult.PASS;
+        }
+
         ClaimTrustLevel requiredTrust = requiresBuildTrust(player.getItemInHand(hand))
                 || entity instanceof ItemFrame
                 || entity instanceof ArmorStand

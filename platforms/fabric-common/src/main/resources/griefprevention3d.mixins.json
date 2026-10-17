@@ -4,6 +4,7 @@
   "plugin": "com.griefprevention.fabric.bootstrap.AdapterMixinGate",
   "compatibilityLevel": "JAVA_8",
   "mixins": [
+    "BlockAttachedEntityMixin",
     "BlockDisplayAccessor",
     "DispenserBlockMixin",
     "DisplayAccessor",

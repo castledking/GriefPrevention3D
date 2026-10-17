@@ -68,6 +68,7 @@ import java.util.WeakHashMap;
 public final class FabricWorldProtection
 {
     private static final Identifier SULFUR_CUBE = Identifier.withDefaultNamespace("sulfur_cube");
+    private static final Identifier CUSHION = Identifier.withDefaultNamespace("cushion");
 
     private static volatile @Nullable FabricWorldProtection active;
 
@@ -521,12 +522,22 @@ public final class FabricWorldProtection
         return SULFUR_CUBE.equals(BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()));
     }
 
+    /**
+     * Cushions (26.3+) are placed and broken like decorations, so breaking one needs build trust.
+     * Recognized by id for the same reason as the sulfur cube: no adapter predates the class.
+     */
+    public static boolean isCushion(@NotNull Entity entity)
+    {
+        return CUSHION.equals(BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()));
+    }
+
     private static boolean isBuildProtected(@NotNull Entity target)
     {
         return target instanceof HangingEntity
                 || target instanceof ArmorStand
                 || target instanceof EndCrystal
-                || target instanceof VehicleEntity;
+                || target instanceof VehicleEntity
+                || isCushion(target);
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -609,14 +620,15 @@ public final class FabricWorldProtection
     }
 
     /**
-     * Paper's PlayerFishEvent rule: reeling a claimed animal, armor stand or sulfur cube in takes
-     * container trust.
+     * Paper's PlayerFishEvent rule: reeling a claimed animal, armor stand, sulfur cube or cushion in
+     * takes container trust.
      */
     public static boolean mayReelIn(@Nullable Player angler, @NotNull Entity hooked)
     {
         FabricWorldProtection protection = active;
         if (protection == null || !(angler instanceof ServerPlayer player)
-                || !(hooked instanceof ArmorStand || hooked instanceof Animal || isSulfurCube(hooked)))
+                || !(hooked instanceof ArmorStand || hooked instanceof Animal || isSulfurCube(hooked)
+                        || isCushion(hooked)))
         {
             return true;
         }
