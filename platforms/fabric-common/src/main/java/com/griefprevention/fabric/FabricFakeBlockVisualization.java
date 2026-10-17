@@ -24,6 +24,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -281,6 +282,14 @@ final class FabricFakeBlockVisualization
 
         Map<BlockPos, Integer> glowIds = new HashMap<>();
         boolean glow = this.settings.tools().visualizationGlow();
+        try
+        {
+            glow = glow && this.claims.claimBlockService().glowEnabled(player.getUUID());
+        }
+        catch (IOException ignored)
+        {
+            // If we can't read the player's glow setting, default to enabled.
+        }
         for (Map.Entry<BlockPos, FakeBlock> entry : fakeBlocks.entrySet())
         {
             sendBlock(player, entry.getKey(), entry.getValue().state);

@@ -145,7 +145,7 @@ class FabricDataFolderTest
         Path gameDir = this.tempDir.resolve("server");
         Path configDir = gameDir.resolve("config");
         Path paperData = gameDir.resolve("plugins").resolve("GriefPreventionData");
-        writeValidDataStore(paperData, 17L, "\n1200\n300\n\n");
+        writeValidDataStore(paperData, 17L, "\n1200\n300\ntrue\n");
 
         Path resolved = FabricDataFolder.resolveSharedDataFolder(gameDir, configDir, NOPLogger.NOP_LOGGER);
 
@@ -161,7 +161,7 @@ class FabricDataFolderTest
         Path configDir = gameDir.resolve("config");
         Path oldFabricData = configDir.resolve("GriefPreventionData");
         Path paperData = gameDir.resolve("plugins").resolve("GriefPreventionData");
-        String playerBalance = "\n1200\n300\n\n";
+        String playerBalance = "\n1200\n300\ntrue\n";
         writeValidDataStore(oldFabricData, 17L, playerBalance);
 
         Path resolved = FabricDataFolder.resolveSharedDataFolder(gameDir, configDir, NOPLogger.NOP_LOGGER);
@@ -189,8 +189,8 @@ class FabricDataFolderTest
         Path configDir = gameDir.resolve("config");
         Path oldFabricData = configDir.resolve("GriefPreventionData");
         Path paperData = gameDir.resolve("plugins").resolve("GriefPreventionData");
-        writeValidDataStore(oldFabricData, 17L, "\n10\n20\n\n");
-        writeValidDataStore(paperData, 44L, "\n30\n40\n\n");
+        writeValidDataStore(oldFabricData, 17L, "\n10\n20\ntrue\n");
+        writeValidDataStore(paperData, 44L, "\n30\n40\ntrue\n");
 
         assertThrows(
                 IllegalStateException.class,

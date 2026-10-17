@@ -30,7 +30,7 @@ class PlayerDataDocumentCodecTest
     @Test
     void encodesTheCanonicalBukkitShape()
     {
-        assertEquals("\n88\n12\n\n", this.codec.encode(new PlayerDataDocument(88, 12)));
+        assertEquals("\n88\n12\ntrue\n", this.codec.encode(new PlayerDataDocument(88, 12)));
     }
 
     @Test

@@ -3013,6 +3013,22 @@ public class GriefPrevention extends JavaPlugin {
                 return true;
             }
             return this.handleWitherExplosionsCommand(sender, args);
+        } else if (cmd.getName().equalsIgnoreCase("claimglow") && player != null) {
+            if (!player.hasPermission("griefprevention.glow")) {
+                GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+                return true;
+            }
+            if (!this.config_visualizationGlow) {
+                GriefPrevention.sendMessage(player, TextMode.Err, "Visualization glow is not enabled on this server.");
+                return true;
+            }
+            return this.handleClaimGlowCommand(sender, args);
+        } else if (cmd.getName().equalsIgnoreCase("gpglow") && sender instanceof Player) {
+            if (!sender.hasPermission("griefprevention.debug")) {
+                GriefPrevention.sendMessage((Player) sender, TextMode.Err, Messages.NoPermissionForCommand);
+                return true;
+            }
+            return this.handleGpGlowCommand(sender, args);
         }
         // neighbortrust <player>
         else if (cmd.getName().equalsIgnoreCase("neighbortrust") && player != null) {
@@ -6591,6 +6607,76 @@ public class GriefPrevention extends JavaPlugin {
 
     public boolean handleWitherExplosionsCommand(CommandSender sender, String[] args) {
         return this.handleClaimExplosionToggleCommand(sender, args, true);
+    }
+
+    public boolean handleClaimGlowCommand(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player)) return false;
+        Player player = (Player) sender;
+
+        PlayerData playerData = this.dataStore.getPlayerData(player.getUniqueId());
+        if (args.length == 0) {
+            // Toggle
+            playerData.glowEnabled = !playerData.glowEnabled;
+        } else if (args.length == 1) {
+            if ("on".equalsIgnoreCase(args[0])) {
+                playerData.glowEnabled = true;
+            } else if ("off".equalsIgnoreCase(args[0])) {
+                playerData.glowEnabled = false;
+            } else {
+                return false;
+            }
+        } else {
+            return false;
+        }
+
+        this.dataStore.savePlayerData(player.getUniqueId(), playerData);
+
+        // Refresh any active visualization so the new glow setting takes effect.
+        PlayerData pd = this.dataStore.getPlayerData(player.getUniqueId());
+        if (pd.getVisibleBoundaries() != null) {
+            pd.setVisibleBoundaries(null);
+        }
+
+        GriefPrevention.sendMessage(player, TextMode.Success, "Glow " + (playerData.glowEnabled ? "enabled" : "disabled") + ".");
+        return true;
+    }
+
+    public boolean handleGpGlowCommand(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player)) return false;
+        Player player = (Player) sender;
+
+        if (args.length == 0) {
+            // Toggle
+            this.config_visualizationGlow = !this.config_visualizationGlow;
+        } else if (args.length == 1) {
+            if ("on".equalsIgnoreCase(args[0])) {
+                this.config_visualizationGlow = true;
+            } else if ("off".equalsIgnoreCase(args[0])) {
+                this.config_visualizationGlow = false;
+            } else {
+                return false;
+            }
+        } else {
+            return false;
+        }
+
+        FileConfiguration config = YamlConfiguration.loadConfiguration(new File(DataStore.configFilePath));
+        config.set("GriefPrevention.VisualizationGlow", this.config_visualizationGlow);
+        try {
+            config.save(DataStore.configFilePath);
+        } catch (IOException exception) {
+            GriefPrevention.AddLogEntry("Unable to write to the configuration file at \"" + DataStore.configFilePath + "\"");
+        }
+        // Refresh any active visualizations so the new glow setting takes effect.
+        for (Player online : Bukkit.getOnlinePlayers()) {
+            PlayerData pd = this.dataStore.getPlayerData(online.getUniqueId());
+            if (pd != null && pd.getVisibleBoundaries() != null) {
+                pd.setVisibleBoundaries(null);
+            }
+        }
+
+        GriefPrevention.sendMessage(player, TextMode.Success, "Visualization glow " + (this.config_visualizationGlow ? "enabled" : "disabled") + " globally.");
+        return true;
     }
 
     private boolean handleClaimExplosionToggleCommand(CommandSender sender, String[] args, boolean witherOnly) {

@@ -52,6 +52,8 @@ final class FabricPermissionDefaults
     static final String CLAIM_ALERTS = "griefprevention.claimalerts";
     static final String TOGGLE_CLAIM_ALERTS = "griefprevention.toggleclaimalerts";
     static final String WITHER_EXPLOSIONS = "griefprevention.witherexplosions";
+    static final String GLOW = "griefprevention.glow";
+    static final String DEBUG = "griefprevention.debug";
     static final String TRANSFER_CLAIM = "griefprevention.transferclaim";
     static final String TRANSFER_CLAIM_FREE = "griefprevention.transferclaim.free";
     static final String TRANSFER_CLAIM_OTHERS = "griefprevention.transferclaim.others";
@@ -75,7 +77,7 @@ final class FabricPermissionDefaults
         for (String child : Arrays.asList(
                 TRUST, UNTRUST, TRUST_LIST, ACCESS_TRUST, CONTAINER_TRUST, MANAGE_TRUST, CLAIMS_LIST,
                 ABANDON_CLAIM, ABANDON_TOP_LEVEL_CLAIM, ABANDON_ALL_CLAIMS, BASIC_CLAIMS, CREATE_CLAIMS,
-                CLAIM_PVP, CLAIM_EXPLOSIONS, WITHER_EXPLOSIONS, TRANSFER_CLAIM, SUBDIVIDE_CLAIMS,
+                CLAIM_PVP, CLAIM_EXPLOSIONS, WITHER_EXPLOSIONS, GLOW, TRANSFER_CLAIM, SUBDIVIDE_CLAIMS,
                 SUBDIVIDE_CLAIMS_3D, RESTRICT_SUBCLAIM, SCROLL_RESIZE, TRAPPED, CLAIM_ALERTS,
                 TOGGLE_CLAIM_ALERTS))
         {

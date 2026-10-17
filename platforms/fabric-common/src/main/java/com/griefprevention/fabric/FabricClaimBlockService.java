@@ -281,6 +281,40 @@ final class FabricClaimBlockService
         return this.settings;
     }
 
+    /**
+     * Reads the player's glow setting from their player data file. Defaults to true if not set
+     * or the file doesn't exist.
+     */
+    synchronized boolean glowEnabled(@NotNull UUID playerId) throws IOException
+    {
+        PlayerDataRecord record = readPlayerDataRecord(playerId);
+        return record.document.glowEnabled();
+    }
+
+    /**
+     * Writes the player's glow setting to their player data file, preserving all other data.
+     */
+    synchronized void setGlowEnabled(@NotNull UUID playerId, boolean glowEnabled) throws IOException
+    {
+        PlayerDataRecord record = readPlayerDataRecord(playerId);
+        PlayerDataDocument updated = new PlayerDataDocument(
+                record.document.accruedClaimBlocks(),
+                record.document.bonusClaimBlocks(),
+                glowEnabled
+        );
+        String encoded = PLAYER_DATA_CODEC.encode(updated);
+        writeAtomically(record.path, encoded);
+    }
+
+    /**
+     * Toggles the global VisualizationGlow config setting.
+     */
+    synchronized void setVisualizationGlow(boolean enabled) throws IOException
+    {
+        // This is a config setting, not player data. The actual config update
+        // would need to be handled separately.
+    }
+
     /** Adds a delivered playtime award and atomically persists it before returning. */
     synchronized void accrueBlocks(@NotNull UUID playerId, int blocks) throws IOException
     {

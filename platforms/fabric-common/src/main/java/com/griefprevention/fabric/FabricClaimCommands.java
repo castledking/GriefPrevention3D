@@ -666,6 +666,69 @@ final class FabricClaimCommands
         return toggleExplosions(sender, args, ClaimFlag.WITHER_EXPLOSIONS);
     }
 
+    /** {@code /claimglow [on|off]}: toggle glowing claim borders for this player. */
+    boolean claimGlow(@NotNull FabricCommandSender sender, @NotNull String @NotNull [] args)
+    {
+        ServerPlayer player = sender.requirePlayer();
+        if (player == null || !sender.checkPermission(FabricPermissionDefaults.GLOW))
+        {
+            return true;
+        }
+
+        boolean newValue;
+        if (args.length == 0)
+        {
+            try
+            {
+                newValue = !this.claims.claimBlockService().glowEnabled(player.getUUID());
+            }
+            catch (IOException exception)
+            {
+                sender.sendText(TextMode.ERROR, "Something went wrong.");
+                return true;
+            }
+        }
+        else if (args.length == 1 && "on".equalsIgnoreCase(args[0]))
+        {
+            newValue = true;
+        }
+        else if (args.length == 1 && "off".equalsIgnoreCase(args[0]))
+        {
+            newValue = false;
+        }
+        else
+        {
+            return false;
+        }
+
+        try
+        {
+            this.claims.claimBlockService().setGlowEnabled(player.getUUID(), newValue);
+            sender.sendText(TextMode.SUCCESS, "Glow " + (newValue ? "enabled" : "disabled") + ".");
+        }
+        catch (IOException exception)
+        {
+            sender.sendText(TextMode.ERROR, "Something went wrong.");
+        }
+        return true;
+    }
+
+    /** {@code /gpglow [on|off]}: toggle the global visualization glow setting. */
+    boolean gpGlow(@NotNull FabricCommandSender sender, @NotNull String @NotNull [] args)
+    {
+        ServerPlayer player = sender.requirePlayer();
+        if (player == null || !sender.checkPermission(FabricPermissionDefaults.DEBUG))
+        {
+            return true;
+        }
+
+        // Fabric doesn't have a simple way to toggle config at runtime.
+        // This is a placeholder - the actual implementation would need to
+        // update the config file and reload settings.
+        sender.sendText(TextMode.INFO, "Glow setting toggle not yet implemented on Fabric.");
+        return true;
+    }
+
     private boolean toggleExplosions(
             @NotNull FabricCommandSender sender,
             @NotNull String @NotNull [] args,

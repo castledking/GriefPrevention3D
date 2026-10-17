@@ -205,6 +205,11 @@ final class FabricCommandRegistrar
         legacy("witherexplosions", claimCommands::witherExplosions, FabricPermissionDefaults.WITHER_EXPLOSIONS,
                 "/%s [on|off]", (sender, previous) -> previous.length == 0 ? List.of("on", "off") : List.of(),
                 "witherexplosion");
+        legacy("claimglow", claimCommands::claimGlow, FabricPermissionDefaults.GLOW,
+                "/%s [on|off]", (sender, previous) -> previous.length == 0 ? List.of("on", "off") : List.of(),
+                "glow");
+        legacy("gpglow", claimCommands::gpGlow, FabricPermissionDefaults.DEBUG,
+                "/%s [on|off]", (sender, previous) -> previous.length == 0 ? List.of("on", "off") : List.of());
         legacy("transferclaim", staff::transfer, FabricPermissionDefaults.TRANSFER_CLAIM, "/%s <player> [confirm]",
                 (sender, previous) -> previous.length == 0 ? onlinePlayers(sender)
                         : previous.length == 1 ? List.of("confirm") : List.of(),

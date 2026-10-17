@@ -1313,6 +1313,7 @@ public class FlatFileDataStore extends DataStore
         playerData.playerID = playerID;
         playerData.setAccruedClaimBlocks(document.accruedClaimBlocks());
         playerData.setBonusClaimBlocks(document.bonusClaimBlocks());
+        playerData.glowEnabled = document.glowEnabled();
         return playerData;
     }
 
@@ -1320,7 +1321,8 @@ public class FlatFileDataStore extends DataStore
     {
         return PLAYER_DATA_DOCUMENT_CODEC.encode(new PlayerDataDocument(
                 playerData.getAccruedClaimBlocks(),
-                playerData.getBonusClaimBlocks()
+                playerData.getBonusClaimBlocks(),
+                playerData.glowEnabled
         ));
     }
 

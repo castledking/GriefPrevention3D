@@ -126,7 +126,7 @@ class FabricClaimBlockServiceTest
                 StandardCharsets.UTF_8
         );
         Path playerFile = playerDataFolder.resolve(OWNER.toString());
-        Files.writeString(playerFile, "\n100\n0\n\n", StandardCharsets.UTF_8);
+        Files.writeString(playerFile, "\n100\n0\ntrue\n", StandardCharsets.UTF_8);
         FabricClaimBlockService service = new FabricClaimBlockService(
                 dataFolder,
                 NOPLogger.NOP_LOGGER,
@@ -139,7 +139,7 @@ class FabricClaimBlockServiceTest
         assertEquals(13, update.accruedPenalty());
         assertEquals(87, update.updatedAccruedClaimBlocks());
 
-        String changed = "\n150\n0\n\n";
+        String changed = "\n150\n0\ntrue\n";
         Files.writeString(playerFile, changed, StandardCharsets.UTF_8);
         assertThrows(IOException.class, () -> service.apply(update));
         assertEquals(changed, Files.readString(playerFile, StandardCharsets.UTF_8));
@@ -170,7 +170,7 @@ class FabricClaimBlockServiceTest
         service.apply(update);
 
         assertEquals(
-                "\n87\n0\n\n",
+                "\n87\n0\ntrue\n",
                 Files.readString(dataFolder.resolve("PlayerData").resolve(OWNER.toString()))
         );
     }
@@ -183,7 +183,7 @@ class FabricClaimBlockServiceTest
         Files.createDirectories(playerDataFolder);
         Files.writeString(
                 playerDataFolder.resolve(OWNER.toString()),
-                "\n100\n0\n\n",
+                "\n100\n0\ntrue\n",
                 StandardCharsets.UTF_8
         );
         FabricClaimBlockService service = new FabricClaimBlockService(
@@ -265,7 +265,7 @@ class FabricClaimBlockServiceTest
         service.accrueBlocks(OWNER, 16);
 
         assertEquals(
-                "\n466\n0\n\n",
+                "\n466\n0\ntrue\n",
                 Files.readString(dataFolder.resolve("PlayerData").resolve(OWNER.toString()))
         );
     }
@@ -288,10 +288,10 @@ class FabricClaimBlockServiceTest
         assertTrue(service.playersWithAccrualState().contains(OWNER));
 
         Files.delete(playerFile);
-        Files.writeString(playerFile, "\n100\n0\n\n", StandardCharsets.UTF_8);
+        Files.writeString(playerFile, "\n100\n0\ntrue\n", StandardCharsets.UTF_8);
         service.flushAccrual(OWNER);
 
-        assertEquals("\n116\n0\n\n", Files.readString(playerFile, StandardCharsets.UTF_8));
+        assertEquals("\n116\n0\ntrue\n", Files.readString(playerFile, StandardCharsets.UTF_8));
         assertFalse(service.playersWithAccrualState().contains(OWNER));
     }
 
@@ -307,7 +307,7 @@ class FabricClaimBlockServiceTest
                 StandardCharsets.UTF_8
         );
         Path playerFile = playerDataFolder.resolve(OWNER.toString());
-        Files.writeString(playerFile, "\n100\n0\n\n", StandardCharsets.UTF_8);
+        Files.writeString(playerFile, "\n100\n0\ntrue\n", StandardCharsets.UTF_8);
         FabricClaimBlockService service = new FabricClaimBlockService(
                 dataFolder,
                 NOPLogger.NOP_LOGGER,
@@ -322,7 +322,7 @@ class FabricClaimBlockServiceTest
         service.apply(update);
         service.flushAccrual(OWNER);
 
-        assertEquals("\n103\n0\n\n", Files.readString(playerFile, StandardCharsets.UTF_8));
+        assertEquals("\n103\n0\ntrue\n", Files.readString(playerFile, StandardCharsets.UTF_8));
     }
 
     @Test
@@ -376,7 +376,7 @@ class FabricClaimBlockServiceTest
         service.setAccruedClaimBlocks(OWNER, 90000);
 
         assertEquals(
-                "\n90000\n0\n\n",
+                "\n90000\n0\ntrue\n",
                 Files.readString(dataFolder.resolve("PlayerData").resolve(OWNER.toString()), StandardCharsets.UTF_8)
         );
         assertEquals(90400, service.adjustAccruedClaimBlocks(OWNER, 400));
@@ -389,12 +389,12 @@ class FabricClaimBlockServiceTest
         Path dataFolder = this.tempDir.resolve("GriefPreventionData");
         Path playerFile = dataFolder.resolve("PlayerData").resolve(OWNER.toString());
         Files.createDirectories(playerFile.getParent());
-        Files.writeString(playerFile, "\n10\n" + Integer.MAX_VALUE + "\n\n", StandardCharsets.UTF_8);
+        Files.writeString(playerFile, "\n10\n" + Integer.MAX_VALUE + "\ntrue\n", StandardCharsets.UTF_8);
         FabricClaimBlockService service = service(dataFolder);
 
         assertThrows(ArithmeticException.class, () -> service.adjustBonusClaimBlocks(OWNER, 1));
 
-        assertEquals("\n10\n" + Integer.MAX_VALUE + "\n\n", Files.readString(playerFile, StandardCharsets.UTF_8));
+        assertEquals("\n10\n" + Integer.MAX_VALUE + "\ntrue\n", Files.readString(playerFile, StandardCharsets.UTF_8));
     }
 
     @Test

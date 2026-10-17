@@ -10,6 +10,7 @@ import com.griefprevention.visualization.impl.FakeBlockVisualization;
 import com.griefprevention.visualization.impl.GlowingVisualization;
 import com.griefprevention.visualization.impl.LegacyFakeBlockVisualization;
 import me.ryanhamshire.GriefPrevention.GriefPrevention;
+import me.ryanhamshire.GriefPrevention.PlayerData;
 import me.ryanhamshire.GriefPrevention.compat.CompatUtil;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
@@ -101,7 +102,9 @@ public class BoundaryVisualizationEvent extends PlayerEvent
             // (1.13-1.19.3), fall through to non-glow visualizations even if config_visualizationGlow
             // is true.
             boolean anticheatEnabled = GriefPrevention.instance.config_visualizationAntiCheatCompat;
+            PlayerData playerData = GriefPrevention.instance.dataStore.getPlayerData(player.getUniqueId());
             boolean glowEnabled = GriefPrevention.instance.config_visualizationGlow
+                    && (playerData == null || playerData.glowEnabled)
                     && hasBlockDisplay()
                     && ClientVersionCompat.supportsBlockDisplay(player);
 

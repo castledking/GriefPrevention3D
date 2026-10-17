@@ -16,9 +16,25 @@ public final class PlayerDataDocumentCodec
             );
         }
 
+        boolean glowEnabled = true;
+        if (lines.length >= 4)
+        {
+            String glowValue = lines[3].trim().toLowerCase();
+            // Only interpret line 3 as glowEnabled if it is a recognizable boolean.
+            // Legacy records store a claim list (or other addon data) on that line,
+            // which must not be misread as "glow disabled".
+            if (glowValue.equals("true") || glowValue.equals("false")
+                    || glowValue.equals("1") || glowValue.equals("0")
+                    || glowValue.equals("yes") || glowValue.equals("no"))
+            {
+                glowEnabled = glowValue.equals("true") || glowValue.equals("1") || glowValue.equals("yes");
+            }
+        }
+
         return new PlayerDataDocument(
                 integer(lines[1], "accrued claim blocks"),
-                integer(lines[2], "bonus claim blocks")
+                integer(lines[2], "bonus claim blocks"),
+                glowEnabled
         );
     }
 
@@ -28,7 +44,9 @@ public final class PlayerDataDocumentCodec
                 + document.accruedClaimBlocks()
                 + "\n"
                 + document.bonusClaimBlocks()
-                + "\n\n";
+                + "\n"
+                + (document.glowEnabled() ? "true" : "false")
+                + "\n";
     }
 
     /**

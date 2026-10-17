@@ -20,7 +20,8 @@ class FlatFilePlayerDataParityTest
         assertEquals(PLAYER, playerData.playerID);
         assertEquals(1200, playerData.getAccruedClaimBlocks());
         assertEquals(300, playerData.getBonusClaimBlocks());
-        assertEquals("\n1200\n300\n\n", FlatFileDataStore.encodePlayerData(playerData));
+        assertEquals(true, playerData.glowEnabled);
+        assertEquals("\n1200\n300\ntrue\n", FlatFileDataStore.encodePlayerData(playerData));
     }
 
     @Test

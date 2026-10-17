@@ -192,6 +192,9 @@ public boolean isIgnoringClaims()
     //whether or not this player's dropped items (on death) are unlocked for other players to pick up
     boolean dropsAreUnlocked = false;
 
+    //whether or not this player has glow enabled for claim visualizations
+    public boolean glowEnabled = true;
+
     //message to send to player after he respawns
     String messageOnRespawn = null;
 

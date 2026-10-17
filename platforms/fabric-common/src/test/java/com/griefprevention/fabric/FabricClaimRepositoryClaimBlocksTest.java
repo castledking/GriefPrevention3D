@@ -29,7 +29,7 @@ class FabricClaimRepositoryClaimBlocksTest
     @Test
     void createResizeAndAbandonUseDerivedBalanceWithoutMutatingPlayerEntitlements() throws Exception
     {
-        Path dataFolder = currentDataStore("\n100\n0\n\n");
+        Path dataFolder = currentDataStore("\n100\n0\ntrue\n");
         Path playerFile = dataFolder.resolve("PlayerData").resolve(OWNER.toString());
         String originalPlayerData = Files.readString(playerFile, StandardCharsets.UTF_8);
         FabricClaimRepository repository = new FabricClaimRepository(dataFolder, NOPLogger.NOP_LOGGER);
@@ -102,7 +102,7 @@ class FabricClaimRepositoryClaimBlocksTest
     void maximumClaimCountRejectsAnotherTopLevelClaimUnlessExplicitlyBypassed() throws Exception
     {
         Path dataFolder = currentDataStore(
-                "\n100\n0\n\n",
+                "\n100\n0\ntrue\n",
                 "GriefPrevention:\n"
                         + "  Claims:\n"
                         + "    InitialBlocks: 100\n"
@@ -182,7 +182,7 @@ class FabricClaimRepositoryClaimBlocksTest
     @Test
     void nonOwnerDeletionDoesNotApplyTheOwnersAbandonPenalty() throws Exception
     {
-        String originalPlayerData = "\n100\n0\n\n";
+        String originalPlayerData = "\n100\n0\ntrue\n";
         Path dataFolder = currentDataStore(
                 originalPlayerData,
                 "GriefPrevention:\n"
@@ -208,7 +208,7 @@ class FabricClaimRepositoryClaimBlocksTest
     void malformedPlayerRecordPreventsPenalizedAbandonBeforeClaimDeletion() throws Exception
     {
         Path dataFolder = currentDataStore(
-                "\n100\n0\n\n",
+                "\n100\n0\ntrue\n",
                 "GriefPrevention:\n"
                         + "  Claims:\n"
                         + "    InitialBlocks: 100\n"
@@ -264,7 +264,7 @@ class FabricClaimRepositoryClaimBlocksTest
     void administrativeClaimsAreFreeAndIgnoreTheClaimLimit() throws Exception
     {
         Path dataFolder = currentDataStore(
-                "\n0\n0\n\n",
+                "\n0\n0\ntrue\n",
                 "GriefPrevention:\n  Claims:\n    InitialBlocks: 0\n    MaximumNumberOfClaimsPerPlayer: 1\n"
         );
         FabricClaimRepository repository = new FabricClaimRepository(dataFolder, NOPLogger.NOP_LOGGER);

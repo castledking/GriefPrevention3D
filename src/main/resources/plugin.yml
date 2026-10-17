@@ -261,6 +261,14 @@ commands:
     usage: /<command> [on|off]
     permission: griefprevention.witherexplosions
     aliases: witherexplosion
+  claimglow:
+    description: Toggles glowing claim borders for this player.
+    usage: /<command> [on|off]
+    permission: griefprevention.glow
+  gpglow:
+    description: Toggles the global visualization glow setting.
+    usage: /<command> [on|off]
+    permission: griefprevention.debug
   softmute:
     description: Toggles whether a player's messages will only reach other soft-muted players.
     usage: /<command> <player>
@@ -334,6 +342,9 @@ permissions:
     default: true
   griefprevention.witherexplosions:
     description: Grants permission to toggle wither explosions in claims.
+    default: true
+  griefprevention.glow:
+    description: Grants permission to toggle glowing claim borders.
     default: true
   griefprevention.accruals:
     description: Allows a player to accrue claim blocks at the configured hourly rate.
@@ -514,6 +525,7 @@ permissions:
       griefprevention.scrollresize: true
       griefprevention.buysellclaimblocks: true
       griefprevention.witherexplosions: true
+      griefprevention.glow: true
       griefprevention.unlockdrops: true
       griefprevention.trapped: true
       griefprevention.givepet: true

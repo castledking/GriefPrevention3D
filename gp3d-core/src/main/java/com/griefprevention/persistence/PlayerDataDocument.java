@@ -13,11 +13,18 @@ public final class PlayerDataDocument
 {
     private final int accruedClaimBlocks;
     private final int bonusClaimBlocks;
+    private final boolean glowEnabled;
 
     public PlayerDataDocument(int accruedClaimBlocks, int bonusClaimBlocks)
     {
+        this(accruedClaimBlocks, bonusClaimBlocks, true);
+    }
+
+    public PlayerDataDocument(int accruedClaimBlocks, int bonusClaimBlocks, boolean glowEnabled)
+    {
         this.accruedClaimBlocks = accruedClaimBlocks;
         this.bonusClaimBlocks = bonusClaimBlocks;
+        this.glowEnabled = glowEnabled;
     }
 
     public int accruedClaimBlocks()
@@ -30,6 +37,11 @@ public final class PlayerDataDocument
         return this.bonusClaimBlocks;
     }
 
+    public boolean glowEnabled()
+    {
+        return this.glowEnabled;
+    }
+
     @Override
     public boolean equals(Object other)
     {
@@ -37,19 +49,21 @@ public final class PlayerDataDocument
         if (!(other instanceof PlayerDataDocument)) return false;
         PlayerDataDocument that = (PlayerDataDocument) other;
         return this.accruedClaimBlocks == that.accruedClaimBlocks
-                && this.bonusClaimBlocks == that.bonusClaimBlocks;
+                && this.bonusClaimBlocks == that.bonusClaimBlocks
+                && this.glowEnabled == that.glowEnabled;
     }
 
     @Override
     public int hashCode()
     {
-        return Objects.hash(this.accruedClaimBlocks, this.bonusClaimBlocks);
+        return Objects.hash(this.accruedClaimBlocks, this.bonusClaimBlocks, this.glowEnabled);
     }
 
     @Override
     public String toString()
     {
         return "PlayerDataDocument[accruedClaimBlocks=" + this.accruedClaimBlocks
-                + ", bonusClaimBlocks=" + this.bonusClaimBlocks + "]";
+                + ", bonusClaimBlocks=" + this.bonusClaimBlocks
+                + ", glowEnabled=" + this.glowEnabled + "]";
     }
 }

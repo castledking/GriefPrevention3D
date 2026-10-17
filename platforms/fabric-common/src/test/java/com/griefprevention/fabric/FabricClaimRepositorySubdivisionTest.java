@@ -259,7 +259,7 @@ class FabricClaimRepositorySubdivisionTest
         Files.writeString(dataFolder.resolve("_schemaVersion"), "11", StandardCharsets.UTF_8);
         Files.writeString(claimData.resolve("_nextClaimID"), "3", StandardCharsets.UTF_8);
         // Enough accrued blocks for the owner to grow the claim.
-        Files.writeString(dataFolder.resolve("PlayerData").resolve(OWNER.toString()), "\n10000\n0\n\n",
+        Files.writeString(dataFolder.resolve("PlayerData").resolve(OWNER.toString()), "\n10000\n0\ntrue\n",
                 StandardCharsets.UTF_8);
 
         List<String> subdivision = new ArrayList<>(List.of(

@@ -4345,7 +4345,8 @@ final class ClaimToolDispatcher
         BoundaryVisualization.visualizeClaim(player, claim, conflictType, clickedBlock);
 
         // If glow is enabled, auto-clear after 5 seconds
-        if (GriefPrevention.instance.config_visualizationGlow) {
+        PlayerData pd = GriefPrevention.instance.dataStore.getPlayerData(player.getUniqueId());
+        if (GriefPrevention.instance.config_visualizationGlow && (pd == null || pd.glowEnabled)) {
             SchedulerUtil.runLaterEntity(GriefPrevention.instance, player, () -> {
                 playerData.setVisibleBoundaries(null);
             }, 100L);
