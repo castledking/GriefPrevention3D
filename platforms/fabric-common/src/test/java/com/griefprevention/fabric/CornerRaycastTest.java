@@ -125,6 +125,21 @@ class CornerRaycastTest
     }
 
     @Test
+    void aGrazingCornerInsideVanillaReachDoesNotReplaceTheBlockTarget()
+    {
+        Vec3 eye = new Vec3(0.5D, 64.5D, 0.5D);
+        Vec3 view = new Vec3(1.0D, 0.0D, 0.0D);
+        CornerRaycast.CornerHit corner = closestOf(
+                subdivision(ClaimBounds.rectangle(6, 65, 0, 10, 68, 4)), eye, view);
+
+        assertNotNull(corner);
+        // Its center is slightly beyond six blocks, but the line reaches the corner at six blocks.
+        assertTrue(eye.distanceToSqr(Vec3.atCenterOf(corner.pos())) > 6.0D * 6.0D);
+        assertTrue(corner.distanceAlongView() <= 6.0D);
+        assertTrue(CornerRaycast.withinVanillaReach(eye, corner, 6.0D));
+    }
+
+    @Test
     void aClaimOneBlockTallLetsTheAimRestOnTheBlockAboveItsCorner()
     {
         Vec3 eye = new Vec3(10.5D, 62.5D, 0.5D);

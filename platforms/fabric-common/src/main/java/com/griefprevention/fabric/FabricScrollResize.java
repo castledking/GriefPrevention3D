@@ -171,6 +171,15 @@ public final class FabricScrollResize
         }
 
         int heldSlot = ((InventoryAccessor) player.getInventory()).griefPrevention$getSelected();
+        if (newSlot == heldSlot)
+        {
+            // The client taking the slot sent back after a step, not a scroll. Paper never sees this
+            // packet, as it fires no PlayerItemHeldEvent for an unchanged slot; read as a scroll, it
+            // undid every step, or moved a second side of a 3D claim.
+            // Keep clientSlot: while a wheel burst is in flight the client can already have sent
+            // another slot relative to the previous client request, before accepting this reset.
+            return true;
+        }
         long now = System.currentTimeMillis();
         // Once a burst of scrolling ends, the slot sent back has reached the client.
         if (now - session.lastScrollMillis > SCROLL_BURST_MILLIS)
@@ -379,16 +388,13 @@ public final class FabricScrollResize
 
     private void applyStep(@NotNull ServerPlayer player, @NotNull Session session, int scroll)
     {
-        // Target the side the line of sight hits; fall back to the camera's main axis when it misses
-        // or hits a side a corner selection doesn't reach.
+        // A steep vertical aim selects the top/bottom boundary the player intends; otherwise the
+        // side the line of sight hits wins, with a fallback when it misses or hits a disallowed side.
         Vec3 eye = player.getEyePosition();
         Vec3 look = player.getViewVector(1.0F);
-        Face face = ScrollResizeGeometry.rayFace(
-                eye.x, eye.y, eye.z, look.x, look.y, look.z, session.bounds, session.threeDimensional);
-        if (face == null || !session.allowedFaces.contains(face))
-        {
-            face = ScrollResizeGeometry.pickFace(look.x, look.y, look.z, session.allowedFaces);
-        }
+        Face face = ScrollResizeGeometry.targetFace(
+                eye.x, eye.y, eye.z, look.x, look.y, look.z,
+                session.bounds, session.threeDimensional, session.allowedFaces);
         int[] next = null;
         if (face != null)
         {

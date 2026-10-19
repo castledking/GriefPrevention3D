@@ -74,7 +74,8 @@ design points for that work:
 - [x] `PlayerOfflineTime` on inspection, from a last-seen store (`LastSeen.yml`) kept as players join
       and leave.
 - [x] Administrative claims mode for the shovel and `/claim create` (`/adminclaims`, `/basicclaims`).
-- [x] Subdivision, 3D and shaped claim modes for the shovel (`/claim mode`).
+- [x] Subdivision and 3D subdivision modes, plus shaped 2D claim creation and reshaping
+      (`/claim mode shaped`, `/shapedclaims`, `/shapedclaim`).
 
 ---
 
@@ -99,6 +100,9 @@ design points for that work:
       their own claims away under `Claims.TransferClaim`. Fabric has no economy, so a configured price
       refuses the transfer, as Paper does without Vault, unless the player has `.free`.
 - [x] `/claimexplosions`, `/witherexplosions`.
+- [x] `/extendclaim` (`/expandclaim`, `/resizeclaim`) extends or shrinks the most specific claim at
+      the player's location, or the claim selected with the shovel nib. It handles 2D and 3D claims
+      and subdivisions, including shaped outlines and the boundary segment the player faces.
 - [x] `FabricPermissionDefaults` is checked against plugin.yml by `FabricPermissionTreeParityTest`.
 - [x] `/restrictsubclaim` toggles inheritance for subdivisions
 - [x] Subdivision trust inheritance in protection checks (trust commands already copy grants to
@@ -119,8 +123,8 @@ design points for that work:
 
 ### Still missing
 
-- [ ] `/siege`, `/extendclaim`, restore nature, buying and selling claim blocks.
-- [ ] `/claim mode shaped` Shaped claims and subdivisions (and scroll-resizing them).
+- [ ] Shaped subdivision creation and shaped `/scrollresize`; restore nature, buying and selling
+      claim blocks, and `/siege`.
 - [ ] The chat hint that points players who say "trapped" or "stuck" at `/trapped` (needs Fabric's
       message API module).
 
@@ -155,6 +159,7 @@ design points for that work:
 | Sulfur cubes (26.2+) are protected like other creatures: hits, burning arrows and fire aspect cannot reach a claimed one, so a TNT cube cannot be lit, and using one takes container trust | `hurtOrSimulate` runs before the cube's own damage handling; `UseEntityCallback` |
 | Falling blocks that drifted sideways (sand cannons) only land in a claim holding their origin, or in an unrestricted subdivision of the claim they fell from; otherwise they drop as items | `setBlock`/`setBlockAndUpdate` wrapped in `FallingBlockEntity.tick` |
 | Boundary alerts to claim owners for stopped pistons and fluids, unless turned off with `/claim alerts` | piston and fluid hooks above, `BoundaryViolationAlerts` |
+| Starting or extending a raid in a claimed village requires build trust in the raid center's claim, falling back to the triggering player's claim | `Raids.createOrExtendRaid` mixin, `Claims.RaidTriggersRequireBuildTrust` |
 | Subdivision trust inheritance, restriction, and admin handling: first-level subdivisions inherit parent trust unless restricted, admin subdivisions modifiable only by staff | Modified trust evaluation in `allows()` method, `isAdminSubdivision()`, `toggleSubdivisionRestriction()`, `toggleNewSubdivisionRestriction()`, subdivision placement validation |
 
 
@@ -182,7 +187,7 @@ Also found while porting, and handled more strictly on Fabric:
 | Silverfish, rabbits, ravagers, withers changing blocks | `EntityChangeBlockEvent` | per-mob goal mixins |
 | Mob melee on frames/stands/armor stands, cactus and other environmental damage | `EntityDamageEvent` | `hurtServer` mixins per class |
 | Splash/lingering potions on claimed creatures and players | `PotionSplashEvent`, `AreaEffectCloudApplyEvent` | potion/cloud mixins |
-| Raid triggers, hoppers taking death loot, pet damage by environment, walking a sulfur cube out of a claim | various | various |
+| Hoppers taking death loot, pet damage by environment, walking a sulfur cube out of a claim | various | various |
 | Fresh-spawn PvP immunity, siege, creative-world rules | various | — |
 
 Known difference: holding a block item while right-clicking a container asks for build trust on Fabric

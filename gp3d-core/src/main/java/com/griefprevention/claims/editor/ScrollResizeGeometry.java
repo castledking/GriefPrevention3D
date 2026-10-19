@@ -71,6 +71,10 @@ public final class ScrollResizeGeometry
      * While scrolling quickly the client reports slots relative to the last slot it sent, before the server's slot
      * reset reaches it, so a step is accepted relative to either slot.
      *
+     * <p>Callers must drop a change to the slot already selected before asking: it is the client taking the slot the
+     * server sent back, and read against {@code clientSlot} it would look like a step back. Bukkit fires no
+     * {@code PlayerItemHeldEvent} for it; a packet hook sees it after every step.
+     *
      * @param previousSlot the slot the server has selected
      * @param newSlot the slot the client asked for
      * @param clientSlot the slot the client most recently asked for
@@ -101,28 +105,23 @@ public final class ScrollResizeGeometry
     }
 
     /**
-     * The sides that meet at a selected corner: two for a 2D claim, plus the top or bottom for a 3D claim. A claim one
-     * block thick on an axis has both of that axis's sides at every corner, so a 1x1x1 claim keeps all six. A point
-     * that isn't a corner of the bounds leaves every side available.
+     * The sides reachable from a selected corner: two horizontal sides, plus both vertical sides for a 3D claim so
+     * aiming up or down can choose either height boundary. A claim one block thick on an axis has both of that axis's
+     * sides at every corner, so a 1x1x1 claim keeps all six. A point that isn't a corner of the bounds leaves every
+     * side available.
      */
     public static @NotNull EnumSet<Face> cornerFaces(int @NotNull [] bounds, int x, int y, int z, boolean is3D)
     {
         EnumSet<Face> faces = EnumSet.noneOf(Face.class);
         boolean onXSide = addCornerSides(faces, x, bounds[MIN_X], bounds[MAX_X], Face.WEST, Face.EAST);
         boolean onZSide = addCornerSides(faces, z, bounds[MIN_Z], bounds[MAX_Z], Face.NORTH, Face.SOUTH);
-        if (!onXSide || !onZSide) return allFaces(is3D);
+        boolean onYSide = !is3D || y == bounds[MIN_Y] || y == bounds[MAX_Y];
+        if (!onXSide || !onZSide || !onYSide) return allFaces(is3D);
 
         if (is3D)
         {
-            if (bounds[MIN_Y] == bounds[MAX_Y])
-            {
-                faces.add(Face.DOWN);
-                faces.add(Face.UP);
-            }
-            else
-            {
-                faces.add(2 * y >= bounds[MIN_Y] + bounds[MAX_Y] ? Face.UP : Face.DOWN);
-            }
+            faces.add(Face.DOWN);
+            faces.add(Face.UP);
         }
         return faces;
     }
@@ -180,6 +179,37 @@ public final class ScrollResizeGeometry
         if (allowed.contains(preferred)) return preferred;
         Face opposite = preferred.opposite();
         return allowed.contains(opposite) ? opposite : null;
+    }
+
+    /**
+     * Chooses the side a scroll step should move. A steep vertical aim is deliberate: looking down selects the bottom
+     * boundary and looking up selects the top, even when the ray first enters the claim through the opposite face.
+     * Otherwise, the ray selects the surface it reaches; a miss or a disallowed corner face falls back to the camera's
+     * main axis.
+     */
+    public static @Nullable Face targetFace(
+            double eyeX,
+            double eyeY,
+            double eyeZ,
+            double lookX,
+            double lookY,
+            double lookZ,
+            int @NotNull [] bounds,
+            boolean is3D,
+            @NotNull Set<Face> allowed)
+    {
+        if (is3D && Math.abs(lookY) > VERTICAL_LOOK_THRESHOLD)
+        {
+            Face vertical = lookY > 0 ? Face.UP : Face.DOWN;
+            if (allowed.contains(vertical)) return vertical;
+        }
+
+        Face face = rayFace(eyeX, eyeY, eyeZ, lookX, lookY, lookZ, bounds, is3D);
+        if (face == null || !allowed.contains(face))
+        {
+            face = pickFace(lookX, lookY, lookZ, allowed);
+        }
+        return face;
     }
 
     /**

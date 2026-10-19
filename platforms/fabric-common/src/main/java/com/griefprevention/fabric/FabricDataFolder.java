@@ -28,7 +28,7 @@ final class FabricDataFolder
     private static final String DEFAULT_CONFIG_TEMPLATE = """
             # GriefPrevention3D Fabric uses the same data folder name and top-level config shape as the Paper plugin.
             # Only the options wired by the Fabric port are active right now; /gpreload rereads the claim tool,
-            # visualization, fire, fluid, piston, combat and block-use options.
+            # visualization, fire, fluid, piston, combat, block-use and raid-trigger options.
             GriefPrevention:
               ConfigVersion: 1
               BlockLandClaimExplosions: true
@@ -65,9 +65,13 @@ final class FabricDataFolder
                 AllowNestedSubClaims: false
                 Allow3DSubdivisions: true
                 AllowShapedClaims: false
+                AllowShapedSubClaims: false
+                ShapedMinimumWidth: 1
+                ShapedMinimumArea: 25
                 AllowTrappedInAdminClaims: false
                 EnderPearlsRequireAccessTrust: true
                 RefundDeniedEnderPearls: true
+                RaidTriggersRequireBuildTrust: true
                 UseClaimSelectSessions: true
                 UseClaimSelectedMessages: false
                 FireSpreadsInClaims: false
@@ -277,6 +281,23 @@ final class FabricDataFolder
               ScrollResizeTimedOut: "Scroll resize cancelled after a minute without scrolling."
               ScrollResizeUnchanged: "Scroll resize closed without changes."
               ScrollResizeClaimGone: "That claim no longer exists."
+              ShapedClaimsDisabled: "Shaped claims are disabled on this server."
+              ShapedClaimsMode: "Shaped claim mode. Right-click to place corners in unclaimed land or to start and extend shaped edits from claim boundaries. Boundary clicks create segment markers as needed. Use /basicclaims to exit."
+              ShapedClaimEditMessage: "{0}"
+              ShapedClaimSuccess: "Shaped claim created! Use /trust to share it with friends."
+              ShapedClaimResized: "Shaped claim resized."
+              ShapedClaims2DOnly: "Shaped outlines can only be used on 2D claims."
+              ShapedSubClaimsDisabled: "Shaped subdivisions are disabled on this server."
+              ShapedSubdivisionNoParent: "Right-click inside a claim you can edit to start a shaped subdivision."
+              ShapedSubdivisionOutsideParent: "Shaped subdivisions have to stay inside the claim you're subdividing."
+              ShapedSubdivisionOn3DClaim: "Shaped subdivisions only work inside top-level 2D claims."
+              ShapedSubdivisionSuccess: "Shaped subdivision created."
+              MustHoldModificationToolForThat: "You must be holding a golden shovel to do that."
+              StandInClaimToResize: "Stand inside the land claim you want to resize."
+              ClaimsExtendToSky: "Land claims always extend to max build height."
+              ClaimsExtendLimit: "That side cannot move any further."
+              ClaimsAutoExtendDownward: "Land claims auto-extend deeper into the ground when you place blocks under them."
+              SurvivalBasicsVideo2: "Click for Land Claim Help: {0}"
             """;
 
     private FabricDataFolder()

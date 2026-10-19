@@ -23,6 +23,7 @@ import com.griefprevention.persistence.ClaimDataSchema;
 import com.google.common.io.Files;
 import com.griefprevention.claims.ClaimSnapshot;
 import com.griefprevention.claims.ClaimSnapshotIndex;
+import com.griefprevention.claims.ShapedClaimSettings;
 import com.griefprevention.geometry.MergeCorridor;
 import com.griefprevention.geometry.OrthogonalEdge2i;
 import com.griefprevention.geometry.OrthogonalPoint2i;
@@ -618,78 +619,32 @@ public abstract class DataStore {
         return polygon.cellCount();
     }
 
-    private static final class MinimumProfile
+    private @NotNull ShapedClaimSettings shapedClaimSettings()
     {
-        private final int minWidth;
-        private final int minArea;
-
-        private MinimumProfile(int minWidth, int minArea)
-        {
-            this.minWidth = minWidth;
-            this.minArea = minArea;
-        }
-
-        private int minWidth()
-        {
-            return minWidth;
-        }
-
-        private int minArea()
-        {
-            return minArea;
-        }
-    }
-
-    private MinimumProfile resolveMinimumProfileForPolygon(@NotNull OrthogonalPolygon polygon)
-    {
-        // A normalized orthogonal polygon with 4 corners is a simple rectangle.
-        // Rectangles must respect standard claim minimums even when shaped editing exists.
-        if (polygon.corners().size() == 4)
-        {
-            return new MinimumProfile(
-                    Math.max(1, GriefPrevention.instance.config_claims_minWidth),
-                    Math.max(1, GriefPrevention.instance.config_claims_minArea));
-        }
-
-        return new MinimumProfile(
-                Math.max(1, GriefPrevention.instance.config_claims_shapedMinWidth),
-                Math.max(1, GriefPrevention.instance.config_claims_shapedMinArea));
+        GriefPrevention plugin = GriefPrevention.instance;
+        return new ShapedClaimSettings(
+                plugin.config_claims_allowShapedClaims,
+                plugin.config_claims_allowShapedSubClaims,
+                plugin.config_claims_shapedMinWidth,
+                plugin.config_claims_shapedMinArea);
     }
 
     private @Nullable Supplier<String> validateShapedCreationMinimums(
             @NotNull World world,
             @NotNull OrthogonalPolygon polygon)
     {
-        MinimumProfile minimumProfile = resolveMinimumProfileForPolygon(polygon);
-        int minWidth = minimumProfile.minWidth();
-        int minArea = minimumProfile.minArea();
-
-        int width;
-        int height;
-        try
+        ShapedClaimSettings.Shortfall shortfall = shapedClaimSettings().creationShortfall(
+                polygon,
+                GriefPrevention.instance.config_claims_minWidth,
+                GriefPrevention.instance.config_claims_minArea);
+        if (shortfall == null)
         {
-            width = Math.abs(Math.subtractExact(polygon.minX(), polygon.maxX())) + 1;
-            height = Math.abs(Math.subtractExact(polygon.minZ(), polygon.maxZ())) + 1;
+            return null;
         }
-        catch (ArithmeticException e)
-        {
-            return () -> this.getMessage(Messages.CreateClaimInsufficientBlocks, String.valueOf(Integer.MAX_VALUE));
-        }
-
-        if (width < minWidth
-                || height < minWidth
-                || !shapedPolygonMeetsMinimumWidth(polygon, minWidth))
-        {
-            return () -> this.getMessage(Messages.NewClaimTooNarrow, String.valueOf(minWidth));
-        }
-
-        int area = polygonCellArea(world, polygon);
-        if (area < minArea)
-        {
-            return () -> this.getMessage(Messages.ResizeClaimInsufficientArea, String.valueOf(minArea));
-        }
-
-        return null;
+        String minimum = String.valueOf(shortfall.minimum());
+        return shortfall.rule() == ShapedClaimSettings.Shortfall.Rule.TOO_NARROW
+                ? () -> this.getMessage(Messages.NewClaimTooNarrow, minimum)
+                : () -> this.getMessage(Messages.ResizeClaimInsufficientArea, minimum);
     }
 
     private @Nullable Supplier<String> validateShapedResizeMinimums(
@@ -703,55 +658,19 @@ public abstract class DataStore {
             return null;
         }
 
-        MinimumProfile minimumProfile = resolveMinimumProfileForPolygon(polygon);
-        int minWidth = minimumProfile.minWidth();
-        int minArea = minimumProfile.minArea();
-
-        int width;
-        int height;
-        try
+        ShapedClaimSettings.Shortfall shortfall = shapedClaimSettings().resizeShortfall(
+                polygon,
+                GriefPrevention.instance.config_claims_minWidth,
+                GriefPrevention.instance.config_claims_minArea,
+                claim.getArea());
+        if (shortfall == null)
         {
-            width = Math.abs(Math.subtractExact(polygon.minX(), polygon.maxX())) + 1;
-            height = Math.abs(Math.subtractExact(polygon.minZ(), polygon.maxZ())) + 1;
+            return null;
         }
-        catch (ArithmeticException e)
-        {
-            return () -> this.getMessage(Messages.ResizeNeedMoreBlocks, String.valueOf(Integer.MAX_VALUE));
-        }
-
-        if (width < minWidth
-                || height < minWidth
-                || !shapedPolygonMeetsMinimumWidth(polygon, minWidth))
-        {
-            return () -> this.getMessage(Messages.ResizeClaimTooNarrow, String.valueOf(minWidth));
-        }
-
-        int newArea = polygonCellArea(world, polygon);
-        if (newArea < minArea && newArea < claim.getArea())
-        {
-            return () -> this.getMessage(Messages.ResizeClaimInsufficientArea, String.valueOf(minArea));
-        }
-
-        return null;
-    }
-
-    private boolean shapedPolygonMeetsMinimumWidth(@NotNull OrthogonalPolygon polygon, int minimumWidth)
-    {
-        int minimumEdgeLength = Math.max(0, minimumWidth - 1);
-        if (minimumEdgeLength <= 0)
-        {
-            return true;
-        }
-
-        for (OrthogonalEdge2i edge : polygon.edges())
-        {
-            if (edge.length() < minimumEdgeLength)
-            {
-                return false;
-            }
-        }
-
-        return true;
+        String minimum = String.valueOf(shortfall.minimum());
+        return shortfall.rule() == ShapedClaimSettings.Shortfall.Rule.TOO_NARROW
+                ? () -> this.getMessage(Messages.ResizeClaimTooNarrow, minimum)
+                : () -> this.getMessage(Messages.ResizeClaimInsufficientArea, minimum);
     }
 
     private boolean containsChild(@NotNull Claim parentCandidate, @NotNull Claim child) {

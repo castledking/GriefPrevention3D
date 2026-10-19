@@ -139,7 +139,14 @@ public final class ClaimToolConfigCodec
                 integer(claims.get(MINIMUM_AREA), ClaimToolSettings.DEFAULT_MINIMUM_AREA, MINIMUM_AREA),
                 bool(root.get(VISUALIZATION_GLOW), false, VISUALIZATION_GLOW),
                 modes,
-                bool(claims.get("Allow3DSubdivisions"), true, "Claims.Allow3DSubdivisions")
+                bool(claims.get("Allow3DSubdivisions"), true, "Claims.Allow3DSubdivisions"),
+                new ShapedClaimSettings(
+                        bool(claims.get("AllowShapedClaims"), false, "Claims.AllowShapedClaims"),
+                        bool(claims.get("AllowShapedSubClaims"), false, "Claims.AllowShapedSubClaims"),
+                        integer(claims.get("ShapedMinimumWidth"), ShapedClaimSettings.DEFAULT_MINIMUM_WIDTH,
+                                "Claims.ShapedMinimumWidth"),
+                        integer(claims.get("ShapedMinimumArea"), ShapedClaimSettings.DEFAULT_MINIMUM_AREA,
+                                "Claims.ShapedMinimumArea"))
         );
     }
 

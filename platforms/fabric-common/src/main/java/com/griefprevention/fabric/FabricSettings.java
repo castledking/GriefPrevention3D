@@ -44,6 +44,7 @@ final class FabricSettings
     private volatile @NotNull ClaimTransferSettings transfer = ClaimTransferSettings.upstreamDefaults();
     private volatile @NotNull EnderPearlSettings enderPearls = EnderPearlSettings.upstreamDefaults();
     private volatile boolean allowTrappedInAdminClaims;
+    private volatile boolean raidTriggersRequireBuildTrust = true;
     // Resolved on first use: registries are not guaranteed to be populated when the mod initializes.
     private volatile @Nullable Item investigationTool;
     private volatile @Nullable Item modificationTool;
@@ -147,12 +148,25 @@ final class FabricSettings
             loadedAllowTrappedInAdminClaims = false;
         }
 
+        boolean loadedRaidTriggersRequireBuildTrust;
+        try
+        {
+            loadedRaidTriggersRequireBuildTrust = this.worldCodec.decodeRaidTriggersRequireBuildTrust(contents);
+        }
+        catch (WorldProtectionConfigException exception)
+        {
+            this.logger.error("Could not read Claims.RaidTriggersRequireBuildTrust from {}; raids stay protected.",
+                    this.configFile, exception);
+            loadedRaidTriggersRequireBuildTrust = true;
+        }
+
         this.tools = loadedTools;
         this.world = loadedWorld;
         this.blockUse = loadedBlockUse;
         this.transfer = loadedTransfer;
         this.enderPearls = loadedEnderPearls;
         this.allowTrappedInAdminClaims = loadedAllowTrappedInAdminClaims;
+        this.raidTriggersRequireBuildTrust = loadedRaidTriggersRequireBuildTrust;
         this.investigationTool = null;
         this.modificationTool = null;
     }
@@ -185,6 +199,12 @@ final class FabricSettings
     boolean allowTrappedInAdminClaims()
     {
         return this.allowTrappedInAdminClaims;
+    }
+
+    /** Whether starting or extending a raid in a claim requires build trust, as on Paper. */
+    boolean raidTriggersRequireBuildTrust()
+    {
+        return this.raidTriggersRequireBuildTrust;
     }
 
     @NotNull ClaimToolSettings tools()

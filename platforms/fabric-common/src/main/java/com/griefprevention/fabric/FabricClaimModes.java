@@ -18,6 +18,8 @@ final class FabricClaimModes
     {
         BASIC,
         ADMIN,
+        /** The shovel draws and reshapes orthogonal non-rectangular 2D claims. */
+        SHAPED,
         /** The shovel draws 2D subdivisions inside claims, as Paper's {@code /subdivideclaims}. */
         SUBDIVIDE,
         /** The shovel draws height-limited subdivisions, as Paper's {@code /3dsubdivideclaims}. */

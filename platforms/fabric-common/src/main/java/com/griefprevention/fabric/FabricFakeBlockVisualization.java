@@ -2,6 +2,9 @@ package com.griefprevention.fabric;
 
 import com.griefprevention.claims.ClaimBounds;
 import com.griefprevention.claims.ClaimSnapshot;
+import com.griefprevention.geometry.OrthogonalEdge2i;
+import com.griefprevention.geometry.OrthogonalPoint2i;
+import com.griefprevention.geometry.OrthogonalPolygon;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.fabricmc.fabric.api.event.player.AttackBlockCallback;
@@ -156,6 +159,17 @@ final class FabricFakeBlockVisualization
                 new VisualizationTarget(bounds, style, null))), player.blockPosition(), clicked.getY());
     }
 
+    /** Shows the stored outline and an in-progress shaped path. */
+    void visualizeShapedDraft(
+            @NotNull ServerPlayer player,
+            @NotNull ServerLevel level,
+            @Nullable Long baseClaimId,
+            @NotNull List<OrthogonalPoint2i> points,
+            int y)
+    {
+        render(player, level, new ShapedDraftRequest(baseClaimId, points), player.blockPosition(), y);
+    }
+
     void visualizeConflictBounds(
             @NotNull ServerPlayer player,
             @NotNull ServerLevel level,
@@ -258,7 +272,8 @@ final class FabricFakeBlockVisualization
         clear(player);
 
         List<VisualizationTarget> targets = request.targets(this.claims);
-        if (targets.isEmpty())
+        boolean shapedDraft = request instanceof ShapedDraftRequest;
+        if (targets.isEmpty() && !shapedDraft)
         {
             return;
         }
@@ -274,6 +289,10 @@ final class FabricFakeBlockVisualization
                 claimIds.add(target.claimId);
             }
             collectFakeBlocks(level, visualizeFrom, height, waterTransparent, target, fakeBlocks);
+        }
+        if (request instanceof ShapedDraftRequest draft)
+        {
+            drawShapedDraft(level, visualizeFrom, height, draft.points, fakeBlocks);
         }
         if (fakeBlocks.isEmpty())
         {
@@ -478,6 +497,35 @@ final class FabricFakeBlockVisualization
             @NotNull VisualizationStyle style,
             @NotNull LinkedHashMap<BlockPos, FakeBlock> fakeBlocks)
     {
+        if (bounds.isShaped())
+        {
+            OrthogonalPolygon polygon = bounds.polygon();
+            for (OrthogonalEdge2i edge : polygon.edges())
+            {
+                if (edge.isHorizontal())
+                {
+                    addHorizontal2D(level, displayZone, edge.minX(), edge.maxX(), height,
+                            edge.start().z(), true, waterTransparent, style.side(), fakeBlocks);
+                }
+                else
+                {
+                    addHorizontal2D(level, displayZone, edge.minZ(), edge.maxZ(), height,
+                            edge.start().x(), false, waterTransparent, style.side(), fakeBlocks);
+                }
+            }
+            for (OrthogonalPoint2i nib : ShapedBoundaryMarkers.cornerNibs(polygon))
+            {
+                add2D(level, displayZone, new BlockPos(nib.x(), height, nib.z()),
+                        waterTransparent, style.side(), fakeBlocks);
+            }
+            for (OrthogonalPoint2i corner : polygon.corners())
+            {
+                add2D(level, displayZone, new BlockPos(corner.x(), height, corner.z()),
+                        waterTransparent, style.corner(), fakeBlocks);
+            }
+            return;
+        }
+
         FakeBlock side = style.side();
         FakeBlock corner = style.corner();
         addHorizontal2D(level, displayZone, bounds.minX(), bounds.maxX(), height, bounds.maxZ(), true,
@@ -521,6 +569,50 @@ final class FabricFakeBlockVisualization
                 waterTransparent, corner, fakeBlocks);
         add2D(level, displayZone, new BlockPos(bounds.maxX(), height, bounds.minZ()),
                 waterTransparent, corner, fakeBlocks);
+    }
+
+    private static void drawShapedDraft(
+            @NotNull ServerLevel level,
+            @NotNull BlockPos visualizeFrom,
+            int height,
+            @NotNull List<OrthogonalPoint2i> points,
+            @NotNull LinkedHashMap<BlockPos, FakeBlock> fakeBlocks)
+    {
+        if (points.isEmpty())
+        {
+            return;
+        }
+        DisplayZone displayZone = DisplayZone.for2D(visualizeFrom, level);
+        VisualizationStyle style = VisualizationStyle.INITIALIZE;
+        boolean waterTransparent = level.getBlockState(visualizeFrom).liquid();
+        for (int i = 0; i < points.size(); i++)
+        {
+            OrthogonalPoint2i point = points.get(i);
+            add2D(level, displayZone, new BlockPos(point.x(), height, point.z()),
+                    waterTransparent, style.corner(), fakeBlocks);
+            if (i == 0)
+            {
+                continue;
+            }
+            OrthogonalPoint2i previous = points.get(i - 1);
+            if (previous.x() == point.x())
+            {
+                addHorizontal2D(level, displayZone, Math.min(previous.z(), point.z()),
+                        Math.max(previous.z(), point.z()), height, point.x(), false,
+                        waterTransparent, style.side(), fakeBlocks);
+            }
+            else if (previous.z() == point.z())
+            {
+                addHorizontal2D(level, displayZone, Math.min(previous.x(), point.x()),
+                        Math.max(previous.x(), point.x()), height, point.z(), true,
+                        waterTransparent, style.side(), fakeBlocks);
+            }
+        }
+        for (OrthogonalPoint2i nib : ShapedBoundaryMarkers.cornerNibs(points))
+        {
+            add2D(level, displayZone, new BlockPos(nib.x(), height, nib.z()),
+                    waterTransparent, style.side(), fakeBlocks);
+        }
     }
 
     private static void addHorizontal2D(
@@ -816,6 +908,28 @@ final class FabricFakeBlockVisualization
         public @NotNull List<VisualizationTarget> targets(@NotNull FabricClaimRepository claims)
         {
             ClaimSnapshot claim = claims.claimById(this.claimId);
+            return claim == null ? Collections.emptyList() : claimTree(claim, claims);
+        }
+    }
+
+    /** A temporary path that can be redrawn while the player edits an existing claim. */
+    private record ShapedDraftRequest(
+            @Nullable Long baseClaimId,
+            @NotNull List<OrthogonalPoint2i> points) implements Request
+    {
+        private ShapedDraftRequest
+        {
+            points = List.copyOf(points);
+        }
+
+        @Override
+        public @NotNull List<VisualizationTarget> targets(@NotNull FabricClaimRepository claims)
+        {
+            if (this.baseClaimId == null)
+            {
+                return Collections.emptyList();
+            }
+            ClaimSnapshot claim = claims.claimById(this.baseClaimId);
             return claim == null ? Collections.emptyList() : claimTree(claim, claims);
         }
     }

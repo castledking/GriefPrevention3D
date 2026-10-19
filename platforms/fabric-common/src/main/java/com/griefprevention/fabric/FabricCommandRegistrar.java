@@ -124,7 +124,7 @@ final class FabricCommandRegistrar
         claim.put("untrust", new Action(trust::untrust, FabricPermissionDefaults.UNTRUST));
         claim.put("trustlist", new Action(trust::trustList, FabricPermissionDefaults.TRUST_LIST));
         claim.put("list", new Action(claimCommands::claimsList, FabricPermissionDefaults.CLAIMS_LIST));
-        claim.put("mode", new Action(claimCommands::claimMode, FabricPermissionDefaults.BASIC_CLAIMS)
+        claim.put("mode", new Action(claimCommands::claimMode, FabricPermissionDefaults.CLAIMS)
                 .standalone(null));
         claim.put("abandon", new Action(claimCommands::abandon, FabricPermissionDefaults.ABANDON_CLAIM)
                 .standalone(claimCommands::abandonClaim));
@@ -183,6 +183,10 @@ final class FabricCommandRegistrar
                         : previous.length == 1 ? List.of("confirm") : List.of());
         legacy("claimpvpconfirm", claimCommands::claimPvpConfirm, FabricPermissionDefaults.CLAIM_PVP, "/%s", null);
         legacy("basicclaims", claimCommands::claimMode, FabricPermissionDefaults.BASIC_CLAIMS, "/%s", null, "bc");
+        legacy("shapedclaims", claimCommands::shapedClaimsMode, FabricPermissionDefaults.SHAPED_CLAIMS, "/%s", null,
+                "shapedclaim");
+        legacy("extendclaim", claimCommands::extendClaim, FabricPermissionDefaults.EXTEND_CLAIM,
+                "/%s <numberOfBlocks>", null, "expandclaim", "resizeclaim");
         legacy("subdivideclaims", claimCommands::subdivideMode, FabricPermissionDefaults.SUBDIVIDE_CLAIMS, "/%s", null,
                 "sc", "subdivideclaim");
         legacy("3dsubdivideclaims", claimCommands::subdivide3DMode, FabricPermissionDefaults.SUBDIVIDE_CLAIMS_3D, "/%s",

@@ -22,6 +22,7 @@ import com.google.common.base.Predicate;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.griefprevention.api.ClaimToolHandlerRegistry;
+import com.griefprevention.claims.ClaimBounds;
 import com.griefprevention.claims.ClaimTrustCommandPermissions;
 import com.griefprevention.claims.ClaimTrustIdentifier;
 import com.griefprevention.claims.editor.BukkitClaimEditMessages;
@@ -35,6 +36,7 @@ import com.griefprevention.claims.editor.ClaimEditTargetType;
 import com.griefprevention.claims.editor.ClaimEditor;
 import com.griefprevention.claims.editor.ClaimEditorSession;
 import com.griefprevention.claims.editor.ClaimEditorSkeleton;
+import com.griefprevention.claims.editor.ClaimExtension;
 import com.griefprevention.claims.editor.SegmentSelection;
 import com.griefprevention.commands.CommandAliasConfiguration;
 import com.griefprevention.commands.TabCompletions;
@@ -7132,57 +7134,34 @@ public class GriefPrevention extends JavaPlugin {
         org.bukkit.util.Vector direction = player.getLocation().getDirection();
         Location lc = claim.getLesserBoundaryCorner();
         Location gc = claim.getGreaterBoundaryCorner();
-        int newx1 = lc.getBlockX();
-        int newx2 = gc.getBlockX();
-        int newy1 = lc.getBlockY();
-        int newy2 = gc.getBlockY();
-        int newz1 = lc.getBlockZ();
-        int newz2 = gc.getBlockZ();
-
-        // Handle vertical extension for 3D claims
         boolean is3D = claim.is3D();
-        if (direction.getY() > .75) {
-            if (!is3D) {
-                GriefPrevention.sendMessage(player, TextMode.Info, Messages.ClaimsExtendToSky);
-                return true;
-            }
-            // Looking up - extend upward (increase max Y)
-            newy2 += amount;
-        } else if (direction.getY() < -.75) {
-            if (!is3D) {
-                GriefPrevention.sendMessage(player, TextMode.Info, Messages.ClaimsAutoExtendDownward);
-                return true;
-            }
-            // Looking down - extend downward (decrease min Y)
-            newy1 -= amount;
-        } else if (Math.abs(direction.getX()) < .3) {
-            // if changing Z only
-            if (direction.getZ() > 0) {
-                newz2 += amount; // north
-            } else {
-                newz1 -= amount; // south
-            }
-        } else if (Math.abs(direction.getZ()) < .3) {
-            // if changing X only
-            if (direction.getX() > 0) {
-                newx2 += amount; // east
-            } else {
-                newx1 -= amount; // west
-            }
-        } else {
-            // diagonals
-            if (direction.getX() > 0) {
-                newx2 += amount;
-            } else {
-                newx1 -= amount;
-            }
-
-            if (direction.getZ() > 0) {
-                newz2 += amount;
-            } else {
-                newz1 -= amount;
-            }
+        ClaimExtension.RectangleExtension extension = ClaimExtension.extendRectangle(
+            ClaimBounds.rectangle(lc.getBlockX(), lc.getBlockY(), lc.getBlockZ(), gc.getBlockX(), gc.getBlockY(), gc.getBlockZ()),
+            is3D,
+            direction.getX(),
+            direction.getY(),
+            direction.getZ(),
+            amount
+        );
+        if (extension.outcome() == ClaimExtension.Outcome.ALREADY_REACHES_SKY) {
+            GriefPrevention.sendMessage(player, TextMode.Info, Messages.ClaimsExtendToSky);
+            return true;
         }
+        if (extension.outcome() == ClaimExtension.Outcome.EXTENDS_DOWNWARD_BY_ITSELF) {
+            GriefPrevention.sendMessage(player, TextMode.Info, Messages.ClaimsAutoExtendDownward);
+            return true;
+        }
+        if (extension.outcome() == ClaimExtension.Outcome.LIMIT_REACHED) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.ClaimsExtendLimit);
+            return true;
+        }
+        ClaimBounds extended = java.util.Objects.requireNonNull(extension.bounds());
+        int newx1 = extended.minX();
+        int newx2 = extended.maxX();
+        int newy1 = extended.minY();
+        int newy2 = extended.maxY();
+        int newz1 = extended.minZ();
+        int newz2 = extended.maxZ();
 
         // For 3D subdivisions, validate that extension stays within the parent's vertical range.
         // 2D parents (including shaped claims) only store their floor and reach the world top.
@@ -7501,38 +7480,13 @@ public class GriefPrevention extends JavaPlugin {
         int amount
     ) {
         Long claimId = claim.getID();
-        SegmentSelection selection = new SegmentSelection(claimId == null ? 0L : claimId, edgeIndex, null, null, null);
-        ClaimEditorSession session = ClaimEditorSession.idle(new UUID(0L, 0L))
-            .withMode(com.griefprevention.claims.editor.ClaimEditorMode.SHAPED, ClaimEditSource.COMMAND)
-            .withTarget(new ClaimEditTarget(
-                claim.parent == null
-                    ? ClaimEditTargetType.EXISTING_PARENT_CLAIM
-                    : ClaimEditTargetType.EXISTING_SUBDIVISION_CLAIM,
-                claimId
-            ))
-            .withActiveSegment(selection)
-            .withPreview(new ClaimEditPreview(
-                polygon,
-                selection,
-                Collections.emptyList(),
-                null,
-                Collections.emptyList(),
-                Collections.emptyList(),
-                Collections.emptyList()
-            ));
-
-        ClaimEditResult result = claimEditor.apply(
-            session,
-            new ClaimEditIntent(
-                ClaimEditIntentType.EXPAND_SEGMENT,
-                ClaimEditSource.COMMAND,
-                null,
-                claimId,
-                null,
-                amount,
-                true,
-                Collections.emptyList()
-            )
+        ClaimEditResult result = ClaimExtension.expandSegment(
+            claimId == null ? 0L : claimId,
+            claim.parent != null,
+            polygon,
+            edgeIndex,
+            null,
+            amount
         );
         return result.success() ? result.preview().polygon() : null;
     }
@@ -7542,15 +7496,13 @@ public class GriefPrevention extends JavaPlugin {
         @NotNull Location playerLocation
     ) {
         org.bukkit.util.Vector direction = playerLocation.getDirection();
-        if (Math.abs(direction.getX()) >= Math.abs(direction.getZ())) {
-            return direction.getX() >= 0
-                ? nearestVerticalEdge(polygon, playerLocation.getBlockZ(), playerLocation.getX(), true)
-                : nearestVerticalEdge(polygon, playerLocation.getBlockZ(), playerLocation.getX(), false);
-        }
-
-        return direction.getZ() >= 0
-            ? nearestHorizontalEdge(polygon, playerLocation.getBlockX(), playerLocation.getZ(), true)
-            : nearestHorizontalEdge(polygon, playerLocation.getBlockX(), playerLocation.getZ(), false);
+        return ClaimExtension.facedSegment(
+            polygon,
+            playerLocation.getX(),
+            playerLocation.getZ(),
+            direction.getX(),
+            direction.getZ()
+        );
     }
 
     private boolean requiresMergeNib(@NotNull Claim claim) {
@@ -7562,73 +7514,7 @@ public class GriefPrevention extends JavaPlugin {
         @NotNull Location playerLocation
     ) {
         org.bukkit.util.Vector direction = playerLocation.getDirection();
-        if (edge.isHorizontal()) {
-            return direction.getZ() >= 0 ? OrthogonalDirection.SOUTH : OrthogonalDirection.NORTH;
-        }
-
-        if (edge.isVertical()) {
-            return direction.getX() >= 0 ? OrthogonalDirection.EAST : OrthogonalDirection.WEST;
-        }
-
-        return edge.outwardDirectionForPositiveOffset();
-    }
-
-    private @Nullable Integer nearestVerticalEdge(
-        @NotNull OrthogonalPolygon polygon,
-        int playerZ,
-        double playerX,
-        boolean towardPositiveX
-    ) {
-        Integer bestIndex = null;
-        double bestDistance = Double.MAX_VALUE;
-        for (int i = 0; i < polygon.edges().size(); i++) {
-            OrthogonalEdge2i edge = polygon.edges().get(i);
-            if (!edge.isVertical() || playerZ < edge.minZ() || playerZ > edge.maxZ()) {
-                continue;
-            }
-
-            double edgeX = edge.start().x();
-            double distance = edgeX - playerX;
-            if (towardPositiveX ? distance < -0.5D : distance > 0.5D) {
-                continue;
-            }
-
-            double absoluteDistance = Math.abs(distance);
-            if (absoluteDistance < bestDistance) {
-                bestDistance = absoluteDistance;
-                bestIndex = i;
-            }
-        }
-        return bestIndex;
-    }
-
-    private @Nullable Integer nearestHorizontalEdge(
-        @NotNull OrthogonalPolygon polygon,
-        int playerX,
-        double playerZ,
-        boolean towardPositiveZ
-    ) {
-        Integer bestIndex = null;
-        double bestDistance = Double.MAX_VALUE;
-        for (int i = 0; i < polygon.edges().size(); i++) {
-            OrthogonalEdge2i edge = polygon.edges().get(i);
-            if (!edge.isHorizontal() || playerX < edge.minX() || playerX > edge.maxX()) {
-                continue;
-            }
-
-            double edgeZ = edge.start().z();
-            double distance = edgeZ - playerZ;
-            if (towardPositiveZ ? distance < -0.5D : distance > 0.5D) {
-                continue;
-            }
-
-            double absoluteDistance = Math.abs(distance);
-            if (absoluteDistance < bestDistance) {
-                bestDistance = absoluteDistance;
-                bestIndex = i;
-            }
-        }
-        return bestIndex;
+        return ClaimExtension.expansionDirection(edge, direction.getX(), direction.getZ());
     }
 
     private void applyClaimEditResult(

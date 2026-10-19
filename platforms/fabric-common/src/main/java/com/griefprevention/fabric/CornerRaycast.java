@@ -2,6 +2,7 @@ package com.griefprevention.fabric;
 
 import com.griefprevention.claims.ClaimBounds;
 import com.griefprevention.claims.ClaimSnapshot;
+import com.griefprevention.geometry.OrthogonalPoint2i;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
@@ -70,6 +71,15 @@ final class CornerRaycast
             }
 
             ClaimBounds bounds = claim.bounds();
+            if (bounds.isShaped())
+            {
+                for (OrthogonalPoint2i corner : bounds.polygon().corners())
+                {
+                    considerCornerPillar(closest, eye, view, maxDistance, bounds,
+                            corner.x(), corner.z(), corner.x(), corner.z());
+                }
+                continue;
+            }
             for (int x : new int[] { bounds.minX(), bounds.maxX() })
             {
                 for (int z : new int[] { bounds.minZ(), bounds.maxZ() })
@@ -123,6 +133,17 @@ final class CornerRaycast
         Vec3 clickedCenter = new Vec3(clicked.getX() + 0.5D, clicked.getY() + 0.5D, clicked.getZ() + 0.5D);
         double clickedDistanceAlongView = clickedCenter.subtract(eye).dot(view);
         return clickedDistanceAlongView < 0 || cornerDistanceAlongView <= clickedDistanceAlongView + CLICKED_TOLERANCE;
+    }
+
+    /**
+     * The custom corner raycast must not replace a vanilla target within interaction reach. Checking the distance
+     * along the view as well as the corner block's center covers grazing rays whose center falls just outside the
+     * vanilla radius while the aimed-at point remains inside it.
+     */
+    static boolean withinVanillaReach(@NotNull Vec3 eye, @NotNull CornerHit corner, double vanillaReach)
+    {
+        return corner.distanceAlongView() <= vanillaReach
+                || eye.distanceToSqr(Vec3.atCenterOf(corner.pos())) <= vanillaReach * vanillaReach;
     }
 
     /**

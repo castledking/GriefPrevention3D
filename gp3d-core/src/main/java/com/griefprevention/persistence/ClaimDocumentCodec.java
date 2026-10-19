@@ -293,7 +293,8 @@ public final class ClaimDocumentCodec
                 greater.z
         );
         ClaimBounds bounds = rectangle;
-        if (effectiveParentId == null && !threeDimensional && !shapeCorners.isEmpty())
+        // A 2D claim or 2D subdivision may be shaped; Paper loads Shape Corners for both.
+        if (!threeDimensional && !shapeCorners.isEmpty())
         {
             List<OrthogonalPoint2i> closedPath = new ArrayList<>(shapeCorners);
             if (!closedPath.get(0).equals(closedPath.get(closedPath.size() - 1)))

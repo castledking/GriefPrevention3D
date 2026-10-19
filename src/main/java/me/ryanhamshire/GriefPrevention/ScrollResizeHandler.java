@@ -361,22 +361,12 @@ public class ScrollResizeHandler implements Listener
         }
         else
         {
-            // Target the side the player's line of sight hits; fall back to the camera's main axis when it misses or
-            // hits a side a corner selection doesn't reach.
+            // A steep vertical aim selects the top/bottom boundary the player intends; otherwise the side the ray
+            // hits wins, with a fallback when it misses or hits a side a corner selection doesn't reach.
             Location eye = player.getEyeLocation();
-            Face face = ScrollResizeGeometry.rayFace(
-                    eye.getX(),
-                    eye.getY(),
-                    eye.getZ(),
-                    look.getX(),
-                    look.getY(),
-                    look.getZ(),
-                    session.bounds,
-                    session.claim.is3D());
-            if (face == null || !session.allowedFaces.contains(face))
-            {
-                face = ScrollResizeGeometry.pickFace(look.getX(), look.getY(), look.getZ(), session.allowedFaces);
-            }
+            Face face = ScrollResizeGeometry.targetFace(
+                    eye.getX(), eye.getY(), eye.getZ(), look.getX(), look.getY(), look.getZ(),
+                    session.bounds, session.claim.is3D(), session.allowedFaces);
             int[] next = null;
             if (face != null)
             {

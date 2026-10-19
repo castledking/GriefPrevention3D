@@ -121,6 +121,21 @@ public final class WorldProtectionConfigCodec
                 bool(claims.get("RefundDeniedEnderPearls"), true, "Claims.RefundDeniedEnderPearls"));
     }
 
+    /** Whether creating or joining a raid in a claim requires build trust, enabled by default on Paper. */
+    public synchronized boolean decodeRaidTriggersRequireBuildTrust(@NotNull String input)
+            throws WorldProtectionConfigException
+    {
+        final Object loaded = load(input);
+        if (loaded == null)
+        {
+            return true;
+        }
+
+        Map<String, Object> root = optionalMap(stringMap(loaded, "config root").get(ROOT), ROOT);
+        Map<String, Object> claims = optionalMap(root.get(CLAIMS), ROOT + "." + CLAIMS);
+        return bool(claims.get("RaidTriggersRequireBuildTrust"), true, "Claims.RaidTriggersRequireBuildTrust");
+    }
+
     private @Nullable Object load(@NotNull String input) throws WorldProtectionConfigException
     {
         try

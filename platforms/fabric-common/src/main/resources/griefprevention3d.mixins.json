@@ -24,6 +24,7 @@
     "LightningBoltMixin",
     "PistonBaseBlockMixin",
     "PlayerSweepAttackMixin",
+    "RaidsMixin",
     "ServerExplosionMixin",
     "ServerGamePacketListenerImplMixin",
     "TeleportRandomlyConsumeEffectMixin",

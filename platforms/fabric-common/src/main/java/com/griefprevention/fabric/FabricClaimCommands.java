@@ -34,6 +34,7 @@ final class FabricClaimCommands
     private final FabricDenialFeedback feedback;
     private final FabricSettings settings;
     private final FabricClaimModes modes;
+    private final FabricClaimToolHooks tools;
     private final FabricFakeBlockVisualization visualization;
     private final Logger logger;
     /** The PvP change each player was last asked to confirm, as Paper's {@code pendingPvpToggle}. */
@@ -44,6 +45,7 @@ final class FabricClaimCommands
             @NotNull FabricDenialFeedback feedback,
             @NotNull FabricSettings settings,
             @NotNull FabricClaimModes modes,
+            @NotNull FabricClaimToolHooks tools,
             @NotNull FabricFakeBlockVisualization visualization,
             @NotNull Logger logger)
     {
@@ -51,6 +53,7 @@ final class FabricClaimCommands
         this.feedback = feedback;
         this.settings = settings;
         this.modes = modes;
+        this.tools = tools;
         this.visualization = visualization;
         this.logger = logger;
     }
@@ -492,6 +495,7 @@ final class FabricClaimCommands
         {
             if (sender.checkPermission(FabricPermissionDefaults.BASIC_CLAIMS))
             {
+                this.tools.clearSelection(player);
                 this.modes.set(player.getUUID(), FabricClaimModes.Mode.BASIC);
                 sender.send(TextMode.SUCCESS, MessageKey.BASIC_CLAIMS_MODE);
             }
@@ -505,6 +509,10 @@ final class FabricClaimCommands
         {
             return subdivide3DMode(sender, new String[0]);
         }
+        if ("shaped".equalsIgnoreCase(args[0]))
+        {
+            return shapedClaimsMode(sender, new String[0]);
+        }
         FabricCommandRegistrar.sendUnavailable(sender);
         return true;
     }
@@ -517,6 +525,7 @@ final class FabricClaimCommands
         {
             return true;
         }
+        this.tools.clearSelection(player);
         this.modes.set(player.getUUID(), FabricClaimModes.Mode.SUBDIVIDE);
         sender.send(TextMode.INSTRUCTION, MessageKey.SUBDIVISION_MODE);
         sender.send(TextMode.INSTRUCTION, MessageKey.SUBDIVISION_VIDEO_2, SUBDIVISION_VIDEO_URL);
@@ -540,10 +549,65 @@ final class FabricClaimCommands
         {
             return true;
         }
+        this.tools.clearSelection(player);
         this.modes.set(player.getUUID(), FabricClaimModes.Mode.SUBDIVIDE_3D);
         sender.send(TextMode.INSTRUCTION, MessageKey.SUBDIVISION_MODE_3D);
         sender.send(TextMode.INSTRUCTION, MessageKey.SUBDIVISION_VIDEO_2, SUBDIVISION_VIDEO_URL);
         return true;
+    }
+
+    /** {@code /shapedclaims} and {@code /claim mode shaped}. */
+    boolean shapedClaimsMode(@NotNull FabricCommandSender sender, @NotNull String @NotNull [] args)
+    {
+        ServerPlayer player = sender.requirePlayer();
+        if (player == null || !sender.checkPermission(FabricPermissionDefaults.SHAPED_CLAIMS))
+        {
+            return true;
+        }
+        if (args.length != 0)
+        {
+            return false;
+        }
+        if (!this.settings.tools().shaped().allowShapedClaims())
+        {
+            sender.sendError(MessageKey.SHAPED_CLAIMS_DISABLED);
+            return true;
+        }
+
+        this.tools.clearSelection(player);
+        this.modes.set(player.getUUID(), FabricClaimModes.Mode.SHAPED);
+        sender.send(TextMode.INSTRUCTION, MessageKey.SHAPED_CLAIMS_MODE);
+        int found = this.visualization.visualizeNearbyClaims(player, (ServerLevel) player.level());
+        if (found > 0)
+        {
+            sender.send(TextMode.INFO, MessageKey.SHOW_NEARBY_CLAIMS, String.valueOf(found));
+        }
+        return true;
+    }
+
+    /** {@code /extendclaim <blocks>}, including the {@code /expandclaim} and {@code /resizeclaim} aliases. */
+    boolean extendClaim(@NotNull FabricCommandSender sender, @NotNull String @NotNull [] args)
+    {
+        ServerPlayer player = sender.requirePlayer();
+        if (player == null || !sender.checkPermission(FabricPermissionDefaults.EXTEND_CLAIM))
+        {
+            return true;
+        }
+        if (args.length != 1)
+        {
+            return false;
+        }
+
+        final int amount;
+        try
+        {
+            amount = Integer.parseInt(args[0]);
+        }
+        catch (NumberFormatException invalidAmount)
+        {
+            return false;
+        }
+        return this.tools.extendClaim(player, amount);
     }
 
     /**
@@ -629,6 +693,7 @@ final class FabricClaimCommands
         {
             if (sender.checkPermission(FabricPermissionDefaults.ADMIN_CLAIMS))
             {
+                this.tools.clearSelection(player);
                 this.modes.set(player.getUUID(), FabricClaimModes.Mode.ADMIN);
                 sender.send(TextMode.SUCCESS, MessageKey.ADMIN_CLAIMS_MODE);
             }

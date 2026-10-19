@@ -735,6 +735,32 @@ public final class FabricWorldProtection
         return this.settings.world().appliesTo(this.claims.worldKey(level));
     }
 
+    /**
+     * Paper's {@code RaidTriggerEvent} rule: build trust is required in the raid's village claim;
+     * when no claim covers the raid center, the player must have build trust where they stand.
+     */
+    public static boolean mayTriggerRaid(@NotNull ServerPlayer player, @NotNull BlockPos raidCenter)
+    {
+        FabricWorldProtection protection = active;
+        if (protection == null || !protection.settings.raidTriggersRequireBuildTrust())
+        {
+            return true;
+        }
+
+        ServerLevel level = (ServerLevel) player.level();
+        if (!protection.applies(level))
+        {
+            return true;
+        }
+
+        ClaimSnapshot claim = protection.claims.findClaimAt(level, raidCenter);
+        if (claim == null)
+        {
+            claim = protection.claims.findClaimAt(level, player.blockPosition());
+        }
+        return claim == null || protection.claims.allows(claim, player, ClaimTrustLevel.BUILD);
+    }
+
     private @NotNull ClaimLookup lookup(@NotNull ServerLevel level)
     {
         FabricClaimRepository repository = this.claims;

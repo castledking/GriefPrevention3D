@@ -73,8 +73,8 @@ class ScrollResizeGeometryTest {
     @Test
     void a3DCornerAddsTheTopOrBottom() {
         int[] bounds = {0, 70, 0, 5, 80, 5};
-        assertEquals(EnumSet.of(Face.WEST, Face.SOUTH, Face.UP), ScrollResizeGeometry.cornerFaces(bounds, 0, 80, 5, true));
-        assertEquals(EnumSet.of(Face.EAST, Face.NORTH, Face.DOWN), ScrollResizeGeometry.cornerFaces(bounds, 5, 70, 0, true));
+        assertEquals(EnumSet.of(Face.WEST, Face.SOUTH, Face.DOWN, Face.UP), ScrollResizeGeometry.cornerFaces(bounds, 0, 80, 5, true));
+        assertEquals(EnumSet.of(Face.EAST, Face.NORTH, Face.DOWN, Face.UP), ScrollResizeGeometry.cornerFaces(bounds, 5, 70, 0, true));
     }
 
     @Test
@@ -173,7 +173,7 @@ class ScrollResizeGeometryTest {
     @Test
     void aOneBlockThickClaimKeepsBothSidesOfThatAxisAtItsCorners() {
         int[] bounds = {3, 70, 0, 3, 80, 10};
-        assertEquals(EnumSet.of(Face.WEST, Face.EAST, Face.NORTH, Face.UP),
+        assertEquals(EnumSet.of(Face.WEST, Face.EAST, Face.NORTH, Face.DOWN, Face.UP),
                 ScrollResizeGeometry.cornerFaces(bounds, 3, 80, 0, true));
     }
 
@@ -208,6 +208,24 @@ class ScrollResizeGeometryTest {
         Face face = ScrollResizeGeometry.rayFace(5.5, 72.6, 5.5, 0.05, -0.99, 0.05, bounds, true);
 
         assertEquals(Face.UP, face);
+    }
+
+    @Test
+    void aimingAtTheGroundSelectsAndResizesTheBottomBoundary() {
+        int[] bounds = {5, 60, 5, 10, 69, 10};
+        EnumSet<Face> allowed = ScrollResizeGeometry.cornerFaces(bounds, 5, 69, 5, true);
+
+        // The ray enters this subdivision through its top, but the steep downward aim selects its bottom boundary.
+        assertEquals(Face.UP, ScrollResizeGeometry.rayFace(7.5, 72.6, 7.5, 0.05, -0.99, 0.05, bounds, true));
+        Face face = ScrollResizeGeometry.targetFace(
+                7.5, 72.6, 7.5, 0.05, -0.99, 0.05, bounds, true, allowed);
+        assertEquals(Face.DOWN, face);
+
+        double facing = ScrollResizeGeometry.facing(face, 0.05, -0.99, 0.05);
+        int[] pushedAway = ScrollResizeGeometry.step(bounds, face, ScrollResizeGeometry.directedStep(1, facing));
+        int[] pulledToward = ScrollResizeGeometry.step(bounds, face, ScrollResizeGeometry.directedStep(-1, facing));
+        assertArrayEquals(new int[] {5, 59, 5, 10, 69, 10}, pushedAway);
+        assertArrayEquals(new int[] {5, 61, 5, 10, 69, 10}, pulledToward);
     }
 
     @Test

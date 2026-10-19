@@ -23,6 +23,7 @@ public final class ClaimToolSettings
     private final boolean visualizationGlow;
     private final @NotNull Map<String, ClaimWorldMode> worldModes;
     private final boolean allow3DSubdivisions;
+    private final @NotNull ShapedClaimSettings shaped;
 
     public ClaimToolSettings(
             @NotNull String investigationTool,
@@ -31,7 +32,8 @@ public final class ClaimToolSettings
             int minimumArea,
             boolean visualizationGlow,
             @NotNull Map<String, ClaimWorldMode> worldModes,
-            boolean allow3DSubdivisions)
+            boolean allow3DSubdivisions,
+            @NotNull ShapedClaimSettings shaped)
     {
         this.investigationTool = investigationTool;
         this.modificationTool = modificationTool;
@@ -40,6 +42,7 @@ public final class ClaimToolSettings
         this.visualizationGlow = visualizationGlow;
         this.worldModes = Collections.unmodifiableMap(new LinkedHashMap<>(worldModes));
         this.allow3DSubdivisions = allow3DSubdivisions;
+        this.shaped = shaped;
     }
 
     public static @NotNull ClaimToolSettings upstreamDefaults()
@@ -51,7 +54,8 @@ public final class ClaimToolSettings
                 DEFAULT_MINIMUM_AREA,
                 false,
                 Collections.<String, ClaimWorldMode>emptyMap(),
-                true
+                true,
+                ShapedClaimSettings.upstreamDefaults()
         );
     }
 
@@ -59,6 +63,12 @@ public final class ClaimToolSettings
     public boolean allow3DSubdivisions()
     {
         return this.allow3DSubdivisions;
+    }
+
+    /** @return the shaped-claim switches and minimums */
+    public @NotNull ShapedClaimSettings shaped()
+    {
+        return this.shaped;
     }
 
     /**

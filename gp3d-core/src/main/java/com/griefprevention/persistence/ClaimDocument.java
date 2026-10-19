@@ -115,7 +115,9 @@ public final class ClaimDocument
         return new ClaimDocument(
                 snapshot,
                 ClaimTrustSnapshot.empty(snapshot.ownerId()),
-                Collections.<OrthogonalPoint2i>emptyList(),
+                snapshot.bounds().isShaped()
+                        ? snapshot.bounds().polygon().corners()
+                        : Collections.<OrthogonalPoint2i>emptyList(),
                 false,
                 false,
                 false,

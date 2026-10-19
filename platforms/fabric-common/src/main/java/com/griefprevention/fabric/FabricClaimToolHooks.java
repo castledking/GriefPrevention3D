@@ -3,6 +3,22 @@ package com.griefprevention.fabric;
 import com.griefprevention.claims.ClaimBounds;
 import com.griefprevention.claims.ClaimSnapshot;
 import com.griefprevention.claims.ClaimTrustLevel;
+import com.griefprevention.claims.editor.ClaimEditIntent;
+import com.griefprevention.claims.editor.ClaimEditIntentType;
+import com.griefprevention.claims.editor.ClaimEditPreview;
+import com.griefprevention.claims.editor.ClaimEditSource;
+import com.griefprevention.claims.editor.ClaimEditTarget;
+import com.griefprevention.claims.editor.ClaimEditTargetType;
+import com.griefprevention.claims.editor.ClaimEditor;
+import com.griefprevention.claims.editor.ClaimEditorMode;
+import com.griefprevention.claims.editor.ClaimEditorSession;
+import com.griefprevention.claims.editor.ClaimEditorSkeleton;
+import com.griefprevention.claims.editor.ClaimExtension;
+import com.griefprevention.claims.editor.ShapedPathDraft;
+import com.griefprevention.geometry.OrthogonalDirection;
+import com.griefprevention.geometry.OrthogonalEdge2i;
+import com.griefprevention.geometry.OrthogonalPoint2i;
+import com.griefprevention.geometry.OrthogonalPolygon;
 import com.griefprevention.fabric.FabricDenialFeedback.TextMode;
 import com.griefprevention.messages.MessageKey;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
@@ -28,6 +44,7 @@ import org.slf4j.Logger;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -58,7 +75,9 @@ final class FabricClaimToolHooks
     private final FabricLastSeenStore lastSeen;
     private final FabricClaimResizer resizer;
     private final Logger logger;
+    private final ClaimEditor editor = new ClaimEditorSkeleton();
     private final Map<UUID, ClaimToolSession> sessions = new HashMap<>();
+    private final Map<UUID, ClaimEditorSession> editorSessions = new HashMap<>();
     /** Server tick at which each player last took the modification tool in hand. */
     private final Map<UUID, Long> modificationToolEquippedAt = new HashMap<>();
     private long tick;
@@ -92,6 +111,7 @@ final class FabricClaimToolHooks
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
             UUID playerId = handler.getPlayer().getUUID();
             this.sessions.remove(playerId);
+            this.editorSessions.remove(playerId);
             this.modificationToolEquippedAt.remove(playerId);
         });
     }
@@ -290,6 +310,12 @@ final class FabricClaimToolHooks
             return;
         }
 
+        if (this.modes.mode(player.getUUID()) == FabricClaimModes.Mode.SHAPED)
+        {
+            modifyShaped(player, level, clicked);
+            return;
+        }
+
         ClaimToolSession session = this.sessions.get(player.getUUID());
         if (session != null && !session.worldKey.equals(this.claims.worldKey(level)))
         {
@@ -430,6 +456,378 @@ final class FabricClaimToolHooks
         }
     }
 
+    /**
+     * Draws a shaped claim with the shared orthogonal editor. Right-click corners in order, then
+     * click the first corner again to close the outline. Clicking an existing 2D claim boundary
+     * starts a reshape instead.
+     */
+    private void modifyShaped(
+            @NotNull ServerPlayer player,
+            @NotNull ServerLevel level,
+            @NotNull BlockPos clicked)
+    {
+        if (!this.settings.tools().shaped().allowShapedClaims())
+        {
+            this.feedback.sendError(player, MessageKey.SHAPED_CLAIMS_DISABLED);
+            this.editorSessions.remove(player.getUUID());
+            return;
+        }
+
+        ClaimEditorSession session = this.editorSessions.get(player.getUUID());
+        if (session != null && session.openPath() != null)
+        {
+            Long targetId = session.activeTarget() == null ? null : session.activeTarget().claimId();
+            ClaimSnapshot target = targetId == null ? null : this.claims.claimById(targetId);
+            if (targetId != null && (target == null || !target.worldKey().equals(this.claims.worldKey(level))))
+            {
+                this.editorSessions.remove(player.getUUID());
+                this.visualization.clear(player);
+                this.feedback.sendError(player, MessageKey.SCROLL_RESIZE_CLAIM_GONE);
+                return;
+            }
+            addShapedCorner(player, level, session, target, clicked);
+            return;
+        }
+
+        ClaimSnapshot claim = this.claims.findClaimAt(level, clicked);
+        if (claim == null)
+        {
+            if (this.claims.hasReachedClaimCountLimit(player))
+            {
+                this.visualization.clear(player);
+                this.feedback.sendError(player, MessageKey.CLAIM_CREATION_FAILED_OVER_CLAIM_COUNT_LIMIT);
+                return;
+            }
+            session = ClaimEditorSession.idle(player.getUUID())
+                    .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.TOOL)
+                    .withTarget(new ClaimEditTarget(ClaimEditTargetType.NEW_PARENT_CLAIM, null));
+            addShapedCorner(player, level, session, null, clicked);
+            return;
+        }
+
+        if (!canModify(player, claim))
+        {
+            this.feedback.sendError(player, MessageKey.NOT_YOUR_CLAIM);
+            this.visualization.visualizeConflictBounds(player, level, claim.bounds(), clicked);
+            return;
+        }
+        if (claim.parentId() != null && !this.settings.tools().shaped().allowShapedSubdivisions())
+        {
+            this.feedback.sendError(player, MessageKey.SHAPED_SUB_CLAIMS_DISABLED);
+            this.visualization.visualizeClaim(player, level, claim, clicked);
+            return;
+        }
+        if (claim.threeDimensional())
+        {
+            this.feedback.sendError(player, MessageKey.SHAPED_CLAIMS_2D_ONLY);
+            this.visualization.visualizeClaim(player, level, claim, clicked);
+            return;
+        }
+
+        ClaimBounds bounds = claim.bounds();
+        OrthogonalPolygon polygon = bounds.isShaped()
+                ? bounds.polygon()
+                : OrthogonalPolygon.fromRectangle(bounds.minX(), bounds.minZ(), bounds.maxX(), bounds.maxZ());
+        ClaimEditTargetType targetType = claim.parentId() == null
+                ? ClaimEditTargetType.EXISTING_PARENT_CLAIM
+                : ClaimEditTargetType.EXISTING_SUBDIVISION_CLAIM;
+        session = ClaimEditorSession.idle(player.getUUID())
+                .withMode(ClaimEditorMode.SHAPED, ClaimEditSource.TOOL)
+                .withTarget(new ClaimEditTarget(targetType, claim.id()))
+                .withPreview(new ClaimEditPreview(
+                        polygon, null, Collections.emptyList(), null, Collections.emptyList(),
+                        Collections.emptyList(), Collections.emptyList()));
+        addShapedCorner(player, level, session, claim, clicked);
+    }
+
+    private void addShapedCorner(
+            @NotNull ServerPlayer player,
+            @NotNull ServerLevel level,
+            @NotNull ClaimEditorSession session,
+            @Nullable ClaimSnapshot target,
+            @NotNull BlockPos clicked)
+    {
+        ClaimEditIntent intent = new ClaimEditIntent(
+                ClaimEditIntentType.ADD_CORNER,
+                ClaimEditSource.TOOL,
+                null,
+                session.activeTarget() == null ? null : session.activeTarget().claimId(),
+                new OrthogonalPoint2i(clicked.getX(), clicked.getZ()),
+                null,
+                true,
+                Collections.emptyList());
+        com.griefprevention.claims.editor.ClaimEditResult result = this.editor.apply(session, intent);
+        this.editorSessions.put(player.getUUID(), result.session());
+
+        if (!result.success())
+        {
+            for (String message : result.messages())
+            {
+                this.feedback.sendText(player, TextMode.ERROR, message);
+            }
+            visualizeShapedDraft(player, level, result.session(), target, clicked.getY());
+            return;
+        }
+
+        ShapedPathDraft path = result.session().openPath();
+        if (path == null)
+        {
+            return;
+        }
+        if (result.preview().polygon() != null && path.closureReady())
+        {
+            commitShapedEdit(player, level, result.session(), target, result.preview().polygon(), clicked);
+            return;
+        }
+
+        for (String message : result.messages())
+        {
+            this.feedback.send(player, TextMode.INSTRUCTION, MessageKey.SHAPED_CLAIM_EDIT_MESSAGE, message);
+        }
+        visualizeShapedDraft(player, level, result.session(), target, clicked.getY());
+    }
+
+    private void commitShapedEdit(
+            @NotNull ServerPlayer player,
+            @NotNull ServerLevel level,
+            @NotNull ClaimEditorSession session,
+            @Nullable ClaimSnapshot target,
+            @NotNull OrthogonalPolygon polygon,
+            @NotNull BlockPos clicked)
+    {
+        ClaimEditTarget editTarget = session.activeTarget();
+        if (editTarget == null || editTarget.type() == ClaimEditTargetType.NEW_PARENT_CLAIM)
+        {
+            if (this.claims.hasReachedClaimCountLimit(player))
+            {
+                this.feedback.sendError(player, MessageKey.CLAIM_CREATION_FAILED_OVER_CLAIM_COUNT_LIMIT);
+                visualizeShapedDraft(player, level, session, null, clicked.getY());
+                return;
+            }
+
+            com.griefprevention.claims.ShapedClaimSettings.Shortfall shortfall =
+                    this.settings.tools().shaped().creationShortfall(
+                            polygon,
+                            this.settings.tools().minimumWidth(),
+                            this.settings.tools().minimumArea());
+            if (shortfall != null)
+            {
+                sendShapedShortfall(player, shortfall);
+                visualizeShapedDraft(player, level, session, null, clicked.getY());
+                return;
+            }
+
+            try
+            {
+                FabricClaimRepository.CreateClaimResult created = this.claims.createClaim(
+                        this.claims.worldKey(level),
+                        ClaimBounds.shaped(polygon, level.getMinY(), level.getMaxY()),
+                        player.getUUID(),
+                        player);
+                if (created.hasReachedClaimCountLimit())
+                {
+                    this.feedback.sendError(player, MessageKey.CLAIM_CREATION_FAILED_OVER_CLAIM_COUNT_LIMIT);
+                    return;
+                }
+                if (created.hasInsufficientClaimBlocks())
+                {
+                    this.feedback.sendError(player, MessageKey.CREATE_CLAIM_INSUFFICIENT_BLOCKS,
+                            String.valueOf(created.blocksNeeded()));
+                    visualizeShapedDraft(player, level, session, null, clicked.getY());
+                    return;
+                }
+                ClaimSnapshot claim = created.createdClaim();
+                if (claim == null)
+                {
+                    ClaimSnapshot overlapping = created.overlappingClaim();
+                    this.feedback.sendError(player, MessageKey.CREATE_CLAIM_FAIL_OVERLAP_SHORT);
+                    this.visualization.visualizeConflictBounds(
+                            player, level, overlapping == null ? ClaimBounds.shaped(polygon, level.getMinY(), level.getMaxY())
+                                    : overlapping.bounds(), clicked);
+                    return;
+                }
+
+                this.feedback.send(player, TextMode.SUCCESS, MessageKey.SHAPED_CLAIM_SUCCESS);
+                this.editorSessions.put(player.getUUID(), completedShapedSession(session, claim, polygon));
+                this.visualization.visualizeClaim(player, level, claim, clicked);
+            }
+            catch (IOException exception)
+            {
+                player.sendSystemMessage(Component.literal("Could not save shaped claim: " + exception.getMessage()), true);
+                visualizeShapedDraft(player, level, session, null, clicked.getY());
+            }
+            return;
+        }
+
+        Long claimId = editTarget.claimId();
+        ClaimSnapshot existing = claimId == null ? target : this.claims.claimById(claimId);
+        if (existing == null)
+        {
+            this.editorSessions.remove(player.getUUID());
+            this.feedback.sendError(player, MessageKey.SCROLL_RESIZE_CLAIM_GONE);
+            this.visualization.clear(player);
+            return;
+        }
+        if (!canModify(player, existing) || existing.threeDimensional())
+        {
+            this.feedback.sendError(player, existing.threeDimensional()
+                    ? MessageKey.SHAPED_CLAIMS_2D_ONLY : MessageKey.NOT_YOUR_CLAIM);
+            visualizeShapedDraft(player, level, session, existing, clicked.getY());
+            return;
+        }
+
+        if (existing.parentId() == null
+                && !existing.adminClaim()
+                && !this.claims.hasPermission(player, FabricPermissionDefaults.ADMIN_CLAIMS))
+        {
+            com.griefprevention.claims.ShapedClaimSettings.Shortfall shortfall =
+                    this.settings.tools().shaped().resizeShortfall(
+                            polygon,
+                            this.settings.tools().minimumWidth(),
+                            this.settings.tools().minimumArea(),
+                            existing.bounds().area());
+            if (shortfall != null)
+            {
+                sendShapedShortfall(player, shortfall);
+                visualizeShapedDraft(player, level, session, existing, clicked.getY());
+                return;
+            }
+        }
+
+        try
+        {
+            FabricClaimRepository.UpdateClaimResult updated = this.claims.updateClaimBounds(
+                    claimId == null ? existing.id() : claimId,
+                    ClaimBounds.shaped(polygon, existing.bounds().minY(), existing.bounds().maxY()),
+                    player);
+            if (updated.isMissing())
+            {
+                this.editorSessions.remove(player.getUUID());
+                this.feedback.sendError(player, MessageKey.SCROLL_RESIZE_CLAIM_GONE);
+                this.visualization.clear(player);
+                return;
+            }
+            if (updated.hasInsufficientClaimBlocks())
+            {
+                this.feedback.sendError(player, MessageKey.RESIZE_NEED_MORE_BLOCKS,
+                        String.valueOf(updated.blocksNeeded()));
+                visualizeShapedDraft(player, level, session, existing, clicked.getY());
+                return;
+            }
+            if (updated.placementProblem() != null)
+            {
+                MessageKey message = switch (updated.placementProblem())
+                {
+                    case OUTSIDE_PARENT -> MessageKey.RESIZE_FAIL_SUBDIVISION_EXCEEDS_PARENT;
+                    case OVERLAPS_SIBLING -> MessageKey.CREATE_SUBDIVISION_OVERLAP;
+                    case EXCLUDES_SUBDIVISION -> MessageKey.RESIZE_FAIL_SUBDIVISION;
+                };
+                this.feedback.sendError(player, message);
+                ClaimSnapshot conflicting = updated.overlappingClaim();
+                this.visualization.visualizeConflictBounds(player, level,
+                        conflicting == null ? ClaimBounds.shaped(polygon, existing.bounds().minY(), existing.bounds().maxY())
+                                : conflicting.bounds(), clicked);
+                return;
+            }
+            ClaimSnapshot resized = updated.updatedClaim();
+            if (resized == null)
+            {
+                ClaimSnapshot overlapping = updated.overlappingClaim();
+                this.feedback.sendError(player, MessageKey.CREATE_CLAIM_FAIL_OVERLAP_SHORT);
+                this.visualization.visualizeConflictBounds(player, level,
+                        overlapping == null ? ClaimBounds.shaped(polygon, existing.bounds().minY(), existing.bounds().maxY())
+                                : overlapping.bounds(), clicked);
+                return;
+            }
+
+            Integer remaining = updated.remainingBlocks();
+            if (remaining == null)
+            {
+                try
+                {
+                    remaining = this.claims.claimBlockBalance(player.getUUID()).remaining();
+                }
+                catch (IOException ignored)
+                {
+                    // The shape was saved; omitting the optional remaining-balance suffix is safe.
+                }
+            }
+            if (remaining == null)
+            {
+                this.feedback.send(player, TextMode.SUCCESS, MessageKey.SHAPED_CLAIM_RESIZED);
+            }
+            else
+            {
+                this.feedback.send(player, TextMode.SUCCESS, MessageKey.CLAIM_RESIZE_SUCCESS,
+                        String.valueOf(remaining));
+            }
+            this.editorSessions.put(player.getUUID(), completedShapedSession(session, resized, polygon));
+            this.visualization.visualizeClaim(player, level, resized, clicked);
+        }
+        catch (IOException exception)
+        {
+            player.sendSystemMessage(Component.literal("Could not save shaped claim: " + exception.getMessage()), true);
+            visualizeShapedDraft(player, level, session, existing, clicked.getY());
+        }
+    }
+
+    private void sendShapedShortfall(
+            @NotNull ServerPlayer player,
+            @NotNull com.griefprevention.claims.ShapedClaimSettings.Shortfall shortfall)
+    {
+        if (shortfall.rule() == com.griefprevention.claims.ShapedClaimSettings.Shortfall.Rule.TOO_NARROW)
+        {
+            this.feedback.sendError(player, MessageKey.NEW_CLAIM_TOO_NARROW, String.valueOf(shortfall.minimum()));
+        }
+        else
+        {
+            this.feedback.sendError(player, MessageKey.RESIZE_CLAIM_INSUFFICIENT_AREA,
+                    String.valueOf(shortfall.minimum()));
+        }
+    }
+
+    private void visualizeShapedDraft(
+            @NotNull ServerPlayer player,
+            @NotNull ServerLevel level,
+            @NotNull ClaimEditorSession session,
+            @Nullable ClaimSnapshot target,
+            int y)
+    {
+        List<OrthogonalPoint2i> points = session.openPath() == null
+                ? Collections.emptyList()
+                : session.openPath().points();
+        if (points.isEmpty())
+        {
+            if (target == null)
+            {
+                this.visualization.clear(player);
+            }
+            else
+            {
+                this.visualization.visualizeClaim(player, level, target, player.blockPosition());
+            }
+            return;
+        }
+        Long baseClaimId = session.activeTarget() == null ? null : session.activeTarget().claimId();
+        this.visualization.visualizeShapedDraft(player, level, baseClaimId, points, y);
+    }
+
+    private static @NotNull ClaimEditorSession completedShapedSession(
+            @NotNull ClaimEditorSession session,
+            @NotNull ClaimSnapshot claim,
+            @NotNull OrthogonalPolygon polygon)
+    {
+        ClaimEditTargetType targetType = claim.parentId() == null
+                ? ClaimEditTargetType.EXISTING_PARENT_CLAIM
+                : ClaimEditTargetType.EXISTING_SUBDIVISION_CLAIM;
+        return session
+                .withTarget(new ClaimEditTarget(targetType, claim.id()))
+                .withOpenPath(null)
+                .withPreview(new ClaimEditPreview(
+                        polygon, session.activeSegment(), Collections.emptyList(), null, Collections.emptyList(),
+                        Collections.emptyList(), Collections.emptyList()));
+    }
+
     private void startSubdivision(
             @NotNull ServerPlayer player,
             @NotNull ServerLevel level,
@@ -555,10 +953,179 @@ final class FabricClaimToolHooks
         return new SelectedCorner(session.claimId, session.firstCorner);
     }
 
+    /** The nib-selected claim, or the most specific claim at the player's current block. */
+    @Nullable ClaimSnapshot selectedOrCurrentClaim(@NotNull ServerPlayer player)
+    {
+        SelectedCorner selection = selectedCorner(player);
+        if (selection != null)
+        {
+            return this.claims.claimById(selection.claimId());
+        }
+        ClaimSnapshot current = this.claims.findClaimAt((ServerLevel) player.level(), player.blockPosition());
+        if (current != null)
+        {
+            return current;
+        }
+        ClaimEditorSession editSession = this.editorSessions.get(player.getUUID());
+        Long editClaimId = editSession == null || editSession.openPath() != null
+                || editSession.activeTarget() == null ? null : editSession.activeTarget().claimId();
+        return editClaimId == null ? null : this.claims.claimById(editClaimId);
+    }
+
+    /** Applies the shared {@code /extendclaim} geometry to the nib-selected or current claim. */
+    boolean extendClaim(@NotNull ServerPlayer player, int amount)
+    {
+        ServerLevel level = (ServerLevel) player.level();
+        if (!this.settings.tools().claimsEnabled(this.claims.worldKey(level)))
+        {
+            this.feedback.sendError(player, MessageKey.CLAIMS_DISABLED_WORLD);
+            return true;
+        }
+        if (!player.getAbilities().instabuild
+                && !this.settings.isModificationTool(player.getMainHandItem())
+                && !this.claims.hasPermission(player, FabricPermissionDefaults.EXTEND_CLAIM_TOOLBYPASS))
+        {
+            this.feedback.sendError(player, MessageKey.MUST_HOLD_MODIFICATION_TOOL_FOR_THAT);
+            return true;
+        }
+
+        ClaimSnapshot claim = selectedOrCurrentClaim(player);
+        if (claim == null || claim.id() == null)
+        {
+            this.feedback.sendError(player, MessageKey.STAND_IN_CLAIM_TO_RESIZE);
+            return true;
+        }
+        if (!canModify(player, claim))
+        {
+            this.feedback.sendError(player, MessageKey.NOT_YOUR_CLAIM);
+            return true;
+        }
+
+        if (claim.bounds().isShaped())
+        {
+            return extendShapedClaim(player, level, claim, amount);
+        }
+
+        Vec3 view = player.getViewVector(1.0F);
+        ClaimExtension.RectangleExtension extension = ClaimExtension.extendRectangle(
+                claim.bounds(),
+                claim.threeDimensional(),
+                view.x,
+                view.y,
+                view.z,
+                amount);
+        if (extension.outcome() == ClaimExtension.Outcome.ALREADY_REACHES_SKY)
+        {
+            this.feedback.send(player, TextMode.INFO, MessageKey.CLAIMS_EXTEND_TO_SKY);
+            return true;
+        }
+        if (extension.outcome() == ClaimExtension.Outcome.EXTENDS_DOWNWARD_BY_ITSELF)
+        {
+            this.feedback.send(player, TextMode.INFO, MessageKey.CLAIMS_AUTO_EXTEND_DOWNWARD);
+            return true;
+        }
+        if (extension.outcome() == ClaimExtension.Outcome.LIMIT_REACHED)
+        {
+            this.feedback.sendError(player, MessageKey.CLAIMS_EXTEND_LIMIT);
+            return true;
+        }
+
+        ClaimBounds updated = extension.bounds();
+        if (claim.threeDimensional() && claim.parentId() != null)
+        {
+            ClaimSnapshot parent = this.claims.claimById(claim.parentId());
+            if (parent == null || updated.minY() < parent.bounds().minY()
+                    || updated.maxY() > parent.bounds().maxY())
+            {
+                this.feedback.sendError(player, MessageKey.RESIZE_FAIL_OVERLAP_SUBDIVISION);
+                return true;
+            }
+        }
+
+        this.resizer.resize(player, level, claim.id(), updated, player.blockPosition());
+        return true;
+    }
+
+    private boolean extendShapedClaim(
+            @NotNull ServerPlayer player,
+            @NotNull ServerLevel level,
+            @NotNull ClaimSnapshot claim,
+            int amount)
+    {
+        OrthogonalPolygon polygon = claim.bounds().polygon();
+        Vec3 view = player.getViewVector(1.0F);
+        Integer edgeIndex = ClaimExtension.facedSegment(
+                polygon, player.getX(), player.getZ(), view.x, view.z);
+        OrthogonalDirection direction = null;
+        if (edgeIndex != null)
+        {
+            OrthogonalEdge2i edge = polygon.edges().get(edgeIndex);
+            direction = ClaimExtension.expansionDirection(edge, view.x, view.z);
+        }
+        else
+        {
+            ClaimEditorSession previous = this.editorSessions.get(player.getUUID());
+            if (previous != null
+                    && previous.activeTarget() != null
+                    && claim.id().equals(previous.activeTarget().claimId())
+                    && previous.preview().polygon() != null
+                    && previous.preview().polygon().corners().equals(polygon.corners())
+                    && previous.activeSegment() != null
+                    && previous.activeSegment().edgeIndex() >= 0
+                    && previous.activeSegment().edgeIndex() < polygon.edges().size())
+            {
+                edgeIndex = previous.activeSegment().edgeIndex();
+                direction = previous.activeSegment().outwardDirection();
+            }
+        }
+        if (edgeIndex == null)
+        {
+            this.feedback.sendText(player, TextMode.ERROR,
+                    "Stand inside the shaped section you want to expand and face its boundary.");
+            return true;
+        }
+
+        com.griefprevention.claims.editor.ClaimEditResult result = ClaimExtension.expandSegment(
+                player.getUUID(),
+                claim.id(),
+                claim.parentId() != null,
+                polygon,
+                edgeIndex,
+                direction,
+                amount);
+        if (!result.success() || result.preview().polygon() == null)
+        {
+            for (String message : result.messages())
+            {
+                this.feedback.sendText(player, TextMode.ERROR, message);
+            }
+            return true;
+        }
+
+        ClaimBounds updated = ClaimBounds.shaped(
+                result.preview().polygon(), claim.bounds().minY(), claim.bounds().maxY());
+        boolean finished = this.resizer.resize(player, level, claim.id(), updated, player.blockPosition());
+        if (finished)
+        {
+            ClaimSnapshot saved = this.claims.claimById(claim.id());
+            if (saved != null && saved.bounds().isShaped())
+            {
+                this.editorSessions.put(player.getUUID(), completedShapedSession(result.session(), saved,
+                        saved.bounds().polygon()));
+            }
+            else
+            {
+                this.editorSessions.remove(player.getUUID());
+            }
+        }
+        return true;
+    }
+
     /** Drops a half-made claim, subdivision or resize, as starting {@code /scrollresize} does on Paper. */
     void clearSelection(@NotNull ServerPlayer player)
     {
         this.sessions.remove(player.getUUID());
+        this.editorSessions.remove(player.getUUID());
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -583,6 +1150,7 @@ final class FabricClaimToolHooks
                 {
                     this.modificationToolEquippedAt.remove(playerId);
                     this.sessions.remove(playerId);
+                    this.editorSessions.remove(playerId);
                 }
                 continue;
             }
@@ -601,6 +1169,7 @@ final class FabricClaimToolHooks
     private void onModificationToolEquipped(@NotNull ServerPlayer player)
     {
         this.sessions.remove(player.getUUID());
+        this.editorSessions.remove(player.getUUID());
         try
         {
             int remaining = this.claims.claimBlockBalance(player.getUUID()).remaining();
@@ -638,12 +1207,29 @@ final class FabricClaimToolHooks
             @NotNull ServerLevel level,
             @Nullable BlockPos clicked)
     {
-        if (this.sessions.containsKey(player.getUUID()))
+        ClaimEditorSession editorSession = this.editorSessions.get(player.getUUID());
+        if (this.sessions.containsKey(player.getUUID())
+                || editorSession != null && editorSession.openPath() != null)
         {
             return null;
         }
 
         Vec3 eye = player.getEyePosition();
+        // Block interactions are resolved against a hit shape, while the helper selects block
+        // centers, so one extra block keeps normal vanilla targets authoritative at the edge.
+        double vanillaReach = player.blockInteractionRange() + 1.0D;
+        // A vanilla block click is authoritative at normal reach. Letting the longer helper
+        // raycast replace it can select a 3D subdivision corner, then the companion item-use
+        // event can treat the same click's ordinary block target as the resize's second corner.
+        if (clicked != null)
+        {
+            Vec3 clickedCenter = Vec3.atCenterOf(clicked);
+            if (eye.distanceToSqr(clickedCenter) <= vanillaReach * vanillaReach)
+            {
+                return null;
+            }
+        }
+
         Vec3 view = player.getViewVector(1.0F);
         Vec3 far = eye.add(view.scale(TOOL_REACH));
         String worldKey = this.claims.worldKey(level);
@@ -665,7 +1251,12 @@ final class FabricClaimToolHooks
                 TOOL_REACH,
                 level.getMinY(),
                 level.getMaxY());
-        if (corner == null || !CornerRaycast.beatsClickedBlock(eye, view, clicked, corner.distanceAlongView()))
+        // The helper exists for far-away corners only. A corner in vanilla reach can otherwise
+        // start a resize on an air click, then the nearby block click arrives as the second corner
+        // and applies the resize before the player intends it.
+        if (corner == null
+                || CornerRaycast.withinVanillaReach(eye, corner, vanillaReach)
+                || !CornerRaycast.beatsClickedBlock(eye, view, clicked, corner.distanceAlongView()))
         {
             return null;
         }

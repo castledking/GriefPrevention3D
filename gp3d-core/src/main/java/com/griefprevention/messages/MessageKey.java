@@ -332,7 +332,26 @@ public enum MessageKey
     SCROLL_RESIZE_CANCELLED("ScrollResizeCancelled", "Scroll resize cancelled."),
     SCROLL_RESIZE_TIMED_OUT("ScrollResizeTimedOut", "Scroll resize cancelled after a minute without scrolling."),
     SCROLL_RESIZE_UNCHANGED("ScrollResizeUnchanged", "Scroll resize closed without changes."),
-    SCROLL_RESIZE_CLAIM_GONE("ScrollResizeClaimGone", "That claim no longer exists.");
+    SCROLL_RESIZE_CLAIM_GONE("ScrollResizeClaimGone", "That claim no longer exists."),
+    SHAPED_CLAIMS_DISABLED("ShapedClaimsDisabled", "Shaped claims are disabled on this server."),
+    SHAPED_CLAIMS_MODE(
+            "ShapedClaimsMode",
+            "Shaped claim mode. Right-click to place corners in unclaimed land or to start and extend shaped edits from claim boundaries. Boundary clicks create segment markers as needed. Use /basicclaims to exit."),
+    SHAPED_CLAIM_EDIT_MESSAGE("ShapedClaimEditMessage", "{0}"),
+    SHAPED_CLAIM_SUCCESS("ShapedClaimSuccess", "Shaped claim created! Use /trust to share it with friends."),
+    SHAPED_CLAIM_RESIZED("ShapedClaimResized", "Shaped claim resized."),
+    SHAPED_CLAIMS_2D_ONLY("ShapedClaims2DOnly", "Shaped outlines can only be used on 2D claims."),
+    SHAPED_SUB_CLAIMS_DISABLED("ShapedSubClaimsDisabled", "Shaped subdivisions are disabled on this server."),
+    SHAPED_SUBDIVISION_NO_PARENT("ShapedSubdivisionNoParent", "Right-click inside a claim you can edit to start a shaped subdivision."),
+    SHAPED_SUBDIVISION_OUTSIDE_PARENT("ShapedSubdivisionOutsideParent", "Shaped subdivisions have to stay inside the claim you're subdividing."),
+    SHAPED_SUBDIVISION_ON_3D_CLAIM("ShapedSubdivisionOn3DClaim", "Shaped subdivisions only work inside top-level 2D claims."),
+    SHAPED_SUBDIVISION_SUCCESS("ShapedSubdivisionSuccess", "Shaped subdivision created."),
+    MUST_HOLD_MODIFICATION_TOOL_FOR_THAT("MustHoldModificationToolForThat", "You must be holding a golden shovel to do that."),
+    STAND_IN_CLAIM_TO_RESIZE("StandInClaimToResize", "Stand inside the land claim you want to resize."),
+    CLAIMS_EXTEND_TO_SKY("ClaimsExtendToSky", "Land claims always extend to max build height."),
+    CLAIMS_EXTEND_LIMIT("ClaimsExtendLimit", "That side cannot move any further."),
+    CLAIMS_AUTO_EXTEND_DOWNWARD("ClaimsAutoExtendDownward", "Land claims auto-extend deeper into the ground when you place blocks under them."),
+    SURVIVAL_BASICS_VIDEO_2("SurvivalBasicsVideo2", "Click for Land Claim Help: {0}");
 
     private final String key;
     private final String defaultValue;

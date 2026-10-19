@@ -41,6 +41,9 @@ final class FabricPermissionDefaults
     static final String ABANDON_TOP_LEVEL_CLAIM = "griefprevention.abandontoplevelclaim";
     static final String ABANDON_ALL_CLAIMS = "griefprevention.abandonallclaims";
     static final String BASIC_CLAIMS = "griefprevention.basicclaims";
+    static final String SHAPED_CLAIMS = "griefprevention.shapedclaims";
+    static final String EXTEND_CLAIM = "griefprevention.extendclaim";
+    static final String EXTEND_CLAIM_TOOLBYPASS = "griefprevention.extendclaim.toolbypass";
     static final String CREATE_CLAIMS = "griefprevention.createclaims";
     static final String CLAIM_PVP = "griefprevention.claimpvp";
     static final String CLAIM_EXPLOSIONS = "griefprevention.claimexplosions";
@@ -77,7 +80,8 @@ final class FabricPermissionDefaults
         for (String child : Arrays.asList(
                 TRUST, UNTRUST, TRUST_LIST, ACCESS_TRUST, CONTAINER_TRUST, MANAGE_TRUST, CLAIMS_LIST,
                 ABANDON_CLAIM, ABANDON_TOP_LEVEL_CLAIM, ABANDON_ALL_CLAIMS, BASIC_CLAIMS, CREATE_CLAIMS,
-                CLAIM_PVP, CLAIM_EXPLOSIONS, WITHER_EXPLOSIONS, GLOW, TRANSFER_CLAIM, SUBDIVIDE_CLAIMS,
+                CLAIM_PVP, CLAIM_EXPLOSIONS, WITHER_EXPLOSIONS, GLOW, TRANSFER_CLAIM, EXTEND_CLAIM,
+                SHAPED_CLAIMS, SUBDIVIDE_CLAIMS,
                 SUBDIVIDE_CLAIMS_3D, RESTRICT_SUBCLAIM, SCROLL_RESIZE, TRAPPED, CLAIM_ALERTS,
                 TOGGLE_CLAIM_ALERTS))
         {
@@ -94,6 +98,7 @@ final class FabricPermissionDefaults
         }
 
         node(PERMISSION_TRUST, Default.FALSE, ADMIN_CLAIMS);
+        node(EXTEND_CLAIM_TOOLBYPASS, Default.OP);
         node(ADMIN_CLAIMS_LIST, Default.OP, ADMIN_CLAIMS);
         node(DELETE_ALL_ADMIN_CLAIMS, Default.OP, ADMIN_CLAIMS);
         node(TRANSFER_CLAIM_FREE, Default.FALSE);

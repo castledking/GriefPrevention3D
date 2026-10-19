@@ -51,15 +51,39 @@ final class FabricClaimResizer
         // The minimum size is for claims; subdivisions may be any size, as on Paper.
         ClaimSnapshot resizing = this.claims.claimById(claimId);
         boolean subdivision = resizing != null && resizing.parentId() != null;
+        boolean minimumsBypassed = resizing != null && resizing.adminClaim()
+                || this.claims.hasPermission(player, FabricPermissionDefaults.ADMIN_CLAIMS);
         int minimumWidth = this.settings.tools().minimumWidth();
-        if (!subdivision && (bounds.xLength() < minimumWidth || bounds.zLength() < minimumWidth))
+        if (!subdivision && bounds.isShaped() && !minimumsBypassed)
+        {
+            com.griefprevention.claims.ShapedClaimSettings shaped = this.settings.tools().shaped();
+            int previousArea = resizing == null ? 0 : resizing.bounds().area();
+            com.griefprevention.claims.ShapedClaimSettings.Shortfall shortfall = shaped.resizeShortfall(
+                    bounds.polygon(), minimumWidth, this.settings.tools().minimumArea(), previousArea);
+            if (shortfall != null)
+            {
+                if (shortfall.rule() == com.griefprevention.claims.ShapedClaimSettings.Shortfall.Rule.TOO_NARROW)
+                {
+                    this.visualization.visualizeInitializeBounds(player, level, bounds, shownAt);
+                    this.feedback.sendError(player, MessageKey.RESIZE_CLAIM_TOO_NARROW,
+                            String.valueOf(shortfall.minimum()));
+                    return false;
+                }
+                this.visualization.visualizeInitializeBounds(player, level, bounds, shownAt);
+                this.feedback.sendError(player, MessageKey.RESIZE_CLAIM_INSUFFICIENT_AREA,
+                        String.valueOf(shortfall.minimum()));
+                return false;
+            }
+        }
+        else if (!subdivision && !bounds.isShaped()
+                && (bounds.xLength() < minimumWidth || bounds.zLength() < minimumWidth))
         {
             this.visualization.visualizeInitializeBounds(player, level, bounds, shownAt);
             this.feedback.sendError(player, MessageKey.RESIZE_CLAIM_TOO_NARROW, String.valueOf(minimumWidth));
             return false;
         }
         int minimumArea = this.settings.tools().minimumArea();
-        if (!subdivision && bounds.area() < minimumArea)
+        if (!subdivision && !bounds.isShaped() && bounds.area() < minimumArea)
         {
             this.visualization.visualizeInitializeBounds(player, level, bounds, shownAt);
             this.feedback.sendError(player, MessageKey.RESIZE_CLAIM_INSUFFICIENT_AREA, String.valueOf(minimumArea));
