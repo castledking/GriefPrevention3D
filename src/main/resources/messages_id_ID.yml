@@ -1,0 +1,409 @@
+# ============================================================
+# GriefPrevention - Pesan dalam Bahasa Indonesia
+# ============================================================
+# Untuk mengubah bahasa, salin berkas messages_XX.yml yang diinginkan
+# dari folder Lang/ ke GriefPreventionData/ dan ubah namanya menjadi:
+#   plugins/GriefPreventionData/messages.yml
+#
+# Plugin memuat pesan dalam urutan ini:
+#   1. messages.yml (berkas khusus atau berkas bahasa Anda)
+#   2. messages_{locale}.yml (berdasarkan GriefPrevention.Locale di config)
+#   3. messages_en.yml (fallback)
+#
+# Format: gunakan $ atau & untuk kod warna.
+# Baris baru: guna \n dalam pesan.
+# Placeholder PlaceholderAPI: %vault_eco_balance_fixed%, %player_name% semuanya berfungsi.
+# ============================================================
+
+Messages:
+  RespectingClaims: Sekarang menghormati klaim.
+  IgnoringClaims: Sekarang mengabaikan klaim.
+  NoCreativeUnClaim: Anda tidak bisa membatalkan klaim tanah ini. Anda hanya bisa memperbesarkan klaim ini atau membuat klaim tambahan.
+  SuccessfulAbandon: Klaim telah ditinggalkan. Anda sekarang memiliki {0} blok klaim yang tersedia.
+  TransferClaimPermission: Perintah itu memerlukan izin klaim administratif.
+  TransferClaimMissing: Tidak ada klaim di sini. Berdiri di dalam klaim administratif yang ingin anda pindahkan.
+  TransferClaimAdminOnly: Hanya klaim administratif bisa dipindahkan kepada pemain.
+  PlayerNotFound2: Tidak ada pemain dengan nama itu log masuk baru-baru ini.
+  TransferTopLevel: Hanya klaim peringkat atas (bukan subdivisi) bisa dipindahkan. Berdiri di luar subdivisi dan cuba lagi.
+  TransferSuccess: Klaim telah dipindahkan.
+  TransferClaimNotEnabled: "Memindahkan klaim kepada pemain lain tidak didayakan pada server ini."
+  TransferClaimNoClaim: "Tidak ada klaim di sini. Berdiri di dalam klaim yang anda mahu pindahkan."
+  TransferClaimSelf: "Anda sudah memiliki klaim ini."
+  TransferClaimRecipientNeedsBlocks: "{0} tidak memiliki blok klaim yang mencukupi untuk klaim ini. Mereka memerlukan {1} lagi."
+  TransferClaimRecipientAtLimit: "{0} sudah memiliki jumlah maksimum klaim yang dibenarkan."
+  ConfirmTransferClaimNoFee: "Adakah anda mahu memindahkan klaim ini kepada {0}?"
+  ConfirmTransferClaimWithFee: "Adakah anda mahu membayar {0} untuk memindahkan klaim ini kepada {1}?"
+  ConfirmTransferClaimInstruction: "Taip /transferclaim {0} confirm untuk mengesahkan."
+  TransferClaimSuccess: "Klaim telah dipindahkan kepada {0}."
+  TransferClaimSuccessWithFee: "Klaim telah dipindahkan kepada {0} dengan bayaran {1}."
+  TransferClaimReceived: "{0} telah memindahkan klaim mereka di {1} kepada anda."
+  ConvertClaimMissing: Tidak ada klaim di sini.  Berdiri di dalam klaim yang ingin anda tukar.
+  ConvertClaimAlreadyAdmin: Klaim ini sudah menjadi klaim administratif.
+  ConvertClaimAlreadyBasic: Klaim ini sudah menjadi klaim asas.
+  ConvertClaimAdminSuccess: Klaim telah ditukar menjadi klaim administratif.
+  ConvertClaimBasicSuccess: Klaim administratif telah ditukar menjadi klaim asas milik anda.
+  ConvertSubdivisionAdminSuccess: Subdivisi ditukar menjadi subdivisi administratif. Pemiliknya tidak lagi bisa mengubah ukurannya, mengelolakan kepercayaan di dalamnya, atau melepaskan klaim di sekelilingnya.
+  ConvertSubdivisionAlreadyAdmin: Subdivisi ini sudah menjadi subdivisi administratif.
+  ConvertSubdivisionAlreadyBasic: Subdivisi ini sudah menjadi subdivisi biasa.
+  ConvertSubdivisionBasicSuccess: Subdivisi administratif dikembalikan kepada subdivisi biasa.
+  ConvertSubdivisionSelectFirst: Klik kanan pada sudut subdivisi dengan sekop emas anda untuk memilihnya, kemudian jalankan perintah itu kembali.
+  AdminSubdivisionRestricted: Subdivisi itu dikelola oleh staf. Berbicaralah dengan staf jika anda memerlukan perubahan.
+  AbandonBlockedAdminSubdivision: "Anda tidak bisa melepaskan klaim ini: ia mengandung subdivisi pentadbir. Berbicaralah dengan staf."
+  TrustListNoClaim: Berdiri di dalam klaim yang ingin anda ketahui.
+  ClearPermsOwnerOnly: Hanya pemilik klaim bisa mengosongkan semua izin.
+  UntrustIndividualAllClaims: Akses {0} kepada SEMUA klaim anda telah dibatalkan. Untuk menetapkan izin bagi satu klaim saja, berdiri di dalamnya.
+  UntrustEveryoneAllClaims: Izin dalam SEMUA klaim anda telah dikosongkan. Untuk menetapkan izin bagi satu klaim saja, berdiri di dalamnya.
+  NoManageTrust: Anda tidak memiliki izin {0} untuk mengelola izin di sini.
+  ClearPermissionsOneClaim: Izin dalam klaim ini telah dikosongkan. Untuk menetapkan izin bagi SEMUA klaim anda, berdiri di luarnya.
+  UntrustIndividualSingleClaim: Akses {0} kepada klaim ini telah dibatalkan. Untuk menetapkan izin bagi SEMUA klaim anda, berdiri di luarnya.
+  AdminClaimsMode: Mod klaim administratif aktif. Sebarang klaim yang dibuat adalah gratis dan bisa diedit oleh pentadbir lain.
+  _3DAdminClaimsMode: 'Mod klaim administratif 3D aktif.  Sebarang klaim yang dibuat adalah gratis, terhad ketinggian, dan bisa diedit oleh pentadbir lain.'
+  BasicClaimsMode: Kembali ke mod penciptaan klaim asas.
+  ShapedClaimsMode: Mod klaim berbentuk. Klik kanan untuk meletakkan sudut pada tanah yang belum diklaim atau untuk memulai dan melanjutkan suntingan berbentuk dari sempadan klaim. Klik pada sempadan membuat penanda segmen menurut keperluan. Gunakan /basicclaims untuk keluar.
+  ShapedClaimsDisabled: Klaim berbentuk dilumpuhkan di server ini.
+  ShapedSubClaimsDisabled: Subdivisi berbentuk dilumpuhkan di server ini.
+  ScrollResizeStart: "Ukuran kembali gulir: lihat pada satu sisi, kemudian gulir ke atas untuk menolaknya menjauhi anda atau ke bawah untuk menariknya ke arah anda. Klik kanan untuk menggunakan; klik kiri atau jatuhkan (Q) untuk membatalkan."
+  ScrollResizeStartCorner: "Ukuran kembali gulir: lihat sepanjang satu sisi pada sudut yang anda pilih, kemudian gulir ke atas untuk menolaknya menjauhi anda atau ke bawah untuk menariknya ke arah anda. Klik kanan untuk menggunakan; klik kiri atau jatuhkan (Q) untuk membatalkan."
+  ScrollResizeNeedTool: "Pegang sekop emas untuk menggunakan ukuran kembali gulir."
+  ScrollResizeNoClaim: "Berdiri di dalam klaim, atau klik kanan salah satu sudutnya dengan sekop emas anda, kemudian gunakan /scrollresize."
+  ScrollResizeSize: "{0} x {1}"
+  ScrollResizeSize3D: "{0} x {1} x {2}"
+  ScrollResizeSizeShaped: "{0} blok"
+  ScrollResizeBlocksLeft: "{0} ({1} blok klaim tinggal)"
+  ScrollResizeConflict: "Garis luar itu bertindih dengan klaim lain atau tidak muat dalam kawasan induk atau subdivisinya. Gulir kembali atau klik kiri untuk membatalkan."
+  ScrollResizeNotEnoughBlocks: "Anda memerlukan {0} lagi blok klaim untuk itu. Gulir kembali atau klik kiri untuk membatalkan."
+  ScrollResizeLimit: "Sisi itu tidak bisa bergerak lagi."
+  ScrollResizeNoSegment: "Lihat pada satu sisi bahagian berbentuk tempat anda berdiri."
+  ScrollResizeCancelled: "Ukuran kembali gulir dibatalkan."
+  ScrollResizeTimedOut: "Ukuran kembali gulir dibatalkan selepas seminit tanpa menggulir."
+  ScrollResizeUnchanged: "Ukuran kembali gulir ditutup tanpa perubahan."
+  ScrollResizeClaimGone: "Klaim itu tidak ada lagi."
+  ShapedSubdivisionMode: Mod subdivisi berbentuk. Klik kanan di dalam salah satu klaim anda untuk meletakkan sudut, kemudian klik kembali sudut pertama anda untuk menutup subdivisi itu. Klik pada sempadan subdivisi berbentuk siap ada untuk membentuknya kembali. Gunakan /basicclaims untuk keluar.
+  ShapedSubdivisionNoParent: Klik kanan di dalam klaim yang anda bisa edit untuk memulai subdivisi berbentuk.
+  ShapedSubdivisionOn3DClaim: Subdivisi berbentuk hanya berfungsi di dalam klaim 2D peringkat tertinggi.
+  ShapedSubdivisionOutsideParent: Subdivisi berbentuk perlu kekal di dalam klaim yang anda sedang bahagikan.
+  ShapedSubdivisionReshaped: Subdivisi berbentuk dikemas sekarang.
+  ShapedSubdivisionSuccess: Subdivisi berbentuk dibuat.
+  MergeOverlapConflict: Tidak dapat digabungkan; penggabungan yang lengkap akan bertindih dengan klaim lain.
+  SubdivisionMode: Mod subdivisi. Gunakan sekop anda untuk membuat subdivisi dalam klaim siap ada anda. Gunakan /basicclaims untuk keluar.
+  SubdivisionMode3D: 'Mod subdivisi 3D.  Gunakan sekop anda untuk membuat subdivisi 3D dalam klaim siap ada anda.  Gunakan /basicclaims untuk keluar.'
+  SubdivisionVideo2: 'Klik untuk Bantuan Subdivisi: {0}'
+  DeleteClaimMissing: Tidak ada klaim di sini.
+  DeletionSubdivisionWarning: Klaim ini mengandung subdivisi. Jika anda pasti mahu memadamkannya, gunakan /deleteclaim sekali lagi.
+  DeleteSuccess: Klaim telah dihapus.
+  CantDeleteAdminClaim: Anda tidak memiliki izin untuk menghapus klaim administratif.
+  NoAdminClaimsPermission: Anda tidak memiliki izin untuk mengelola klaim administratif.
+  ClaimLabel: klaim
+  SubdivisionLabel: subdivisi
+  ConfirmPvpToggleEnabledNoFee: "Adakah anda mahu membolehkan PvP dalam {0} ini?"
+  ConfirmPvpToggleDisabledNoFee: "Adakah anda mahu melumpuhkan PvP dalam {0} ini?"
+  ConfirmPvpToggleEnabledWithFee: "Adakah anda mahu membayar {0} untuk membolehkan PvP dalam {1} ini?"
+  ConfirmPvpToggleDisabledWithFee: "Adakah anda mahu membayar {0} untuk melumpuhkan PvP dalam {1} ini?"
+  PvPToggleEnabled: "PvP dibolehkan dalam {0} ini."
+  PvPToggleDisabled: "PvP dilumpuhkan dalam {0} ini."
+  PvPToggleEnabledWithFee: "PvP dibolehkan dalam {0} ini untuk {1}."
+  PvPToggleDisabledWithFee: "PvP dilumpuhkan dalam {0} ini untuk {1}."
+  PvpToggleNotEnabled: "Perintah togol PvP tidak didayakan."
+  PvpToggleNotEnabledForClaimType: "PvP tidak bisa ditogol dalam jenis klaim ini."
+  NoPendingPvpToggle: "Tidak ada togol PvP yang belum selesai untuk disahkan."
+  PendingPvpToggleExpired: "Togol PvP anda yang belum selesai telah tamat tempoh. Silakan cuba lagi."
+  ConfirmPvpToggleInstruction: "Taip /claim pvp {0} confirm atau /claimpvpconfirm untuk mengesahkan."
+  PvpToggleUsage: "Penggunaan: /claim pvp [true|false|on|off] [confirm]"
+  PvpToggleAlreadyEnabled: "PvP sudah didayakan dalam {0} ini."
+  PvpToggleAlreadyDisabled: "PvP sudah dilumpuhkan dalam {0} ini."
+  DeleteAllSuccess: Semua klaim {0} telah dihapus.
+  NoDeletePermission: Anda tidak memiliki izin untuk menghapus klaim.
+  AllAdminDeleted: Semua klaim administratif telah dihapus.
+  AdjustBlocksSuccess: 'Blok klaim bonus {0} telah diselaraskan sebanyak {1}. Jumlah blok bonus baru: {2}.'
+  AdjustBlocksAllSuccess: Blok klaim bonus semua pemain dalam talian telah diselaraskan sebanyak {0}.
+  NotTrappedHere: Anda bisa membangun di sini. Selamatkan diri anda sendiri.
+  RescuePending: Jika anda kekal diam selama 10 saat, anda akan dipindahkan keluar. Silakan tunggu.
+  AbandonClaimMissing: Berdiri di dalam klaim yang ingin anda padam, atau pertimbangkan /abandonallclaims.
+  NotYourClaim: Ini bukan klaim anda.
+  DeleteTopLevelClaim: Untuk menghapus subdivisi, berdiri di dalamnya. Jika tidak, gunakan /abandontoplevelclaim untuk menghapus klaim ini dan semua subdivisinya.
+  AbandonSuccess: Klaim telah ditinggalkan. Anda sekarang memiliki {0} blok klaim yang tersedia.
+  ConfirmAbandonAllClaims: Adakah anda pasti mahu meninggalkan SEMUA klaim anda? Silakan sahkan dengan /abandonallclaims confirm
+  GrantPermissionNoClaim: Berdiri di dalam klaim di mana anda mahu memberikan izin.
+  GrantPermissionConfirmation: Izin untuk {1} {2} telah diberikan kepada {0}.
+  ManageUniversalPermissionsInstruction: Untuk mengelola izin bagi SEMUA klaim anda, berdiri di luarnya.
+  ManageOneClaimPermissionsInstruction: Untuk mengelola izin bagi klaim tertentu, berdiri di dalamnya.
+  CollectivePublic: orang ramai
+  BuildPermission: membangun
+  ContainersPermission: mengakses bekas dan hewan
+  AccessPermission: menggunakan butang dan tuil
+  ManagePermission: mengelola izin
+  PvPTrustPermission: bertarung dengan pemain
+  PvETrustPermission: bertarung dengan hewan
+  LocationCurrentClaim: dalam klaim ini
+  LocationAllClaims: dalam semua klaim anda
+  PvPImmunityStart: Anda dilindungi dari serangan pemain lain selama inventori anda kosong.
+  DonateItemsInstruction: Untuk menderma item di tangan anda, klik kiri peti itu sekali lagi.
+  ChestFull: Peti ini sudah penuh.
+  DonationSuccess: Item telah dipindahkan ke peti!
+  PlayerTooCloseForFire2: Anda tidak bisa menyalakan api sedekat ini dengan pemain lain.
+  TooDeepToClaim: Peti ini tidak bisa dilindungi karena terlalu jauh di bawah tanah. Pertimbangkan untuk memindahkannya.
+  ChestClaimConfirmation: Peti ini dilindungi.
+  AutomaticClaimNotification: Peti ini dan blok dekat dilindungi dari kerosakan dan kecurian.
+  AutomaticClaimOtherClaimTooClose: Tidak dapat membuat klaim untuk peti anda, terdapat klaim lain yang terlalu dekat!
+  UnprotectedChestWarning: Peti ini TIDAK dilindungi. Pertimbangkan menggunakan sekop emas untuk memperluas klaim siap ada atau membuat yang baru.
+  ThatPlayerPvPImmune: Anda tidak bisa mencederakan pemain yang tidak berdaya.
+  CantFightWhileImmune: Anda tidak bisa melawan seseorang saat anda dilindungi dari PvP.
+  NoDamageClaimedEntity: Itu kepunyaan {0}.
+  ShovelBasicClaimMode: Sekop kembali ke mod klaim asas.
+  RemainingBlocks: Anda bisa mengklaim sehingga {0} blok lagi.
+  CreativeBasicsVideo2: 'Klik untuk Bantuan Klaim Tanah: {0}'
+  SurvivalBasicsVideo2: 'Klik untuk Bantuan Klaim Tanah: {0}'
+  TrappedChatKeyword: terperangkap;tersekat
+  TrappedInstructions: Adakah anda terperangkap dalam klaim tanah seseorang? Cuba perintah /trapped.
+  PvPNoDrop: Anda tidak bisa menjatuhkan item saat dalam pertempuran PvP.
+  PvPNoContainers: Anda tidak bisa mengakses bekas saat pertempuran PvP.
+  PvPImmunityEnd: Sekarang anda bisa melawan pemain lain.
+  NoBedPermission: '{0} belum memberikan anda izin untuk tidur di sini.'
+  NoWildernessBuckets: Anda hanya bisa menuang baldi di dalam klaim anda atau di bawah tanah.
+  NoLavaNearOtherPlayer: Anda tidak bisa meletakkan lava sedekat ini dengan {0}.
+  NoLavaNearClaim: Anda terlalu dekat dengan klaim untuk melakukan itu!
+  TooFarAway: Itu terlalu jauh.
+  BlockNotClaimed: Tidak ada sesiapa mengklaim blok ini.
+  BlockClaimed: Blok itu telah diklaim oleh {0}.
+  NoCreateClaimPermission: Anda tidak memiliki izin untuk mengklaim tanah.
+  ResizeClaimTooNarrow: Ukuran baru ini terlalu kecil. Klaim harus sekurang-kurangnya {0} blok lebar.
+  ResizeNeedMoreBlocks: Anda tidak memiliki cukup blok untuk ukuran ini. Anda memerlukan {0} lagi.
+  ClaimResizeSuccess: Ukuran klaim telah ditukar. {0} blok klaim tersedia yang tinggal.
+  ResizeFailOverlap: Tidak dapat mengubah ukuran di sini karena ia akan bertindih dengan klaim dekat yang lain.
+  ResizeStart: Mengubah ukuran klaim. Gunakan sekop anda sekali lagi di lokasi baru untuk sudut ini.
+  ClaimSelected: 'Klaim dipilih. Gunakan sekop anda sekali lagi untuk menetapkan sudut yang satu lagi dan mengubah ukuran.\nNota: Anda sekarang bisa menjalankan /claim abandon saat klaim ini dipilih.'
+  ClaimSelectedTopLevel: 'Klaim dipilih. Gunakan sekop anda sekali lagi untuk menetapkan sudut yang satu lagi dan mengubah ukuran.\nNota: Anda sekarang bisa menjalankan /claim abandon toplevel saat klaim ini dipilih.'
+  SubdivisionSelected: Subdivisi dipilih. Anda bisa mengelola izin untuk kawasan khusus ini.\n&6Anda bisa menjalankan perintah seperti:\n&7- &f/trust&7, &f/untrust\n&7- &f/containertrust&7, &f/accesstrust\n&7- &f/abandonclaim\n&6atau anda bisa klik kanan sekali lagi untuk mengubah ukuran.
+  ResizeFailOverlapSubdivision: Anda tidak bisa membuat subdivisi di sini karena ia akan bertindih dengan subdivisi lain. Pertimbangkan /abandonclaim untuk memadamkannya, atau gunakan sekop anda pada sudut untuk mengubah ukurannya.
+  SubdivisionStart: Sudut subdivisi telah ditetapkan! Gunakan sekop anda di lokasi sudut bertentangan bagi subdivisi baru ini.
+  CreateSubdivisionOverlap: Kawasan yang anda pilih bertindih dengan subdivisi lain.
+  InnerSubdivisionTooClose: Subdivisi ini harus kekal sekurang-kurangnya satu blok di dalam induknya pada semua sisi.
+  SubdivisionSuccess: Subdivisi telah dibuat! Gunakan /trust untuk berkongsinya dengan teman.
+  CreateClaimFailOverlap: Anda tidak bisa membuat klaim di sini karena ia akan bertindih dengan klaim anda yang lain. Gunakan /abandonclaim untuk memadamkannya, atau gunakan sekop anda pada sudut untuk mengubah ukurannya.
+  CreateClaimFailOverlapOtherPlayer: Anda tidak bisa membuat klaim di sini karena ia akan bertindih dengan klaim {0}.
+  ClaimsDisabledWorld: Klaim tanah dilumpuhkan di dunia ini.
+  ClaimStart: Sudut klaim telah ditetapkan! Gunakan sekop sekali lagi pada sudut bertentangan untuk mengklaim sebidang tanah segi empat tepat. Untuk membatalkan, simpan kembali sekop anda.
+  NewClaimTooNarrow: Klaim ini terlalu kecil. Mana-mana klaim harus sekurang-kurangnya {0} blok lebar.
+  ResizeClaimInsufficientArea: Klaim ini terlalu kecil. Mana-mana klaim harus menggunakan sekurang-kurangnya {0} jumlah blok klaim.
+  CreateClaimInsufficientBlocks: Anda tidak memiliki cukup blok untuk mengklaim keseluruhan kawasan itu. Anda memerlukan {0} blok lagi.
+  AbandonClaimAdvertisement: Untuk menghapus klaim lain dan membebaskan beberapa blok, gunakan /abandonclaim.
+  CreateClaimFailOverlapShort: Kawasan yang anda pilih bertindih dengan klaim siap ada.
+  CreateClaimSuccess: Klaim telah dibuat! Gunakan /trust untuk berkongsinya dengan teman.
+  RescueAbortedMoved: Anda bergerak! Penyelamatan dibatalkan.
+  OnlyOwnersModifyClaims: Hanya {0} bisa mengubah suai klaim ini.
+  NoBuildPvP: Anda tidak bisa membangun dalam klaim saat pertempuran PvP.
+  NoBuildPermission: Anda tidak memiliki izin {0} untuk membangun di sini.
+  NoAccessPermission: Anda tidak memiliki izin {0} untuk menggunakan itu.
+  NoContainersPermission: Anda tidak memiliki izin {0} untuk menggunakan itu.
+  NoPvPTrust: Anda tidak memiliki izin {0} untuk bertarung dengan pemain di sini.
+  NoPvETrust: Anda tidak memiliki izin {0} untuk bertarung dengan hewan di sini.
+  OwnerNameForAdminClaims: seorang pentadbir
+  UnknownPlayerName: seseorang
+  ClaimTooSmallForEntities: Klaim ini tidak cukup besar untuk itu. Cuba perbesarkannya.
+  TooManyEntitiesInClaim: Klaim ini sudah memiliki terlalu banyak entiti. Cuba perbesarkan klaim atau alihkan beberapa hewan, mob, lukisan, atau kereta tambang.
+  YouHaveNoClaims: Anda tidak memiliki sebarang klaim tanah.
+  AutoBanNotify: '{0}({1}) telah diharamkan secara automatik. Lihat log untuk butiran.'
+  AdjustGroupBlocksSuccess: 'Blok klaim bonus untuk pemain dengan izin {0} telah diselaraskan sebanyak {1}. Jumlah baru: {2}.'
+  InvalidPermissionID: Silakan nyatakan nama pemain, atau izin dalam [kurungan].
+  HowToClaimRegex: (^|.*\W)(bagaimana|macam mana)\W.*\W(tuntut|lindung|kunci)(\W.*|$)
+  NoBuildOutsideClaims: Anda tidak bisa membangun di sini melainkan anda mengklaim sebidang tanah terlebih dahulu.
+  PlayerOfflineTime: ' Log masuk terakhir: {0} hari lalu.'
+  BuildingOutsideClaims: Pemain lain juga bisa membangun di sini. Pertimbangkan membuat klaim tanah untuk melindungi hasil kerja anda!
+  TrappedWontWorkHere: Maaf, tidak dapat mencari lokasi selamat untuk memindahkan anda. Hubungi pentadbir.
+  CommandBannedInPvP: Anda tidak bisa menggunakan perintah itu saat dalam pertempuran PvP.
+  UnclaimCleanupWarning: Tanah yang telah anda lepaskan tuntutannya bisa diubah oleh pemain lain atau dibersihkan oleh pentadbir. Jika anda telah membangun sesuatu di sana yang ingin anda simpan, anda patut menuntutnya kembali.
+  NoTeleportPvPCombat: Anda tidak bisa berpindah tempat saat melawan pemain lain.
+  NoTNTDamageAboveSeaLevel: 'Peringatan: TNT tidak akan memusnahkan blok di atas paras laut.'
+  NoTNTDamageClaims: 'Peringatan: TNT tidak akan memusnahkan blok yang diklaim.'
+  IgnoreClaimsAdvertisement: Untuk mengatasinya, gunakan /ignoreclaims.
+  NoPermissionForCommand: Anda tidak memiliki izin untuk melakukan itu.
+  ClaimsListNoPermission: Anda tidak memiliki izin untuk mendapatkan maklumat tentang klaim tanah pemain lain.
+  ExplosivesDisabled: Klaim ini sekarang dilindungi dari letupan. Gunakan /claimexplosions sekali lagi untuk melumpuhkannya.
+  ExplosivesEnabled: Klaim ini sekarang terdedah kepada letupan. Gunakan /claimexplosions sekali lagi untuk mengaktifkan kembali perlindungan.
+  WitherExplosionsDisabled: Klaim ini sekarang dilindungi dari letupan wither.  Gunakan /witherexplosions sekali lagi untuk melumpuhkan perlindungan.
+  WitherExplosionsEnabled: Klaim ini sekarang terdedah kepada letupan wither.  Gunakan /witherexplosions sekali lagi untuk mengaktifkan kembali perlindungan.
+  ClaimExplosivesAdvertisement: Untuk membenarkan bahan letupan memusnahkan blok dalam klaim tanah ini, gunakan /claimexplosions.
+  PlayerInPvPSafeZone: Pemain itu berada dalam zon selamat PvP.
+  NoPistonsOutsideClaims: 'Peringatan: Piston tidak akan menggerakkan blok di luar klaim tanah.'
+  SoftMuted: '{0} telah disenyapkan secara lembut.'
+  UnSoftMuted: Penyenyapan lembut {0} telah dibatalkan.
+  DropUnlockAdvertisement: Pemain lain tidak bisa mengambil item yang anda jatuhkan melainkan anda menggunakan /unlockdrops terlebih dahulu.
+  PickupBlockedExplanation: Anda tidak bisa mengambil ini melainkan {0} menggunakan /unlockdrops.
+  DropUnlockConfirmation: Item jatuhan anda telah dibuka kunci. Pemain lain sekarang bisa mengambilnya (sehingga anda mati lagi).
+  DropLockConfirmation: Item jatuhan anda telah dikunci.  Pemain lain tidak lagi bisa mengambilnya.
+  DropUnlockOthersConfirmation: Item jatuhan {0} telah dibuka kunci.
+  AdvertiseACandACB: Anda bisa menggunakan /acb untuk memberikan diri anda lebih banyak blok klaim, atau /adminclaims untuk membuat klaim administratif gratis.
+  AdvertiseAdminClaims: Anda bisa membuat klaim tanah administratif menggunakan /adminclaims, yang akan anda kongsi dengan pentadbir lain.
+  AdvertiseACB: Anda bisa menggunakan /acb untuk memberikan diri anda lebih banyak blok klaim.
+  NotYourPet: Itu kepunyaan {0}.
+  PetGiveawayConfirmation: Hewan peliharaan telah dipindahkan.
+  PetTransferCancellation: Pemberian hewan peliharaan dibatalkan.
+  ReadyToTransferPet: Siap untuk memindahkan!  Klik kanan hewan peliharaan yang ingin anda berikan, atau batalkan dengan /givepet cancel.
+  AvoidGriefClaimLand: Elakkan grief! Jika anda mengklaim tanah anda, anda akan kebal dari grief.
+  BecomeMayor: Subbahagikan klaim tanah anda dan jadilah datuk bandar!
+  ClaimCreationFailedOverClaimCountLimit: Anda telah mencapai had klaim tanah anda. Gunakan /abandonclaim untuk membuang satu sebelum membuat yang lain.
+  CreateClaimFailOverlapRegion: Anda tidak bisa mengklaim semua ini karena anda tidak dibenarkan membangun di sini.
+  ResizeFailOverlapRegion: Anda tidak memiliki izin untuk membangun di sana, jadi anda tidak bisa mengklaim kawasan itu.
+  ResizeFailSubdivision: 'Tidak dapat mengubah ukuran klaim: Sempadan baru akan mengecualikan subdivisi siap ada. Silakan buang atau pindahkan subdivisi itu dahulu.'
+  ResizeFailSubdivisionExceedsParent: 'Tidak dapat mengubah ukuran: Subdivisi tidak dikekalkan dalam sempadan induknya pada semua sisi, menyebabkan kemunculan zon konflik pada klaim utama.'
+  ShapedClaimInteriorClick: Anda tidak bisa memulai klaim berbentuk di sini. Anda bisa sama ada memulai klaim berbentuk baru atau membuat segmen pada sempadan klaim saat anda dan melanjutkannya.
+  ShapedClaimsCutStarted: "Memulai potongan berbentuk klaim anda. Teruskan membentuk dan kembali ke sempadan untuk melengkapkan potongan. Peringatan: potong bermakna tidak mengklaim tanah tersebut."
+  ShowNearbyClaims: '{0} klaim tanah ditemui.'
+  NoChatUntilMove: 'Maaf, tetapi anda perlu bergerak sedikit lagi sebelum bisa berbual. Kami menerima banyak bot spam di sini. :)'
+  SetClaimBlocksSuccess: Blok klaim terkumpul telah dikemas sekarang.
+  IgnoreConfirmation: Anda sekarang mengabaikan pesan chat dari pemain itu.
+  UnIgnoreConfirmation: Anda tidak lagi mengabaikan pesan chat dari pemain itu.
+  NotIgnoringPlayer: Anda tidak mengabaikan pemain itu.
+  SeparateConfirmation: Pemain-pemain itu sekarang akan saling mengabaikan dalam chat.
+  UnSeparateConfirmation: Pemain-pemain itu tidak lagi akan saling mengabaikan dalam chat.
+  NotIgnoringAnyone: Anda tidak mengabaikan sesiapa.
+  TrustListHeader: "Izin eksplisit di sini:"
+  Manage: Urus
+  Build: Bina
+  Containers: Bekas
+  Access: Akses
+  Neighbor: Tetangga
+  HasSubclaimRestriction: Subkawasan ini tidak mewarisi izin dari induknya
+  StartBlockMath: '{0} blok dari bermain + {1} bonus = {2} jumlah.'
+  ClaimsListHeader: "Kawasan Klaim:"
+  ContinueBlockMath: '(-{0} blok)'
+  EndBlockMath: ' = {0} blok tinggal untuk digunakan'
+  ClaimExpiryHeader: "Tamat tempoh klaim untuk {0}:"
+  ClaimExpiryLocation: 'Lokasi: {0}'
+  ClaimExpiryOwnerStatus: 'Pemilik: {0} ({1})'
+  ClaimExpiryOwnerOnline: dalam talian
+  ClaimExpiryOwnerOffline: luar talian
+  ClaimExpiryLastActive: 'Kali terakhir dilihat: {0} lalu'
+  ClaimExpiryLastActiveUnknown: 'Kali terakhir dilihat: tidak diketahui'
+  ClaimExpiryClaimModified: 'Terakhir diubah suai: {0}'
+  ClaimExpiryExpiresIn: 'Tamat tempoh dalam: {0}'
+  ClaimExpiryExpired: Telah tamat tempoh {0} lalu
+  ClaimExpiryExempt: 'Klaim ini dikecualikan dari tamat tempoh: {0}'
+  ClaimExpiryNeverExpires: Klaim ini tidak akan pernah tamat tempoh.
+  ClaimExpiryChestClaim: 'Tamat tempoh klaim peti: {0}'
+  ClaimExpiryNoClaim: Anda tidak berdiri di dalam klaim.
+  ClaimExpiryPlayerHeading: "Tamat tempoh klaim untuk {0}:"
+  ClaimExpiryPlayerNoClaims: '{0} tidak memiliki klaim.'
+  ClaimExpiryPlayerNotFound: Tidak dapat menemui pemain {0}.
+  ClaimExpiryUnknown: tidak diketahui
+  ClaimExpiryUsage: /checkclaimexpiry [pemain]
+  ClaimExpiryListEntry: '- {0}: {1}'
+  NoClaimDuringPvP: Anda tidak bisa mengklaim tanah saat pertempuran PvP.
+  UntrustAllOwnerOnly: Hanya pemilik klaim bisa mengosongkan semua izinnya.
+  ManagersDontUntrustManagers: Hanya pemilik klaim bisa menurunkan pangkat pengurus.
+  PlayerNotIgnorable: Anda tidak bisa mengabaikan pemain itu.
+  NoEnoughBlocksForChestClaim: Kerana anda tidak memiliki sebarang blok klaim yang tersedia, tidak ada klaim tanah automatik dibuat untuk anda. Anda bisa menggunakan /claimslist untuk memantau jumlah blok klaim tersedia anda.
+  MustHoldModificationToolForThat: Anda harus memegang sekop emas untuk melakukan itu.
+  StandInClaimToResize: Berdiri di dalam klaim tanah yang ingin anda tukar ukurannya.
+  ClaimsExtendToSky: Klaim tanah sentiasa memanjang sehingga ketinggian binaan maksimum.
+  ClaimsAutoExtendDownward: Klaim tanah memanjang secara automatik lebih dalam ke tanah apabila anda meletakkan blok di bawahnya.
+  MinimumRadius: Jejari minimum ialah {0}.
+  RadiusRequiresGoldenShovel: Anda harus memegang sekop emas apabila menentukan jejari.
+  ClaimTooSmallForActiveBlocks: Klaim ini tidak cukup besar untuk menampung sebarang jenis blok aktif (hopper, penjana, beacon...). Perbesarkan klaim terlebih dahulu.
+  TooManyActiveBlocksInClaim: Klaim ini telah mencapai had bagi jenis blok aktif (hopper, penjana, beacon...). Sama ada perbesarkannya, atau buang blok aktif lain terlebih dahulu.
+  BookAuthor: BigScary
+  BookTitle: Cara Mengklaim Tanah
+  BookLink: 'Klik: {0}'
+  BookIntro: 'Tuntut tanah untuk melindungi barang anda! Klik pautan di atas untuk mempelajari klaim tanah dalam masa 3 minit atau kurang. :)'
+  BookTools: Alat klaim kami ialah {0} dan {1}.
+  BookDisabledChestClaims: Di server ini, meletakkan peti TIDAK akan mengklaim tanah untuk anda.
+  BookUsefulCommands: "Perintah Berguna:"
+  NoProfanity: Silakan jaga bahasa anda.
+  IsIgnoringYou: Pemain itu sedang mengabaikan anda.
+  ConsoleOnlyCommand: Perintah itu hanya bisa dijalankan dari konsol server.
+  WorldNotFound: Dunia tidak ditemui.
+  TooMuchIpOverlap: Maaf, terdapat terlalu ramai pemain log masuk dengan alamat IP anda.
+  StandInSubclaim: Anda perlu berdiri di dalam subkawasan untuk menyekatnya
+  SubclaimRestricted: Izin subkawasan ini tidak lagi akan mewarisi dari klaim induk
+  SubclaimUnrestricted: Izin subkawasan ini sekarang akan mewarisi dari klaim induk
+  MainClaimSubdivisionInheritDisabled: Semua subdivisi dalam klaim ini TIDAK akan mewarisi izin.
+  MainClaimSubdivisionInheritEnabled: Semua subdivisi dalam klaim ini akan mewarisi izin.
+  NetherPortalTrapDetectionMessage: Nampaknya anda mungkin tersekat di dalam portal Nether. Kami akan menyelamatkan anda dalam beberapa saat jika itu berlaku!
+  ClaimHelpHeader: 'Perintah /claim yang tersedia:'
+  ClaimHelpLegend: <> - Diperlukan, [] - Pilihan.
+  ClaimHelpEntry: '&e/{0}&7 - &f{1}'
+  ClaimHelpPagination: Taip /claim help {0} untuk halaman seterusnya.
+  AClaimHelpHeader: 'Perintah /aclaim yang tersedia:'
+  AClaimHelpLegend: <> - Diperlukan, [] - Pilihan.
+  AClaimHelpEntry: '&e/{0}&7 - &f{1}'
+  AClaimHelpPagination: Taip /aclaim help {0} untuk halaman seterusnya.
+  CommandNotFound: 'Subarahan tidak diketahui: {0}'
+  CommandNotImplementedYet: Perintah ini belum dilaksanakan lagi.
+  CommandInvalidMode: 'Mod tidak sah. Pilihan sah: basic, 2d, 3d, shaped'
+  RestoreNatureActivate: Siap untuk memulihkan alam kembali jadi!  Klik kanan pada blok untuk memulihkan kawasan.  Gunakan /basicclaims untuk keluar.
+  RestoreNatureAggressiveActivate: Mod pemulihan alam kembali jadi agresif diaktifkan.  Klik kanan pada blok untuk memulihkan kawasan.  Gunakan /basicclaims untuk keluar.
+  FillModeActive: Mod isian diaktifkan dengan jejari {0}.  Klik kanan pada blok untuk mengisi kawasan.  Gunakan /basicclaims untuk keluar.
+  EconomyDisabled: Ciri ekonomi dilumpuhkan di server ini.
+  EconomyBuyBlocksConfirmation: Membeli {0} blok klaim dengan harga {1}. Anda sekarang memiliki {2} blok klaim.
+  EconomySellBlocksConfirmation: Menjual {0} blok klaim dengan harga {1}. Anda sekarang memiliki {2} blok klaim.
+  EconomyNotEnoughMoney: 'Anda tidak memiliki cukup wang. Kos: {0}, Baki anda: {1}'
+  EconomyNotEnoughBlocks: 'Anda tidak memiliki cukup blok klaim untuk dijual. Diminta: {0}, Tersedia: {1}'
+  EconomyBuyBlocksUsage: 'Penggunaan: /buyclaimblocks <jumlah>'
+  EconomySellBlocksUsage: 'Penggunaan: /sellclaimblocks <jumlah>'
+  EconomyInvalidAmount: Silakan nyatakan nombor blok positif yang sah.
+  EconomyPurchaseCancelled: Pembelian dibatalkan.
+  EconomyNoVault: Sokongan ekonomi memerlukan plugin Vault dipasang.
+  CommandRequiresPlayer: Perintah ini hanya bisa digunakan oleh pemain.
+  PistonExploded: Piston di {0} meledak karena ia tidak dapat memasuki klaim di {1}
+  ExternalPistonBoundaryViolation: '&6Amaran: Satu piston cuba menolak blok ke dalam klaim anda @ x:{0} y:{1} z:{2}!'
+  InternalPistonBoundaryViolation: '&6Amaran: Satu piston cuba menolak blok keluar dari klaim anda @ x:{0} y:{1} z:{2}!'
+  ExternalLiquidBoundaryViolation: '&6Amaran: Cairan cuba mengalir ke dalam klaim anda @ x:{0} y:{1} z:{2}!'
+  InternalLiquidBoundaryViolation: '&6Amaran: Cairan cuba mengalir keluar dari klaim anda @ x:{0} y:{1} z:{2}!'
+  BoundaryViolationBurstSummary: '&6Amaran: {0} pelanggaran {1} dekat klaim anda @ x:{2} y:{3} z:{4}!'
+  PlaceholderTrustLevelUnclaimed: Tidak Diklaim
+  PlaceholderTrustLevelOwner: Pemilik
+  PlaceholderTrustLevelManager: Pengurus
+  PlaceholderTrustLevelBuilder: Pembina
+  PlaceholderTrustLevelAccess: Akses
+  PlaceholderTrustLevelContainer: Bekas
+  PlaceholderTrustLevelNeighbor: Tetangga
+  PlaceholderTrustLevelUntrusted: Tidak Dipercayai
+  NeighborPermission: memintas jarak minimum
+  CreateClaimFailTooClose: "Anda tidak bisa membuat klaim di sini karena ia terlalu dekat dengan klaim {0}. Jarak minimum ialah {1} blok."
+  CreateClaimFailTooCloseNoBypass: "Anda tidak bisa membuat klaim di sini karena ia terlalu dekat dengan klaim lain. Jarak minimum ialah {0} blok."
+  MinimumDistance: "Jarak minimum antara klaim: {0} blok."
+  NearbyClaims: "Klaim dekat: {0}"
+  NeighborTrustGranted: "Kepercayaan tetangga telah diberikan kepada {0}. Mereka sekarang bisa memintas semakan jarak minimum untuk klaim anda."
+  NeighborTrustRevoked: "Kepercayaan tetangga {0} telah dibatalkan."
+  NeighborTrustGrantedAll: "Kepercayaan tetangga telah diberikan kepada {0} untuk SEMUA klaim anda."
+  NeighborTrustRevokedAll: "Kepercayaan tetangga {0} telah dibatalkan dari SEMUA klaim anda."
+  NeighborBypassEnabled: "Semua pemain sekarang bisa memintas semakan jarak minimum untuk klaim ini."
+  NeighborBypassDisabled: "Semakan jarak minimum sekarang dikuatkuasakan untuk klaim ini."
+  AuthorTag: "&7oleh castledking, RoboMWM dan BigScary"
+  PluginTag: "&6Plugin anti-griefing layan diri untuk server Minecraft \n&b- Sekarang dengan subdivisi 3D penuh"
+  StartupDetails: "&fButiran permulaan: {0}"
+  ClaimAlertsEnabled: Peringatan diaktifkan untuk klaim ini.
+  ClaimAlertsDisabled: Peringatan dilumpuhkan untuk klaim ini.
+  ClaimAlertsEnabledGlobal: Peringatan diaktifkan untuk semua klaim.
+  ClaimAlertsDisabledGlobal: Peringatan dilumpuhkan untuk semua klaim.
+  ClaimAlertsUsage: Gunakan /claimtogglealerts on|off untuk mengubah peringatan untuk SEMUA klaim, atau berdiri dalam klaim tertentu dan cuba lagi.
+  BootFinished: "&7Permulaan selesai dalam: &a{0}"
+  MessagesLoaded: "Pesan dimuatkan: &a{0}"
+  MaxBonusReached: "Anda tidak bisa membeli lebih banyak blok klaim. Anda telah mencapai had server."
+  CantGrantThatPermission: "Anda tidak bisa memberikan izin yang anda sendiri tidak miliki."
+  NonSiegeWorld: "Pengepungan dilumpuhkan di sini."
+  AlreadySieging: "Anda sudah terlibat dalam pengepungan."
+  NotSiegableThere: "{0} tidak dilindungi di situ."
+  SiegeTooFarAway: "Anda terlalu jauh untuk memulai pengepungan."
+  NoSiegeYourself: "Anda tidak bisa mengepung diri sendiri."
+  NoSiegeDefenseless: "Pemain itu tidak berdaya. Cari lawan lain."
+  AlreadyUnderSiegePlayer: "{0} sudah dikepung. Sertai pertempuran!"
+  AlreadyUnderSiegeArea: "Kawasan itu sudah dikepung. Sertai pertempuran!"
+  NoSiegeAdminClaim: "Pengepungan dilumpuhkan di kawasan ini."
+  SiegeOnCooldown: "Tempoh menunggu pengepungan anda untuk pemain atau klaim itu masih aktif. Cari sasaran lain."
+  SiegeAlert: "Anda sedang dikepung! Jika anda log keluar sekarang, anda akan mati. Anda harus menewaskan {0}, menunggu mereka menyerah, atau melarikan diri."
+  SiegeConfirmed: "Pengepungan telah bermula! Jika anda log keluar sekarang, anda akan mati. Anda harus menewaskan {0}, mengusir mereka, atau mundur."
+  SiegeNoDrop: "Anda tidak bisa memberikan barangan saat terlibat dalam pengepungan."
+  SiegeNoTeleport: "Anda tidak bisa teleport keluar dari kawasan yang dikepung."
+  BesiegedNoTeleport: "Anda tidak bisa teleport masuk ke kawasan yang dikepung."
+  SiegeNoContainers: "Anda tidak bisa mengakses bekas saat terlibat dalam pengepungan."
+  SiegeNoShovel: "Anda tidak bisa menggunakan alat klaim saat terlibat dalam pengepungan."
+  SiegeWinDoorsOpen: "Tahniah! Butang dan tuil dibuka buat sementara waktu."
+  SiegeDoorsLockedEjection: "Masa menjarah sudah tamat! Anda telah dikeluarkan dari klaim."
+  NoModifyDuringSiege: "Klaim tidak bisa diubah saat pengepungan."
+  NoBuildUnderSiege: "Klaim ini sedang dikepung oleh {0}. Tidak ada sesiapa bisa membangun di sini."
+  NonSiegeMaterial: "Bahan itu terlalu kuat untuk dipecahkan."
+  NoOwnerBuildUnderSiege: "Anda tidak bisa membuat perubahan saat pengepungan."
+  NoContainersSiege: "Klaim ini sedang dikepung oleh {0}. Tidak ada sesiapa bisa mengakses bekas di sini buat masa ini."
+  SiegeImmune: "Pemain itu kebal terhadap /siege."
+

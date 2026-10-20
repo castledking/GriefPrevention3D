@@ -135,6 +135,7 @@ falling back to English.
 | `de_DE` | German |
 | `es` | Spanish |
 | `fr_FR` | French |
+| `id_ID` | Indonesian (Bahasa Indonesia) |
 | `ja_JP` | Japanese |
 | `ms_MY` | Malay |
 | `pl_PL` | Polish |
