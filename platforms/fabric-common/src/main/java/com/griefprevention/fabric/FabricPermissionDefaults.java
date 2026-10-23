@@ -69,6 +69,10 @@ final class FabricPermissionDefaults
     static final String IGNORE_CLAIMS = "griefprevention.ignoreclaims";
     static final String SEE_INACTIVITY = "griefprevention.seeinactivity";
     static final String RELOAD = "griefprevention.reload";
+    static final String DONT_EXPIRE = "griefprevention.dontexpire";
+    static final String CHECK_CLAIM_EXPIRY = "griefprevention.checkclaimexpiry";
+    /** Paper's node for checking another player's claims; plugin.yml leaves it undeclared, so op-only. */
+    static final String CHECK_OTHERS_CLAIM_EXPIRY = "griefprevention.admin.checkclaimexpiry";
 
     private static final Map<String, Node> NODES = new HashMap<>();
 
@@ -96,6 +100,9 @@ final class FabricPermissionDefaults
         {
             node(child, Default.OP, ADMIN);
         }
+
+        node(DONT_EXPIRE, Default.OP, ADMIN);
+        node(CHECK_CLAIM_EXPIRY, Default.FALSE, CLAIMS, ADMIN);
 
         node(PERMISSION_TRUST, Default.FALSE, ADMIN_CLAIMS);
         node(EXTEND_CLAIM_TOOLBYPASS, Default.OP);

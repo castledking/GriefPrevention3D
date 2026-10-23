@@ -1,5 +1,6 @@
 package com.griefprevention.fabric;
 
+import com.griefprevention.claims.ClaimExpirationSettings;
 import com.griefprevention.claims.ClaimToolConfigCodec;
 import com.griefprevention.claims.ClaimToolConfigException;
 import com.griefprevention.claims.ClaimToolSettings;
@@ -45,6 +46,7 @@ final class FabricSettings
     private volatile @NotNull EnderPearlSettings enderPearls = EnderPearlSettings.upstreamDefaults();
     private volatile boolean allowTrappedInAdminClaims;
     private volatile boolean raidTriggersRequireBuildTrust = true;
+    private volatile @NotNull ClaimExpirationSettings expiration = ClaimExpirationSettings.upstreamDefaults();
     // Resolved on first use: registries are not guaranteed to be populated when the mod initializes.
     private volatile @Nullable Item investigationTool;
     private volatile @Nullable Item modificationTool;
@@ -59,6 +61,7 @@ final class FabricSettings
     void reload()
     {
         String contents;
+        boolean unreadable = false;
         try
         {
             contents = Files.readString(this.configFile, StandardCharsets.UTF_8);
@@ -72,6 +75,7 @@ final class FabricSettings
             this.logger.warn("Could not read {}; using the default claim tool and protection settings.",
                     this.configFile, exception);
             contents = "";
+            unreadable = true;
         }
 
         ClaimToolSettings loadedTools;
@@ -160,6 +164,20 @@ final class FabricSettings
             loadedRaidTriggersRequireBuildTrust = true;
         }
 
+        // Deleting claims on a misread setting cannot be undone, so an unreadable file or a bad value
+        // turns expiration off instead of falling back to Paper's defaults.
+        ClaimExpirationSettings loadedExpiration;
+        try
+        {
+            loadedExpiration = unreadable ? disabledExpiration() : this.codec.decodeClaimExpiration(contents);
+        }
+        catch (ClaimToolConfigException exception)
+        {
+            this.logger.error("Could not read Claims.Expiration from {}; claims will not expire until it is fixed.",
+                    this.configFile, exception);
+            loadedExpiration = disabledExpiration();
+        }
+
         this.tools = loadedTools;
         this.world = loadedWorld;
         this.blockUse = loadedBlockUse;
@@ -167,6 +185,7 @@ final class FabricSettings
         this.enderPearls = loadedEnderPearls;
         this.allowTrappedInAdminClaims = loadedAllowTrappedInAdminClaims;
         this.raidTriggersRequireBuildTrust = loadedRaidTriggersRequireBuildTrust;
+        this.expiration = loadedExpiration;
         this.investigationTool = null;
         this.modificationTool = null;
     }
@@ -205,6 +224,19 @@ final class FabricSettings
     boolean raidTriggersRequireBuildTrust()
     {
         return this.raidTriggersRequireBuildTrust;
+    }
+
+    private static @NotNull ClaimExpirationSettings disabledExpiration()
+    {
+        return new ClaimExpirationSettings(0, 0, 0, 0,
+                ClaimExpirationSettings.DEFAULT_NEW_PLAYER_CLAIM_RADIUS,
+                ClaimExpirationSettings.DEFAULT_CHECK_RATE_SECONDS);
+    }
+
+    /** {@code Claims.Expiration}: when the claims of players who stopped playing expire. */
+    @NotNull ClaimExpirationSettings expiration()
+    {
+        return this.expiration;
     }
 
     @NotNull ClaimToolSettings tools()

@@ -28,7 +28,7 @@ final class FabricDataFolder
     private static final String DEFAULT_CONFIG_TEMPLATE = """
             # GriefPrevention3D Fabric uses the same data folder name and top-level config shape as the Paper plugin.
             # Only the options wired by the Fabric port are active right now; /gpreload rereads the claim tool,
-            # visualization, fire, fluid, piston, combat, block-use and raid-trigger options.
+            # visualization, fire, fluid, piston, combat, block-use, raid-trigger and claim expiration options.
             GriefPrevention:
               ConfigVersion: 1
               BlockLandClaimExplosions: true
@@ -91,6 +91,15 @@ final class FabricDataFolder
                     Enabled: false
                   Subdivision:
                     Enabled: false
+                AutomaticNewPlayerClaimsRadius: 4
+                Expiration:
+                  ChestClaimDays: 7
+                  AllClaims:
+                    DaysInactive: 60
+                    ExceptWhenOwnerHasTotalClaimBlocks: 10000
+                    ExceptWhenOwnerHasBonusClaimBlocks: 5000
+              Advanced:
+                ClaimExpirationCheckRate: 60
               VisualizationGlow: false
               FireSpreads: false
               FireDestroys: false
@@ -298,6 +307,19 @@ final class FabricDataFolder
               ClaimsExtendLimit: "That side cannot move any further."
               ClaimsAutoExtendDownward: "Land claims auto-extend deeper into the ground when you place blocks under them."
               SurvivalBasicsVideo2: "Click for Land Claim Help: {0}"
+              ClaimExpiryPlayerHeading: "Claim expiration for {0}:"
+              ClaimExpiryOwnerStatus: "Owner: {0} ({1})"
+              ClaimExpiryOwnerOnline: "online"
+              ClaimExpiryOwnerOffline: "offline"
+              ClaimExpiryLastActive: "Last seen: {0} ago"
+              ClaimExpiryLastActiveUnknown: "Last seen: unknown"
+              ClaimExpiryExpiresIn: "Expires in: {0}"
+              ClaimExpiryExpired: "Expired {0} ago"
+              ClaimExpiryExempt: "This claim is exempt from expiration: {0}"
+              ClaimExpiryNeverExpires: "This claim will never expire."
+              ClaimExpiryNoClaim: "You are not standing in a claim."
+              ClaimExpiryPlayerNoClaims: "{0} has no claims."
+              ClaimExpiryPlayerNotFound: "Could not find player {0}."
             """;
 
     private FabricDataFolder()

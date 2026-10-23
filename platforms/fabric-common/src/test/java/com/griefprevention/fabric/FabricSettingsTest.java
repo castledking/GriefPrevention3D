@@ -80,4 +80,28 @@ class FabricSettingsTest
         assertFalse(settings.world().fireSpreads());
         assertTrue(settings.tools().visualizationGlow());
     }
+
+    @Test
+    void theSeededConfigExpiresClaimsAsPaperDoes()
+    {
+        FabricDataFolder.ensureDefaults(this.dataFolder, LOGGER);
+
+        FabricSettings settings = new FabricSettings(this.dataFolder, LOGGER);
+
+        assertEquals(60, settings.expiration().daysInactive());
+        assertEquals(7, settings.expiration().chestClaimDays());
+        assertEquals(60, settings.expiration().checkRateSeconds());
+        assertTrue(settings.expiration().enabled());
+    }
+
+    @Test
+    void aBadExpirationSettingTurnsExpirationOffInsteadOfUsingDefaults() throws Exception
+    {
+        Files.writeString(this.dataFolder.resolve("config.yml"), "GriefPrevention:\n  Claims:\n"
+                + "    Expiration:\n      AllClaims:\n        DaysInactive: sixty\n", StandardCharsets.UTF_8);
+
+        FabricSettings settings = new FabricSettings(this.dataFolder, LOGGER);
+
+        assertFalse(settings.expiration().enabled());
+    }
 }

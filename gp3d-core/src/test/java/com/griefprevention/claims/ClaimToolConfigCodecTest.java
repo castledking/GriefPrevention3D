@@ -102,4 +102,43 @@ class ClaimToolConfigCodecTest
         assertTrue(this.codec.decodeAllowTrappedInAdminClaims(
                 "GriefPrevention:\n  Claims:\n    AllowTrappedInAdminClaims: true\n"));
     }
+
+    @Test
+    void readsClaimExpirationWithPapersDefaults() throws Exception
+    {
+        ClaimExpirationSettings defaults = this.codec.decodeClaimExpiration("GriefPrevention: {}\n");
+        assertEquals(7, defaults.chestClaimDays());
+        assertEquals(60, defaults.daysInactive());
+        assertEquals(10000, defaults.exceptWhenOwnerHasTotalClaimBlocks());
+        assertEquals(5000, defaults.exceptWhenOwnerHasBonusClaimBlocks());
+        assertEquals(81L, defaults.newPlayerClaimArea());
+        assertEquals(60, defaults.checkRateSeconds());
+
+        ClaimExpirationSettings configured = this.codec.decodeClaimExpiration(
+                "GriefPrevention:\n"
+                        + "  Advanced:\n"
+                        + "    ClaimExpirationCheckRate: 5\n"
+                        + "  Claims:\n"
+                        + "    AutomaticNewPlayerClaimsRadius: -1\n"
+                        + "    Expiration:\n"
+                        + "      ChestClaimDays: 0\n"
+                        + "      AllClaims:\n"
+                        + "        DaysInactive: 30\n"
+                        + "        ExceptWhenOwnerHasTotalClaimBlocks: 2000\n"
+                        + "        ExceptWhenOwnerHasBonusClaimBlocks: 100\n");
+        assertEquals(0, configured.chestClaimDays());
+        assertEquals(30, configured.daysInactive());
+        assertEquals(2000, configured.exceptWhenOwnerHasTotalClaimBlocks());
+        assertEquals(100, configured.exceptWhenOwnerHasBonusClaimBlocks());
+        assertEquals(0L, configured.newPlayerClaimArea());
+        assertEquals(5, configured.checkRateSeconds());
+        assertTrue(configured.enabled());
+    }
+
+    @Test
+    void rejectsANonNumericExpirationSetting()
+    {
+        assertThrows(ClaimToolConfigException.class, () -> this.codec.decodeClaimExpiration(
+                "GriefPrevention:\n  Claims:\n    Expiration:\n      AllClaims:\n        DaysInactive: soon\n"));
+    }
 }

@@ -72,6 +72,51 @@ public final class ClaimToolConfigCodec
                 parsedPrice);
     }
 
+    /**
+     * Reads {@code Claims.Expiration}, {@code Claims.AutomaticNewPlayerClaimsRadius} and
+     * {@code Advanced.ClaimExpirationCheckRate}, with Paper's defaults.
+     */
+    public synchronized @NotNull ClaimExpirationSettings decodeClaimExpiration(@NotNull String input)
+            throws ClaimToolConfigException
+    {
+        final Object loaded;
+        try
+        {
+            loaded = this.yaml.load(input);
+        }
+        catch (YAMLException exception)
+        {
+            throw new ClaimToolConfigException("Invalid config YAML: " + exception.getMessage(), exception);
+        }
+        if (loaded == null)
+        {
+            return ClaimExpirationSettings.upstreamDefaults();
+        }
+
+        Map<String, Object> root = optionalMap(stringMap(loaded, "config root").get(ROOT), ROOT);
+        Map<String, Object> claims = optionalMap(root.get(CLAIMS), ROOT + "." + CLAIMS);
+        Map<String, Object> expiration = optionalMap(claims.get("Expiration"), ROOT + ".Claims.Expiration");
+        Map<String, Object> allClaims = optionalMap(
+                expiration.get("AllClaims"), ROOT + ".Claims.Expiration.AllClaims");
+        Map<String, Object> advanced = optionalMap(root.get("Advanced"), ROOT + ".Advanced");
+        return new ClaimExpirationSettings(
+                integer(expiration.get("ChestClaimDays"), ClaimExpirationSettings.DEFAULT_CHEST_CLAIM_DAYS,
+                        "Claims.Expiration.ChestClaimDays"),
+                integer(allClaims.get("DaysInactive"), ClaimExpirationSettings.DEFAULT_DAYS_INACTIVE,
+                        "Claims.Expiration.AllClaims.DaysInactive"),
+                integer(allClaims.get("ExceptWhenOwnerHasTotalClaimBlocks"),
+                        ClaimExpirationSettings.DEFAULT_EXCEPT_TOTAL_CLAIM_BLOCKS,
+                        "Claims.Expiration.AllClaims.ExceptWhenOwnerHasTotalClaimBlocks"),
+                integer(allClaims.get("ExceptWhenOwnerHasBonusClaimBlocks"),
+                        ClaimExpirationSettings.DEFAULT_EXCEPT_BONUS_CLAIM_BLOCKS,
+                        "Claims.Expiration.AllClaims.ExceptWhenOwnerHasBonusClaimBlocks"),
+                integer(claims.get("AutomaticNewPlayerClaimsRadius"),
+                        ClaimExpirationSettings.DEFAULT_NEW_PLAYER_CLAIM_RADIUS,
+                        "Claims.AutomaticNewPlayerClaimsRadius"),
+                integer(advanced.get("ClaimExpirationCheckRate"), ClaimExpirationSettings.DEFAULT_CHECK_RATE_SECONDS,
+                        "Advanced.ClaimExpirationCheckRate"));
+    }
+
     /** Reads {@code Claims.AllowTrappedInAdminClaims}: whether /trapped works in administrative claims. */
     public synchronized boolean decodeAllowTrappedInAdminClaims(@NotNull String input)
             throws ClaimToolConfigException

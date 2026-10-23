@@ -86,6 +86,7 @@ final class FabricCommandRegistrar
             @NotNull FabricAdminClaimCommands staff,
             @NotNull FabricScrollResize scrollResize,
             @NotNull FabricPlayerRescue rescue,
+            @NotNull FabricClaimExpiration expiration,
             @NotNull Path aliasFile,
             @NotNull Logger logger)
     {
@@ -150,6 +151,7 @@ final class FabricCommandRegistrar
         admin.put("transfer", new Action(staff::transfer, FabricPermissionDefaults.TRANSFER_CLAIM));
         admin.put("makeadmin", new Action(staff::makeAdmin, FabricPermissionDefaults.CONVERT_CLAIMS));
         admin.put("makebasic", new Action(staff::makeBasic, FabricPermissionDefaults.CONVERT_CLAIMS));
+        admin.put("checkexpiry", new Action(expiration::checkExpiry, FabricPermissionDefaults.CHECK_CLAIM_EXPIRY));
         this.actions.put(ADMIN_ROOT, admin);
 
         legacy("trust", trust::trust, FabricPermissionDefaults.TRUST,
@@ -227,6 +229,8 @@ final class FabricCommandRegistrar
         legacy("makeadmin", staff::makeAdmin, FabricPermissionDefaults.CONVERT_CLAIMS, "/%s", null);
         legacy("makebasic", staff::makeBasic, FabricPermissionDefaults.CONVERT_CLAIMS, "/%s", null);
         legacy("trapped", rescue::trapped, FabricPermissionDefaults.TRAPPED, "/%s", null);
+        legacy("checkclaimexpiry", expiration::checkExpiry, FabricPermissionDefaults.CHECK_CLAIM_EXPIRY,
+                "/%s [player]", players, "claimcheckexpiry", "checkclaimexpiration", "claimcheckexpiration");
         legacy("scrollresize", scrollResize::start, FabricPermissionDefaults.SCROLL_RESIZE, "/%s", null,
                 "scrollresizeclaim", "sr", "src");
         legacy("claimtogglealerts", claimCommands::toggleAllClaimAlerts, FabricPermissionDefaults.TOGGLE_CLAIM_ALERTS,

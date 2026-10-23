@@ -203,6 +203,7 @@ registered after other mods', so a name another mod already uses (such as `/crea
 | `/scrollresize` (`/claim scrollresize`, `/sr`) | Resizes the claim you stand in, look at or selected a corner of with the mouse wheel; right-click applies. |
 | `/trapped` (`/claim trapped`) | Moves you out of a claim you cannot build in after ten seconds standing still. |
 | `/claim alerts [on\|off]`, `/claimtogglealerts [on\|off]` | Piston and fluid border warnings for the claim you stand in, or for all your claims. |
+| `/checkclaimexpiry [player]` (`/aclaim checkexpiry`) | When the claim you stand in, or a player's claims, expire under `Claims.Expiration`, and what keeps them (claim blocks, `griefprevention.dontexpire`). Another player's claims need `griefprevention.admin.checkclaimexpiry`. |
 | `/gpreload`, `/gpstatus` | Reloads claims, messages, settings and `alias.yml`; shows the loaded claim count. |
 
 Player names resolve from online players, then the players the server has seen (vanilla's `usercache.json`), then
@@ -211,8 +212,12 @@ the UUID the player actually joins with. A name no player has, containing a dot,
 
 The balance commands need `griefprevention.adjustclaimblocks`, work from the console, and change only the accrued
 and bonus lines of `PlayerData/<uuid>`, so unknown addon data survives. Paper subcommands Fabric does not have yet
-(shaped modes, restore nature, siege, `/extendclaim`, buying and selling blocks) answer that they are not available
-on Fabric.
+(restore nature, siege, buying and selling blocks) answer that they are not available on Fabric.
+
+Claims of players who stop playing expire as on Paper, under `Claims.Expiration.AllClaims.DaysInactive` (60 days
+by default) and `Claims.Expiration.ChestClaimDays`. `griefprevention.dontexpire` exempts a player and is read
+from LuckPerms even while they are offline. Fabric learns when players were last online from `LastSeen.yml`,
+which began recording in 18.4.7, so players not seen since then keep their claims.
 
 Administrative claims are free, count toward nobody's claim limit, and are drawn in Paper's admin colors. Staff
 with `griefprevention.adminclaims` hold every permission in them: they can build, resize, trust and abandon. The

@@ -120,6 +120,19 @@ design points for that work:
 - [x] `/claim alerts [on|off]` for the claim the player stands in, `/claimtogglealerts [on|off]` for all
       their claims; owners are warned when pistons or fluids are stopped at their claim's border, with
       Paper's deduplication and burst summaries (`BoundaryViolationAlerts`).
+- [x] Claim expiration, as Paper's `FindUnusedClaimsTask`: one claim owner is checked every
+      `Advanced.ClaimExpirationCheckRate` seconds. `Claims.Expiration.AllClaims.DaysInactive` expires all of
+      an absent owner's claims, and `Claims.Expiration.ChestClaimDays` a lone claim no bigger than a new
+      player's (`Claims.AutomaticNewPlayerClaimsRadius`). Owners with enough claim blocks
+      (`ExceptWhenOwnerHas...ClaimBlocks`) or `griefprevention.dontexpire` keep their claims; for an offline
+      owner the permission is read from LuckPerms storage (`loadUser`, then `cleanupUser`), otherwise from
+      the plugin.yml default with `ops.json`. Last-online times come from `LastSeen.yml`, so owners not seen
+      since it began recording (18.4.7) never expire. A bad or unreadable setting turns expiration off
+      rather than falling back to the defaults. `ClaimExpirationCallback` lets other mods keep a claim, as
+      Paper's `ClaimExpirationEvent`.
+- [x] `/checkclaimexpiry [player]` (`/aclaim checkexpiry`): when the claim the player stands in, or a
+      player's claims, expire and what keeps them; another player's takes
+      `griefprevention.admin.checkclaimexpiry`.
 
 ### Still missing
 
@@ -127,6 +140,8 @@ design points for that work:
       claim blocks, and `/siege`.
 - [ ] The chat hint that points players who say "trapped" or "stuck" at `/trapped` (needs Fabric's
       message API module).
+- [ ] `Claims.Expiration.UnusedClaimDays` (small creative-world claims scored by the blocks placed in
+      them) and `AutomaticNatureRestoration`, which both need restore nature.
 
 ---
 

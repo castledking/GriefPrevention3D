@@ -32,6 +32,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 public final class FabricClaimRepository implements ClaimRepository
@@ -1067,6 +1068,20 @@ public final class FabricClaimRepository implements ClaimRepository
                 permission,
                 node -> this.permissions.permissionValue(playerId, node),
                 isOperator(player));
+    }
+
+    /**
+     * A permission node for a player who may be offline, with plugin.yml's defaults. May complete on
+     * the permission provider's thread.
+     *
+     * @param operator whether the player is a server operator
+     */
+    @NotNull CompletableFuture<Boolean> hasPermissionOffline(
+            @NotNull UUID playerId,
+            @NotNull String permission,
+            boolean operator)
+    {
+        return this.permissions.resolveOffline(playerId, permission, operator);
     }
 
     /**

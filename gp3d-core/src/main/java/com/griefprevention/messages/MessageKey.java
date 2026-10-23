@@ -351,7 +351,20 @@ public enum MessageKey
     CLAIMS_EXTEND_TO_SKY("ClaimsExtendToSky", "Land claims always extend to max build height."),
     CLAIMS_EXTEND_LIMIT("ClaimsExtendLimit", "That side cannot move any further."),
     CLAIMS_AUTO_EXTEND_DOWNWARD("ClaimsAutoExtendDownward", "Land claims auto-extend deeper into the ground when you place blocks under them."),
-    SURVIVAL_BASICS_VIDEO_2("SurvivalBasicsVideo2", "Click for Land Claim Help: {0}");
+    SURVIVAL_BASICS_VIDEO_2("SurvivalBasicsVideo2", "Click for Land Claim Help: {0}"),
+    CLAIM_EXPIRY_PLAYER_HEADING("ClaimExpiryPlayerHeading", "Claim expiration for {0}:"),
+    CLAIM_EXPIRY_OWNER_STATUS("ClaimExpiryOwnerStatus", "Owner: {0} ({1})"),
+    CLAIM_EXPIRY_OWNER_ONLINE("ClaimExpiryOwnerOnline", "online"),
+    CLAIM_EXPIRY_OWNER_OFFLINE("ClaimExpiryOwnerOffline", "offline"),
+    CLAIM_EXPIRY_LAST_ACTIVE("ClaimExpiryLastActive", "Last seen: {0} ago"),
+    CLAIM_EXPIRY_LAST_ACTIVE_UNKNOWN("ClaimExpiryLastActiveUnknown", "Last seen: unknown"),
+    CLAIM_EXPIRY_EXPIRES_IN("ClaimExpiryExpiresIn", "Expires in: {0}"),
+    CLAIM_EXPIRY_EXPIRED("ClaimExpiryExpired", "Expired {0} ago"),
+    CLAIM_EXPIRY_EXEMPT("ClaimExpiryExempt", "This claim is exempt from expiration: {0}"),
+    CLAIM_EXPIRY_NEVER_EXPIRES("ClaimExpiryNeverExpires", "This claim will never expire."),
+    CLAIM_EXPIRY_NO_CLAIM("ClaimExpiryNoClaim", "You are not standing in a claim."),
+    CLAIM_EXPIRY_PLAYER_NO_CLAIMS("ClaimExpiryPlayerNoClaims", "{0} has no claims."),
+    CLAIM_EXPIRY_PLAYER_NOT_FOUND("ClaimExpiryPlayerNotFound", "Could not find player {0}.");
 
     private final String key;
     private final String defaultValue;

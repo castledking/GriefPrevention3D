@@ -30,6 +30,29 @@ class FabricPermissionDefaultsTest
     }
 
     @Test
+    void dontExpireIsForOperatorsUnlessAProviderSaysOtherwise()
+    {
+        String node = FabricPermissionDefaults.DONT_EXPIRE;
+        assertFalse(FabricPermissionDefaults.resolve(node, UNDEFINED, false));
+        assertTrue(FabricPermissionDefaults.resolve(node, UNDEFINED, true));
+        // A LuckPerms grant on the node, or on griefprevention.admin.* above it, exempts any player.
+        assertTrue(FabricPermissionDefaults.resolve(node, explicit(Map.of(node, true)), false));
+        assertTrue(FabricPermissionDefaults.resolve(node, explicit(Map.of(FabricPermissionDefaults.ADMIN, true)), false));
+        // And an explicit denial takes it from an operator.
+        assertFalse(FabricPermissionDefaults.resolve(node, explicit(Map.of(node, false)), true));
+    }
+
+    @Test
+    void withoutAProviderTheOfflineLookupUsesTheDefaults()
+    {
+        FabricPermissionResolver none = (playerId, permission) -> null;
+        java.util.UUID player = java.util.UUID.randomUUID();
+
+        assertTrue(none.resolveOffline(player, FabricPermissionDefaults.DONT_EXPIRE, true).join());
+        assertFalse(none.resolveOffline(player, FabricPermissionDefaults.DONT_EXPIRE, false).join());
+    }
+
+    @Test
     void unknownNodesAreOperatorOnly()
     {
         assertFalse(FabricPermissionDefaults.resolve("griefprevention.somethingnew", UNDEFINED, false));

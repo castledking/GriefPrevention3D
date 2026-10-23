@@ -55,6 +55,8 @@ public final class GriefPreventionFabric implements FabricPlatformAdapter
         new FabricProtectionHooks(claims, feedback, settings).register();
         FabricPlayerRescue rescue = new FabricPlayerRescue(claims, feedback, settings, LOGGER);
         rescue.register();
+        FabricClaimExpiration expiration = new FabricClaimExpiration(claims, settings, lastSeen, LOGGER);
+        expiration.register();
 
         FabricClaimCommands claimCommands = new FabricClaimCommands(
                 claims, feedback, settings, modes, toolHooks, visualization, LOGGER);
@@ -72,6 +74,7 @@ public final class GriefPreventionFabric implements FabricPlatformAdapter
                 staffCommands,
                 scrollResize,
                 rescue,
+                expiration,
                 dataFolder.resolve("alias.yml"),
                 LOGGER
         ).register();
