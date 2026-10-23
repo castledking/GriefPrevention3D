@@ -36,6 +36,13 @@ repositories {
     maven("https://repo.purpurmc.org/snapshots")
     maven("https://mvn.lumine.io/repository/maven-public/")
     maven("https://s01.oss.sonatype.org/content/repositories/snapshots")
+    // GPExpansion's optional map integrations, for the addon compatibility check only.
+    maven("https://repo.bluecolored.de/releases/") {
+        content { includeGroup("de.bluecolored") }
+    }
+    maven("https://repo.mikeprimm.com/") {
+        content { includeGroup("us.dynmap") }
+    }
 }
 
 java {
@@ -139,6 +146,10 @@ dependencies {
     gpExpansionCompatCompileClasspath("me.clip:placeholderapi:2.11.6")
     gpExpansionCompatCompileClasspath("commons-lang:commons-lang:2.6")
     gpExpansionCompatCompileClasspath("org.jetbrains:annotations:26.0.2")
+    // GPExpansion's optional BlueMap and Dynmap markers, as its pom.xml declares them.
+    gpExpansionCompatCompileClasspath("de.bluecolored:bluemap-api:2.8.0")
+    gpExpansionCompatCompileClasspath("us.dynmap:DynmapCoreAPI:3.8")
+    gpExpansionCompatCompileClasspath("us.dynmap:dynmap-api:3.8")
 }
 
 tasks {
