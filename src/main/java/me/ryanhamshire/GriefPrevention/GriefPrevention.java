@@ -57,7 +57,6 @@ import com.griefprevention.visualization.VisualizationStyleRegistry;
 import com.griefprevention.visualization.VisualizationType;
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.ArrayList;
@@ -70,7 +69,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map.Entry;
-import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.UUID;
@@ -1500,9 +1498,6 @@ public class GriefPrevention extends JavaPlugin {
             config.getDouble("GriefPrevention.Claims.TransferClaim.Price", 0.0)
         );
 
-        // optional database settings
-        loadDatabaseSettings(config);
-
         this.config_advanced_fixNegativeClaimblockAmounts = config.getBoolean(
             "GriefPrevention.Advanced.fixNegativeClaimblockAmounts",
             true
@@ -1852,36 +1847,6 @@ public class GriefPrevention extends JavaPlugin {
         for (String command : commands) {
             this.config_pvp_blockedCommands.add(command.trim().toLowerCase());
         }
-    }
-
-    private void loadDatabaseSettings(@NotNull FileConfiguration legacyConfig) {
-        File databasePropsFile = new File(DataStore.dataLayerFolderPath, "database.properties");
-        Properties databaseProps = new Properties();
-
-        // If properties file exists, use it - old config has already been migrated.
-        if (databasePropsFile.exists() && databasePropsFile.isFile()) {
-            try (
-                InputStreamReader reader = new InputStreamReader(
-                    new java.io.FileInputStream(databasePropsFile),
-                    StandardCharsets.UTF_8
-                )
-            ) {
-                // Load properties from file.
-                databaseProps.load(reader);
-
-                // Set values from loaded properties.
-                // Removed unused database fields
-            } catch (IOException e) {
-                getLogger().log(Level.SEVERE, "Unable to read database.properties", e);
-            }
-
-            return;
-        }
-
-        // Otherwise, database details may not have been migrated from legacy
-        // configuration.
-        // Try to load them.
-        // Removed unused database fields
     }
 
     private ClaimsMode configStringToClaimsMode(String configSetting) {

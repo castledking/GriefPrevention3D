@@ -39,7 +39,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
@@ -49,8 +48,6 @@ import java.util.UUID;
 public class DatabaseDataStore extends DataStore
 {
 
-    private static final String SQL_UPDATE_NAME =
-            "UPDATE griefprevention_playerdata SET name = ? WHERE name = ?";
     @SuppressWarnings("unused")
     private static final String SQL_UPDATE_CLAIM =
             "UPDATE griefprevention_claimdata SET owner = ?, lessercorner = ?, greatercorner = ?, builders = ?, containers = ?, accessors = ?, managers = ?, inheritnothing = ?, inheritnothingfornewsubdivisions = ?, parentid = ?, expiration = ?, explosivesallowed = ?, witherexplosionsallowed = ? WHERE id = ?";
@@ -206,91 +203,6 @@ public class DatabaseDataStore extends DataStore
             this.nextClaimID = results.getLong("nextid");
         }
 
-        if (this.getSchemaVersion() == 0)
-        {
-            try
-            {
-                this.refreshDataConnection();
-
-                //pull ALL player data from the database
-                statement = this.databaseConnection.createStatement();
-                results = statement.executeQuery("SELECT * FROM griefprevention_playerdata");
-
-                //make a list of changes to be made
-                HashMap<String, UUID> changes = new HashMap<>();
-
-                ArrayList<String> namesToConvert = new ArrayList<>();
-                while (results.next())
-                {
-                    //get the id
-                    String playerName = results.getString("name");
-
-                    //add to list of names to convert to UUID
-                    namesToConvert.add(playerName);
-                }
-
-                //resolve and cache as many as possible through various means
-                try
-                {
-                    UUIDFetcher fetcher = new UUIDFetcher(namesToConvert);
-                    fetcher.call();
-                }
-                catch (Exception e)
-                {
-                    GriefPrevention.AddLogEntry("Failed to resolve a batch of names to UUIDs.  Details:" + e.getMessage());
-                    e.printStackTrace();
-                }
-
-                //reset results cursor
-                results.beforeFirst();
-
-                //for each result
-                while (results.next())
-                {
-                    //get the id
-                    String playerName = results.getString("name");
-
-                    //try to convert player name to UUID
-                    try
-                    {
-                        UUID playerID = UUIDFetcher.getUUIDOf(playerName);
-
-                        //if successful, update the playerdata row by replacing the player's name with the player's UUID
-                        if (playerID != null)
-                        {
-                            changes.put(playerName, playerID);
-                        }
-                    }
-                    //otherwise leave it as-is. no harm done - it won't be requested by name, and this update only happens once.
-                    catch (Exception ex) { }
-                }
-
-                //refresh data connection in case data migration took a long time
-                this.refreshDataConnection();
-
-                for (String name : changes.keySet())
-                {
-                    try (PreparedStatement updateStmnt = this.databaseConnection.prepareStatement(SQL_UPDATE_NAME))
-                    {
-                        updateStmnt.setString(1, changes.get(name).toString());
-                        updateStmnt.setString(2, name);
-                        updateStmnt.executeUpdate();
-                    }
-                    catch (SQLException e)
-                    {
-                        GriefPrevention.AddLogEntry("Unable to convert player data for " + name + ".  Skipping.");
-                        GriefPrevention.AddLogEntry(e.getMessage());
-                    }
-                }
-            }
-            catch (SQLException e)
-            {
-                GriefPrevention.AddLogEntry("Unable to convert player data.  Details:");
-                GriefPrevention.AddLogEntry(e.getMessage());
-                e.printStackTrace();
-            }
-        }
-
         if (this.getSchemaVersion() <= 2)
         {
             statement = this.databaseConnection.createStatement();
@@ -424,18 +336,6 @@ public class DatabaseDataStore extends DataStore
                 {
                     ownerID = null;  //administrative land claim or subdivision
                 }
-                else if (this.getSchemaVersion() < 1)
-                {
-                    try
-                    {
-                        ownerID = UUIDFetcher.getUUIDOf(ownerName);
-                    }
-                    catch (Exception ex)
-                    {
-                        GriefPrevention.AddLogEntry("This owner name did not convert to a UUID: " + ownerName + ".");
-                        GriefPrevention.AddLogEntry("  Converted land claim to administrative @ " + lesserBoundaryCorner.toString());
-                    }
-                }
                 else
                 {
                     try
@@ -451,22 +351,18 @@ public class DatabaseDataStore extends DataStore
 
                 String buildersString = results.getString("builders");
                 List<String> builderNames = Arrays.asList(buildersString.split(";"));
-                builderNames = this.convertNameListToUUIDList(builderNames);
 
                 String containersString = results.getString("containers");
                 List<String> containerNames = Arrays.asList(containersString.split(";"));
-                containerNames = this.convertNameListToUUIDList(containerNames);
 
                 String accessorsString = results.getString("accessors");
                 List<String> accessorNames = Arrays.asList(accessorsString.split(";"));
-                accessorNames = this.convertNameListToUUIDList(accessorNames);
 
                 String managersString = results.getString("managers");
                 List<String> managerNames = Arrays.asList(managersString.split(";"));
-                managerNames = this.convertNameListToUUIDList(managerNames);
 
                 // Deny entries carry a trust-level suffix and may name a permission node, so they
-                // are stored verbatim rather than run through the legacy name-to-UUID conversion.
+                // are stored verbatim rather than split into a plain name list.
                 List<String> deniedIdentifiers;
                 try {
                     deniedIdentifiers = parseStorageList(results.getString("denied"));

@@ -197,12 +197,6 @@ public abstract class DataStore {
                 }
             }
 
-            // clean up any UUID conversion work
-            if (UUIDFetcher.lookupCache != null) {
-                UUIDFetcher.lookupCache.clear();
-                UUIDFetcher.correctedNames.clear();
-            }
-
             GriefPrevention.AddLogEntry("Update finished.");
         }
 
@@ -3364,39 +3358,6 @@ public abstract class DataStore {
     // gets a message using the server's default locale (for console/non-player contexts)
     synchronized public String getMessage(@NotNull Messages messageID, @NotNull String @NotNull... args) {
         return getMessage((Player) null, messageID, args);
-    }
-
-    // used in updating the data schema from 0 to 1.
-    // converts player names in a list to uuids
-    protected List<String> convertNameListToUUIDList(List<String> names) {
-        // doesn't apply after schema has been updated to version 1
-        if (this.getSchemaVersion() >= 1)
-            return names;
-
-        // list to build results
-        List<String> resultNames = new ArrayList<>();
-
-        for (String name : names) {
-            // skip non-player-names (groups and "public"), leave them as-is
-            if (name.startsWith("[") || name.equals("public")) {
-                resultNames.add(name);
-                continue;
-            }
-
-            // otherwise try to convert to a UUID
-            UUID playerID = null;
-            try {
-                playerID = UUIDFetcher.getUUIDOf(name);
-            } catch (Exception ex) {
-            }
-
-            // if successful, replace player name with corresponding UUID
-            if (playerID != null) {
-                resultNames.add(playerID.toString());
-            }
-        }
-
-        return resultNames;
     }
 
     abstract void close();

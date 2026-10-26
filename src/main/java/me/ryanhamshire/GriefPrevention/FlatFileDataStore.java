@@ -46,7 +46,6 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
@@ -61,7 +60,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Matcher;
 import java.util.Collections;
 
 //manages data stored in the file system
@@ -120,20 +118,12 @@ public class FlatFileDataStore extends DataStore
     void initialize() throws Exception
     {
         //ensure data folders exist
-        boolean newDataStore = false;
         File playerDataFolder = new File(playerDataFolderPath);
         File claimDataFolder = new File(claimDataFolderPath);
         if (!playerDataFolder.exists() || !claimDataFolder.exists())
         {
-            newDataStore = true;
             playerDataFolder.mkdirs();
             claimDataFolder.mkdirs();
-        }
-
-        //if there's no data yet, then anything written will use the schema implemented by this code
-        if (newDataStore)
-        {
-            this.setSchemaVersion(DataStore.latestSchemaVersion);
         }
 
         //check for legacy subdivision format migration
@@ -202,252 +192,11 @@ public class FlatFileDataStore extends DataStore
             catch (IOException exception) {}
         }
 
-        //if converting up from schema version 0, rename player data files using UUIDs instead of player names
-        //get a list of all the files in the claims data folder
-        if (this.getSchemaVersion() == 0)
-        {
-            files = playerDataFolder.listFiles();
-            ArrayList<String> namesToConvert = new ArrayList<>();
-            for (File playerFile : files)
-            {
-                namesToConvert.add(playerFile.getName());
-            }
-
-            //resolve and cache as many as possible through various means
-            try
-            {
-                UUIDFetcher fetcher = new UUIDFetcher(namesToConvert);
-                fetcher.call();
-            }
-            catch (Exception e)
-            {
-                GriefPrevention.AddLogEntry("Failed to resolve a batch of names to UUIDs.  Details:" + e.getMessage());
-                e.printStackTrace();
-            }
-
-            //rename files
-            for (File playerFile : files)
-            {
-                String currentFilename = playerFile.getName();
-
-                //if corrected casing and a record already exists using the correct casing, skip this one
-                String correctedCasing = UUIDFetcher.correctedNames.get(currentFilename);
-                if (correctedCasing != null && !currentFilename.equals(correctedCasing))
-                {
-                    File correctedCasingFile = new File(playerDataFolder.getPath() + File.separator + correctedCasing);
-                    if (correctedCasingFile.exists())
-                    {
-                        continue;
-                    }
-                }
-
-                //try to convert player name to UUID
-                UUID playerID = null;
-                try
-                {
-                    playerID = UUIDFetcher.getUUIDOf(currentFilename);
-
-                    //if successful, rename the file using the UUID
-                    if (playerID != null)
-                    {
-                        playerFile.renameTo(new File(playerDataFolder, playerID.toString()));
-                    }
-                }
-                catch (Exception ex) { }
-            }
-        }
-
         //load claims data into memory
         //get a list of all the files in the claims data folder
-        files = claimDataFolder.listFiles();
-
-        if (this.getSchemaVersion() <= 1)
-        {
-            this.loadClaimData_Legacy(files);
-        }
-        else
-        {
-            this.loadClaimData(files);
-        }
+        this.loadClaimData(claimDataFolder.listFiles());
 
         super.initialize();
-    }
-
-    void loadClaimData_Legacy(File[] files) throws Exception
-    {
-        List<World> validWorlds = Bukkit.getServer().getWorlds();
-
-        for (int i = 0; i < files.length; i++)
-        {
-            if (files[i].isFile())  //avoids folders
-            {
-                //skip any file starting with an underscore, to avoid special files not representing land claims
-                if (files[i].getName().startsWith("_")) continue;
-
-                //the filename is the claim ID.  try to parse it
-                long claimID;
-
-                try
-                {
-                    claimID = Long.parseLong(files[i].getName());
-                }
-
-                //because some older versions used a different file name pattern before claim IDs were introduced,
-                //those files need to be "converted" by renaming them to a unique ID
-                catch (Exception e)
-                {
-                    claimID = this.nextClaimID;
-                    this.incrementNextClaimID();
-                    File newFile = new File(claimDataFolderPath + File.separator + this.nextClaimID);
-                    files[i].renameTo(newFile);
-                    files[i] = newFile;
-                }
-
-                BufferedReader inStream = null;
-                String lesserCornerString = "";
-                try
-                {
-                    Claim topLevelClaim = null;
-
-                    inStream = new BufferedReader(new FileReader(files[i].getAbsolutePath()));
-                    String line = inStream.readLine();
-
-                    while (line != null)
-                    {
-                        //skip any SUB:### lines from previous versions
-                        if (line.toLowerCase().startsWith("sub:"))
-                        {
-                            line = inStream.readLine();
-                        }
-
-                        //skip any UUID lines from previous versions
-                        Matcher match = uuidpattern.matcher(line.trim());
-                        if (match.find())
-                        {
-                            line = inStream.readLine();
-                        }
-
-                        //first line is lesser boundary corner location
-                        lesserCornerString = line;
-                        Location lesserBoundaryCorner = this.locationFromString(lesserCornerString, validWorlds);
-
-                        //second line is greater boundary corner location
-                        line = inStream.readLine();
-                        Location greaterBoundaryCorner = this.locationFromString(line, validWorlds);
-
-                        //third line is owner name
-                        line = inStream.readLine();
-                        String ownerName = line;
-                        UUID ownerID = null;
-                        if (ownerName.isEmpty() || ownerName.startsWith("--"))
-                        {
-                            ownerID = null;  //administrative land claim or subdivision
-                        }
-                        else if (this.getSchemaVersion() == 0)
-                        {
-                            try
-                            {
-                                ownerID = UUIDFetcher.getUUIDOf(ownerName);
-                            }
-                            catch (Exception ex)
-                            {
-                                GriefPrevention.AddLogEntry("Couldn't resolve this name to a UUID: " + ownerName + ".");
-                                GriefPrevention.AddLogEntry("  Converted land claim to administrative @ " + lesserBoundaryCorner.toString());
-                            }
-                        }
-                        else
-                        {
-                            try
-                            {
-                                ownerID = UUID.fromString(ownerName);
-                            }
-                            catch (Exception ex)
-                            {
-                                GriefPrevention.AddLogEntry("Error - this is not a valid UUID: " + ownerName + ".");
-                                GriefPrevention.AddLogEntry("  Converted land claim to administrative @ " + lesserBoundaryCorner.toString());
-                            }
-                        }
-
-                        //fourth line is list of builders
-                        line = inStream.readLine();
-                        List<String> builderNames = Arrays.asList(line.split(";"));
-                        builderNames = this.convertNameListToUUIDList(builderNames);
-
-                        //fifth line is list of players who can access containers
-                        line = inStream.readLine();
-                        List<String> containerNames = Arrays.asList(line.split(";"));
-                        containerNames = this.convertNameListToUUIDList(containerNames);
-
-                        //sixth line is list of players who can use buttons and switches
-                        line = inStream.readLine();
-                        List<String> accessorNames = Arrays.asList(line.split(";"));
-                        accessorNames = this.convertNameListToUUIDList(accessorNames);
-
-                        //seventh line is list of players who can grant permissions
-                        line = inStream.readLine();
-                        if (line == null) line = "";
-                        List<String> managerNames = Arrays.asList(line.split(";"));
-                        managerNames = this.convertNameListToUUIDList(managerNames);
-
-                        //skip any remaining extra lines, until the "===" string, indicating the end of this claim or subdivision
-                        line = inStream.readLine();
-                        while (line != null && !line.contains("==="))
-                            line = inStream.readLine();
-
-                        //build a claim instance from those data
-                        //if this is the first claim loaded from this file, it's the top level claim
-                        if (topLevelClaim == null)
-                        {
-                            //instantiate
-                            topLevelClaim = new Claim(lesserBoundaryCorner, greaterBoundaryCorner, ownerID, builderNames, containerNames, accessorNames, managerNames, claimID);
-
-                            topLevelClaim.modifiedDate = new Date(files[i].lastModified());
-                            this.addClaim(topLevelClaim, false);
-                        }
-
-                        //otherwise there's already a top level claim, so this must be a subdivision of that top level claim
-                        else
-                        {
-                            Claim subdivision = new Claim(lesserBoundaryCorner, greaterBoundaryCorner, null, builderNames, containerNames, accessorNames, managerNames, null);
-
-                            subdivision.modifiedDate = new Date(files[i].lastModified());
-                            subdivision.parent = topLevelClaim;
-                            topLevelClaim.children.add(subdivision);
-                            subdivision.inDataStore = true;
-                        }
-
-                        //move up to the first line in the next subdivision
-                        line = inStream.readLine();
-                    }
-
-                    inStream.close();
-                }
-
-                //if there's any problem with the file's content, log an error message and skip it
-                catch (Exception e)
-                {
-                    if (e.getMessage() != null && e.getMessage().contains("World not found"))
-                    {
-                        GriefPrevention.AddLogEntry("Failed to load a claim " + files[i].getName() + " because its world isn't loaded (yet?).  Please delete the claim file or contact the GriefPrevention developer with information about which plugin(s) you're using to load or create worlds.  " + lesserCornerString);
-                        if (inStream != null) inStream.close();
-
-                    }
-                    else
-                    {
-                        StringWriter errors = new StringWriter();
-                        e.printStackTrace(new PrintWriter(errors));
-                        GriefPrevention.AddLogEntry("Failed to load claim " + files[i].getName() + ". This usually occurs when your server runs out of storage space, causing any file saves to corrupt. Fix or delete the file found in GriefPreventionData/ClaimData/" + files[i].getName(), CustomLogEntryTypes.Debug, false);
-                        GriefPrevention.AddLogEntry(files[i].getName() + " " + errors, CustomLogEntryTypes.Exception);
-                    }
-                }
-
-                try
-                {
-                    if (inStream != null) inStream.close();
-                }
-                catch (IOException exception) {}
-            }
-        }
     }
 
     void loadClaimData(File[] files) throws Exception
