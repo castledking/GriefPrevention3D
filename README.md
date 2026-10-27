@@ -109,6 +109,11 @@ Stop _responding_ to grief and prevent it instead. GriefPrevention stops grief b
   - **Per-Player Locale**: Enabled by default. Players receive messages in their client language when a translation is available, falling back to English. See [Supported Languages](#supported-languages) for the full list. Disable with `PerPlayerLocale: false` in config.yml.
   - **Action Bar Messages**: You can now define a list of message keys that should be chosen to be shown in the action bar instead of chat.
   - **Rate Limited Messages**: Denials that repeat on their own — an arrow bouncing off a claimed decorated pot, a swing at a claimed animal, a piston placed outside a claim — are sent at most once per 10 seconds, counted separately for each message so one denial never hides another.
+  - **Prevent climbing on rejected blocks**: Set `GriefPrevention.Claims.PreventBlockPlaceClimbing: true` and run
+    `/gpreload` to return players to a recent supported position when they try to jump on or climb blocks GP3D
+    refuses to place, including ladders and vines outside their collision shapes. The option is off by default
+    and is available on Bukkit/Paper and Fabric. It checks real support, respects claim bypass, and allows
+    ordinary jumping and climbing on real ladders.
   - Resizing a claim now selects it and is accessible using common commands like `/claim abandon` or `/claim trust` during that resize session
   - `/restrictsubclaim` while standing in main claims now instantly restricts all subdivisions inside
   - `/trustlist` now shows inherited permissions

@@ -164,6 +164,7 @@ design points for that work:
 | Fire spread and burning, lava ignition | `FireBlock.tick` and `LavaFluid.randomTick` mixins, `FirePolicy` |
 | Dispensers and droppers across claim borders | `dispenseFrom` mixins |
 | Farmland trampling | `FarmBlock`/`FarmlandBlock` mixin |
+| Optional setback for climbing on rejected block placements (`Claims.PreventBlockPlaceClimbing`, default false) | Rejected block-item use and `ServerGamePacketListenerImpl.handleMovePlayer`, shared `BlockPlaceClimbTracker`; collision steps and climbable activation space, real support and safe destination checks |
 | Endermen taking blocks | enderman take-block goal mixin |
 | Weaving cobwebs: players need build trust at each destination; mobs cannot place webs in claims | `WeavingMobEffect.onMobRemoved` context and per-web placement mixins, including 26.3's `setBlockAndUpdate` |
 | Splash and lingering weaving on claimed animals and villagers need container trust; dispenser potions retain their source through cloud creation | `LivingEntity.addEffect`, potion impact, dispenser projectile and cloud-constructor mixins |

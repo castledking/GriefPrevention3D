@@ -328,6 +328,8 @@ tasks {
         args(
             "me.ryanhamshire.GriefPrevention.GriefPrevention",
             "me.ryanhamshire.GriefPrevention.BlockEventHandler",
+            "me.ryanhamshire.GriefPrevention.BlockPlaceClimbProtection",
+            "com.griefprevention.compat.BlockCollisionCompat#collision-boxes",
             "me.ryanhamshire.GriefPrevention.EntityEventHandler",
             "me.ryanhamshire.GriefPrevention.EntityDamageHandler",
             "me.ryanhamshire.GriefPrevention.PlayerEventHandler",

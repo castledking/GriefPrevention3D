@@ -22,6 +22,25 @@ class FabricSettingsTest
     Path dataFolder;
 
     @Test
+    void blockPlaceClimbingProtectionIsOptInAndReloadable() throws Exception
+    {
+        FabricDataFolder.ensureDefaults(this.dataFolder, LOGGER);
+        FabricSettings settings = new FabricSettings(this.dataFolder, LOGGER);
+        assertFalse(settings.preventBlockPlaceClimbing());
+        Path config = this.dataFolder.resolve("config.yml");
+        Files.writeString(config, "GriefPrevention:\n  Claims:\n    PreventBlockPlaceClimbing: true\n");
+        FabricDataFolder.ensureDefaults(this.dataFolder, LOGGER);
+        settings.reload();
+        assertTrue(settings.preventBlockPlaceClimbing());
+        Files.writeString(config, "GriefPrevention:\n  Claims:\n    PreventBlockPlaceClimbing: false\n");
+        settings.reload();
+        assertFalse(settings.preventBlockPlaceClimbing());
+        Files.writeString(config, "GriefPrevention:\n  Claims:\n    PreventBlockPlaceClimbing: maybe\n");
+        settings.reload();
+        assertFalse(settings.preventBlockPlaceClimbing());
+    }
+
+    @Test
     void theSeededConfigCarriesPapersDefaults()
     {
         FabricDataFolder.ensureDefaults(this.dataFolder, LOGGER);

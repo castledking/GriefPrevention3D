@@ -158,6 +158,10 @@ final class FabricProtectionHooks
             {
                 warnAboutUnclaimedPiston(player, level, stack, targetPos);
             }
+            else if (level instanceof ServerLevel serverLevel)
+            {
+                FabricBlockPlaceClimbProtection.deniedPlacement(player, serverLevel, hand, hitResult);
+            }
             return allowed ? InteractionResult.PASS : InteractionResult.FAIL;
         }
 

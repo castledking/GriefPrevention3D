@@ -46,6 +46,7 @@ final class FabricSettings
     private volatile @NotNull EnderPearlSettings enderPearls = EnderPearlSettings.upstreamDefaults();
     private volatile boolean allowTrappedInAdminClaims;
     private volatile boolean raidTriggersRequireBuildTrust = true;
+    private volatile boolean preventBlockPlaceClimbing;
     private volatile @NotNull ClaimExpirationSettings expiration = ClaimExpirationSettings.upstreamDefaults();
     // Resolved on first use: registries are not guaranteed to be populated when the mod initializes.
     private volatile @Nullable Item investigationTool;
@@ -164,6 +165,18 @@ final class FabricSettings
             loadedRaidTriggersRequireBuildTrust = true;
         }
 
+        boolean loadedPreventBlockPlaceClimbing;
+        try
+        {
+            loadedPreventBlockPlaceClimbing = this.worldCodec.decodePreventBlockPlaceClimbing(contents);
+        }
+        catch (WorldProtectionConfigException exception)
+        {
+            this.logger.error("Could not read Claims.PreventBlockPlaceClimbing from {}; movement correction stays off.",
+                    this.configFile, exception);
+            loadedPreventBlockPlaceClimbing = false;
+        }
+
         // Deleting claims on a misread setting cannot be undone, so an unreadable file or a bad value
         // turns expiration off instead of falling back to Paper's defaults.
         ClaimExpirationSettings loadedExpiration;
@@ -185,6 +198,7 @@ final class FabricSettings
         this.enderPearls = loadedEnderPearls;
         this.allowTrappedInAdminClaims = loadedAllowTrappedInAdminClaims;
         this.raidTriggersRequireBuildTrust = loadedRaidTriggersRequireBuildTrust;
+        this.preventBlockPlaceClimbing = loadedPreventBlockPlaceClimbing;
         this.expiration = loadedExpiration;
         this.investigationTool = null;
         this.modificationTool = null;
@@ -224,6 +238,11 @@ final class FabricSettings
     boolean raidTriggersRequireBuildTrust()
     {
         return this.raidTriggersRequireBuildTrust;
+    }
+
+    boolean preventBlockPlaceClimbing()
+    {
+        return this.preventBlockPlaceClimbing;
     }
 
     private static @NotNull ClaimExpirationSettings disabledExpiration()

@@ -173,6 +173,7 @@ public class GriefPrevention extends JavaPlugin {
 
     public boolean config_claims_preventGlobalMonsterEggs; // whether monster eggs can be placed regardless of trust.
     public boolean config_claims_preventTheft; // whether containers and crafting blocks are protectable
+    public volatile boolean config_claims_preventBlockPlaceClimbing;
     public boolean config_claims_protectCreatures; // whether claimed animals may be injured by players without
     // permission
     public boolean config_claims_protectHorses; // whether horses on a claim should be protected by that claim's rules
@@ -601,6 +602,7 @@ public class GriefPrevention extends JavaPlugin {
         // block events
         BlockEventHandler blockEventHandler = new BlockEventHandler(this.dataStore);
         pluginManager.registerEvents(blockEventHandler, this);
+        pluginManager.registerEvents(new BlockPlaceClimbProtection(this), this);
 
         // entity events
         entityEventHandler = new EntityEventHandler(this.dataStore, this);
@@ -1035,6 +1037,7 @@ public class GriefPrevention extends JavaPlugin {
             true
         );
         this.config_claims_preventTheft = config.getBoolean("GriefPrevention.Claims.PreventTheft", true);
+        this.config_claims_preventBlockPlaceClimbing = config.getBoolean("GriefPrevention.Claims.PreventBlockPlaceClimbing", false);
         this.config_claims_protectCreatures = config.getBoolean("GriefPrevention.Claims.ProtectCreatures", true);
         this.config_claims_protectHorses = config.getBoolean("GriefPrevention.Claims.ProtectHorses", true);
         this.config_claims_protectDonkeys = config.getBoolean("GriefPrevention.Claims.ProtectDonkeys", true);
@@ -1544,6 +1547,7 @@ public class GriefPrevention extends JavaPlugin {
 
         outConfig.set("GriefPrevention.Claims.PreventGlobalMonsterEggs", this.config_claims_preventGlobalMonsterEggs);
         outConfig.set("GriefPrevention.Claims.PreventTheft", this.config_claims_preventTheft);
+        outConfig.set("GriefPrevention.Claims.PreventBlockPlaceClimbing", this.config_claims_preventBlockPlaceClimbing);
         outConfig.set("GriefPrevention.Claims.PreventCushionMount", this.config_claims_preventCushionMount);
         outConfig.set("GriefPrevention.Claims.ProtectStrawBeds", this.config_claims_protectStrawBeds);
         outConfig.set("GriefPrevention.Claims.ProtectCreatures", this.config_claims_protectCreatures);

@@ -1,6 +1,8 @@
 package com.griefprevention.fabric.mixin;
 
 import com.griefprevention.fabric.FabricScrollResize;
+import com.griefprevention.fabric.FabricBlockPlaceClimbProtection;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
 import net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket;
 import net.minecraft.server.level.ServerPlayer;
@@ -20,6 +22,29 @@ abstract class ServerGamePacketListenerImplMixin
 {
     @Shadow
     public ServerPlayer player;
+
+    @Inject(method = "handleMovePlayer", at = @At("HEAD"), cancellable = true)
+    private void griefPrevention$denyRejectedBlockSteps(ServerboundMovePlayerPacket packet, CallbackInfo callback)
+    {
+        if (FabricBlockPlaceClimbProtection.beforeMove(player,
+                packet.getX(player.getX()), packet.getY(player.getY()), packet.getZ(player.getZ()),
+                packet.getYRot(player.getYRot()), packet.getXRot(player.getXRot())))
+        {
+            callback.cancel();
+        }
+    }
+
+    @Inject(method = "handleMovePlayer", at = @At("RETURN"))
+    private void griefPrevention$rememberSupportedPosition(ServerboundMovePlayerPacket packet, CallbackInfo callback)
+    {
+        FabricBlockPlaceClimbProtection.moved(player);
+    }
+
+    @Inject(method = "teleport", at = @At("HEAD"))
+    private void griefPrevention$clearClimbingCheckpoint(CallbackInfo callback)
+    {
+        FabricBlockPlaceClimbProtection.clear(player);
+    }
 
     @Inject(method = "handleSetCarriedItem", at = @At("HEAD"), cancellable = true)
     private void griefPrevention$scrollResize(ServerboundSetCarriedItemPacket packet, CallbackInfo callback)

@@ -42,6 +42,7 @@ public final class GriefPreventionFabric implements FabricPlatformAdapter
         FabricClaimAlerts alerts = new FabricClaimAlerts(claims, feedback);
         alerts.register();
         FabricWorldProtection.install(claims, settings, feedback, alerts);
+        FabricBlockPlaceClimbProtection.install(claims, settings);
         FabricFakeBlockVisualization visualization = new FabricFakeBlockVisualization(claims, settings);
         FabricClaimResizer resizer = new FabricClaimResizer(claims, visualization, feedback, settings);
         FabricClaimToolHooks toolHooks =
