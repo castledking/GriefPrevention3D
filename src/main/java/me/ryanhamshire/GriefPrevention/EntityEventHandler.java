@@ -107,6 +107,7 @@ public class EntityEventHandler implements Listener
     {
         if (CompatUtil.isMaterial(event.getTo(), "COBWEB") && event.getEntity() instanceof LivingEntity)
         {
+            handleWeavingChangeBlock(event);
             return;
         }
 
@@ -191,6 +192,26 @@ public class EntityEventHandler implements Listener
                     event.setCancelled(true);
                 }
             }
+        }
+    }
+
+    private void handleWeavingChangeBlock(@NotNull EntityChangeBlockEvent event)
+    {
+        Block block = event.getBlock();
+        if (!instance.claimsEnabledForWorld(block.getWorld())) return;
+
+        // Check each prospective web, including ones across a claim or subdivision boundary.
+        if (event.getEntity() instanceof Player)
+        {
+            if (ProtectionHelper.checkPermission((Player) event.getEntity(), block.getLocation(), ClaimPermission.Build, event) != null)
+            {
+                event.setCancelled(true);
+            }
+        }
+        else if (dataStore.getClaimAt(block.getLocation(), false, null) != null)
+        {
+            // A mob's death does not identify who applied weaving. Do not let it build in claims.
+            event.setCancelled(true);
         }
     }
 
@@ -729,6 +750,7 @@ public class EntityEventHandler implements Listener
     @EventHandler(priority = EventPriority.LOWEST)
     public void onEntityPickup(EntityChangeBlockEvent event)
     {
+        // Weaving is handled by onEntityChangeBLock, rather than enderman block theft rules.
         if (CompatUtil.isMaterial(event.getTo(), "COBWEB") && event.getEntity() instanceof LivingEntity)
         {
             return;

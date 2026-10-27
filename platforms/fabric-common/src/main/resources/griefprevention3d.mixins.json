@@ -4,6 +4,8 @@
   "plugin": "com.griefprevention.fabric.bootstrap.AdapterMixinGate",
   "compatibilityLevel": "JAVA_8",
   "mixins": [
+    "AbstractThrownPotionMixin",
+    "AreaEffectCloudMixin",
     "BlockAttachedEntityMixin",
     "BlockDisplayAccessor",
     "DispenserBlockMixin",
@@ -22,13 +24,16 @@
     "LecternBlockEntityMixin",
     "LecternMenuMixin",
     "LightningBoltMixin",
+    "LivingEntityPotionMixin",
     "PistonBaseBlockMixin",
     "PlayerSweepAttackMixin",
+    "ProjectileDispenseBehaviorMixin",
     "RaidsMixin",
     "ServerExplosionMixin",
     "ServerGamePacketListenerImplMixin",
     "TeleportRandomlyConsumeEffectMixin",
-    "ThrownEnderpearlMixin"
+    "ThrownEnderpearlMixin",
+    "WeavingMobEffectMixin"
   ],
   "injectors": {
     "defaultRequire": 1

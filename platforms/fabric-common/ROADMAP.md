@@ -165,6 +165,8 @@ design points for that work:
 | Dispensers and droppers across claim borders | `dispenseFrom` mixins |
 | Farmland trampling | `FarmBlock`/`FarmlandBlock` mixin |
 | Endermen taking blocks | enderman take-block goal mixin |
+| Weaving cobwebs: players need build trust at each destination; mobs cannot place webs in claims | `WeavingMobEffect.onMobRemoved` context and per-web placement mixins, including 26.3's `setBlockAndUpdate` |
+| Splash and lingering weaving on claimed animals and villagers need container trust; dispenser potions retain their source through cloud creation | `LivingEntity.addEffect`, potion impact, dispenser projectile and cloud-constructor mixins |
 | Block use as Paper decides it (`BlockUseSettings`): containers with `PreventTheft`; doors, trapdoors, fence gates, beds, buttons and levers behind `LockWoodenDoors`, `LockTrapDoors`, `LockFenceGates` and `PreventButtonsSwitches`; redstone and decorations need build trust; crafting tables and other workstations are free | `UseBlockCallback`, dragon eggs `AttackBlockCallback` |
 | Lecterns: reading needs access trust with `LecternReadingRequiresAccessTrust` (otherwise anyone may read); taking or placing the book needs container trust | `UseBlockCallback`, `LecternMenu.clickMenuButton` and `LecternBlockEntity.createMenu` mixins |
 | Ender pearls and chorus fruit into claims need access trust (`EnderPearlsRequireAccessTrust`); a refused pearl breaks and comes back with `RefundDeniedEnderPearls` (not in creative, where it was never spent); a refused chorus jump is undone and vanilla tries another spot | `ThrownEnderpearl.onHit` mixin; `randomTeleport` wrapped in `TeleportRandomlyConsumeEffect.apply` (the 26.3 overload too) |
@@ -201,7 +203,7 @@ Also found while porting, and handled more strictly on Fabric:
 | Nether portal creation over claims | `PortalCreateEvent` | portal shape mixin |
 | Silverfish, rabbits, ravagers, withers changing blocks | `EntityChangeBlockEvent` | per-mob goal mixins |
 | Mob melee on frames/stands/armor stands, cactus and other environmental damage | `EntityDamageEvent` | `hurtServer` mixins per class |
-| Splash/lingering potions on claimed creatures and players | `PotionSplashEvent`, `AreaEffectCloudApplyEvent` | potion/cloud mixins |
+| Other splash/lingering potion effects on claimed creatures and players (weaving is protected) | `PotionSplashEvent`, `AreaEffectCloudApplyEvent` | potion/cloud mixins |
 | Hoppers taking death loot, pet damage by environment, walking a sulfur cube out of a claim | various | various |
 | Fresh-spawn PvP immunity, siege, creative-world rules | various | — |
 

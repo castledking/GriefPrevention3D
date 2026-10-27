@@ -25,6 +25,7 @@ import net.minecraft.tags.BlockTags;
 import net.minecraft.tags.FluidTags;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.AreaEffectCloud;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.TamableAnimal;
@@ -76,6 +77,7 @@ public final class FabricWorldProtection
     private final @NotNull FabricSettings settings;
     private final @NotNull FabricDenialFeedback feedback;
     private final @NotNull FabricClaimAlerts alerts;
+    private final @NotNull FabricWeavingProtection weaving;
 
     private FabricWorldProtection(
             @NotNull FabricClaimRepository claims,
@@ -87,6 +89,7 @@ public final class FabricWorldProtection
         this.settings = settings;
         this.feedback = feedback;
         this.alerts = alerts;
+        this.weaving = new FabricWeavingProtection(claims, settings.world());
     }
 
     static void install(
@@ -686,6 +689,73 @@ public final class FabricWorldProtection
         }
         ClaimSnapshot origin = protection.claims.findClaimAt(serverLevel, start);
         return origin != null && parentId.equals(origin.id());
+    }
+
+    /** Each weaving web is checked at its destination, independently of where the entity died. */
+    public static boolean mayPlaceWeavingWeb(
+            @NotNull ServerLevel level,
+            @NotNull BlockPos pos,
+            @Nullable LivingEntity source)
+    {
+        FabricWorldProtection protection = active;
+        if (protection == null) return true;
+
+        boolean ignoring = source instanceof ServerPlayer player
+                && protection.claims.isIgnoringClaims(player.getUUID())
+                && protection.claims.hasPermission(player, FabricPermissionDefaults.IGNORE_CLAIMS);
+        return protection.weaving.mayPlaceWeb(protection.claims.worldKey(level), point(pos),
+                source instanceof Player player
+                        ? (claim, trust) -> protection.claims.allows(claim, player, trust)
+                        : null,
+                ignoring);
+    }
+
+    /** Splash and lingering weaving use container trust for claimed animals and villagers. */
+    public static boolean mayApplyWeaving(
+            @NotNull LivingEntity target,
+            @NotNull Level targetLevel,
+            @Nullable Entity source)
+    {
+        FabricWorldProtection protection = active;
+        if (protection == null || !(targetLevel instanceof ServerLevel level) || !protection.applies(level))
+        {
+            return true;
+        }
+
+        Entity actor = source instanceof AreaEffectCloud cloud ? cloud.getOwner() : source;
+        if (actor instanceof Projectile projectile && projectile.getOwner() != null) actor = projectile.getOwner();
+        if (actor == target) return true;
+        if (target instanceof Player defender)
+        {
+            return !(actor instanceof Player attacker) || protection.mayFight(level, attacker, defender);
+        }
+        if (!(target instanceof Animal || target instanceof Villager)) return true;
+
+        Entity responsible = actor;
+        boolean allowed = protection.weaving.mayApplyToCreature(
+                protection.claims.worldKey(level), point(target.blockPosition()),
+                responsible instanceof Player player
+                        ? (claim, trust) -> protection.claims.allows(claim, player, trust)
+                        : null,
+                source == null ? null : FabricPotionSources.origin(source));
+        if (!allowed && responsible instanceof Player player)
+        {
+            protection.requireTrust(level, target, player, ClaimTrustLevel.CONTAINER, true);
+        }
+        return allowed;
+    }
+
+    public static void rememberDispensedProjectile(
+            @NotNull Entity projectile,
+            @NotNull ServerLevel level,
+            @NotNull BlockPos dispenser)
+    {
+        FabricWorldProtection protection = active;
+        if (protection != null)
+        {
+            FabricPotionSources.remember(projectile,
+                    new FabricPotionSources.Origin(protection.claims.worldKey(level), point(dispenser)));
+        }
     }
 
     // ---------------------------------------------------------------------------------------------

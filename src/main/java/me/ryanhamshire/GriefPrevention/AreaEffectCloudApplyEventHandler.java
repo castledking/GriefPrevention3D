@@ -1,5 +1,6 @@
 package me.ryanhamshire.GriefPrevention;
 
+import com.griefprevention.compat.PotionEffectTypeCompat;
 import org.bukkit.Location;
 import org.bukkit.entity.Animals;
 import org.bukkit.entity.AreaEffectCloud;
@@ -14,6 +15,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.entity.AreaEffectCloudApplyEvent;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.potion.PotionType;
 import org.bukkit.projectiles.ProjectileSource;
 import org.jetbrains.annotations.NotNull;
 
@@ -32,6 +34,13 @@ public final class AreaEffectCloudApplyEventHandler implements Listener {
     public void onAreaEffectCloudApply(@NotNull AreaEffectCloudApplyEvent event) {
         AreaEffectCloud cloud = event.getEntity();
         ProjectileSource source = cloud.getSource();
+
+        if (hasWeavingEffect(cloud)) {
+            // Apply the same creature protection as splash potions, before access trust or
+            // non-player sources can bypass it. This also covers ordinary base potions.
+            event.getAffectedEntities().removeIf(affected ->
+                    entityDamageHandler.checkGriefPotionPermission(source, affected, event) != null);
+        }
 
         // Only handle player-thrown potions
         if (!(source instanceof Player))
@@ -90,5 +99,22 @@ public final class AreaEffectCloudApplyEventHandler implements Listener {
 
             return false;
         });
+    }
+
+    private static boolean hasWeavingEffect(@NotNull AreaEffectCloud cloud) {
+        Object weaving = PotionEffectTypeCompat.getByName("WEAVING");
+        if (weaving == null)
+            return false;
+
+        if (cloud.getCustomEffects().stream().anyMatch(effect -> weaving.equals(effect.getType())))
+            return true;
+
+        try {
+            PotionType base = cloud.getBasePotionType();
+            return base != null && "WEAVING".equals(base.name());
+        } catch (NoSuchMethodError ignored) {
+            // getBasePotionType was added in 1.20.2; older servers have no weaving effect.
+            return false;
+        }
     }
 }

@@ -5,7 +5,9 @@ import org.bukkit.Keyed;
 import org.bukkit.NamespacedKey;
 import org.bukkit.Registry;
 import org.bukkit.Server;
+import org.bukkit.inventory.MenuType;
 import org.jetbrains.annotations.NotNull;
+import org.mockito.stubbing.Answer;
 
 import java.lang.reflect.Field;
 import java.util.logging.Logger;
@@ -35,15 +37,18 @@ public final class ServerMocks
         // If that is not done, all the constants in the dependent class will be null.
         doAnswer(invocationGetRegistry -> {
             Registry<?> registry = mock();
-            doAnswer(invocationGetEntry -> {
+            Answer<Keyed> lookup = invocationGetEntry -> {
                 NamespacedKey key = invocationGetEntry.getArgument(0);
                 // Set registries to always return a new value. This allows static constants to be populated,
                 // i.e. won't need reflection hackery to re-set a final value if Biome.PLAINS is accessed by a test.
                 Class<? extends Keyed> arg = invocationGetRegistry.getArgument(0);
+                if (arg == MenuType.class) arg = MenuType.Typed.class;
                 Keyed keyed = mock(arg);
                 doReturn(key).when(keyed).getKey();
                 return keyed;
-            }).when(registry).get(notNull(NamespacedKey.class));
+            };
+            doAnswer(lookup).when(registry).get(notNull(NamespacedKey.class));
+            doAnswer(lookup).when(registry).getOrThrow(notNull(NamespacedKey.class));
             return registry;
         }).when(mock).getRegistry(notNull());
 

@@ -35,6 +35,7 @@ public final class PotionEffectTypeCompat {
         addEffectByName(effects, "WITHER");
         addEffectByName(effects, "JUMP_BOOST");
         addEffectByName(effects, "LEVITATION");
+        addEffectByName(effects, "WEAVING");
 
         // Legacy fallback names
         addEffectByName(effects, "HARM");  // Old name for INSTANT_DAMAGE

@@ -1182,7 +1182,26 @@ public class EntityDamageHandler implements Listener {
         }
     }
 
-    
+    @Nullable Supplier<String> checkGriefPotionPermission(
+            @Nullable ProjectileSource source,
+            @NotNull LivingEntity affected,
+            @NotNull Event event) {
+        if (affected == source || !(affected.getType() == EntityType.VILLAGER || affected instanceof Animals))
+            return null;
+
+        Claim claim = dataStore.getClaimAt(affected.getLocation(), false, null);
+        if (claim == null)
+            return null;
+
+        Supplier<String> denial = () -> dataStore.getMessage(Messages.NoDamageClaimedEntity, claim.getOwnerName());
+        if (source instanceof Player) {
+            return claim.checkPermission((Player) source, ClaimPermission.Container, event, denial);
+        }
+
+        // Dispensers may affect their own claim, but not creatures across a boundary.
+        return EntityEventHandler.isBlockSourceInClaim(source, claim) ? null : denial;
+    }
+
     // when a splash potion affects one or more entities...
     @EventHandler(ignoreCancelled = true, priority = EventPriority.LOWEST)
     public void onPotionSplash(@NotNull PotionSplashEvent event) {
@@ -1206,37 +1225,12 @@ public class EntityDamageHandler implements Listener {
             // Restrict some potions on claimed villagers and animals.
             // Griefers could use potions to kill entities or steal them over fences.
             if (getGriefEffects().contains(effectType)) {
-                Claim cachedClaim = null;
                 for (LivingEntity affected : event.getAffectedEntities()) {
-                    // Always impact the thrower.
-                    if (affected == thrower)
-                        continue;
-
-                    if (affected.getType() == EntityType.VILLAGER || affected instanceof Animals) {
-                        Claim claim = this.dataStore.getClaimAt(affected.getLocation(), false, cachedClaim);
-                        if (claim != null) {
-                            cachedClaim = claim;
-
-                            if (thrower == null) {
-                                // Non-player source: Witches, dispensers, etc.
-                                if (!EntityEventHandler.isBlockSourceInClaim(projectileSource, claim)) {
-                                    // If the source is not a block in the same claim as the affected entity,
-                                    // disallow.
-                                    event.setIntensity(affected, 0);
-                                }
-                            } else {
-                                // Source is a player. Determine if they have permission to access entities in the claim.
-                                Supplier<String> override = () -> instance.dataStore
-                                        .getMessage(Messages.NoDamageClaimedEntity, claim.getOwnerName());
-                                final Supplier<String> noContainersReason = claim.checkPermission(thrower,
-                                        ClaimPermission.Container, event, override);
-                                if (noContainersReason != null) {
-                                    event.setIntensity(affected, 0);
-                                    if (messagedPlayer.compareAndSet(false, true)) {
-                                        GriefPrevention.sendRateLimitedErrorMessage(thrower, noContainersReason.get());
-                                    }
-                                }
-                            }
+                    Supplier<String> denial = checkGriefPotionPermission(projectileSource, affected, event);
+                    if (denial != null) {
+                        event.setIntensity(affected, 0);
+                        if (thrower != null && messagedPlayer.compareAndSet(false, true)) {
+                            GriefPrevention.sendRateLimitedErrorMessage(thrower, denial.get());
                         }
                     }
                 }
