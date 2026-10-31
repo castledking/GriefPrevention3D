@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 import com.griefprevention.test.ServerMocks;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.UUID;
 import java.util.logging.Logger;
 import org.bukkit.Bukkit;
@@ -222,6 +223,72 @@ class AutoIgnoreClaimsTest
     }
 
     @Test
+    void staffKeepTheTrustAnAdminClaimGivesThePublic()
+    {
+        plugin.config_requireIgnoreClaimsInAdminClaims = true;
+        Player staff = staff(true);
+        when(dataStore.getPlayerData(STAFF_ID)).thenReturn(new PlayerData());
+        Claim claim = adminClaim(Collections.<String>emptyList(), Collections.singletonList("public"));
+
+        // trading with a villager needs only the container trust the claim hands everyone
+        assertNull(claim.checkPermission(staff, ClaimPermission.Container, null));
+
+        // building still takes /ignoreclaims, as the public was never trusted to build
+        assertNotNull(claim.checkPermission(staff, ClaimPermission.Build, null));
+    }
+
+    @Test
+    void staffKeepTheTrustAnAdminClaimGivesThem()
+    {
+        plugin.config_requireIgnoreClaimsInAdminClaims = true;
+        Player staff = staff(true);
+        when(dataStore.getPlayerData(STAFF_ID)).thenReturn(new PlayerData());
+        Claim claim = adminClaim(Collections.singletonList(STAFF_ID.toString()), Collections.<String>emptyList());
+
+        assertNull(claim.checkPermission(staff, ClaimPermission.Build, null));
+        assertNull(claim.checkPermission(staff, ClaimPermission.Container, null));
+    }
+
+    @Test
+    void adminSubdivisionsFollowTheSameIgnoreClaimsRule()
+    {
+        plugin.config_requireIgnoreClaimsInAdminClaims = true;
+        PlayerData staffData = new PlayerData();
+        Player staff = staff(true);
+        when(dataStore.getPlayerData(STAFF_ID)).thenReturn(staffData);
+        when(dataStore.getMessage(any(Messages.class), any(String[].class)))
+                .thenAnswer(call -> call.getArgument(0).toString());
+
+        Claim subdivision = adminSubdivision(Collections.<String>emptyList(), Collections.<String>emptyList());
+
+        assertNotNull(subdivision.checkPermission(staff, ClaimPermission.Build, null));
+        assertNotNull(subdivision.checkPermission(staff, ClaimPermission.Container, null));
+        assertNull(subdivision.checkPermission(staff, ClaimPermission.Access, null));
+        assertNull(subdivision.checkPermission(staff, ClaimPermission.Edit, null));
+        assertNull(subdivision.checkPermission(staff, ClaimPermission.Manage, null));
+
+        staffData.ignoreClaims = true;
+        assertNull(subdivision.checkPermission(staff, ClaimPermission.Build, null));
+        assertNull(subdivision.checkPermission(staff, ClaimPermission.Container, null));
+    }
+
+    @Test
+    void staffKeepTheTrustAnAdminSubdivisionGives()
+    {
+        plugin.config_requireIgnoreClaimsInAdminClaims = true;
+        Player staff = staff(true);
+        when(dataStore.getPlayerData(STAFF_ID)).thenReturn(new PlayerData());
+
+        Claim publicContainers = adminSubdivision(Collections.<String>emptyList(), Collections.singletonList("public"));
+        assertNull(publicContainers.checkPermission(staff, ClaimPermission.Container, null));
+        assertNotNull(publicContainers.checkPermission(staff, ClaimPermission.Build, null));
+
+        Claim staffBuilders = adminSubdivision(Collections.singletonList(STAFF_ID.toString()), Collections.<String>emptyList());
+        assertNull(staffBuilders.checkPermission(staff, ClaimPermission.Build, null));
+        assertNull(staffBuilders.checkPermission(staff, ClaimPermission.Container, null));
+    }
+
+    @Test
     void theOptionOnlyBindsStaffWhoHoldAdminClaims()
     {
         plugin.config_requireIgnoreClaimsInAdminClaims = true;
@@ -238,15 +305,46 @@ class AutoIgnoreClaimsTest
 
     private static Claim adminClaim()
     {
+        return adminClaim(Collections.<String>emptyList(), Collections.<String>emptyList());
+    }
+
+    private static Claim adminClaim(List<String> builders, List<String> containers)
+    {
         return new Claim(
                 new Location(null, 0, 64, 0),
                 new Location(null, 9, 64, 9),
                 null,
-                Collections.<String>emptyList(),
-                Collections.<String>emptyList(),
+                builders,
+                containers,
                 Collections.<String>emptyList(),
                 Collections.<String>emptyList(),
                 1L);
+    }
+
+    private static Claim adminSubdivision(List<String> builders, List<String> containers)
+    {
+        Claim parent = new Claim(
+                new Location(null, 0, 64, 0),
+                new Location(null, 20, 64, 20),
+                PLAYER_ID,
+                Collections.<String>emptyList(),
+                Collections.<String>emptyList(),
+                Collections.<String>emptyList(),
+                Collections.<String>emptyList(),
+                10L);
+        Claim child = new Claim(
+                new Location(null, 4, 64, 4),
+                new Location(null, 8, 64, 8),
+                null,
+                builders,
+                containers,
+                Collections.<String>emptyList(),
+                Collections.<String>emptyList(),
+                11L);
+        child.parent = parent;
+        parent.children.add(child);
+        child.setAdminSubdivision(true);
+        return child;
     }
 
     private static Player staff(boolean hasAutoIgnore)

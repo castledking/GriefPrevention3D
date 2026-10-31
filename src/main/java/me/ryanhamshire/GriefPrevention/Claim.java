@@ -958,11 +958,14 @@ public class Claim
          if (this.isAdminSubdivision())
          {
              // Staff run them the same way they run an administrative claim.
-             if (player != null && player.hasPermission("griefprevention.adminclaims")) return null;
+             if (player != null && player.hasPermission("griefprevention.adminclaims"))
+             {
+                 if (!staffMustIgnoreClaims(uuid, permission)) return null;
+             }
 
              // Everyone else keeps whatever build/container/access trust reaches them, but
              // reshaping the subdivision and handing out trust inside it stays with staff.
-             if (permission == ClaimPermission.Edit || permission == ClaimPermission.Manage)
+             else if (permission == ClaimPermission.Edit || permission == ClaimPermission.Manage)
              {
                  return () -> GriefPrevention.instance.dataStore.getMessage(Messages.AdminSubdivisionRestricted);
              }
@@ -973,26 +976,10 @@ public class Claim
              // Admin claims need adminclaims permission only.
              if (this.isAdminClaim())
              {
-                 if (player.hasPermission("griefprevention.adminclaims"))
+                 if (player.hasPermission("griefprevention.adminclaims")
+                         && !staffMustIgnoreClaims(uuid, permission))
                  {
-                     // Optionally, staff must also be ignoring claims to build in an admin claim,
-                     // so that building in admin land is always a deliberate act. The refusal is the
-                     // ordinary one for this permission, with the usual pointer at /ignoreclaims,
-                     // exactly as every other protection reports it.
-                     boolean needsIgnoreClaims =
-                         GriefPrevention.instance.config_requireIgnoreClaimsInAdminClaims
-                             && (permission == ClaimPermission.Build || permission == ClaimPermission.Container);
-
-                     if (!needsIgnoreClaims
-                         || GriefPrevention.instance.dataStore.getPlayerData(uuid).isIgnoringClaims()) return null;
-
-                     return () ->
-                     {
-                         String reason = GriefPrevention.instance.dataStore.getMessage(permission.getDenialMessage(), this.getOwnerName());
-                         if (hasBypassPermission(player, permission))
-                             reason += "  " + GriefPrevention.instance.dataStore.getMessage(Messages.IgnoreClaimsAdvertisement);
-                         return reason;
-                     };
+                     return null;
                  }
              }
 
@@ -1072,6 +1059,19 @@ public class Claim
                  reason += "  " + GriefPrevention.instance.dataStore.getMessage(Messages.IgnoreClaimsAdvertisement);
              return reason;
          };
+     }
+
+     /**
+      * Whether {@code RequireIgnoreClaimsInAdminClaims} withholds automatic staff access for this
+      * check. Until staff ignore claims, they fall through to the claim's own trust like anyone
+      * else; otherwise the refusal is the ordinary one for this permission, with the usual pointer
+      * at {@code /ignoreclaims}.
+      */
+     private boolean staffMustIgnoreClaims(@NotNull UUID uuid, @NotNull ClaimPermission permission)
+     {
+         return GriefPrevention.instance.config_requireIgnoreClaimsInAdminClaims
+                 && (permission == ClaimPermission.Build || permission == ClaimPermission.Container)
+                 && !GriefPrevention.instance.dataStore.getPlayerData(uuid).isIgnoringClaims();
      }
 
      /**
