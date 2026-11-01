@@ -78,7 +78,6 @@ import java.util.UUID;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
-import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 //singleton class which manages all GriefPrevention data (except for config options)
@@ -105,10 +104,6 @@ public abstract class DataStore {
 
     // in-memory cache for messages, keyed by locale code
     private final Map<String, String[]> messagesByLocale = new HashMap<>();
-
-    // pattern for unique user identifiers (UUIDs)
-    protected final static Pattern uuidpattern = Pattern
-            .compile("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
 
     // next claim ID
     Long nextClaimID = (long) 0;

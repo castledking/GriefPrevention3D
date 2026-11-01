@@ -209,10 +209,10 @@ public class FlatFileDataStore extends DataStore
                 //skip any file starting with an underscore, to avoid special files not representing land claims
                 if (files[i].getName().startsWith("_")) continue;
 
-                //delete any which don't end in .yml
+                //skip any which don't end in .yml
                 if (!files[i].getName().endsWith(".yml"))
                 {
-                    files[i].delete();
+                    GriefPrevention.AddLogEntry("Not a claim file, skipping: " + files[i].getName());
                     continue;
                 }
 
@@ -223,16 +223,10 @@ public class FlatFileDataStore extends DataStore
                 {
                     claimID = Long.parseLong(files[i].getName().split("\\.")[0]);
                 }
-
-                //because some older versions used a different file name pattern before claim IDs were introduced,
-                //those files need to be "converted" by renaming them to a unique ID
                 catch (Exception e)
                 {
-                    claimID = this.nextClaimID;
-                    this.incrementNextClaimID();
-                    File newFile = new File(claimDataFolderPath + File.separator + this.nextClaimID + ".yml");
-                    files[i].renameTo(newFile);
-                    files[i] = newFile;
+                    GriefPrevention.AddLogEntry("Claim filename is not a claim ID, skipping: " + files[i].getName());
+                    continue;
                 }
 
                 try
