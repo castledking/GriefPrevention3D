@@ -237,4 +237,16 @@ class MessageFileTest {
             }
         }
     }
+
+    @Test
+    void everyBundledLanguageExposesAllThreeTutorialLinks() throws IOException {
+        for (String locale : MessageLocalization.SUPPORTED_LOCALE_CODES) {
+            MessageFile file = MessageFile.load(new File("src/main/resources/messages_" + locale + ".yml"));
+            assertEquals(Messages.SurvivalVideoURL.defaultValue, file.getString("Messages.SurvivalVideoURL", "missing"), locale);
+            assertEquals(Messages.CreativeVideoURL.defaultValue, file.getString("Messages.CreativeVideoURL", "missing"), locale);
+            assertEquals(Messages.SubdivisionVideoURL.defaultValue, file.getString("Messages.SubdivisionVideoURL", "missing"), locale);
+        }
+        MessageFile file = MessageFile.load(new File("src/main/resources/messages.yml"));
+        assertEquals(Messages.SurvivalVideoURL.defaultValue, file.getString("Messages.SurvivalVideoURL", "missing"));
+    }
 }

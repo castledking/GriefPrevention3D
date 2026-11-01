@@ -16,6 +16,10 @@
 # ============================================================
 
 Messages:
+  # Tutorial links; keep {0} in the corresponding video help messages to display these values.
+  SurvivalVideoURL: '&3&nbit.ly/mcgpuser&r'
+  CreativeVideoURL: '&3&nbit.ly/mcgpcrea&r'
+  SubdivisionVideoURL: '&3&nbit.ly/mcgpsub&r'
   RespectingClaims: 现在正在尊重领地边界。
   IgnoringClaims: 现在正在忽略领地边界。
   NoCreativeUnClaim: 你不能取消认领这块土地。你只能扩大这个领地或创建新的领地。

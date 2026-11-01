@@ -629,7 +629,7 @@ public class BlockEventHandler implements Listener {
                     player,
                     TextMode.Instr,
                     Messages.SurvivalBasicsVideo2,
-                    DataStore.SURVIVAL_VIDEO_URL
+                    GriefPrevention.instance.dataStore.getMessage(player, Messages.SurvivalVideoURL)
                 );
             }
 
@@ -698,7 +698,7 @@ public class BlockEventHandler implements Listener {
                             player,
                             TextMode.Instr,
                             Messages.SurvivalBasicsVideo2,
-                            DataStore.SURVIVAL_VIDEO_URL
+                            GriefPrevention.instance.dataStore.getMessage(player, Messages.SurvivalVideoURL)
                         );
                     }
 

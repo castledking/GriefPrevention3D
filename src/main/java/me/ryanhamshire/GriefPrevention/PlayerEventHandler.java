@@ -18,6 +18,8 @@
 
 package me.ryanhamshire.GriefPrevention;
 
+import com.griefprevention.geometry.CellRegion;
+
 import com.griefprevention.claims.editor.BukkitClaimEditMessages;
 import com.griefprevention.claims.editor.ClaimEditIntent;
 import com.griefprevention.claims.editor.ClaimEditIntentType;
@@ -377,7 +379,7 @@ public class PlayerEventHandler implements Listener {
                     TextMode.Info,
                     Messages.CreativeBasicsVideo2,
                     10L,
-                    DataStore.CREATIVE_VIDEO_URL
+                    GriefPrevention.instance.dataStore.getMessage(player, Messages.CreativeVideoURL)
                 );
             } else {
                 GriefPrevention.sendMessage(
@@ -385,7 +387,7 @@ public class PlayerEventHandler implements Listener {
                     TextMode.Info,
                     Messages.SurvivalBasicsVideo2,
                     10L,
-                    DataStore.SURVIVAL_VIDEO_URL
+                    GriefPrevention.instance.dataStore.getMessage(player, Messages.SurvivalVideoURL)
                 );
             }
         }
@@ -4043,48 +4045,15 @@ public class PlayerEventHandler implements Listener {
     }
 
     private int polygonArea(@NotNull OrthogonalPolygon polygon) {
-        int area = 0;
-        for (int x = polygon.minX(); x <= polygon.maxX(); x++) {
-            for (int z = polygon.minZ(); z <= polygon.maxZ(); z++) {
-                if (polygonContains(polygon, new OrthogonalPoint2i(x, z))) {
-                    area++;
-                }
-            }
-        }
-
-        return area;
+        return polygon.cellCount();
     }
 
     private boolean polygonContainsPolygon(@NotNull OrthogonalPolygon container, @NotNull OrthogonalPolygon contents) {
-        for (int x = contents.minX(); x <= contents.maxX(); x++) {
-            for (int z = contents.minZ(); z <= contents.maxZ(); z++) {
-                OrthogonalPoint2i point = new OrthogonalPoint2i(x, z);
-                if (polygonContains(contents, point) && !polygonContains(container, point)) {
-                    return false;
-                }
-            }
-        }
-
-        return true;
+        return container.cellRegion().containsAll(contents.cellRegion());
     }
 
     private int polygonOverlapArea(@NotNull OrthogonalPolygon first, @NotNull OrthogonalPolygon second) {
-        int area = 0;
-        int minX = Math.max(first.minX(), second.minX());
-        int maxX = Math.min(first.maxX(), second.maxX());
-        int minZ = Math.max(first.minZ(), second.minZ());
-        int maxZ = Math.min(first.maxZ(), second.maxZ());
-
-        for (int x = minX; x <= maxX; x++) {
-            for (int z = minZ; z <= maxZ; z++) {
-                OrthogonalPoint2i point = new OrthogonalPoint2i(x, z);
-                if (polygonContains(first, point) && polygonContains(second, point)) {
-                    area++;
-                }
-            }
-        }
-
-        return area;
+        return (int) Math.min(Integer.MAX_VALUE, first.cellRegion().intersect(second.cellRegion()).cellCount());
     }
 
     private static final class ShapedNibResizeAttempt {
@@ -5577,7 +5546,7 @@ public class PlayerEventHandler implements Listener {
                 TextMode.Instr,
                 Messages.SubdivisionVideo2,
                 201L,
-                DataStore.SUBDIVISION_VIDEO_URL
+                GriefPrevention.instance.dataStore.getMessage(player, Messages.SubdivisionVideoURL)
             );
         }
 
@@ -5665,14 +5634,9 @@ public class PlayerEventHandler implements Listener {
                 // preview polygon that were NOT in the original claim). These
                 // guide the merge to connect from the reshape front to the
                 // marked claim, preserving the player's intended path.
-                Set<OrthogonalPoint2i> corridorCells = new HashSet<>();
-                for (int x = polygon.minX(); x <= polygon.maxX(); x++) {
-                    for (int z = polygon.minZ(); z <= polygon.maxZ(); z++) {
-                        if (polygon.containsCell(x, z) && !originalPolygon.containsCell(x, z)) {
-                            corridorCells.add(new OrthogonalPoint2i(x, z));
-                        }
-                    }
-                }
+                CellRegion added = polygon.cellRegion().subtract(originalPolygon.cellRegion());
+                // mergeClaims only needs to know that this reshape supplied its own corridor.
+                Set<OrthogonalPoint2i> corridorCells = added.isEmpty() ? Collections.emptySet() : Collections.singleton(added.firstCell());
                 this.dataStore.mergeClaims(player, playerData, claim, markedClaim, null, corridorCells);
                 playerData.clearCrossClaimBoundaryMarkers();
                 return;
@@ -5859,23 +5823,7 @@ public class PlayerEventHandler implements Listener {
         }
         OrthogonalPolygon resultPolygon = validation.polygon();
 
-        Set<OrthogonalPoint2i> resultCells = new HashSet<>();
-        for (int x = resultPolygon.minX(); x <= resultPolygon.maxX(); x++) {
-            for (int z = resultPolygon.minZ(); z <= resultPolygon.maxZ(); z++) {
-                if (resultPolygon.containsCell(x, z)) {
-                    resultCells.add(new OrthogonalPoint2i(x, z));
-                }
-            }
-        }
-        Set<OrthogonalPoint2i> originalCells = new HashSet<>();
-        for (int x = originalPolygon.minX(); x <= originalPolygon.maxX(); x++) {
-            for (int z = originalPolygon.minZ(); z <= originalPolygon.maxZ(); z++) {
-                if (originalPolygon.containsCell(x, z)) {
-                    originalCells.add(new OrthogonalPoint2i(x, z));
-                }
-            }
-        }
-        if (resultCells.size() >= originalCells.size()) {
+        if (resultPolygon.cellRegion().cellCount() >= originalPolygon.cellRegion().cellCount()) {
             GriefPrevention.sendMessage(player, TextMode.Err, "The cut path doesn't remove any land from the claim.");
             visualizeShapedEditState(player, session, clickedBlock.getY());
             return;

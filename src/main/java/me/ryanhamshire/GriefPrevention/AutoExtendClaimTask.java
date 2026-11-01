@@ -61,6 +61,11 @@ public class AutoExtendClaimTask implements Runnable
 
         if (world == null) return;
 
+        // A claim already at its configured depth cannot extend. Avoid collecting potentially
+        // thousands of chunk snapshots only for the async scan to immediately return.
+        int minimumY = Math.max(GriefPrevention.getWorldMinY(world), GriefPrevention.instance.getMaxDepthForWorld(world));
+        if (lesserCorner.getBlockY() <= minimumY) return;
+
         int lowestLootableTile = lesserCorner.getBlockY();
         ArrayList<ChunkSnapshot> snapshots = new ArrayList<>();
         for (int chunkX = lesserCorner.getBlockX() >> 4; chunkX <= greaterCorner.getBlockX() >> 4; chunkX++)

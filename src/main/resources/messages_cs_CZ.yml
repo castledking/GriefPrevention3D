@@ -16,6 +16,10 @@
 # ============================================================
 
 Messages:
+  # Tutorial links; keep {0} in the corresponding video help messages to display these values.
+  SurvivalVideoURL: '&3&nbit.ly/mcgpuser&r'
+  CreativeVideoURL: '&3&nbit.ly/mcgpcrea&r'
+  SubdivisionVideoURL: '&3&nbit.ly/mcgpsub&r'
   RespectingClaims: Nyní respektuješ claimy.
   IgnoringClaims: Nyní ignoruješ claimy.
   NoCreativeUnClaim: Tuto půdu nemůžeš odclaimovat. Můžeš pouze tento claim zvětšit nebo vytvořit další.

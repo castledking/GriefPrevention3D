@@ -16,6 +16,10 @@
 # ============================================================
 
 Messages:
+  # Tutorial links; keep {0} in the corresponding video help messages to display these values.
+  SurvivalVideoURL: '&3&nbit.ly/mcgpuser&r'
+  CreativeVideoURL: '&3&nbit.ly/mcgpcrea&r'
+  SubdivisionVideoURL: '&3&nbit.ly/mcgpsub&r'
   RespectingClaims: "Теперь вы уважаете чужие территории."
   IgnoringClaims: "Теперь вы игнорируете чужие территории."
   NoCreativeUnClaim: "Вы не можете снять защиту с этой территории. Вы можете только расширить её или создать новые территории."

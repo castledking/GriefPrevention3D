@@ -16,6 +16,10 @@
 # ============================================================
 
 Messages:
+  # Tutorial links; keep {0} in the corresponding video help messages to display these values.
+  SurvivalVideoURL: '&3&nbit.ly/mcgpuser&r'
+  CreativeVideoURL: '&3&nbit.ly/mcgpcrea&r'
+  SubdivisionVideoURL: '&3&nbit.ly/mcgpsub&r'
   RespectingClaims: Kini menghormati kawasan tuntutan.
   IgnoringClaims: Kini mengabaikan kawasan tuntutan.
   NoCreativeUnClaim: Anda tidak boleh membatalkan tuntutan tanah ini. Anda hanya boleh memperbesarkan kawasan tuntutan ini atau mencipta kawasan tuntutan tambahan.

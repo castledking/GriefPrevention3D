@@ -16,6 +16,10 @@
 # ============================================================
 
 Messages:
+  # Tutorial links; keep {0} in the corresponding video help messages to display these values.
+  SurvivalVideoURL: '&3&nbit.ly/mcgpuser&r'
+  CreativeVideoURL: '&3&nbit.ly/mcgpcrea&r'
+  SubdivisionVideoURL: '&3&nbit.ly/mcgpsub&r'
   RespectingClaims: Schutzgebiete werden nun respektiert.
   IgnoringClaims: Schutzgebiete werden nun ignoriert.
   NoCreativeUnClaim: Du kannst dieses Gebiet nicht entfernen. Du kannst es nur vergrößern oder weitere Gebiete erstellen.

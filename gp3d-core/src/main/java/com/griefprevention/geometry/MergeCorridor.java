@@ -3,12 +3,8 @@ package com.griefprevention.geometry;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Deque;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 /**
  * Builds the corridor that joins two claims that do not touch when they are merged.
@@ -201,58 +197,13 @@ public final class MergeCorridor
             int lineMin,
             int lineMax)
     {
-        Set<OrthogonalPoint2i> visited = new HashSet<>();
-        Set<OrthogonalPoint2i> outside = new HashSet<>();
-        Deque<OrthogonalPoint2i> queue = new ArrayDeque<>();
-
-        for (int parallel = parallelMin; parallel <= parallelMax; parallel++)
-        {
-            int x = horizontal ? parallel : edgeLine;
-            int z = horizontal ? edgeLine : parallel;
-            if (!polygon.containsCell(x, z)) continue;
-
-            OrthogonalPoint2i cell = new OrthogonalPoint2i(x, z);
-            if (visited.add(cell)) queue.add(cell);
-        }
-
-        if (visited.isEmpty()) return null;
-
-        int minX = Integer.MAX_VALUE;
-        int maxX = Integer.MIN_VALUE;
-        int minZ = Integer.MAX_VALUE;
-        int maxZ = Integer.MIN_VALUE;
-
-        while (!queue.isEmpty())
-        {
-            OrthogonalPoint2i cell = queue.poll();
-            minX = Math.min(minX, cell.x());
-            maxX = Math.max(maxX, cell.x());
-            minZ = Math.min(minZ, cell.z());
-            maxZ = Math.max(maxZ, cell.z());
-
-            int[][] neighbors = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
-            for (int[] neighbor : neighbors)
-            {
-                int x = cell.x() + neighbor[0];
-                int z = cell.z() + neighbor[1];
-                int line = horizontal ? z : x;
-                if (line < lineMin || line > lineMax) continue;
-
-                OrthogonalPoint2i next = new OrthogonalPoint2i(x, z);
-                if (visited.contains(next) || outside.contains(next)) continue;
-
-                if (!polygon.containsCell(x, z))
-                {
-                    outside.add(next);
-                    continue;
-                }
-
-                visited.add(next);
-                queue.add(next);
-            }
-        }
-
-        return new Extent(minX, minZ, maxX, maxZ);
+        CellRegion band = polygon.cellRegion().intersect(horizontal
+                ? CellRegion.rectangle(polygon.minX(), lineMin, polygon.maxX(), lineMax)
+                : CellRegion.rectangle(lineMin, polygon.minZ(), lineMax, polygon.maxZ()));
+        int[] bounds = horizontal
+                ? band.connectedBounds(parallelMin, edgeLine, parallelMax, edgeLine)
+                : band.connectedBounds(edgeLine, parallelMin, edgeLine, parallelMax);
+        return bounds == null ? null : new Extent(bounds[0], bounds[1], bounds[2], bounds[3]);
     }
 
     /**
@@ -284,14 +235,9 @@ public final class MergeCorridor
             int parallelMin,
             int parallelMax)
     {
-        for (int parallel = parallelMin; parallel <= parallelMax; parallel++)
-        {
-            int x = horizontal ? parallel : line;
-            int z = horizontal ? line : parallel;
-            if (polygon.containsCell(x, z)) return true;
-        }
-
-        return false;
+        return polygon.cellRegion().intersects(horizontal
+                ? CellRegion.rectangle(parallelMin, line, parallelMax, line)
+                : CellRegion.rectangle(line, parallelMin, line, parallelMax));
     }
 
     /**

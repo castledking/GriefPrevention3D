@@ -248,6 +248,9 @@ public enum MessageKey
     SUBDIVISION_MODE_3D(
             "SubdivisionMode3D",
             "3D Subdivision mode.  Use your shovel to create 3D subdivisions in your existing claims.  Use /basicclaims to exit."),
+    SURVIVAL_VIDEO_URL("SurvivalVideoURL", "&3&nbit.ly/mcgpuser&r"),
+    CREATIVE_VIDEO_URL("CreativeVideoURL", "&3&nbit.ly/mcgpcrea&r"),
+    SUBDIVISION_VIDEO_URL("SubdivisionVideoURL", "&3&nbit.ly/mcgpsub&r"),
     SUBDIVISION_VIDEO_2("SubdivisionVideo2", "Click for Subdivision Help: {0}"),
     SUBDIVISION_START(
             "SubdivisionStart",

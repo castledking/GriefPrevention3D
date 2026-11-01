@@ -111,6 +111,9 @@ final class FabricDataFolder
             # GriefPrevention3D Fabric keeps message keys under the same Messages.* root as the Paper plugin.
             # This file currently seeds the native Fabric messages; more Paper messages will be added as features port.
             Messages:
+              SurvivalVideoURL: "&3&nbit.ly/mcgpuser&r"
+              CreativeVideoURL: "&3&nbit.ly/mcgpcrea&r"
+              SubdivisionVideoURL: "&3&nbit.ly/mcgpsub&r"
               BlockNotClaimed: "No one has claimed this block."
               BlockClaimed: "That block has been claimed by {0}."
               NoCreateClaimPermission: "You don't have permission to claim land."

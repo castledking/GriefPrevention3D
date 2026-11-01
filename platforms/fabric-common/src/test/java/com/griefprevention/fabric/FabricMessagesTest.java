@@ -77,6 +77,21 @@ class FabricMessagesTest
         );
     }
 
+    @Test
+    void tutorialLinksAreEditableAndReloadWithoutChangingTheHelpMessage() throws IOException
+    {
+        write("Messages:\n  SubdivisionVideoURL: 'https://example.test/subdivision'\n");
+        FabricMessages messages = new FabricMessages(this.dataFolder, LOGGER);
+        assertEquals("Click for Subdivision Help: https://example.test/subdivision",
+                messages.format(MessageKey.SUBDIVISION_VIDEO_2, messages.format(MessageKey.SUBDIVISION_VIDEO_URL)));
+        write("Messages:\n  SubdivisionVideoURL: '&bhttps://example.test/new'\n");
+        messages.reload();
+        assertEquals("Click for Subdivision Help: " + LegacyText.SECTION + "bhttps://example.test/new",
+                messages.format(MessageKey.SUBDIVISION_VIDEO_2, messages.format(MessageKey.SUBDIVISION_VIDEO_URL)));
+        assertEquals(LegacyText.translate(MessageKey.SURVIVAL_VIDEO_URL.defaultValue()), messages.format(MessageKey.SURVIVAL_VIDEO_URL));
+        assertEquals(LegacyText.translate(MessageKey.CREATIVE_VIDEO_URL.defaultValue()), messages.format(MessageKey.CREATIVE_VIDEO_URL));
+    }
+
     private void write(String contents) throws IOException
     {
         Files.write(this.dataFolder.resolve("messages.yml"), contents.getBytes(StandardCharsets.UTF_8));

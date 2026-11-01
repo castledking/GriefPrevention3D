@@ -79,7 +79,7 @@ public final class ProtectionHelper
                         String reason = GriefPrevention.instance.dataStore.getMessage(Messages.NoBuildOutsideClaims);
                         if (player.hasPermission("griefprevention.ignoreclaims"))
                             reason += "  " + GriefPrevention.instance.dataStore.getMessage(Messages.IgnoreClaimsAdvertisement);
-                        reason += "  " + GriefPrevention.instance.dataStore.getMessage(Messages.CreativeBasicsVideo2, DataStore.CREATIVE_VIDEO_URL);
+                        reason += "  " + GriefPrevention.instance.dataStore.getMessage(player, Messages.CreativeBasicsVideo2, GriefPrevention.instance.dataStore.getMessage(player, Messages.CreativeVideoURL));
                         return reason;
                     };
                 }

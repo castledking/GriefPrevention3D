@@ -18,6 +18,8 @@
 
 package me.ryanhamshire.GriefPrevention;
 
+import com.griefprevention.geometry.CellRegion;
+
 import com.griefprevention.persistence.ClaimDataSchema;
 
 import com.google.common.io.Files;
@@ -130,11 +132,14 @@ public abstract class DataStore {
     // current version of the schema of data in secondary storage
     private int currentSchemaVersion = -1; // -1 means not determined yet
 
-    // video links
+    // Legacy API defaults. Player-visible links now come from Messages.*VideoURL.
+    @Deprecated
     public static final String SURVIVAL_VIDEO_URL = "" + ChatColor.DARK_AQUA + ChatColor.UNDERLINE + "bit.ly/mcgpuser"
             + ChatColor.RESET;
+    @Deprecated
     public static final String CREATIVE_VIDEO_URL = "" + ChatColor.DARK_AQUA + ChatColor.UNDERLINE + "bit.ly/mcgpcrea"
             + ChatColor.RESET;
+    @Deprecated
     public static final String SUBDIVISION_VIDEO_URL = "" + ChatColor.DARK_AQUA + ChatColor.UNDERLINE + "bit.ly/mcgpsub"
             + ChatColor.RESET;
 
@@ -676,21 +681,10 @@ public abstract class DataStore {
         // Shaped parents need exact X/Z containment checks for each occupied child column.
         // A simple corner check can miss concave boundary escapes.
         if (parentCandidate.isShaped()) {
-            int sampleY = childMinY;
-            for (int x = minX; x <= maxX; x++) {
-                for (int z = minZ; z <= maxZ; z++) {
-                    Location probe = new Location(world, x, sampleY, z);
-                    if (!child.contains(probe, true, false)) {
-                        continue;
-                    }
-
-                    if (!parentCandidate.contains(probe, true, false)) {
-                        return false;
-                    }
-                }
-            }
-
-            return true;
+            CellRegion childColumns = child.isShaped()
+                    ? child.getBoundaryPolygon().cellRegion()
+                    : CellRegion.rectangle(minX, minZ, maxX, maxZ);
+            return parentCandidate.getBoundaryPolygon().cellRegion().containsAll(childColumns);
         }
 
         boolean cornersInside = parentCandidate.contains(new Location(world, minX, childMinY, minZ), true, false)
@@ -2348,8 +2342,8 @@ public abstract class DataStore {
                     Math.max(firstPolygon.maxZ(), secondPolygon.maxZ()));
         }
 
-        Set<OrthogonalPoint2i> occupied = collectCells(firstPolygon, secondPolygon);
-        if (occupied.isEmpty() || isConnected(occupied)) {
+        CellRegion occupied = firstPolygon.cellRegion().union(secondPolygon.cellRegion());
+        if (occupied.isEmpty() || occupied.isConnected()) {
             return null;
         }
 
@@ -2361,15 +2355,11 @@ public abstract class DataStore {
         }
 
         for (MergeCorridor.Extent leg : corridor) {
-            for (int x = leg.minX(); x <= leg.maxX(); x++) {
-                for (int z = leg.minZ(); z <= leg.maxZ(); z++) {
-                    occupied.add(new OrthogonalPoint2i(x, z));
-                }
-            }
+            occupied = occupied.union(CellRegion.rectangle(leg.minX(), leg.minZ(), leg.maxX(), leg.maxZ()));
         }
 
         try {
-            return OrthogonalPolygon.fromOccupiedPoints(occupied);
+            return occupied.toPolygon();
         } catch (IllegalArgumentException e) {
             // Contour tracing failed - let the caller fall back to a plain union.
             return null;
@@ -2380,46 +2370,9 @@ public abstract class DataStore {
         return polygon.corners().size() == 4;
     }
 
-    private static @NotNull Set<OrthogonalPoint2i> collectCells(
-            @NotNull OrthogonalPolygon first,
-            @NotNull OrthogonalPolygon second) {
-        Set<OrthogonalPoint2i> occupied = new HashSet<>();
-        int minX = Math.min(first.minX(), second.minX());
-        int maxX = Math.max(first.maxX(), second.maxX());
-        int minZ = Math.min(first.minZ(), second.minZ());
-        int maxZ = Math.max(first.maxZ(), second.maxZ());
 
-        for (int x = minX; x <= maxX; x++) {
-            for (int z = minZ; z <= maxZ; z++) {
-                if (first.containsCell(x, z) || second.containsCell(x, z)) {
-                    occupied.add(new OrthogonalPoint2i(x, z));
-                }
-            }
-        }
 
-        return occupied;
-    }
 
-    private static boolean isConnected(@NotNull Set<OrthogonalPoint2i> occupied) {
-        Set<OrthogonalPoint2i> unvisited = new HashSet<>(occupied);
-        java.util.Deque<OrthogonalPoint2i> queue = new java.util.ArrayDeque<>();
-        OrthogonalPoint2i start = unvisited.iterator().next();
-        unvisited.remove(start);
-        queue.add(start);
-
-        while (!queue.isEmpty()) {
-            OrthogonalPoint2i cell = queue.poll();
-            int[][] neighbors = {{1, 0}, {-1, 0}, {0, 1}, {0, -1}};
-            for (int[] neighbor : neighbors) {
-                OrthogonalPoint2i next = new OrthogonalPoint2i(cell.x() + neighbor[0], cell.z() + neighbor[1]);
-                if (unvisited.remove(next)) {
-                    queue.add(next);
-                }
-            }
-        }
-
-        return unvisited.isEmpty();
-    }
 
     /**
      * All top-level claims whose bounding box could touch the given shape.
@@ -2470,41 +2423,7 @@ public abstract class DataStore {
     }
 
     static boolean polygonsOverlap(OrthogonalPolygon polygon1, OrthogonalPolygon polygon2) {
-        // Check if bounding boxes overlap
-        int minX = Math.max(polygon1.minX(), polygon2.minX());
-        int maxX = Math.min(polygon1.maxX(), polygon2.maxX());
-        int minZ = Math.max(polygon1.minZ(), polygon2.minZ());
-        int maxZ = Math.min(polygon1.maxZ(), polygon2.maxZ());
-        if (minX > maxX || minZ > maxZ) {
-            return false;
-        }
-
-        // Check if any corner of either polygon is inside the other. This is cheap and settles
-        // the common cases without walking the whole overlapping region.
-        for (OrthogonalPoint2i corner : polygon1.corners()) {
-            if (polygon2.contains(corner)) {
-                return true;
-            }
-        }
-
-        for (OrthogonalPoint2i corner : polygon2.corners()) {
-            if (polygon1.contains(corner)) {
-                return true;
-            }
-        }
-
-        // Shapes can cross without either one's corners landing inside the other - a corridor
-        // laid straight across a narrow claim, for example. Walk the shared region for a cell
-        // that belongs to both.
-        for (int x = minX; x <= maxX; x++) {
-            for (int z = minZ; z <= maxZ; z++) {
-                if (polygon1.containsCell(x, z) && polygon2.containsCell(x, z)) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
+        return polygon1.cellRegion().intersects(polygon2.cellRegion());
     }
 
     private void updateClaimPolygon(Claim claim, OrthogonalPolygon polygon) {
@@ -3229,7 +3148,7 @@ public abstract class DataStore {
                     && !player.hasPermission("griefprevention.adminclaims")) {
                 GriefPrevention.sendMessage(player, TextMode.Info, Messages.BecomeMayor, 200L);
                 GriefPrevention.sendMessage(player, TextMode.Instr, Messages.SubdivisionVideo2, 201L,
-                        DataStore.SUBDIVISION_VIDEO_URL);
+                        GriefPrevention.instance.dataStore.getMessage(player, Messages.SubdivisionVideoURL));
             }
 
             // clean up

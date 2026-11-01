@@ -2788,7 +2788,7 @@ public class GriefPrevention extends JavaPlugin {
                 player,
                 TextMode.Instr,
                 Messages.SubdivisionVideo2,
-                DataStore.SUBDIVISION_VIDEO_URL
+                GriefPrevention.instance.dataStore.getMessage(player, Messages.SubdivisionVideoURL)
             );
 
             return true;
@@ -2839,7 +2839,7 @@ public class GriefPrevention extends JavaPlugin {
                 player,
                 TextMode.Instr,
                 Messages.SubdivisionVideo2,
-                DataStore.SUBDIVISION_VIDEO_URL
+                GriefPrevention.instance.dataStore.getMessage(player, Messages.SubdivisionVideoURL)
             );
 
             return true;
@@ -5487,7 +5487,7 @@ public class GriefPrevention extends JavaPlugin {
                     player,
                     TextMode.Instr,
                     Messages.SubdivisionVideo2,
-                    DataStore.SUBDIVISION_VIDEO_URL
+                    GriefPrevention.instance.dataStore.getMessage(player, Messages.SubdivisionVideoURL)
                 );
                 break;
             case "3d":
@@ -5507,7 +5507,7 @@ public class GriefPrevention extends JavaPlugin {
                     player,
                     TextMode.Instr,
                     Messages.SubdivisionVideo2,
-                    DataStore.SUBDIVISION_VIDEO_URL
+                    GriefPrevention.instance.dataStore.getMessage(player, Messages.SubdivisionVideoURL)
                 );
                 break;
             default:
@@ -6905,14 +6905,14 @@ public class GriefPrevention extends JavaPlugin {
                     player,
                     TextMode.Instr,
                     Messages.CreativeBasicsVideo2,
-                    DataStore.CREATIVE_VIDEO_URL
+                    GriefPrevention.instance.dataStore.getMessage(player, Messages.CreativeVideoURL)
                 );
             } else if (GriefPrevention.instance.claimsEnabledForWorld(player.getLocation().getWorld())) {
                 GriefPrevention.sendMessage(
                     player,
                     TextMode.Instr,
                     Messages.SurvivalBasicsVideo2,
-                    DataStore.SURVIVAL_VIDEO_URL
+                    GriefPrevention.instance.dataStore.getMessage(player, Messages.SurvivalVideoURL)
                 );
             }
             return false;
@@ -6928,14 +6928,14 @@ public class GriefPrevention extends JavaPlugin {
                     player,
                     TextMode.Instr,
                     Messages.CreativeBasicsVideo2,
-                    DataStore.CREATIVE_VIDEO_URL
+                    GriefPrevention.instance.dataStore.getMessage(player, Messages.CreativeVideoURL)
                 );
             } else if (GriefPrevention.instance.claimsEnabledForWorld(player.getLocation().getWorld())) {
                 GriefPrevention.sendMessage(
                     player,
                     TextMode.Instr,
                     Messages.SurvivalBasicsVideo2,
-                    DataStore.SURVIVAL_VIDEO_URL
+                    GriefPrevention.instance.dataStore.getMessage(player, Messages.SurvivalVideoURL)
                 );
             }
             return false;

@@ -16,6 +16,10 @@
 # ============================================================
 
 Messages:
+  # Tutorial links; keep {0} in the corresponding video help messages to display these values.
+  SurvivalVideoURL: '&3&nbit.ly/mcgpuser&r'
+  CreativeVideoURL: '&3&nbit.ly/mcgpcrea&r'
+  SubdivisionVideoURL: '&3&nbit.ly/mcgpsub&r'
   RespectingClaims: クレームを尊重するモードになりました。
   IgnoringClaims: クレームを無視するモードになりました。
   NoCreativeUnClaim: この土地のクレームを解除できません。このクレームを拡大するか、新しいクレームを作成することのみ可能です。

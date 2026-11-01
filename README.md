@@ -154,6 +154,20 @@ falling back to English.
 See the [Locale guide](https://github.com/castledking/GriefPrevention3D/wiki/Locale) for how to customise messages or
 add a language of your own.
 
+Tutorial links are editable separately from the surrounding help text. In the active
+`Lang/messages_<locale>.yml` (or Fabric's `messages.yml`), change these entries and run `/gpreload`:
+
+```yaml
+Messages:
+  SurvivalVideoURL: '&3&nbit.ly/mcgpuser&r'
+  CreativeVideoURL: '&3&nbit.ly/mcgpcrea&r'
+  SubdivisionVideoURL: '&3&nbit.ly/mcgpsub&r'
+```
+
+Keep `{0}` in `SurvivalBasicsVideo2`, `CreativeBasicsVideo2`, `SubdivisionVideo2` and `BookLink`
+where the corresponding link should appear. With per-player locales enabled, each player receives
+the link from their own language file.
+
 ## Supported Platforms: Fabric, Spigot, Paper, Purpur, and Folia.
 ### GriefPrevention3D targets and supports 1.8 - latest available version for non-fabric servers.
 ### Fabric support currently covers 1.21.2 - latest.

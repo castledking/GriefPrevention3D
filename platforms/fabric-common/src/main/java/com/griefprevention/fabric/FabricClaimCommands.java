@@ -27,8 +27,6 @@ final class FabricClaimCommands
 {
     /** Keeps a typed radius inside the world border, where claim arithmetic cannot overflow. */
     private static final int MAXIMUM_RADIUS = 30_000_000;
-    /** Paper's {@code DataStore.SUBDIVISION_VIDEO_URL}, underlined in dark aqua. */
-    private static final String SUBDIVISION_VIDEO_URL = "\u00A73\u00A7nbit.ly/mcgpsub\u00A7r";
 
     private final FabricClaimRepository claims;
     private final FabricDenialFeedback feedback;
@@ -528,7 +526,7 @@ final class FabricClaimCommands
         this.tools.clearSelection(player);
         this.modes.set(player.getUUID(), FabricClaimModes.Mode.SUBDIVIDE);
         sender.send(TextMode.INSTRUCTION, MessageKey.SUBDIVISION_MODE);
-        sender.send(TextMode.INSTRUCTION, MessageKey.SUBDIVISION_VIDEO_2, SUBDIVISION_VIDEO_URL);
+        sender.send(TextMode.INSTRUCTION, MessageKey.SUBDIVISION_VIDEO_2, sender.format(MessageKey.SUBDIVISION_VIDEO_URL));
         return true;
     }
 
@@ -552,7 +550,7 @@ final class FabricClaimCommands
         this.tools.clearSelection(player);
         this.modes.set(player.getUUID(), FabricClaimModes.Mode.SUBDIVIDE_3D);
         sender.send(TextMode.INSTRUCTION, MessageKey.SUBDIVISION_MODE_3D);
-        sender.send(TextMode.INSTRUCTION, MessageKey.SUBDIVISION_VIDEO_2, SUBDIVISION_VIDEO_URL);
+        sender.send(TextMode.INSTRUCTION, MessageKey.SUBDIVISION_VIDEO_2, sender.format(MessageKey.SUBDIVISION_VIDEO_URL));
         return true;
     }
 

@@ -11,6 +11,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import org.bukkit.Location;
+import org.bukkit.World;
+import java.lang.reflect.Method;
+import static org.mockito.Mockito.*;
 import org.junit.jupiter.api.Test;
 
 @SuppressWarnings("null")
@@ -88,6 +91,23 @@ class ShapedSubdivisionTest {
         assertTrue(subdivision.getCornerIndexAt(concaveCorner.x(), concaveCorner.z()) >= 0);
         // A point on an edge is not a corner.
         assertEquals(-1, subdivision.getCornerIndexAt(2, 0));
+    }
+
+    @Test
+    void singleColumnSubdivisionsStillUseExactShapedParentContainment() throws Exception {
+        Claim parent = claim(13L, OWNER, 0, 0, 10, 10);
+        parent.setShapedCorners(lShape());
+        World world = mock(World.class);
+        Claim inside = subdivision(parent, 14L, 1, 1, 1, 8);
+        Claim outside = subdivision(parent, 15L, 8, 1, 8, 2);
+        inside.lesserBoundaryCorner.setWorld(world);
+        outside.lesserBoundaryCorner.setWorld(world);
+        DataStore store = mock(DataStore.class, CALLS_REAL_METHODS);
+        Method contains = DataStore.class.getDeclaredMethod("containsChild", Claim.class, Claim.class);
+        contains.setAccessible(true);
+
+        assertTrue((Boolean) contains.invoke(store, parent, inside));
+        assertFalse((Boolean) contains.invoke(store, parent, outside));
     }
 
     /** An L covering x 0..4 for all z, plus z 4..10 for all x. */

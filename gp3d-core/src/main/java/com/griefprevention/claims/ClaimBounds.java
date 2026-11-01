@@ -1,12 +1,11 @@
 package com.griefprevention.claims;
 
-import com.griefprevention.geometry.OrthogonalEdge2i;
-import com.griefprevention.geometry.OrthogonalPoint2i;
+import com.griefprevention.geometry.CellRegion;
+
 import com.griefprevention.geometry.OrthogonalPolygon;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.List;
 import java.util.Objects;
 
 /**
@@ -154,16 +153,7 @@ public final class ClaimBounds
             return true;
         }
 
-        OrthogonalPoint2i blockPoint = new OrthogonalPoint2i(x, z);
-        for (OrthogonalEdge2i edge : this.polygon.edges())
-        {
-            if (edge.containsPoint(blockPoint))
-            {
-                return true;
-            }
-        }
-
-        return isInsidePolygon(blockPoint, this.polygon);
+        return this.polygon.containsCell(x, z);
     }
 
     public boolean intersects(@NotNull ClaimBounds other, boolean ignoreY)
@@ -196,50 +186,12 @@ public final class ClaimBounds
 
     private boolean intersectsColumns(@NotNull ClaimBounds other)
     {
-        int overlapMinX = Math.max(this.minX, other.minX);
-        int overlapMaxX = Math.min(this.maxX, other.maxX);
-        int overlapMinZ = Math.max(this.minZ, other.minZ);
-        int overlapMaxZ = Math.min(this.maxZ, other.maxZ);
-
-        for (int x = overlapMinX; x <= overlapMaxX; x++)
-        {
-            for (int z = overlapMinZ; z <= overlapMaxZ; z++)
-            {
-                if (this.containsColumn(x, z) && other.containsColumn(x, z))
-                {
-                    return true;
-                }
-            }
-        }
-
-        return false;
+        return columns().intersects(other.columns());
     }
 
-    private static boolean isInsidePolygon(@NotNull OrthogonalPoint2i point, @NotNull OrthogonalPolygon polygon)
+    private CellRegion columns()
     {
-        double sampleX = point.x() + 0.5D;
-        double sampleZ = point.z() + 0.5D;
-        boolean inside = false;
-        List<OrthogonalPoint2i> corners = polygon.corners();
-
-        for (int i = 0, j = corners.size() - 1; i < corners.size(); j = i++)
-        {
-            OrthogonalPoint2i a = corners.get(i);
-            OrthogonalPoint2i b = corners.get(j);
-            boolean crosses = (a.z() > sampleZ) != (b.z() > sampleZ);
-            if (!crosses)
-            {
-                continue;
-            }
-
-            double intersectionX = (double) (b.x() - a.x()) * (sampleZ - a.z()) / (double) (b.z() - a.z()) + a.x();
-            if (sampleX < intersectionX)
-            {
-                inside = !inside;
-            }
-        }
-
-        return inside;
+        return polygon == null ? CellRegion.rectangle(minX, minZ, maxX, maxZ) : polygon.cellRegion();
     }
 
     @Override

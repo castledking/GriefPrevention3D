@@ -16,6 +16,10 @@
 # ============================================================
 
 Messages:
+  # Tutorial links; keep {0} in the corresponding video help messages to display these values.
+  SurvivalVideoURL: '&3&nbit.ly/mcgpuser&r'
+  CreativeVideoURL: '&3&nbit.ly/mcgpcrea&r'
+  SubdivisionVideoURL: '&3&nbit.ly/mcgpsub&r'
   RespectingClaims: Vous respectez désormais les terrains protégés.
   IgnoringClaims: Vous ignorez désormais les terrains protégés.
   NoCreativeUnClaim: Vous ne pouvez pas supprimer la protection de ce terrain. Vous pouvez seulement l'agrandir ou créer d'autres terrains protégés.

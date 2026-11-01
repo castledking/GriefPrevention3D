@@ -1,5 +1,7 @@
 package com.griefprevention.claims.editor;
 
+import com.griefprevention.geometry.CellRegion;
+
 import com.griefprevention.geometry.OrthogonalDirection;
 import com.griefprevention.geometry.OrthogonalEdge2i;
 import com.griefprevention.geometry.OrthogonalPoint2i;
@@ -1082,48 +1084,15 @@ public final class ClaimEditorSkeleton implements ClaimEditor {
     }
 
     private int polygonArea(@NotNull OrthogonalPolygon polygon) {
-        int area = 0;
-        for (int x = polygon.minX(); x <= polygon.maxX(); x++) {
-            for (int z = polygon.minZ(); z <= polygon.maxZ(); z++) {
-                if (polygon.containsCell(x, z)) {
-                    area++;
-                }
-            }
-        }
-
-        return area;
+        return polygon.cellCount();
     }
 
     private boolean polygonContainsPolygon(@NotNull OrthogonalPolygon container, @NotNull OrthogonalPolygon contents) {
-        for (int x = contents.minX(); x <= contents.maxX(); x++) {
-            for (int z = contents.minZ(); z <= contents.maxZ(); z++) {
-                OrthogonalPoint2i point = new OrthogonalPoint2i(x, z);
-                if (contents.containsCell(x, z) && !container.containsCell(x, z)) {
-                    return false;
-                }
-            }
-        }
-
-        return true;
+        return container.cellRegion().containsAll(contents.cellRegion());
     }
 
     private int polygonOverlapArea(@NotNull OrthogonalPolygon first, @NotNull OrthogonalPolygon second) {
-        int area = 0;
-        int minX = Math.max(first.minX(), second.minX());
-        int maxX = Math.min(first.maxX(), second.maxX());
-        int minZ = Math.max(first.minZ(), second.minZ());
-        int maxZ = Math.min(first.maxZ(), second.maxZ());
-
-        for (int x = minX; x <= maxX; x++) {
-            for (int z = minZ; z <= maxZ; z++) {
-                OrthogonalPoint2i point = new OrthogonalPoint2i(x, z);
-                if (first.containsCell(x, z) && second.containsCell(x, z)) {
-                    area++;
-                }
-            }
-        }
-
-        return area;
+        return (int) Math.min(Integer.MAX_VALUE, first.cellRegion().intersect(second.cellRegion()).cellCount());
     }
 
     private @NotNull ClaimEditResult handleAddNode(
@@ -1450,59 +1419,15 @@ public final class ClaimEditorSkeleton implements ClaimEditor {
         @NotNull OrthogonalPolygon source,
         @NotNull OrthogonalPolygon cutout
     ) {
-        Set<OrthogonalPoint2i> occupied = occupiedPoints(source);
-        occupied.removeAll(occupiedPoints(cutout));
-        if (occupied.isEmpty()) {
-            throw new IllegalArgumentException("That segment move would remove the claim.");
-        }
-
-        if (!isConnected(occupied)) {
-            throw new IllegalArgumentException("That segment move would split the claim into multiple pieces.");
-        }
-
-        return OrthogonalPolygon.fromOccupiedPoints(occupied);
+        CellRegion remaining = source.cellRegion().subtract(cutout.cellRegion());
+        if (remaining.isEmpty()) throw new IllegalArgumentException("That segment move would remove the claim.");
+        if (!remaining.isConnected()) throw new IllegalArgumentException("That segment move would split the claim into multiple pieces.");
+        return remaining.toPolygon();
     }
 
-    private @NotNull Set<OrthogonalPoint2i> occupiedPoints(@NotNull OrthogonalPolygon polygon) {
-        Set<OrthogonalPoint2i> occupied = new HashSet<>();
-        for (int x = polygon.minX(); x <= polygon.maxX(); x++) {
-            for (int z = polygon.minZ(); z <= polygon.maxZ(); z++) {
-                OrthogonalPoint2i point = new OrthogonalPoint2i(x, z);
-                if (polygon.contains(point)) {
-                    occupied.add(point);
-                }
-            }
-        }
-        return occupied;
-    }
 
-    private boolean isConnected(@NotNull Set<OrthogonalPoint2i> occupied) {
-        if (occupied.isEmpty()) {
-            return true;
-        }
 
-        Set<OrthogonalPoint2i> visited = new HashSet<>();
-        List<OrthogonalPoint2i> queue = new ArrayList<>();
-        OrthogonalPoint2i start = occupied.iterator().next();
-        queue.add(start);
-        visited.add(start);
 
-        for (int i = 0; i < queue.size(); i++) {
-            OrthogonalPoint2i current = queue.get(i);
-            for (OrthogonalPoint2i neighbor : Arrays.asList(
-                new OrthogonalPoint2i(current.x() + 1, current.z()),
-                new OrthogonalPoint2i(current.x() - 1, current.z()),
-                new OrthogonalPoint2i(current.x(), current.z() + 1),
-                new OrthogonalPoint2i(current.x(), current.z() - 1)
-            )) {
-                if (occupied.contains(neighbor) && visited.add(neighbor)) {
-                    queue.add(neighbor);
-                }
-            }
-        }
-
-        return visited.size() == occupied.size();
-    }
 
     private static final class OffsetVector {
 

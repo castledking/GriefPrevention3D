@@ -8,11 +8,9 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Queue;
 import java.util.Set;
 
 /**
@@ -26,6 +24,7 @@ public final class OrthogonalPolygon
     private final int maxX;
     private final int minZ;
     private final int maxZ;
+    private volatile CellRegion cellRegion;
 
     OrthogonalPolygon(@NotNull List<OrthogonalPoint2i> corners)
     {
@@ -339,7 +338,7 @@ public final class OrthogonalPolygon
             OrthogonalPoint2i a = this.corners.get(i);
             OrthogonalPoint2i b = this.corners.get((i + 1) % n);
             twoArea += (long) a.x() * b.z() - (long) b.x() * a.z();
-            perimeter += Math.abs(a.x() - b.x()) + Math.abs(a.z() - b.z());
+            perimeter += Math.abs((long) a.x() - b.x()) + Math.abs((long) a.z() - b.z());
         }
         long area = Math.abs(twoArea) / 2L;
         long total = area + perimeter / 2L + 1L;
@@ -416,77 +415,36 @@ public final class OrthogonalPolygon
         return cornerIndexes;
     }
 
-    public boolean contains(@NotNull OrthogonalPoint2i point)
+    public @NotNull CellRegion cellRegion()
     {
-        if (this.corners().contains(point))
-        {
-            return true;
-        }
-
-        if (!this.edgeIndexesContainingInteriorPoint(point).isEmpty())
-        {
-            return true;
-        }
-
-        double sampleX = point.x() + 0.5D;
-        double sampleZ = point.z() + 0.5D;
-        boolean inside = false;
-        List<OrthogonalPoint2i> corners = this.corners();
-        for (int i = 0, j = corners.size() - 1; i < corners.size(); j = i++)
-        {
-            OrthogonalPoint2i a = corners.get(i);
-            OrthogonalPoint2i b = corners.get(j);
-            boolean crosses = (a.z() > sampleZ) != (b.z() > sampleZ);
-            if (!crosses)
-            {
-                continue;
-            }
-
-            double intersectionX = (double) (b.x() - a.x()) * (sampleZ - a.z()) / (double) (b.z() - a.z()) + a.x();
-            if (sampleX < intersectionX)
-            {
-                inside = !inside;
-            }
-        }
-
-        return inside;
+        CellRegion region = this.cellRegion;
+        if (region == null) this.cellRegion = region = CellRegion.of(this);
+        return region;
     }
 
+    public boolean contains(@NotNull OrthogonalPoint2i point)
+    {
+        return containsCell(point.x(), point.z());
+    }
 
     public boolean containsCell(int x, int z)
     {
-        OrthogonalPoint2i point = new OrthogonalPoint2i(x, z);
-        if (this.corners().contains(point))
-        {
-            return true;
-        }
-
-        if (!this.edgeIndexesContainingInteriorPoint(point).isEmpty())
-        {
-            return true;
-        }
-
-        double sampleX = point.x() + 0.5D;
-        double sampleZ = point.z() + 0.5D;
+        if (x < minX || x > maxX || z < minZ || z > maxZ) return false;
+        CellRegion region = this.cellRegion;
+        if (region != null) return region.contains(x, z);
         boolean inside = false;
-        List<OrthogonalPoint2i> corners = this.corners();
-        for (int i = 0, j = corners.size() - 1; i < corners.size(); j = i++)
+        for (OrthogonalEdge2i edge : edges)
         {
-            OrthogonalPoint2i a = corners.get(i);
-            OrthogonalPoint2i b = corners.get(j);
-            boolean crosses = (a.z() > sampleZ) != (b.z() > sampleZ);
-            if (!crosses)
+            if (edge.isHorizontal())
             {
-                continue;
+                if (z == edge.start().z() && x >= edge.minX() && x <= edge.maxX()) return true;
             }
-
-            double intersectionX = (double) (b.x() - a.x()) * (sampleZ - a.z()) / (double) (b.z() - a.z()) + a.x();
-            if (sampleX < intersectionX)
+            else
             {
-                inside = !inside;
+                if (x == edge.start().x() && z >= edge.minZ() && z <= edge.maxZ()) return true;
+                if (z >= edge.minZ() && z < edge.maxZ() && x < edge.start().x()) inside = !inside;
             }
         }
-
         return inside;
     }
 
@@ -494,147 +452,7 @@ public final class OrthogonalPolygon
             @NotNull OrthogonalPolygon first,
             @NotNull OrthogonalPolygon second)
     {
-        Set<OrthogonalPoint2i> occupied = new HashSet<>();
-        int minX = Math.min(first.minX(), second.minX());
-        int maxX = Math.max(first.maxX(), second.maxX());
-        int minZ = Math.min(first.minZ(), second.minZ());
-        int maxZ = Math.max(first.maxZ(), second.maxZ());
-
-        for (int x = minX; x <= maxX; x++)
-        {
-            for (int z = minZ; z <= maxZ; z++)
-            {
-                OrthogonalPoint2i point = new OrthogonalPoint2i(x, z);
-                if (first.containsCell(x, z) || second.containsCell(x, z))
-                {
-                    occupied.add(point);
-                }
-            }
-        }
-
-        if (occupied.isEmpty())
-        {
-            throw new IllegalArgumentException("The union of the polygons is empty.");
-        }
-
-        // Ensure the occupied set is connected. If the two polygons are
-        // disconnected (e.g. reshape path through unclaimed land between
-        // two claims), fill cells along Manhattan paths between the
-        // closest cells of each component until the set is connected.
-        ensureConnected(occupied);
-
-        return fromOccupiedPoints(occupied);
-    }
-
-    /**
-     * Ensure all cells in the occupied set are connected by filling gaps
-     * between disconnected components using the FULL bounding box between
-     * the closest pair of cells (not just a 1-cell corridor).
-     *
-     * A thin 1-cell corridor gets compressed away by the contour simplifier,
-     * causing the merged shape to collapse to a rectangle. Using the full
-     * bounding box between components ensures the connection survives
-     * simplification and the intended shape is preserved.
-     */
-    private static void ensureConnected(@NotNull Set<OrthogonalPoint2i> occupied)
-    {
-        if (occupied.size() <= 1) return;
-
-        // Find connected components using BFS (4-connectivity)
-        Set<OrthogonalPoint2i> unvisited = new HashSet<>(occupied);
-        List<Set<OrthogonalPoint2i>> components = new ArrayList<>();
-
-        while (!unvisited.isEmpty())
-        {
-            OrthogonalPoint2i start = unvisited.iterator().next();
-            Set<OrthogonalPoint2i> component = new HashSet<>();
-            Queue<OrthogonalPoint2i> queue = new LinkedList<>();
-            queue.add(start);
-            unvisited.remove(start);
-
-            while (!queue.isEmpty())
-            {
-                OrthogonalPoint2i current = queue.poll();
-                component.add(current);
-
-                int[][] neighbors = {{1,0},{-1,0},{0,1},{0,-1}};
-                for (int[] n : neighbors)
-                {
-                    OrthogonalPoint2i neighbor = new OrthogonalPoint2i(current.x() + n[0], current.z() + n[1]);
-                    if (unvisited.remove(neighbor))
-                    {
-                        queue.add(neighbor);
-                    }
-                }
-            }
-            components.add(component);
-        }
-
-        if (components.size() <= 1) return; // Already connected
-
-        // Iteratively connect the closest pair of components until fully connected
-        while (components.size() > 1)
-        {
-            int bestI = 0, bestJ = 1;
-            int bestDist = Integer.MAX_VALUE;
-            OrthogonalPoint2i bestA = null, bestB = null;
-
-            for (int i = 0; i < components.size(); i++)
-            {
-                for (int j = i + 1; j < components.size(); j++)
-                {
-                    for (OrthogonalPoint2i a : components.get(i))
-                    {
-                        for (OrthogonalPoint2i b : components.get(j))
-                        {
-                            int dist = Math.abs(a.x() - b.x()) + Math.abs(a.z() - b.z());
-                            if (dist < bestDist)
-                            {
-                                bestDist = dist;
-                                bestA = a;
-                                bestB = b;
-                                bestI = i;
-                                bestJ = j;
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Fill a 2-cell-wide Manhattan path between bestA and bestB.
-            // This connects the components while preserving the original
-            // shapes, unlike a full bounding box which always produces a
-            // rectangle. A 2-cell width avoids contour tracing failures
-            // that can occur at diagonal convergence points with 1-cell
-            // corridors, and prevents the path from being collapsed by
-            // the contour simplifier.
-            int cx = bestA.x(), cz = bestA.z();
-            int tx = bestB.x(), tz = bestB.z();
-            while (cx != tx || cz != tz)
-            {
-                fillCellAndOrthogonalNeighbors(occupied, cx, cz);
-                if (cx < tx) cx++;
-                else if (cx > tx) cx--;
-                else if (cz < tz) cz++;
-                else if (cz > tz) cz--;
-            }
-            fillCellAndOrthogonalNeighbors(occupied, tx, tz);
-
-            // Merge the two components
-            components.get(bestI).addAll(components.get(bestJ));
-            components.remove(bestJ);
-        }
-    }
-
-    private static void fillCellAndOrthogonalNeighbors(
-            @NotNull Set<OrthogonalPoint2i> occupied,
-            int x, int z)
-    {
-        occupied.add(new OrthogonalPoint2i(x, z));
-        occupied.add(new OrthogonalPoint2i(x + 1, z));
-        occupied.add(new OrthogonalPoint2i(x - 1, z));
-        occupied.add(new OrthogonalPoint2i(x, z + 1));
-        occupied.add(new OrthogonalPoint2i(x, z - 1));
+        return first.cellRegion().union(second.cellRegion()).connected().toPolygon();
     }
 
     public static @NotNull OrthogonalPolygon fromOccupiedPoints(@NotNull Set<OrthogonalPoint2i> occupied)

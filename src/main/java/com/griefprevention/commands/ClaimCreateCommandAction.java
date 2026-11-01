@@ -227,11 +227,11 @@ final class ClaimCreateCommandAction implements TabExecutor
 
             if (plugin.creativeRulesApply(player.getLocation()))
             {
-                GriefPrevention.sendMessage(player, TextMode.Instr, Messages.CreativeBasicsVideo2, DataStore.CREATIVE_VIDEO_URL);
+                GriefPrevention.sendMessage(player, TextMode.Instr, Messages.CreativeBasicsVideo2, GriefPrevention.instance.dataStore.getMessage(player, Messages.CreativeVideoURL));
             }
             else if (plugin.claimsEnabledForWorld(world))
             {
-                GriefPrevention.sendMessage(player, TextMode.Instr, Messages.SurvivalBasicsVideo2, DataStore.SURVIVAL_VIDEO_URL);
+                GriefPrevention.sendMessage(player, TextMode.Instr, Messages.SurvivalBasicsVideo2, GriefPrevention.instance.dataStore.getMessage(player, Messages.SurvivalVideoURL));
             }
             BoundaryVisualization.visualizeClaim(player, result.claim, VisualizationType.CLAIM);
             playerData.claimResizing = null;

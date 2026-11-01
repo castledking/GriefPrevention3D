@@ -17,6 +17,10 @@
 # ============================================================
 
 Messages:
+  # Tutorial links; keep {0} in the corresponding video help messages to display these values.
+  SurvivalVideoURL: '&3&nbit.ly/mcgpuser&r'
+  CreativeVideoURL: '&3&nbit.ly/mcgpcrea&r'
+  SubdivisionVideoURL: '&3&nbit.ly/mcgpsub&r'
   RespectingClaims: "Arrr, now respectin' claims, ye be."
   IgnoringClaims: "Avast! Claims be ignored, ye scallywag."
   NoCreativeUnClaim: "Blimey! Ye can't unclaim this land. Ye can only make this claim larger or create new claims, matey."
