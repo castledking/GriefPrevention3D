@@ -82,6 +82,7 @@ public class GlowingVisualization extends FakeBlockVisualization {
             case PUMPKIN:
                 return org.bukkit.Color.ORANGE;
             case LIME_GLAZED_TERRACOTTA:
+            case LIME_WOOL:
             case EMERALD_BLOCK:
                 return org.bukkit.Color.LIME;
             default:

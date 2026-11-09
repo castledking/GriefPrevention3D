@@ -61,35 +61,41 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
         // Check if alias system is globally disabled
         if (!plugin.getCommandAliases().isEnabled()) {
             this.rootCommandConfig = null;
-            this.rootCommandEnabled = true; // Use defaults when alias system disabled
-            debugLog("Initializing command '" + this.canonicalCommand + "' - Using defaults (alias system disabled)");
-        } else {
-            this.rootCommandConfig = plugin.getCommandAliases().getRootCommand(this.canonicalCommand);
-            this.rootCommandEnabled = this.rootCommandConfig == null || this.rootCommandConfig.isEnabled();
-
-            // Log the enable/disable state for debugging
-            debugLog(
-                "Initializing command '" +
-                    this.canonicalCommand +
-                    "' - Enabled: " +
-                    this.rootCommandEnabled +
-                    (this.rootCommandConfig != null ? " (from config)" : " (default enabled)")
-            );
+            this.rootCommandEnabled = false;
+            debugLog("Skipping unified command '" + this.canonicalCommand + "' (alias system disabled)");
+            return;
         }
 
-        PluginCommand pluginCommand = plugin.getCommand(this.canonicalCommand);
+        this.rootCommandConfig = plugin.getCommandAliases().getRootCommand(this.canonicalCommand);
+        this.rootCommandEnabled = this.rootCommandConfig == null || this.rootCommandConfig.isEnabled();
+
+        // Log the enable/disable state for debugging
+        debugLog(
+            "Initializing command '" +
+                this.canonicalCommand +
+                "' - Enabled: " +
+                this.rootCommandEnabled +
+                (this.rootCommandConfig != null ? " (from config)" : " (default enabled)")
+        );
+
+        PluginCommand pluginCommand = plugin.findPluginCommand(this.canonicalCommand);
+        if (pluginCommand == null) {
+            pluginCommand = plugin.getCommand(this.canonicalCommand);
+        }
         if (pluginCommand == null) {
             // Try to register the command manually if not found in plugin.yml
             try {
                 pluginCommand = plugin.getServer().getPluginCommand(this.canonicalCommand);
                 if (pluginCommand == null) {
-                    plugin
-                        .getLogger()
-                        .warning(
-                            "Failed to find command '" +
-                                this.canonicalCommand +
-                                "' in plugin.yml. Some functionality may be limited."
-                        );
+                    if (this.rootCommandEnabled) {
+                        plugin
+                            .getLogger()
+                            .warning(
+                                "Failed to find command '" +
+                                    this.canonicalCommand +
+                                    "' in plugin.yml. Some functionality may be limited."
+                            );
+                    }
                     return;
                 }
             } catch (Exception e) {
@@ -103,6 +109,7 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
         }
 
         pluginCommand.setExecutor(this);
+        pluginCommand.setTabCompleter(this);
         applyRootCommandMetadata(pluginCommand);
 
         // Register every name in commands list (except canonical) so e.g. /claim and /claims both host subcommands
@@ -177,17 +184,8 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
         @NotNull BiFunction<CommandSender, String[], Boolean> handler,
         @Nullable TabExecutor tabExecutor
     ) {
-        // If alias system is globally disabled, use enum defaults only
-        if (!plugin.getCommandAliases().isEnabled()) {
-            String enumStandalone = alias.getStandalone();
-            if (enumStandalone == null || enumStandalone.isEmpty()) {
-                return;
-            }
-            registerDynamicStandaloneCommand(enumStandalone, resolveAliasSubcommandName(alias), handler, tabExecutor, null);
-            return;
-        }
-        // If standalone commands are disabled globally, do not register any standalone (ignore per-subcommand standalone entries)
-        if (!plugin.getCommandAliases().isStandaloneEnabled()) {
+        // If alias system or standalone commands are disabled globally, do not register alias.yml standalone commands
+        if (!plugin.getCommandAliases().isEnabled() || !plugin.getCommandAliases().isStandaloneEnabled()) {
             return;
         }
 
@@ -196,6 +194,9 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
         // Get standalone names from configuration (alias.yml), not from enum
         CommandAliasConfiguration.Subcommand config =
             rootCommandConfig != null ? rootCommandConfig.getSubcommand(finalSubcommandName) : null;
+        if (config != null && !config.isEnabled()) {
+            return;
+        }
 
         List<String> standaloneNames;
         if (config != null) {
@@ -425,7 +426,13 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
         @NotNull BiFunction<CommandSender, String[], Boolean> handler,
         @Nullable List<String> tabCompletions
     ) {
-        PluginCommand pluginCommand = plugin.getCommand(commandName);
+        if (!plugin.getCommandAliases().isEnabled() || !plugin.getCommandAliases().isStandaloneEnabled()) {
+            return;
+        }
+        PluginCommand pluginCommand = plugin.findPluginCommand(commandName);
+        if (pluginCommand == null) {
+            pluginCommand = plugin.getCommand(commandName);
+        }
         if (pluginCommand != null) {
             TabExecutor wrapper = new TabExecutor() {
                 @Override
@@ -928,6 +935,9 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
         BiFunction<CommandSender, String[], Boolean> handler,
         String... defaultAliases
     ) {
+        if (!rootCommandEnabled) {
+            return;
+        }
         String canonical = name.toLowerCase(Locale.ROOT);
         CommandAliasConfiguration.Subcommand config =
             rootCommandConfig != null ? rootCommandConfig.getSubcommand(canonical) : null;
@@ -964,6 +974,9 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
      * Register a subcommand handler with custom tab completion
      */
     protected void registerSubcommand(String name, TabExecutor tabExecutor, String... defaultAliases) {
+        if (!rootCommandEnabled) {
+            return;
+        }
         String canonical = name.toLowerCase(Locale.ROOT);
         CommandAliasConfiguration.Subcommand config =
             rootCommandConfig != null ? rootCommandConfig.getSubcommand(canonical) : null;
@@ -1028,6 +1041,9 @@ public abstract class UnifiedCommandHandler implements TabExecutor {
         @NotNull String alias,
         @NotNull String[] args
     ) {
+        if (!rootCommandEnabled) {
+            return Collections.emptyList();
+        }
         if (args.length == 1) {
             // Suggest subcommands that start with the partial input
             String prefix = args[0].toLowerCase(Locale.ROOT);

@@ -759,6 +759,18 @@ final class FabricClaimCommands
         {
             newValue = false;
         }
+        else if (args.length == 1 && "toggle".equalsIgnoreCase(args[0]))
+        {
+            try
+            {
+                newValue = !this.claims.claimBlockService().glowEnabled(player.getUUID());
+            }
+            catch (IOException exception)
+            {
+                sender.sendText(TextMode.ERROR, "Something went wrong.");
+                return true;
+            }
+        }
         else
         {
             return false;
@@ -776,7 +788,7 @@ final class FabricClaimCommands
         return true;
     }
 
-    /** {@code /gpglow [on|off]}: toggle the global visualization glow setting. */
+    /** {@code /gpglow [on|off|toggle]}: toggle the global visualization glow setting. */
     boolean gpGlow(@NotNull FabricCommandSender sender, @NotNull String @NotNull [] args)
     {
         ServerPlayer player = sender.requirePlayer();
@@ -785,10 +797,33 @@ final class FabricClaimCommands
             return true;
         }
 
-        // Fabric doesn't have a simple way to toggle config at runtime.
-        // This is a placeholder - the actual implementation would need to
-        // update the config file and reload settings.
-        sender.sendText(TextMode.INFO, "Glow setting toggle not yet implemented on Fabric.");
+        Boolean newState;
+        if (args.length == 0 || (args.length == 1 && "toggle".equalsIgnoreCase(args[0])))
+        {
+            newState = !this.settings.tools().visualizationGlow();
+        }
+        else if (args.length == 1 && "on".equalsIgnoreCase(args[0]))
+        {
+            newState = true;
+        }
+        else if (args.length == 1 && "off".equalsIgnoreCase(args[0]))
+        {
+            newState = false;
+        }
+        else
+        {
+            return false;
+        }
+
+        if (this.settings.setVisualizationGlow(newState))
+        {
+            this.visualization.clearAll();
+            sender.sendText(TextMode.SUCCESS, "Visualization glow " + (newState ? "enabled" : "disabled") + " globally.");
+        }
+        else
+        {
+            sender.sendText(TextMode.ERROR, "Unable to save configuration file.");
+        }
         return true;
     }
 

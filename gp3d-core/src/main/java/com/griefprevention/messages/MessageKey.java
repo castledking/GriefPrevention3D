@@ -367,7 +367,16 @@ public enum MessageKey
     CLAIM_EXPIRY_NEVER_EXPIRES("ClaimExpiryNeverExpires", "This claim will never expire."),
     CLAIM_EXPIRY_NO_CLAIM("ClaimExpiryNoClaim", "You are not standing in a claim."),
     CLAIM_EXPIRY_PLAYER_NO_CLAIMS("ClaimExpiryPlayerNoClaims", "{0} has no claims."),
-    CLAIM_EXPIRY_PLAYER_NOT_FOUND("ClaimExpiryPlayerNotFound", "Could not find player {0}.");
+    CLAIM_EXPIRY_PLAYER_NOT_FOUND("ClaimExpiryPlayerNotFound", "Could not find player {0}."),
+    RESTORE_NATURE_ACTIVATE(
+            "RestoreNatureActivate",
+            "Ready to restore nature!  Right-click on a block to restore an area.  Use /basicclaims to exit."),
+    RESTORE_NATURE_AGGRESSIVE_ACTIVATE(
+            "RestoreNatureAggressiveActivate",
+            "Aggressive restore nature mode activated.  Right-click on a block to restore an area.  Use /basicclaims to exit."),
+    FILL_MODE_ACTIVE(
+            "FillModeActive",
+            "Fill mode activated with radius {0}.  Right-click on a block to fill in an area.  Use /basicclaims to exit.");
 
     private final String key;
     private final String defaultValue;

@@ -23,11 +23,22 @@ final class FabricClaimModes
         /** The shovel draws 2D subdivisions inside claims, as Paper's {@code /subdivideclaims}. */
         SUBDIVIDE,
         /** The shovel draws height-limited subdivisions, as Paper's {@code /3dsubdivideclaims}. */
-        SUBDIVIDE_3D;
+        SUBDIVIDE_3D,
+        /** The shovel restores areas to nature. */
+        RESTORE_NATURE,
+        /** The shovel aggressively restores areas to nature, including claimed blocks. */
+        RESTORE_NATURE_AGGRESSIVE,
+        /** The shovel fills holes and restores nature with a custom radius. */
+        RESTORE_NATURE_FILL;
 
         boolean subdivides()
         {
             return this == SUBDIVIDE || this == SUBDIVIDE_3D;
+        }
+
+        boolean isRestoreNature()
+        {
+            return this == RESTORE_NATURE || this == RESTORE_NATURE_AGGRESSIVE || this == RESTORE_NATURE_FILL;
         }
     }
 

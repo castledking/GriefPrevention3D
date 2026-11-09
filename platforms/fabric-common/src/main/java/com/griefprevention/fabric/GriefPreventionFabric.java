@@ -45,8 +45,10 @@ public final class GriefPreventionFabric implements FabricPlatformAdapter
         FabricBlockPlaceClimbProtection.install(claims, settings);
         FabricFakeBlockVisualization visualization = new FabricFakeBlockVisualization(claims, settings);
         FabricClaimResizer resizer = new FabricClaimResizer(claims, visualization, feedback, settings);
+        FabricRestoreNature restoreNature = new FabricRestoreNature(claims, visualization, feedback, modes, settings, LOGGER);
+        restoreNature.register();
         FabricClaimToolHooks toolHooks =
-                new FabricClaimToolHooks(claims, visualization, feedback, settings, modes, lastSeen, resizer, LOGGER);
+                new FabricClaimToolHooks(claims, visualization, feedback, settings, modes, lastSeen, resizer, restoreNature, LOGGER);
         FabricScrollResize scrollResize =
                 new FabricScrollResize(claims, visualization, feedback, settings, resizer, toolHooks, LOGGER);
         // A scroll resize session answers clicks before the visualization and the claim tool do.
@@ -76,6 +78,7 @@ public final class GriefPreventionFabric implements FabricPlatformAdapter
                 scrollResize,
                 rescue,
                 expiration,
+                restoreNature,
                 dataFolder.resolve("alias.yml"),
                 LOGGER
         ).register();

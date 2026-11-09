@@ -186,7 +186,7 @@ public class RestoreNatureExecutionTask implements Runnable {
                 null
         );
 
-        BoundaryVisualization.visualizeClaim(player, visualClaim, VisualizationType.RESTORE_NATURE, lesserCorner.getBlock());
+        BoundaryVisualization.visualizeClaim(player, visualClaim, VisualizationType.RESTORE_NATURE);
 
         GriefPrevention.sendMessage(player, TextMode.Success, Messages.RestoreNatureActivate);
 

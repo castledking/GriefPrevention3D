@@ -51,7 +51,6 @@ import com.griefprevention.geometry.OrthogonalPolygon;
 import com.griefprevention.platform.PlatformDetection;
 import com.griefprevention.platform.knockback.KnockbackProtectionListener;
 import com.griefprevention.protection.InteractionProtectionHandler;
-import com.griefprevention.protection.ProtectionHelper;
 import com.griefprevention.visualization.BoundaryVisualization;
 import com.griefprevention.visualization.VisualizationStyleRegistry;
 import com.griefprevention.visualization.VisualizationType;
@@ -111,8 +110,6 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.AnimalTamer;
 import org.bukkit.entity.Player;
-import org.bukkit.event.block.BlockBreakEvent;
-import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
@@ -1814,9 +1811,17 @@ public class GriefPrevention extends JavaPlugin {
         return maxDepth;
     }
 
+    @SuppressWarnings("deprecation")
     private void setUpCommands() {
-        this.claimCommand = new com.griefprevention.commands.UnifiedClaimCommand(this);
-        new com.griefprevention.commands.UnifiedAdminClaimCommand(this);
+        resetPluginCommands();
+        syncAliasCommandRegistration();
+        if (this.commandAliases.isEnabled()) {
+            this.claimCommand = new com.griefprevention.commands.UnifiedClaimCommand(this);
+            new com.griefprevention.commands.UnifiedAdminClaimCommand(this);
+        } else {
+            this.claimCommand = null;
+            new com.griefprevention.commands.ClaimCommand(this);
+        }
         syncShapedCommandRegistration();
         sync3DCommandRegistration();
         syncCombatTrustCommandRegistration();
@@ -1824,13 +1829,40 @@ public class GriefPrevention extends JavaPlugin {
 
         // Add tab completion for old trust commands
         TrustTabCompleter trustTabCompleter = new TrustTabCompleter();
-        getCommand("trust").setTabCompleter(trustTabCompleter);
-        getCommand("accesstrust").setTabCompleter(trustTabCompleter);
-        getCommand("containertrust").setTabCompleter(trustTabCompleter);
-        getCommand("managetrust").setTabCompleter(trustTabCompleter);
-        getCommand("untrust").setTabCompleter(trustTabCompleter);
-        getCommand("neighbortrust").setTabCompleter(trustTabCompleter);
-        getCommand("distancetrust").setTabCompleter(trustTabCompleter);
+        setTrustTabCompleter("trust", trustTabCompleter);
+        setTrustTabCompleter("accesstrust", trustTabCompleter);
+        setTrustTabCompleter("containertrust", trustTabCompleter);
+        setTrustTabCompleter("managetrust", trustTabCompleter);
+        setTrustTabCompleter("untrust", trustTabCompleter);
+        setTrustTabCompleter("neighbortrust", trustTabCompleter);
+        setTrustTabCompleter("distancetrust", trustTabCompleter);
+    }
+
+    private void resetPluginCommands() {
+        if (this.getDescription() == null || this.getDescription().getCommands() == null) {
+            return;
+        }
+        for (String name : this.getDescription().getCommands().keySet()) {
+            org.bukkit.command.PluginCommand command = findPluginCommand(name);
+            if (command == null) {
+                continue;
+            }
+            command.setExecutor(this);
+            command.setTabCompleter(this);
+            java.util.List<String> labels = commandLabels(command);
+            if (labels.size() > 1) {
+                command.setAliases(new java.util.ArrayList<>(labels.subList(1, labels.size())));
+            } else {
+                command.setAliases(java.util.Collections.emptyList());
+            }
+        }
+    }
+
+    private void setTrustTabCompleter(String name, TrustTabCompleter trustTabCompleter) {
+        org.bukkit.command.PluginCommand command = findPluginCommand(name);
+        if (command != null) {
+            command.setTabCompleter(trustTabCompleter);
+        }
     }
 
     // Bukkit checks a command's plugin.yml permission before GriefPrevention sees the command. Give that check the
@@ -1838,21 +1870,38 @@ public class GriefPrevention extends JavaPlugin {
     private void applyCommandPermissionMessages() {
         String message = ChatColor.RED + this.dataStore.getMessage(Messages.NoPermissionForCommand);
         for (String name : this.getDescription().getCommands().keySet()) {
-            org.bukkit.command.PluginCommand command = this.getCommand(name);
+            org.bukkit.command.PluginCommand command = findPluginCommand(name);
             if (command != null) {
                 command.setPermissionMessage(message);
             }
         }
     }
 
-    // handle to the unified /claim command so legacy onCommand paths can reuse its handlers
+    // handle to the unified /claim command when alias.yml is enabled
     private @Nullable com.griefprevention.commands.UnifiedClaimCommand claimCommand;
 
-    private com.griefprevention.commands.UnifiedClaimCommand unifiedClaimCommand() {
-        if (this.claimCommand == null) {
-            this.claimCommand = new com.griefprevention.commands.UnifiedClaimCommand(this);
+    private void syncAliasCommandRegistration() {
+        try {
+            CommandMap commandMap = obtainCommandMap();
+            if (commandMap == null) {
+                return;
+            }
+
+            String prefix = this.getName().toLowerCase(Locale.ROOT);
+            java.util.Map<String, org.bukkit.command.Command> knownCommands = findKnownCommandsMap(commandMap);
+
+            boolean aliasesEnabled = this.commandAliases.isEnabled();
+            CommandAliasConfiguration.RootCommand claimRoot = this.commandAliases.getRootCommand("claim");
+            CommandAliasConfiguration.RootCommand aclaimRoot = this.commandAliases.getRootCommand("aclaim");
+
+            boolean claimEnabled = !aliasesEnabled || claimRoot == null || claimRoot.isEnabled();
+            boolean aclaimEnabled = aliasesEnabled && (aclaimRoot == null || aclaimRoot.isEnabled());
+
+            syncOptionalCommand(commandMap, knownCommands, prefix, "claim", claimEnabled);
+            syncOptionalCommand(commandMap, knownCommands, prefix, "aclaim", aclaimEnabled);
+        } catch (Exception e) {
+            this.getLogger().warning("Failed to sync alias root commands: " + e.getMessage());
         }
-        return this.claimCommand;
     }
 
     /**
@@ -1991,7 +2040,7 @@ public class GriefPrevention extends JavaPlugin {
         String commandName,
         boolean enabled
     ) {
-        org.bukkit.command.PluginCommand command = this.getCommand(commandName);
+        org.bukkit.command.PluginCommand command = findPluginCommand(commandName);
         if (command == null) {
             return;
         }
@@ -2006,6 +2055,9 @@ public class GriefPrevention extends JavaPlugin {
             // Register through the command map so the implementation (Paper/Brigadier) stays
             // consistent with plugin.yml, then put back the labels it declined to re-add.
             commandMap.register(prefix, command);
+            if (labels.size() > 1) {
+                command.setAliases(new java.util.ArrayList<>(labels.subList(1, labels.size())));
+            }
             if (knownCommands == null) {
                 return;
             }
@@ -2031,6 +2083,25 @@ public class GriefPrevention extends JavaPlugin {
             }
             knownCommands.remove(prefix + ":" + label);
         }
+    }
+
+    // Cached plugin.yml PluginCommand instances so commands removed from knownCommands when disabled
+    // can still be looked up and re-registered on /gpreload.
+    private final java.util.Map<String, org.bukkit.command.PluginCommand> pluginCommandsByName = new java.util.HashMap<>();
+
+    public @Nullable org.bukkit.command.PluginCommand findPluginCommand(@NotNull String commandName) {
+        String normalized = commandName.toLowerCase(Locale.ROOT);
+        org.bukkit.command.PluginCommand cached = this.pluginCommandsByName.get(normalized);
+        if (cached != null) {
+            return cached;
+        }
+
+        org.bukkit.command.PluginCommand command = this.getCommand(commandName);
+        if (command != null) {
+            this.pluginCommandsByName.put(normalized, command);
+            commandLabels(command);
+        }
+        return command;
     }
 
     // plugin.yml label sets (command name plus aliases), captured the first time each command is
@@ -2676,11 +2747,11 @@ public class GriefPrevention extends JavaPlugin {
         }
         // pvptrust <player> - combat trust against players (requires AllowPvPTrust)
         else if (cmd.getName().equalsIgnoreCase("pvptrust") && player != null) {
-            return unifiedClaimCommand().handlePvpTrust(player, args);
+            return this.handlePvpTrustCommand(player, args);
         }
         // pvetrust <player> - combat trust against creatures (requires AllowPvETrust)
         else if (cmd.getName().equalsIgnoreCase("pvetrust") && player != null) {
-            return unifiedClaimCommand().handlePveTrust(player, args);
+            return this.handlePveTrustCommand(player, args);
         }
         // restrictsubclaim
         else if (cmd.getName().equalsIgnoreCase("restrictsubclaim") && player != null) {
@@ -4703,68 +4774,6 @@ public class GriefPrevention extends JavaPlugin {
         return this.config_claims_worldModes.get(location.getWorld()) == ClaimsMode.Creative;
     }
 
-    /**
-     * @deprecated use
-     *             {@link ProtectionHelper#checkPermission(Player, Location, ClaimPermission, org.bukkit.event.Event)}
-     */
-    @Deprecated
-    public @Nullable String allowBuild(Player player, Location location) {
-        return this.allowBuild(player, location, location.getBlock().getType());
-    }
-
-    /**
-     * @deprecated use
-     *             {@link ProtectionHelper#checkPermission(Player, Location, ClaimPermission, org.bukkit.event.Event)}
-     */
-    @Deprecated
-    public @Nullable String allowBuild(Player player, Location location, Material material) {
-        if (!GriefPrevention.instance.claimsEnabledForWorld(location.getWorld())) return null;
-
-        ItemStack placed = CompatUtil.createItemStack(material);
-
-        Block block = location.getBlock();
-        Supplier<String> result = ProtectionHelper.checkPermission(
-            player,
-            location,
-            ClaimPermission.Build,
-            CompatUtil.createBlockPlaceEvent(block, block.getState(), block, placed, player, true)
-        );
-        return result == null ? null : result.get();
-    }
-
-    /**
-     * @deprecated use
-     *             {@link ProtectionHelper#checkPermission(Player, Location, ClaimPermission, org.bukkit.event.Event)}
-     */
-    @Deprecated
-    public @Nullable String allowBreak(Player player, Block block, Location location) {
-        return this.allowBreak(player, block, location, new BlockBreakEvent(block, player));
-    }
-
-    /**
-     * @deprecated use
-     *             {@link ProtectionHelper#checkPermission(Player, Location, ClaimPermission, org.bukkit.event.Event)}
-     */
-    @Deprecated
-    public @Nullable String allowBreak(
-        Player player,
-        Material material,
-        Location location,
-        BlockBreakEvent breakEvent
-    ) {
-        return this.allowBreak(player, location.getBlock(), location, breakEvent);
-    }
-
-    /**
-     * @deprecated use
-     *             {@link ProtectionHelper#checkPermission(Player, Location, ClaimPermission, org.bukkit.event.Event)}
-     */
-    @Deprecated
-    public @Nullable String allowBreak(Player player, Block block, Location location, BlockBreakEvent breakEvent) {
-        Supplier<String> result = ProtectionHelper.checkPermission(player, location, ClaimPermission.Build, breakEvent);
-        return result == null ? null : result.get();
-    }
-
     public int getSeaLevel(World world) {
         Integer overrideValue = this.config_seaLevelOverride.get(world.getName());
         if (overrideValue == null || overrideValue == -1) {
@@ -5926,6 +5935,34 @@ public class GriefPrevention extends JavaPlugin {
         return this.handlePvpCommand(sender, args);
     }
 
+    public boolean handlePvpTrustCommand(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player)) return false;
+        Player player = (Player) sender;
+
+        if (!this.config_claims_allowPvPTrust || !player.hasPermission("griefprevention.pvptrust")) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+            return true;
+        }
+        if (args.length != 1) return false;
+
+        this.handleTrustCommand(player, ClaimPermission.PVP, args[0], false);
+        return true;
+    }
+
+    public boolean handlePveTrustCommand(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player)) return false;
+        Player player = (Player) sender;
+
+        if (!this.config_claims_allowPvETrust || !player.hasPermission("griefprevention.pvetrust")) {
+            GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
+            return true;
+        }
+        if (args.length != 1) return false;
+
+        this.handleTrustCommand(player, ClaimPermission.PVE, args[0], false);
+        return true;
+    }
+
     public boolean handleClaimAlertsCommand(CommandSender sender, String[] args) {
         if (!(sender instanceof Player)) {
             sender.sendMessage(this.dataStore.getMessage(Messages.CommandRequiresPlayer));
@@ -6555,7 +6592,7 @@ public class GriefPrevention extends JavaPlugin {
         if (!(sender instanceof Player)) return false;
         Player player = (Player) sender;
 
-        if (args.length == 0) {
+        if (args.length == 0 || (args.length == 1 && "toggle".equalsIgnoreCase(args[0]))) {
             // Toggle
             this.config_visualizationGlow = !this.config_visualizationGlow;
         } else if (args.length == 1) {

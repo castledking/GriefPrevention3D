@@ -87,6 +87,7 @@ final class FabricCommandRegistrar
             @NotNull FabricScrollResize scrollResize,
             @NotNull FabricPlayerRescue rescue,
             @NotNull FabricClaimExpiration expiration,
+            @NotNull FabricRestoreNature restoreNature,
             @NotNull Path aliasFile,
             @NotNull Logger logger)
     {
@@ -152,6 +153,12 @@ final class FabricCommandRegistrar
         admin.put("makeadmin", new Action(staff::makeAdmin, FabricPermissionDefaults.CONVERT_CLAIMS));
         admin.put("makebasic", new Action(staff::makeBasic, FabricPermissionDefaults.CONVERT_CLAIMS));
         admin.put("checkexpiry", new Action(expiration::checkExpiry, FabricPermissionDefaults.CHECK_CLAIM_EXPIRY));
+        admin.put("restore", new Action(restoreNature::restoreCommand, FabricPermissionDefaults.RESTORE_NATURE)
+                .standalone(restoreNature::restoreNature));
+        admin.put("restoreaggressive", new Action(restoreNature::restoreAggressive, FabricPermissionDefaults.RESTORE_NATURE_AGGRESSIVE)
+                .standalone(restoreNature::restoreAggressive));
+        admin.put("restorefill", new Action(restoreNature::restoreFill, FabricPermissionDefaults.RESTORE_NATURE_AGGRESSIVE)
+                .standalone(restoreNature::restoreFill));
         this.actions.put(ADMIN_ROOT, admin);
 
         legacy("trust", trust::trust, FabricPermissionDefaults.TRUST,
@@ -212,10 +219,10 @@ final class FabricCommandRegistrar
                 "/%s [on|off]", (sender, previous) -> previous.length == 0 ? List.of("on", "off") : List.of(),
                 "witherexplosion");
         legacy("claimglow", claimCommands::claimGlow, FabricPermissionDefaults.GLOW,
-                "/%s [on|off]", (sender, previous) -> previous.length == 0 ? List.of("on", "off") : List.of(),
+                "/%s [on|off|toggle]", (sender, previous) -> previous.length == 0 ? List.of("on", "off", "toggle") : List.of(),
                 "glow");
         legacy("gpglow", claimCommands::gpGlow, FabricPermissionDefaults.DEBUG,
-                "/%s [on|off]", (sender, previous) -> previous.length == 0 ? List.of("on", "off") : List.of());
+                "/%s [on|off|toggle]", (sender, previous) -> previous.length == 0 ? List.of("on", "off", "toggle") : List.of());
         legacy("transferclaim", staff::transfer, FabricPermissionDefaults.TRANSFER_CLAIM, "/%s <player> [confirm]",
                 (sender, previous) -> previous.length == 0 ? onlinePlayers(sender)
                         : previous.length == 1 ? List.of("confirm") : List.of(),
@@ -235,6 +242,12 @@ final class FabricCommandRegistrar
                 "scrollresizeclaim", "sr", "src");
         legacy("claimtogglealerts", claimCommands::toggleAllClaimAlerts, FabricPermissionDefaults.TOGGLE_CLAIM_ALERTS,
                 "/%s [on|off]", onOff, "toggleclaimalerts");
+        legacy("restorenature", restoreNature::restoreNature, FabricPermissionDefaults.RESTORE_NATURE,
+                "/%s", null, "rn");
+        legacy("restorenatureaggressive", restoreNature::restoreAggressive, FabricPermissionDefaults.RESTORE_NATURE_AGGRESSIVE,
+                "/%s", null, "rna");
+        legacy("restorenaturefill", restoreNature::restoreFill, FabricPermissionDefaults.RESTORE_NATURE_AGGRESSIVE,
+                "/%s [radius]", (sender, previous) -> previous.length == 0 ? List.of("1", "2", "3", "4", "5", "10") : List.of(), "rnf");
         legacy("gpreload", this::reload, FabricPermissionDefaults.RELOAD, "/%s", null);
         legacy("gpstatus", this::status, FabricPermissionDefaults.RELOAD, "/%s", null);
     }
@@ -406,8 +419,16 @@ final class FabricCommandRegistrar
 
         if (!aliases.isEnabled())
         {
-            // With the alias system off, Paper registers the English defaults.
-            aliases = CommandAliasConfiguration.defaults(new SilentLogger());
+            Action create = this.actions.getOrDefault(CLAIM_ROOT, Collections.emptyMap()).get("create");
+            if (create != null)
+            {
+                result.putIfAbsent(CLAIM_ROOT, new Spec(
+                        create.handler,
+                        FabricPermissionDefaults.CREATE_CLAIMS,
+                        "/claim [radius]",
+                        null));
+            }
+            return Collections.unmodifiableMap(result);
         }
 
         for (String rootKey : Arrays.asList(CLAIM_ROOT, ADMIN_ROOT))

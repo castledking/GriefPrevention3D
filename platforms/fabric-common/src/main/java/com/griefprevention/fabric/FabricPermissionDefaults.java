@@ -71,6 +71,8 @@ final class FabricPermissionDefaults
     static final String RELOAD = "griefprevention.reload";
     static final String DONT_EXPIRE = "griefprevention.dontexpire";
     static final String CHECK_CLAIM_EXPIRY = "griefprevention.checkclaimexpiry";
+    static final String RESTORE_NATURE = "griefprevention.restorenature";
+    static final String RESTORE_NATURE_AGGRESSIVE = "griefprevention.restorenatureaggressive";
     /** Paper's node for checking another player's claims; plugin.yml leaves it undeclared, so op-only. */
     static final String CHECK_OTHERS_CLAIM_EXPIRY = "griefprevention.admin.checkclaimexpiry";
 
@@ -96,7 +98,8 @@ final class FabricPermissionDefaults
         for (String child : Arrays.asList(
                 ADMIN_CLAIMS, ADJUST_CLAIM_BLOCKS, DELETE_CLAIMS, SEE_INACTIVITY, RELOAD, CLAIMS_LIST_OTHER,
                 IGNORE_CLAIMS, "griefprevention.seeclaimsize", "griefprevention.overrideclaimcountlimit",
-                TRANSFER_CLAIM_OTHERS, CONVERT_CLAIMS, DELETE_CLAIMS_IN_WORLD))
+                TRANSFER_CLAIM_OTHERS, CONVERT_CLAIMS, DELETE_CLAIMS_IN_WORLD,
+                RESTORE_NATURE, RESTORE_NATURE_AGGRESSIVE))
         {
             node(child, Default.OP, ADMIN);
         }

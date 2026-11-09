@@ -27,6 +27,10 @@ class FabricPermissionDefaultsTest
         assertTrue(FabricPermissionDefaults.resolve(FabricPermissionDefaults.ADJUST_CLAIM_BLOCKS, UNDEFINED, true));
         assertFalse(FabricPermissionDefaults.resolve(FabricPermissionDefaults.ADMIN_CLAIMS, UNDEFINED, false));
         assertTrue(FabricPermissionDefaults.resolve(FabricPermissionDefaults.ADMIN_CLAIMS, UNDEFINED, true));
+        assertFalse(FabricPermissionDefaults.resolve(FabricPermissionDefaults.RESTORE_NATURE, UNDEFINED, false));
+        assertTrue(FabricPermissionDefaults.resolve(FabricPermissionDefaults.RESTORE_NATURE, UNDEFINED, true));
+        assertFalse(FabricPermissionDefaults.resolve(FabricPermissionDefaults.RESTORE_NATURE_AGGRESSIVE, UNDEFINED, false));
+        assertTrue(FabricPermissionDefaults.resolve(FabricPermissionDefaults.RESTORE_NATURE_AGGRESSIVE, UNDEFINED, true));
     }
 
     @Test

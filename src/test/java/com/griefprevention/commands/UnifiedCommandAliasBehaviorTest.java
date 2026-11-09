@@ -10,7 +10,6 @@ import org.bukkit.Server;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.PluginCommand;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.PluginManager;
 import org.junit.jupiter.api.AfterAll;
@@ -20,11 +19,13 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Collections;
 import java.util.logging.Logger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.doAnswer;
@@ -184,6 +185,60 @@ class UnifiedCommandAliasBehaviorTest
         assertEquals(java.util.Collections.singletonList("allow"), trustSub.getCommands());
     }
 
+    @Test
+    void disabledAliasSystemSkipsUnifiedSubcommandAndStandaloneRegistration(@TempDir Path tempDir) throws Exception
+    {
+        CommandAliasConfiguration aliases = loadAliases(tempDir, "enabled: false\n");
+        GriefPrevention plugin = mock(GriefPrevention.class);
+        PluginCommand claimPluginCommand = mock(PluginCommand.class);
+        PluginCommand trustPluginCommand = mock(PluginCommand.class);
+        when(plugin.getCommandAliases()).thenReturn(aliases);
+        when(plugin.getCommand("claim")).thenReturn(claimPluginCommand);
+        when(plugin.getCommand("trust")).thenReturn(trustPluginCommand);
+        when(plugin.getLogger()).thenReturn(mock(Logger.class));
+
+        UnifiedClaimCommand command = new UnifiedClaimCommand(plugin);
+        CommandSender sender = mock(CommandSender.class);
+
+        verify(claimPluginCommand, never()).setExecutor(any());
+        verify(trustPluginCommand, never()).setExecutor(any());
+        assertEquals(
+                Collections.emptyList(),
+                command.onTabComplete(sender, mock(Command.class), "claim", new String[] { "" })
+        );
+    }
+
+    @Test
+    void disabledSubcommandSkipsStandaloneRegistration(@TempDir Path tempDir) throws Exception
+    {
+        CommandAliasConfiguration aliases = loadAliases(tempDir,
+                "enabled: true\n"
+                        + "standalone: true\n"
+                        + "subcommands:\n"
+                        + "  claim:\n"
+                        + "    list:\n"
+                        + "      enable: false\n"
+                        + "      commands: [list]\n"
+                        + "      standalone: [claimslist]\n");
+        GriefPrevention plugin = mock(GriefPrevention.class);
+        PluginCommand claimPluginCommand = mock(PluginCommand.class);
+        PluginCommand claimsListPluginCommand = mock(PluginCommand.class);
+        when(plugin.getCommandAliases()).thenReturn(aliases);
+        when(plugin.getCommand(anyString())).thenAnswer(invocation -> {
+            String name = invocation.getArgument(0);
+            if ("claim".equals(name)) return claimPluginCommand;
+            if ("claimslist".equals(name)) return claimsListPluginCommand;
+            return mock(PluginCommand.class);
+        });
+        when(plugin.getLogger()).thenReturn(mock(Logger.class));
+
+        UnifiedClaimCommand command = new UnifiedClaimCommand(plugin);
+        CommandSender sender = mock(CommandSender.class);
+
+        verify(claimsListPluginCommand, never()).setExecutor(any());
+        assertTrue(!command.onTabComplete(sender, mock(Command.class), "claim", new String[] { "" }).contains("list"));
+    }
+
     private static CommandAliasConfiguration loadAliases(Path tempDir, String yaml) throws Exception
     {
         Path file = tempDir.resolve("alias.yml");
@@ -216,7 +271,7 @@ class UnifiedCommandAliasBehaviorTest
                 return "CUSTOM " + command + " :: " + description;
             }
             if (message == Messages.ClaimHelpHeader) {
-                return "§6Available /claim commands (Page 1/1):";
+                return "\u00a76Available /claim commands (Page 1/1):";
             }
             if (message == Messages.ClaimHelpLegend || message == Messages.ClaimHelpPagination) {
                 return "";

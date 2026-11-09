@@ -263,11 +263,11 @@ commands:
     aliases: witherexplosion
   claimglow:
     description: Toggles glowing claim borders for this player.
-    usage: /<command> [on|off]
+    usage: /<command> [on|off|toggle]
     permission: griefprevention.glow
   gpglow:
     description: Toggles the global visualization glow setting.
-    usage: /<command> [on|off]
+    usage: /<command> [on|off|toggle]
     permission: griefprevention.debug
   softmute:
     description: Toggles whether a player's messages will only reach other soft-muted players.

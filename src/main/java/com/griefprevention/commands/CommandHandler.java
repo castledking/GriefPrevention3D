@@ -41,6 +41,7 @@ public abstract class CommandHandler implements TabExecutor
             throw new IllegalStateException("Command not registered: " + commandName);
         }
         command.setExecutor(this);
+        command.setTabCompleter(this);
     }
 
     @Override

@@ -74,6 +74,30 @@ public class LegacyFakeBlockVisualization extends FakeBlockVisualization
                 usesExactPlacement(type));
     }
 
+    private int restoreNatureHeight(int x, int z, @NotNull Player player)
+    {
+        int targetY = this.height;
+        if (targetY <= GriefPrevention.getWorldMinY(world))
+        {
+            targetY = player.getEyeLocation().getBlockY();
+        }
+        if (world.getEnvironment() != World.Environment.NETHER)
+        {
+            try
+            {
+                int highest = world.getHighestBlockYAt(x, z);
+                if (highest > GriefPrevention.getWorldMinY(world))
+                {
+                    return highest;
+                }
+            }
+            catch (Throwable ignored)
+            {
+            }
+        }
+        return targetY;
+    }
+
     @Override
     protected void drawRestoreNature(@NotNull Player player, @NotNull Boundary boundary)
     {
@@ -94,24 +118,24 @@ public class LegacyFakeBlockVisualization extends FakeBlockVisualization
 
         if (area.getLength() > 2)
         {
-            addDisplayed(displayZone, new IntVector(area.getMinX() + 1, height, area.getMaxZ()), addSide);
-            addDisplayed(displayZone, new IntVector(area.getMinX() + 1, height, area.getMinZ()), addSide);
-            addDisplayed(displayZone, new IntVector(area.getMaxX() - 1, height, area.getMaxZ()), addSide);
-            addDisplayed(displayZone, new IntVector(area.getMaxX() - 1, height, area.getMinZ()), addSide);
+            addDisplayed(displayZone, new IntVector(area.getMinX() + 1, restoreNatureHeight(area.getMinX() + 1, area.getMaxZ(), player), area.getMaxZ()), addSide);
+            addDisplayed(displayZone, new IntVector(area.getMinX() + 1, restoreNatureHeight(area.getMinX() + 1, area.getMinZ(), player), area.getMinZ()), addSide);
+            addDisplayed(displayZone, new IntVector(area.getMaxX() - 1, restoreNatureHeight(area.getMaxX() - 1, area.getMaxZ(), player), area.getMaxZ()), addSide);
+            addDisplayed(displayZone, new IntVector(area.getMaxX() - 1, restoreNatureHeight(area.getMaxX() - 1, area.getMinZ(), player), area.getMinZ()), addSide);
         }
         if (area.getWidth() > 2)
         {
-            addDisplayed(displayZone, new IntVector(area.getMinX(), height, area.getMinZ() + 1), addSide);
-            addDisplayed(displayZone, new IntVector(area.getMaxX(), height, area.getMinZ() + 1), addSide);
-            addDisplayed(displayZone, new IntVector(area.getMinX(), height, area.getMaxZ() - 1), addSide);
-            addDisplayed(displayZone, new IntVector(area.getMaxX(), height, area.getMaxZ() - 1), addSide);
+            addDisplayed(displayZone, new IntVector(area.getMinX(), restoreNatureHeight(area.getMinX(), area.getMinZ() + 1, player), area.getMinZ() + 1), addSide);
+            addDisplayed(displayZone, new IntVector(area.getMaxX(), restoreNatureHeight(area.getMaxX(), area.getMinZ() + 1, player), area.getMinZ() + 1), addSide);
+            addDisplayed(displayZone, new IntVector(area.getMinX(), restoreNatureHeight(area.getMinX(), area.getMaxZ() - 1, player), area.getMaxZ() - 1), addSide);
+            addDisplayed(displayZone, new IntVector(area.getMaxX(), restoreNatureHeight(area.getMaxX(), area.getMaxZ() - 1, player), area.getMaxZ() - 1), addSide);
         }
 
         Consumer<@NotNull IntVector> addCorner = addCornerElements(boundary);
-        addDisplayed(displayZone, new IntVector(area.getMinX(), height, area.getMaxZ()), addCorner);
-        addDisplayed(displayZone, new IntVector(area.getMaxX(), height, area.getMaxZ()), addCorner);
-        addDisplayed(displayZone, new IntVector(area.getMinX(), height, area.getMinZ()), addCorner);
-        addDisplayed(displayZone, new IntVector(area.getMaxX(), height, area.getMinZ()), addCorner);
+        addDisplayed(displayZone, new IntVector(area.getMinX(), restoreNatureHeight(area.getMinX(), area.getMaxZ(), player), area.getMaxZ()), addCorner);
+        addDisplayed(displayZone, new IntVector(area.getMaxX(), restoreNatureHeight(area.getMaxX(), area.getMaxZ(), player), area.getMaxZ()), addCorner);
+        addDisplayed(displayZone, new IntVector(area.getMinX(), restoreNatureHeight(area.getMinX(), area.getMinZ(), player), area.getMinZ()), addCorner);
+        addDisplayed(displayZone, new IntVector(area.getMaxX(), restoreNatureHeight(area.getMaxX(), area.getMinZ(), player), area.getMinZ()), addCorner);
     }
 
     @Override

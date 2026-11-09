@@ -212,7 +212,7 @@ the UUID the player actually joins with. A name no player has, containing a dot,
 
 The balance commands need `griefprevention.adjustclaimblocks`, work from the console, and change only the accrued
 and bonus lines of `PlayerData/<uuid>`, so unknown addon data survives. Paper subcommands Fabric does not have yet
-(restore nature, siege, buying and selling blocks) answer that they are not available on Fabric.
+(siege, buying and selling blocks) answer that they are not available on Fabric.
 
 Claims of players who stop playing expire as on Paper, under `Claims.Expiration.AllClaims.DaysInactive` (60 days
 by default) and `Claims.Expiration.ChestClaimDays`. `griefprevention.dontexpire` exempts a player and is read

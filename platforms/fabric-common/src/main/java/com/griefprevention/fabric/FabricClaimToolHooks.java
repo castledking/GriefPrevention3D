@@ -74,6 +74,7 @@ final class FabricClaimToolHooks
     private final FabricClaimModes modes;
     private final FabricLastSeenStore lastSeen;
     private final FabricClaimResizer resizer;
+    private final FabricRestoreNature restoreNature;
     private final Logger logger;
     private final ClaimEditor editor = new ClaimEditorSkeleton();
     private final Map<UUID, ClaimToolSession> sessions = new HashMap<>();
@@ -90,6 +91,7 @@ final class FabricClaimToolHooks
             @NotNull FabricClaimModes modes,
             @NotNull FabricLastSeenStore lastSeen,
             @NotNull FabricClaimResizer resizer,
+            @NotNull FabricRestoreNature restoreNature,
             @NotNull Logger logger)
     {
         this.claims = claims;
@@ -99,6 +101,7 @@ final class FabricClaimToolHooks
         this.modes = modes;
         this.lastSeen = lastSeen;
         this.resizer = resizer;
+        this.restoreNature = restoreNature;
         this.logger = logger;
     }
 
@@ -304,6 +307,14 @@ final class FabricClaimToolHooks
             this.feedback.sendError(player, MessageKey.CLAIMS_DISABLED_WORLD);
             return;
         }
+
+        FabricClaimModes.Mode claimMode = this.modes.mode(player.getUUID());
+        if (claimMode.isRestoreNature())
+        {
+            this.restoreNature.restoreAt(player, level, clicked, claimMode);
+            return;
+        }
+
         if (!this.claims.hasPermission(player, CREATE_CLAIMS_PERMISSION, true))
         {
             this.feedback.sendRateLimitedError(player, MessageKey.NO_CREATE_CLAIM_PERMISSION);

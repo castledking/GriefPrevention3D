@@ -21,6 +21,8 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import com.griefprevention.util.ClientProtocolLookup;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -180,6 +182,17 @@ final class FabricFakeBlockVisualization
                 new VisualizationTarget(bounds, VisualizationStyle.CONFLICT, null))), player.blockPosition(), clicked.getY());
     }
 
+    void visualizeRestoreArea(
+            @NotNull ServerPlayer player,
+            @NotNull ServerLevel level,
+            @NotNull ClaimBounds bounds,
+            @NotNull BlockPos clicked)
+    {
+        render(player, level, new BoundsRequest(List.of(
+                new VisualizationTarget(bounds, VisualizationStyle.RESTORE_NATURE, null))),
+                player.blockPosition(), clicked.getY(), 100L);
+    }
+
     /**
      * The outline a {@code /scrollresize} session would give a claim, drawn with the claims around it
      * so the player can see what it would run into: the claim's parent and siblings, its own
@@ -221,6 +234,28 @@ final class FabricFakeBlockVisualization
         if (active != null)
         {
             restore(player, active);
+        }
+    }
+
+    void clearAll()
+    {
+        MinecraftServer current = this.server;
+        if (current == null)
+        {
+            this.activeVisualizations.clear();
+            return;
+        }
+        for (UUID playerId : new ArrayList<>(this.activeVisualizations.keySet()))
+        {
+            ServerPlayer player = current.getPlayerList().getPlayer(playerId);
+            if (player != null)
+            {
+                clear(player);
+            }
+            else
+            {
+                this.activeVisualizations.remove(playerId);
+            }
         }
     }
 
@@ -269,6 +304,17 @@ final class FabricFakeBlockVisualization
             @NotNull BlockPos visualizeFrom,
             int requestedHeight)
     {
+        render(player, level, request, visualizeFrom, requestedHeight, VISUALIZATION_TICKS);
+    }
+
+    private void render(
+            @NotNull ServerPlayer player,
+            @NotNull ServerLevel level,
+            @NotNull Request request,
+            @NotNull BlockPos visualizeFrom,
+            int requestedHeight,
+            long durationTicks)
+    {
         clear(player);
 
         List<VisualizationTarget> targets = request.targets(this.claims);
@@ -282,13 +328,14 @@ final class FabricFakeBlockVisualization
         boolean waterTransparent = level.getBlockState(visualizeFrom).liquid();
         LinkedHashMap<BlockPos, FakeBlock> fakeBlocks = new LinkedHashMap<>();
         Set<Long> claimIds = new LinkedHashSet<>();
+        boolean preGlazedTerracotta = ClientProtocolLookup.isPreGlazedTerracotta(player.getUUID());
         for (VisualizationTarget target : targets)
         {
             if (target.claimId != null)
             {
                 claimIds.add(target.claimId);
             }
-            collectFakeBlocks(level, visualizeFrom, height, waterTransparent, target, fakeBlocks);
+            collectFakeBlocks(level, visualizeFrom, height, waterTransparent, target, preGlazedTerracotta, fakeBlocks);
         }
         if (request instanceof ShapedDraftRequest draft)
         {
@@ -300,7 +347,8 @@ final class FabricFakeBlockVisualization
         }
 
         Map<BlockPos, Integer> glowIds = new HashMap<>();
-        boolean glow = this.settings.tools().visualizationGlow();
+        boolean glow = this.settings.tools().visualizationGlow()
+                && ClientProtocolLookup.supportsBlockDisplay(player.getUUID());
         try
         {
             glow = glow && this.claims.claimBlockService().glowEnabled(player.getUUID());
@@ -329,7 +377,7 @@ final class FabricFakeBlockVisualization
                         claimIds,
                         fakeBlocks,
                         glowIds,
-                        this.tick + VISUALIZATION_TICKS,
+                        this.tick + durationTicks,
                         this.tick + 1L));
     }
 
@@ -472,6 +520,7 @@ final class FabricFakeBlockVisualization
             int height,
             boolean waterTransparent,
             @NotNull VisualizationTarget target,
+            boolean preGlazedTerracotta,
             @NotNull LinkedHashMap<BlockPos, FakeBlock> fakeBlocks)
     {
         ClaimBounds bounds = target.bounds;
@@ -485,7 +534,7 @@ final class FabricFakeBlockVisualization
             return;
         }
 
-        draw2D(level, bounds, displayZone, height, waterTransparent, target.style, fakeBlocks);
+        draw2D(level, bounds, displayZone, height, waterTransparent, target.style, preGlazedTerracotta, fakeBlocks);
     }
 
     private static void draw2D(
@@ -495,6 +544,7 @@ final class FabricFakeBlockVisualization
             int height,
             boolean waterTransparent,
             @NotNull VisualizationStyle style,
+            boolean preGlazedTerracotta,
             @NotNull LinkedHashMap<BlockPos, FakeBlock> fakeBlocks)
     {
         if (bounds.isShaped())
@@ -561,14 +611,14 @@ final class FabricFakeBlockVisualization
                     waterTransparent, side, fakeBlocks);
         }
 
-        add2D(level, displayZone, new BlockPos(bounds.minX(), height, bounds.maxZ()),
-                waterTransparent, corner, fakeBlocks);
-        add2D(level, displayZone, new BlockPos(bounds.maxX(), height, bounds.maxZ()),
-                waterTransparent, corner, fakeBlocks);
-        add2D(level, displayZone, new BlockPos(bounds.minX(), height, bounds.minZ()),
-                waterTransparent, corner, fakeBlocks);
-        add2D(level, displayZone, new BlockPos(bounds.maxX(), height, bounds.minZ()),
-                waterTransparent, corner, fakeBlocks);
+        addCorner2D(level, displayZone, new BlockPos(bounds.minX(), height, bounds.maxZ()),
+                waterTransparent, corner, Direction.WEST, fakeBlocks);
+        addCorner2D(level, displayZone, new BlockPos(bounds.maxX(), height, bounds.maxZ()),
+                waterTransparent, corner, Direction.SOUTH, fakeBlocks);
+        addCorner2D(level, displayZone, new BlockPos(bounds.minX(), height, bounds.minZ()),
+                waterTransparent, corner, Direction.NORTH, fakeBlocks);
+        addCorner2D(level, displayZone, new BlockPos(bounds.maxX(), height, bounds.minZ()),
+                waterTransparent, corner, Direction.EAST, fakeBlocks);
     }
 
     private static void drawShapedDraft(
@@ -694,6 +744,32 @@ final class FabricFakeBlockVisualization
                 add3D(level, displayZone, new BlockPos(bounds.minX(), verticalY, bounds.minZ()), side, fakeBlocks);
                 add3D(level, displayZone, new BlockPos(bounds.maxX(), verticalY, bounds.minZ()), side, fakeBlocks);
             }
+        }
+    }
+
+    private static void addCorner2D(
+            @NotNull ServerLevel level,
+            @NotNull DisplayZone displayZone,
+            @NotNull BlockPos requested,
+            boolean waterTransparent,
+            @NotNull FakeBlock fake,
+            @Nullable Direction facing,
+            @NotNull LinkedHashMap<BlockPos, FakeBlock> fakeBlocks)
+    {
+        if (!displayZone.contains2D(requested) || !level.isLoaded(requested))
+        {
+            return;
+        }
+
+        BlockPos visiblePos = getVisibleLocation(level, requested, waterTransparent);
+        if (displayZone.contains(visiblePos) && level.isLoaded(visiblePos))
+        {
+            BlockState state = fake.state;
+            if (facing != null && state.hasProperty(BlockStateProperties.HORIZONTAL_FACING))
+            {
+                state = state.setValue(BlockStateProperties.HORIZONTAL_FACING, facing);
+            }
+            fakeBlocks.put(visiblePos.immutable(), new FakeBlock(state, fake.glowColor));
         }
     }
 
@@ -1005,7 +1081,8 @@ final class FabricFakeBlockVisualization
         INITIALIZE("diamond_block", GlowColor.AQUA, "diamond_block", GlowColor.AQUA, false),
         INITIALIZE_3D("diamond_block", GlowColor.AQUA, "diamond_block", GlowColor.AQUA, true),
         CONFLICT("redstone_ore", GlowColor.RED, "netherrack", GlowColor.RED, false),
-        CONFLICT_3D("redstone_ore", GlowColor.RED, "netherrack", GlowColor.RED, true);
+        CONFLICT_3D("redstone_ore", GlowColor.RED, "netherrack", GlowColor.RED, true),
+        RESTORE_NATURE("lime_glazed_terracotta", GlowColor.GREEN, "emerald_block", GlowColor.GREEN, false);
 
         private final @NotNull String cornerBlock;
         private final int cornerGlow;
@@ -1013,6 +1090,7 @@ final class FabricFakeBlockVisualization
         private final int sideGlow;
         private final boolean exactPlacement;
         private @Nullable FakeBlock corner;
+        private @Nullable FakeBlock cornerFallback;
         private @Nullable FakeBlock side;
 
         VisualizationStyle(
@@ -1032,6 +1110,19 @@ final class FabricFakeBlockVisualization
         // Resolved on first draw, once registries are certain to be populated.
         @NotNull FakeBlock corner()
         {
+            return corner(false);
+        }
+
+        @NotNull FakeBlock corner(boolean preGlazedTerracotta)
+        {
+            if (preGlazedTerracotta && this == RESTORE_NATURE)
+            {
+                if (this.cornerFallback == null)
+                {
+                    this.cornerFallback = new FakeBlock(block("lime_wool"), this.cornerGlow);
+                }
+                return this.cornerFallback;
+            }
             if (this.corner == null)
             {
                 this.corner = new FakeBlock(block(this.cornerBlock), this.cornerGlow);
@@ -1057,6 +1148,7 @@ final class FabricFakeBlockVisualization
         private static final int WHITE = 0xFFFFFF;
         private static final int AQUA = 0x00FFFF;
         private static final int RED = 0xFF0000;
+        private static final int GREEN = 0x55FF55;
 
         private GlowColor()
         {

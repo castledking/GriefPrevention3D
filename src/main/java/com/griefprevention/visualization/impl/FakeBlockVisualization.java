@@ -1,5 +1,6 @@
 package com.griefprevention.visualization.impl;
 
+import com.griefprevention.compat.ClientVersionCompat;
 import com.griefprevention.compat.MaterialTagCompat;
 import com.griefprevention.util.IntVector;
 import com.griefprevention.visualization.BlockBoundaryRenderer;
@@ -129,6 +130,23 @@ public class FakeBlockVisualization extends BlockBoundaryVisualization {
         }
     }
 
+    private int restoreNatureHeight(int x, int z, @NotNull Player player) {
+        int targetY = this.height;
+        if (targetY <= GriefPrevention.getWorldMinY(world)) {
+            targetY = player.getEyeLocation().getBlockY();
+        }
+        if (world.getEnvironment() != World.Environment.NETHER) {
+            try {
+                int highest = world.getHighestBlockYAt(x, z);
+                if (highest > GriefPrevention.getWorldMinY(world)) {
+                    return highest;
+                }
+            } catch (Throwable ignored) {
+            }
+        }
+        return targetY;
+    }
+
     /**
      * Draw restore nature visualization with directional lime glazed terracotta corners.
      * Corner directions:
@@ -154,29 +172,57 @@ public class FakeBlockVisualization extends BlockBoundaryVisualization {
 
         Consumer<@NotNull IntVector> addSide = addSideElements(boundary);
 
-        // Add stub blocks (emerald) next to corners
+        // Add stub blocks (emerald) next to corners, using surface height so markers do not sink underground
         if (area.getLength() > 2) {
-            addDisplayed(displayZone, new IntVector(area.getMinX() + 1, height, area.getMaxZ()), addSide);
-            addDisplayed(displayZone, new IntVector(area.getMinX() + 1, height, area.getMinZ()), addSide);
-            addDisplayed(displayZone, new IntVector(area.getMaxX() - 1, height, area.getMaxZ()), addSide);
-            addDisplayed(displayZone, new IntVector(area.getMaxX() - 1, height, area.getMinZ()), addSide);
+            addDisplayed(displayZone, new IntVector(area.getMinX() + 1, restoreNatureHeight(area.getMinX() + 1, area.getMaxZ(), player), area.getMaxZ()), addSide);
+            addDisplayed(displayZone, new IntVector(area.getMinX() + 1, restoreNatureHeight(area.getMinX() + 1, area.getMinZ(), player), area.getMinZ()), addSide);
+            addDisplayed(displayZone, new IntVector(area.getMaxX() - 1, restoreNatureHeight(area.getMaxX() - 1, area.getMaxZ(), player), area.getMaxZ()), addSide);
+            addDisplayed(displayZone, new IntVector(area.getMaxX() - 1, restoreNatureHeight(area.getMaxX() - 1, area.getMinZ(), player), area.getMinZ()), addSide);
         }
         if (area.getWidth() > 2) {
-            addDisplayed(displayZone, new IntVector(area.getMinX(), height, area.getMinZ() + 1), addSide);
-            addDisplayed(displayZone, new IntVector(area.getMaxX(), height, area.getMinZ() + 1), addSide);
-            addDisplayed(displayZone, new IntVector(area.getMinX(), height, area.getMaxZ() - 1), addSide);
-            addDisplayed(displayZone, new IntVector(area.getMaxX(), height, area.getMaxZ() - 1), addSide);
+            addDisplayed(displayZone, new IntVector(area.getMinX(), restoreNatureHeight(area.getMinX(), area.getMinZ() + 1, player), area.getMinZ() + 1), addSide);
+            addDisplayed(displayZone, new IntVector(area.getMaxX(), restoreNatureHeight(area.getMaxX(), area.getMinZ() + 1, player), area.getMinZ() + 1), addSide);
+            addDisplayed(displayZone, new IntVector(area.getMinX(), restoreNatureHeight(area.getMinX(), area.getMaxZ() - 1, player), area.getMaxZ() - 1), addSide);
+            addDisplayed(displayZone, new IntVector(area.getMaxX(), restoreNatureHeight(area.getMaxX(), area.getMaxZ() - 1, player), area.getMaxZ() - 1), addSide);
         }
 
-        // Add corners with directional lime glazed terracotta
+        // Add corners with directional lime glazed terracotta (or lime wool for clients < 1.10 / < 1.12)
         // South West Corner (minX, maxZ): facing west
-        addDirectionalCorner(displayZone, new IntVector(area.getMinX(), height, area.getMaxZ()), BlockFace.WEST, type);
+        int swY = restoreNatureHeight(area.getMinX(), area.getMaxZ(), player);
+        addDirectionalCorner(displayZone, new IntVector(area.getMinX(), swY, area.getMaxZ()), BlockFace.WEST, type, player);
         // South East Corner (maxX, maxZ): facing south
-        addDirectionalCorner(displayZone, new IntVector(area.getMaxX(), height, area.getMaxZ()), BlockFace.SOUTH, type);
+        int seY = restoreNatureHeight(area.getMaxX(), area.getMaxZ(), player);
+        addDirectionalCorner(displayZone, new IntVector(area.getMaxX(), seY, area.getMaxZ()), BlockFace.SOUTH, type, player);
         // North West Corner (minX, minZ): facing north
-        addDirectionalCorner(displayZone, new IntVector(area.getMinX(), height, area.getMinZ()), BlockFace.NORTH, type);
+        int nwY = restoreNatureHeight(area.getMinX(), area.getMinZ(), player);
+        addDirectionalCorner(displayZone, new IntVector(area.getMinX(), nwY, area.getMinZ()), BlockFace.NORTH, type, player);
         // North East Corner (maxX, minZ): facing east
-        addDirectionalCorner(displayZone, new IntVector(area.getMaxX(), height, area.getMinZ()), BlockFace.EAST, type);
+        int neY = restoreNatureHeight(area.getMaxX(), area.getMinZ(), player);
+        addDirectionalCorner(displayZone, new IntVector(area.getMaxX(), neY, area.getMinZ()), BlockFace.EAST, type, player);
+    }
+
+    /**
+     * Add a directional lime glazed terracotta corner block (or lime wool for clients on < 1.10 / < 1.12).
+     */
+    protected void addDirectionalCorner(
+        @NotNull BoundingBox displayZone,
+        @NotNull IntVector coordinate,
+        @NotNull BlockFace facing,
+        @NotNull VisualizationType type,
+        @NotNull Player player
+    ) {
+        if (!isAccessible(displayZone, coordinate)) return;
+
+        BlockData fakeData;
+        if (ClientVersionCompat.isPreGlazedTerracotta(player)) {
+            fakeData = Material.LIME_WOOL.createBlockData();
+        } else {
+            fakeData = Material.LIME_GLAZED_TERRACOTTA.createBlockData();
+            if (fakeData instanceof Directional) {
+                ((Directional) fakeData).setFacing(facing);
+            }
+        }
+        createElementAdder(fakeData, type, false).accept(coordinate);
     }
 
     /**
@@ -265,34 +311,26 @@ public class FakeBlockVisualization extends BlockBoundaryVisualization {
                 sides.add(new IntVector(area.getMaxX(), y, area.getMaxZ() - 1));
             }
 
-            // Corners at this Y level
+            // Always add the 4 corners at this Y level
             corners.add(new IntVector(area.getMinX(), y, area.getMaxZ()));
             corners.add(new IntVector(area.getMaxX(), y, area.getMaxZ()));
             corners.add(new IntVector(area.getMinX(), y, area.getMinZ()));
             corners.add(new IntVector(area.getMaxX(), y, area.getMinZ()));
-
-            // Vertical indicator: one white wool block above the bottom corners and below the top corners, only when
-            // there is a gap between the two rings to put it in.
-            if (claimMaxY - claimMinY >= 2) {
-                int verticalY = y == claimMinY ? y + 1 : y - 1;
-                sides.add(new IntVector(area.getMinX(), verticalY, area.getMaxZ()));
-                sides.add(new IntVector(area.getMaxX(), verticalY, area.getMaxZ()));
-                sides.add(new IntVector(area.getMinX(), verticalY, area.getMinZ()));
-                sides.add(new IntVector(area.getMaxX(), verticalY, area.getMinZ()));
-            }
         }
 
+        // Apply corners over sides so corner markers take precedence when markers overlap
         sides.removeAll(corners);
-        for (IntVector side : sides) {
-            addDisplayed3D(displayZone, side, addSide);
+
+        for (IntVector sideVector : sides) {
+            addDisplayed3D(displayZone, sideVector, addSide);
         }
-        for (IntVector corner : corners) {
-            addDisplayed3D(displayZone, corner, addCorner);
+        for (IntVector cornerVector : corners) {
+            addDisplayed3D(displayZone, cornerVector, addCorner);
         }
     }
 
     /**
-     * Add a display element if accessible (3D version that doesn't call parent's addDisplayed).
+     * Add a 3D display element if accessible, checking full 3D bounds instead of 2D.
      */
     private void addDisplayed3D(
         @NotNull BoundingBox displayZone,

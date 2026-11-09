@@ -133,15 +133,17 @@ design points for that work:
 - [x] `/checkclaimexpiry [player]` (`/aclaim checkexpiry`): when the claim the player stands in, or a
       player's claims, expire and what keeps them; another player's takes
       `griefprevention.admin.checkclaimexpiry`.
+- [x] Restore nature (`/restorenature`, `/restorenatureaggressive`, `/restorenaturefill [radius]`, `/aclaim restore`):
+      switches the modification tool to restoration mode. Restores natural biome surface, removes player-placed blocks,
+      walls, and floating artifacts, fills holes in natural terrain, and respects existing claims (unless in aggressive mode).
 
 ### Still missing
 
-- [ ] Shaped subdivision creation and shaped `/scrollresize`; restore nature, buying and selling
-      claim blocks, and `/siege`.
-- [ ] The chat hint that points players who say "trapped" or "stuck" at `/trapped` (needs Fabric's
-      message API module).
+- [ ] Buying and selling claim blocks and `/siege`.
+- [ ] Shaped (polygon) subdivision creation and shaped `/scrollresize` (rectangular `/scrollresize` is complete).
+- [ ] Chat-keyword educator for players who type "trapped" or "stuck" in chat without a slash (the `/trapped` command itself is complete).
 - [ ] `Claims.Expiration.UnusedClaimDays` (small creative-world claims scored by the blocks placed in
-      them) and `AutomaticNatureRestoration`, which both need restore nature.
+      them) and `AutomaticNatureRestoration` for auto-cleaning claims after deletion/abandonment.
 
 ---
 

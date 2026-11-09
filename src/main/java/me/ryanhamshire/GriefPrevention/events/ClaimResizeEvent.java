@@ -37,16 +37,4 @@ public class ClaimResizeEvent extends ClaimChangeEvent
     {
         return modifier;
     }
-
-    /**
-     * Get the resulting {@link Claim} after modification.
-     *
-     * @return the resulting {@code Claim}
-     * @deprecated Use {@link #getTo()} instead.
-     */
-    @Deprecated
-    public @NotNull Claim getClaim()
-    {
-        return getTo();
-    }
 }

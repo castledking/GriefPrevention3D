@@ -277,31 +277,11 @@ public class UnifiedClaimCommand extends UnifiedCommandHandler {
     }
 
     public boolean handlePvpTrust(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player)) return false;
-        Player player = (Player) sender;
-
-        if (!plugin.config_claims_allowPvPTrust || !player.hasPermission("griefprevention.pvptrust")) {
-            GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
-            return true;
-        }
-        if (args.length != 1) return false;
-
-        plugin.handleTrustCommand(player, ClaimPermission.PVP, args[0], false);
-        return true;
+        return plugin.handlePvpTrustCommand(sender, args);
     }
 
     public boolean handlePveTrust(CommandSender sender, String[] args) {
-        if (!(sender instanceof Player)) return false;
-        Player player = (Player) sender;
-
-        if (!plugin.config_claims_allowPvETrust || !player.hasPermission("griefprevention.pvetrust")) {
-            GriefPrevention.sendMessage(player, TextMode.Err, Messages.NoPermissionForCommand);
-            return true;
-        }
-        if (args.length != 1) return false;
-
-        plugin.handleTrustCommand(player, ClaimPermission.PVE, args[0], false);
-        return true;
+        return plugin.handlePveTrustCommand(sender, args);
     }
 
     private boolean handleTrustList(CommandSender sender, String[] args) {

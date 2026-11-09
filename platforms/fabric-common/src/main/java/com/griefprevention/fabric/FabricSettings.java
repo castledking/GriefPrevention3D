@@ -258,6 +258,58 @@ final class FabricSettings
         return this.expiration;
     }
 
+    /**
+     * Updates the VisualizationGlow setting in config.yml and reloads the settings.
+     *
+     * @param glow the new setting
+     * @return true if successfully saved and reloaded
+     */
+    synchronized boolean setVisualizationGlow(boolean glow)
+    {
+        try
+        {
+            String contents = "";
+            try
+            {
+                contents = java.nio.file.Files.readString(this.configFile, java.nio.charset.StandardCharsets.UTF_8);
+            }
+            catch (java.nio.file.NoSuchFileException ignored)
+            {
+            }
+
+            String updated;
+            if (contents.matches("(?s).*\\bVisualizationGlow\\s*:.*"))
+            {
+                updated = contents.replaceAll("(?m)^(\\s*VisualizationGlow\\s*:\\s*).*$", "$1" + glow);
+            }
+            else if (contents.matches("(?s).*\\bGriefPrevention\\s*:.*"))
+            {
+                updated = contents.replaceFirst("(?m)^(GriefPrevention\\s*:.*)$", "$1\n  VisualizationGlow: " + glow);
+            }
+            else if (contents.isBlank())
+            {
+                updated = "GriefPrevention:\n  VisualizationGlow: " + glow + "\n";
+            }
+            else
+            {
+                updated = contents + "\nGriefPrevention:\n  VisualizationGlow: " + glow + "\n";
+            }
+
+            if (this.configFile.getParent() != null)
+            {
+                java.nio.file.Files.createDirectories(this.configFile.getParent());
+            }
+            java.nio.file.Files.writeString(this.configFile, updated, java.nio.charset.StandardCharsets.UTF_8);
+            reload();
+            return true;
+        }
+        catch (java.io.IOException exception)
+        {
+            this.logger.error("Could not write VisualizationGlow to {}", this.configFile, exception);
+            return false;
+        }
+    }
+
     @NotNull ClaimToolSettings tools()
     {
         return this.tools;
