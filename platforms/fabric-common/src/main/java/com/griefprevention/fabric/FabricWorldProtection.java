@@ -358,8 +358,8 @@ public final class FabricWorldProtection
 
     /**
      * Paper's entity protection: monsters are never protected; players follow the PvP safe-zone
-     * rules; frames, stands, crystals, paintings, vehicles and villagers in a claim need build trust;
-     * other creatures in a claim need container trust.
+     * rules; frames, stands, crystals, paintings and villagers in a claim need build trust;
+     * vehicles and other creatures in a claim need container trust.
      */
     public static boolean mayDamage(@NotNull Entity target, @NotNull Level targetLevel, @NotNull DamageSource source)
     {
@@ -407,6 +407,17 @@ public final class FabricWorldProtection
             }
             return protection.requireTrust(level, target, attacker, ClaimTrustLevel.BUILD, false);
         }
+        if (target instanceof VehicleEntity)
+        {
+            if (attacker != null)
+            {
+                ClaimTrustLevel requiredTrust = protection.settings.vehiclesRequireBuildTrust()
+                        ? ClaimTrustLevel.BUILD
+                        : ClaimTrustLevel.CONTAINER;
+                return protection.requireTrust(level, target, attacker, requiredTrust, true);
+            }
+            return protection.claims.findClaimAt(level, target.blockPosition()) == null;
+        }
         if (isBuildProtected(target))
         {
             if (attacker != null)
@@ -445,7 +456,7 @@ public final class FabricWorldProtection
         {
             return true;
         }
-        boolean protectedKind = isBuildProtected(target) || target instanceof Villager
+        boolean protectedKind = isBuildProtected(target) || target instanceof VehicleEntity || target instanceof Villager
                 || (target instanceof Mob && protection.settings.world().protectCreatures());
         return !protectedKind || protection.claims.findClaimAt(level, target.blockPosition()) == null;
     }
@@ -539,7 +550,6 @@ public final class FabricWorldProtection
         return target instanceof HangingEntity
                 || target instanceof ArmorStand
                 || target instanceof EndCrystal
-                || target instanceof VehicleEntity
                 || isCushion(target);
     }
 

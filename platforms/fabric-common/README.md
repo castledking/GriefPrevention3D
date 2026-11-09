@@ -271,9 +271,9 @@ Protection coverage (Paper's rules and config keys; environmental rules apply in
   berry bushes, glow berries, pumpkins and anvils. Editing an unwaxed sign needs build trust; waxed
   signs stay clickable so their commands work. Other blocks need access trust.
 - Item frames and armor stands need build trust to use; other entities need container trust.
-- Monsters are never protected. Item frames, paintings, armor stands, end crystals and vehicles in a
+- Monsters are never protected. Item frames, paintings, armor stands and end crystals in a
   claim need build trust to damage, by hand or by projectile; villagers too while
-  `Claims.ProtectCreatures` is on. Other creatures need container trust (`NoDamageClaimedEntity`); a pet's
+  `Claims.ProtectCreatures` is on. Vehicles and other creatures need container trust (`NoDamageClaimedEntity`, or build trust when `Claims.VehiclesRequireBuildTrust: true` is configured); a pet's
   owner may still hurt it. Projectiles from mobs and dispensers cannot hurt them either.
 - PvP: a claim protects the players in it according to `PvP.ProtectPlayersInLandClaims`
   (`CantFightWhileImmune`, `PlayerInPvPSafeZone`). With `Claims.PvPToggle.Claim.Enabled` or

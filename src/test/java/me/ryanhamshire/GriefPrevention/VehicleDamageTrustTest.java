@@ -19,8 +19,8 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * Breaking a vehicle in a claim takes build trust, not the container trust that opening a chest
- * minecart takes.
+ * Breaking a vehicle in a claim takes container trust by default (matching upstream GriefPrevention),
+ * or build trust when GriefPrevention.Claims.VehiclesRequireBuildTrust is enabled.
  */
 class VehicleDamageTrustTest {
     private static final UUID PLAYER_UUID = UUID.fromString("fa8d60a7-9645-4a9f-b74d-173966174739");
@@ -31,10 +31,10 @@ class VehicleDamageTrustTest {
     }
 
     @Test
-    void breakingAVehicleIsDeniedWithoutBuildTrust() {
-        Fixture fixture = new Fixture();
-        when(fixture.claim.checkPermission(eq(fixture.player), eq(ClaimPermission.Build), eq(fixture.event), any()))
-                .thenReturn(() -> "no build trust here");
+    void breakingAVehicleIsDeniedWithoutContainerTrustByDefault() {
+        Fixture fixture = new Fixture(false);
+        when(fixture.claim.checkPermission(eq(fixture.player), eq(ClaimPermission.Container), eq(fixture.event), any()))
+                .thenReturn(() -> "no container trust here");
 
         fixture.handler.onVehicleDamage(fixture.event);
 
@@ -42,10 +42,19 @@ class VehicleDamageTrustTest {
     }
 
     @Test
-    void containerTrustAloneDoesNotAllowBreakingAVehicle() {
-        // A claim with public container trust - a shop or a loot warp - would otherwise let any
-        // visitor break its minecarts.
-        Fixture fixture = new Fixture();
+    void containerTrustAllowsBreakingAVehicleByDefault() {
+        Fixture fixture = new Fixture(false);
+        when(fixture.claim.checkPermission(eq(fixture.player), eq(ClaimPermission.Container), eq(fixture.event), any()))
+                .thenReturn(null);
+
+        fixture.handler.onVehicleDamage(fixture.event);
+
+        verify(fixture.event, never()).setCancelled(true);
+    }
+
+    @Test
+    void whenConfiguredToRequireBuildTrust_containerTrustAloneIsDenied() {
+        Fixture fixture = new Fixture(true);
         when(fixture.claim.checkPermission(eq(fixture.player), eq(ClaimPermission.Container), eq(fixture.event), any()))
                 .thenReturn(null);
         when(fixture.claim.checkPermission(eq(fixture.player), eq(ClaimPermission.Build), eq(fixture.event), any()))
@@ -57,8 +66,8 @@ class VehicleDamageTrustTest {
     }
 
     @Test
-    void buildTrustAllowsBreakingAVehicle() {
-        Fixture fixture = new Fixture();
+    void whenConfiguredToRequireBuildTrust_buildTrustAllowsBreakingVehicle() {
+        Fixture fixture = new Fixture(true);
         when(fixture.claim.checkPermission(eq(fixture.player), eq(ClaimPermission.Build), eq(fixture.event), any()))
                 .thenReturn(null);
 
@@ -74,9 +83,10 @@ class VehicleDamageTrustTest {
         private final EntityDamageHandler handler;
 
         @SuppressWarnings("unchecked")
-        private Fixture() {
+        private Fixture(boolean vehiclesRequireBuildTrust) {
             GriefPrevention plugin = mock(GriefPrevention.class);
             plugin.config_claims_preventTheft = true;
+            plugin.config_claims_vehiclesRequireBuildTrust = vehiclesRequireBuildTrust;
             GriefPrevention.instance = plugin;
             DataStore dataStore = mock(DataStore.class);
 

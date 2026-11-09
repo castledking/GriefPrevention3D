@@ -78,6 +78,7 @@ final class FabricDataFolder
                 FireDamagesInClaims: false
                 ProtectCreatures: true
                 PreventTheft: true
+                VehiclesRequireBuildTrust: false
                 PreventBlockPlaceClimbing: false
                 LockWoodenDoors: false
                 LockTrapDoors: false

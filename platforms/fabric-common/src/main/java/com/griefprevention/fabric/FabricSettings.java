@@ -47,6 +47,7 @@ final class FabricSettings
     private volatile boolean allowTrappedInAdminClaims;
     private volatile boolean raidTriggersRequireBuildTrust = true;
     private volatile boolean preventBlockPlaceClimbing;
+    private volatile boolean vehiclesRequireBuildTrust;
     private volatile @NotNull ClaimExpirationSettings expiration = ClaimExpirationSettings.upstreamDefaults();
     // Resolved on first use: registries are not guaranteed to be populated when the mod initializes.
     private volatile @Nullable Item investigationTool;
@@ -177,6 +178,18 @@ final class FabricSettings
             loadedPreventBlockPlaceClimbing = false;
         }
 
+        boolean loadedVehiclesRequireBuildTrust;
+        try
+        {
+            loadedVehiclesRequireBuildTrust = this.worldCodec.decodeVehiclesRequireBuildTrust(contents);
+        }
+        catch (WorldProtectionConfigException exception)
+        {
+            this.logger.error("Could not read Claims.VehiclesRequireBuildTrust from {}; vehicle damage stays container trust.",
+                    this.configFile, exception);
+            loadedVehiclesRequireBuildTrust = false;
+        }
+
         // Deleting claims on a misread setting cannot be undone, so an unreadable file or a bad value
         // turns expiration off instead of falling back to Paper's defaults.
         ClaimExpirationSettings loadedExpiration;
@@ -199,6 +212,7 @@ final class FabricSettings
         this.allowTrappedInAdminClaims = loadedAllowTrappedInAdminClaims;
         this.raidTriggersRequireBuildTrust = loadedRaidTriggersRequireBuildTrust;
         this.preventBlockPlaceClimbing = loadedPreventBlockPlaceClimbing;
+        this.vehiclesRequireBuildTrust = loadedVehiclesRequireBuildTrust;
         this.expiration = loadedExpiration;
         this.investigationTool = null;
         this.modificationTool = null;
@@ -243,6 +257,11 @@ final class FabricSettings
     boolean preventBlockPlaceClimbing()
     {
         return this.preventBlockPlaceClimbing;
+    }
+
+    boolean vehiclesRequireBuildTrust()
+    {
+        return this.vehiclesRequireBuildTrust;
     }
 
     private static @NotNull ClaimExpirationSettings disabledExpiration()

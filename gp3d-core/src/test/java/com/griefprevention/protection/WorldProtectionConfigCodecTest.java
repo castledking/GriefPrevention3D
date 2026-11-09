@@ -76,6 +76,14 @@ class WorldProtectionConfigCodecTest
     }
 
     @Test
+    void readsVehiclesRequireBuildTrust() throws Exception
+    {
+        assertFalse(this.codec.decodeVehiclesRequireBuildTrust("GriefPrevention: {}\n"));
+        assertFalse(this.codec.decodeVehiclesRequireBuildTrust("GriefPrevention:\n  Claims:\n    VehiclesRequireBuildTrust: false\n"));
+        assertTrue(this.codec.decodeVehiclesRequireBuildTrust("GriefPrevention:\n  Claims:\n    VehiclesRequireBuildTrust: true\n"));
+    }
+
+    @Test
     void rejectsValuesOfTheWrongType()
     {
         assertThrows(WorldProtectionConfigException.class, () -> this.codec.decode(

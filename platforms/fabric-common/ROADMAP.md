@@ -158,7 +158,7 @@ design points for that work:
 | Container-level blocks without block entities (cake, cauldrons, anchors, berries, pumpkins, anvils) | `UseBlockCallback` |
 | Sign editing (build), waxed signs clickable | `UseBlockCallback` |
 | Item frame / armor stand interaction (build) | `UseEntityCallback` |
-| Entity damage: monsters free, creatures (container), frames/stands/crystals/paintings/vehicles/villagers (build), projectiles included | `Entity.hurtOrSimulate` mixin + `AttackEntityCallback` |
+| Entity damage: monsters free, creatures and vehicles (container), frames/stands/crystals/paintings/villagers (build), projectiles included | `Entity.hurtOrSimulate` mixin + `AttackEntityCallback` |
 | PvP safe zones and `/claimpvp` toggles | same, `PvpProtectionPolicy` |
 | Explosion damage to protected entities | `ServerExplosion.hurtEntities` mixin |
 | Fluid flow into claims | `FlowingFluid.spreadTo` mixin, `FluidFlowPolicy` |

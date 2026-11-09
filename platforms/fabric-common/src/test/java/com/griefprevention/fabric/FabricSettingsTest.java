@@ -64,6 +64,15 @@ class FabricSettingsTest
         assertTrue(settings.enderPearls().requireAccessTrust());
         assertTrue(settings.enderPearls().refundDenied());
         assertFalse(settings.allowTrappedInAdminClaims());
+        assertFalse(settings.vehiclesRequireBuildTrust());
+    }
+
+    @Test
+    void readsVehiclesRequireBuildTrust() throws Exception
+    {
+        Files.writeString(this.dataFolder.resolve("config.yml"), "GriefPrevention:\n  Claims:\n    VehiclesRequireBuildTrust: true\n", StandardCharsets.UTF_8);
+        FabricSettings settings = new FabricSettings(this.dataFolder, LOGGER);
+        assertTrue(settings.vehiclesRequireBuildTrust());
     }
 
     @Test

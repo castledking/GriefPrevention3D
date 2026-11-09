@@ -256,6 +256,7 @@ public class GriefPrevention extends JavaPlugin {
 
     public boolean config_claims_lecternReadingRequiresAccessTrust; // reading lecterns requires access trust
     public boolean config_claims_hoppersRequireBuildTrust; // hoppers require build trust
+    public boolean config_claims_vehiclesRequireBuildTrust; // whether breaking vehicles requires build trust instead of container trust
     public int config_claims_unprotectedChestWarningCooldownSeconds; // cooldown between unprotected chest warnings
     public int config_claims_unprotectedChestWarningDistance; // minimum distance before repeating chest warning
     public List<String> config_claims_actionBarMessages; // message IDs to render in action bar
@@ -1189,6 +1190,10 @@ public class GriefPrevention extends JavaPlugin {
             "GriefPrevention.Claims.HoppersRequireBuildTrust",
             false
         );
+        this.config_claims_vehiclesRequireBuildTrust = config.getBoolean(
+            "GriefPrevention.Claims.VehiclesRequireBuildTrust",
+            false
+        );
 
         this.config_claims_unprotectedChestWarningCooldownSeconds = config.getInt(
             "GriefPrevention.Claims.UnprotectedChestWarningCooldownSeconds",
@@ -1593,6 +1598,7 @@ public class GriefPrevention extends JavaPlugin {
             config_claims_lecternReadingRequiresAccessTrust
         );
         outConfig.set("GriefPrevention.Claims.HoppersRequireBuildTrust", this.config_claims_hoppersRequireBuildTrust);
+        outConfig.set("GriefPrevention.Claims.VehiclesRequireBuildTrust", this.config_claims_vehiclesRequireBuildTrust);
         outConfig.set("GriefPrevention.Claims.UnprotectedChestWarningCooldownSeconds", this.config_claims_unprotectedChestWarningCooldownSeconds);
         outConfig.set("GriefPrevention.Claims.UnprotectedChestWarningDistance", this.config_claims_unprotectedChestWarningDistance);
         outConfig.set("GriefPrevention.ActionBarMessages", this.config_claims_actionBarMessages);
