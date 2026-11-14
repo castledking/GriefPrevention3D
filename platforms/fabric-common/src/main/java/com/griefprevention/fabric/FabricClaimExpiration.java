@@ -122,10 +122,14 @@ final class FabricClaimExpiration
             return;
         }
         Assessment assessment = assess(server, ownerId);
-        if (assessment == null || !assessment.decision.expires())
+        if (assessment == null)
         {
-            this.logger.debug("Claims of {} stay: {}.", ownerId,
-                    assessment == null ? "unreadable claim blocks" : assessment.decision.reason());
+            this.logger.debug("Claims of {} stay: unreadable claim blocks.", ownerId);
+            return;
+        }
+        if (!assessment.decision.expires() && this.settings.expiration().unusedClaimDays() <= 0)
+        {
+            this.logger.debug("Claims of {} stay: {}.", ownerId, assessment.decision.reason());
             return;
         }
 
@@ -139,19 +143,69 @@ final class FabricClaimExpiration
             }
             // The owner may have come back, or their claims changed, while the permission was looked up.
             Assessment current = assess(server, ownerId);
-            if (current != null && current.decision.expires())
+            if (current == null)
+            {
+                return;
+            }
+            if (current.decision.expires())
             {
                 expire(server, ownerId, current);
+                return;
+            }
+            Assessment unused = assessUnusedClaims(server, ownerId);
+            if (unused != null && unused.decision.expires())
+            {
+                expire(server, ownerId, unused);
+            }
+            else
+            {
+                this.logger.debug("Claims of {} stay: {}.", ownerId, current.decision.reason());
             }
         });
     }
 
     private void expire(@NotNull MinecraftServer server, @NotNull UUID ownerId, @NotNull Assessment assessment)
     {
-        List<ClaimSnapshot> expiring = assessment.decision.outcome() == ClaimExpirationPolicy.Outcome.EXPIRE_NEW_PLAYER_CLAIM
+        ClaimExpirationPolicy.Decision decision = assessment.decision;
+        String ownerName = FabricPlayerLookup.name(server, ownerId);
+
+        if (decision.outcome() == ClaimExpirationPolicy.Outcome.EXPIRE_UNUSED_CLAIM)
+        {
+            int deleted = 0;
+            for (ClaimSnapshot claim : assessment.claims)
+            {
+                Long id = claim.id();
+                if (id == null || !ClaimExpirationCallback.EVENT.invoker().allowExpiration(claim))
+                {
+                    continue;
+                }
+                try
+                {
+                    if (this.claims.deleteClaimAs(id, null, null) != null)
+                    {
+                        deleted++;
+                        // Paper restores unused creative claims on expiration.
+                        autoRestoreOnExpiration(server, claim);
+                        this.logger.info("Removed {}'s unused claim at {}.", ownerName, FabricClaimCommands.friendlyLocation(claim));
+                    }
+                }
+                catch (IOException exception)
+                {
+                    this.logger.error("Could not delete {}'s unused claim at {}.",
+                            ownerName, FabricClaimCommands.friendlyLocation(claim), exception);
+                }
+            }
+            if (deleted > 0)
+            {
+                this.logger.info("{} unused claim(s) of {} expired after {} days away.",
+                        deleted, ownerName, this.settings.expiration().unusedClaimDays());
+            }
+            return;
+        }
+
+        List<ClaimSnapshot> expiring = decision.outcome() == ClaimExpirationPolicy.Outcome.EXPIRE_NEW_PLAYER_CLAIM
                 ? Collections.singletonList(assessment.claims.get(0))
                 : assessment.claims;
-        String ownerName = FabricPlayerLookup.name(server, ownerId);
         int deleted = 0;
         for (ClaimSnapshot claim : expiring)
         {
@@ -180,7 +234,7 @@ final class FabricClaimExpiration
         {
             return;
         }
-        if (assessment.decision.outcome() == ClaimExpirationPolicy.Outcome.EXPIRE_NEW_PLAYER_CLAIM)
+        if (decision.outcome() == ClaimExpirationPolicy.Outcome.EXPIRE_NEW_PLAYER_CLAIM)
         {
             this.logger.info("{}'s new player claim expired.", ownerName);
         }
@@ -356,6 +410,79 @@ final class FabricClaimExpiration
     // ---------------------------------------------------------------------------------------------
     // Helpers
     // ---------------------------------------------------------------------------------------------
+
+    /** Evaluates Paper's UnusedClaimDays rule for individual small creative claims. */
+    private @Nullable Assessment assessUnusedClaims(@NotNull MinecraftServer server, @NotNull UUID ownerId)
+    {
+        ClaimExpirationSettings expiration = this.settings.expiration();
+        if (expiration.unusedClaimDays() <= 0)
+        {
+            return null;
+        }
+        boolean online = server.getPlayerList().getPlayer(ownerId) != null;
+        Long lastSeen = this.lastSeen.lastSeen(ownerId);
+        long now = System.currentTimeMillis();
+        List<ClaimSnapshot> owned = ownedByAge(ownerId);
+        if (owned.isEmpty())
+        {
+            return null;
+        }
+
+        List<ClaimSnapshot> unused = new ArrayList<>();
+        for (ClaimSnapshot claim : owned)
+        {
+            if (claim.id() == null)
+            {
+                continue;
+            }
+            String worldKey = claim.worldKey();
+            boolean creative = this.settings.world().creativeRulesApply(worldKey);
+            if (!creative || claim.adminClaim())
+            {
+                continue;
+            }
+            if (claim.bounds().xLength() > ClaimExpirationPolicy.UNUSED_CLAIM_MAX_WIDTH
+                    || claim.bounds().zLength() > ClaimExpirationPolicy.UNUSED_CLAIM_MAX_HEIGHT)
+            {
+                continue;
+            }
+            Long score = playerInvestmentScore(server, claim);
+            ClaimExpirationPolicy.Decision decision = ClaimExpirationPolicy.decideUnusedClaim(
+                    expiration, online, lastSeen, true, false,
+                    claim.bounds().xLength(), claim.bounds().zLength(), score, now);
+            if (decision.expires())
+            {
+                unused.add(claim);
+            }
+        }
+        if (unused.isEmpty())
+        {
+            return null;
+        }
+        return new Assessment(ClaimExpirationPolicy.Decision.expired(ClaimExpirationPolicy.Outcome.EXPIRE_UNUSED_CLAIM), unused);
+    }
+
+    /**
+     * Computes Paper's unused-claim investment score for a claim on the server thread.
+     * Returns null if the claim's world is unavailable.
+     */
+    private @Nullable Long playerInvestmentScore(@NotNull MinecraftServer server, @NotNull ClaimSnapshot claim)
+    {
+        ServerLevel level = null;
+        for (ServerLevel candidate : server.getAllLevels())
+        {
+            if (this.claims.worldKey(candidate).equals(claim.worldKey()))
+            {
+                level = candidate;
+                break;
+            }
+        }
+        if (level == null)
+        {
+            return null;
+        }
+        return FabricClaimInvestmentScore.score(level, claim, this.settings.world().creativeRulesApply(claim.worldKey()));
+    }
 
     /** What the policy says about an owner now, or null when their claim blocks cannot be read. */
     private @Nullable Assessment assess(@NotNull MinecraftServer server, @NotNull UUID ownerId)

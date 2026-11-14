@@ -119,7 +119,9 @@ public final class ClaimToolConfigCodec
                         "Advanced.ClaimExpirationCheckRate"),
                 bool(natureRestoration.get("SurvivalWorlds"),
                         ClaimExpirationSettings.DEFAULT_AUTOMATIC_NATURE_RESTORATION_SURVIVAL_WORLDS,
-                        "Claims.Expiration.AutomaticNatureRestoration.SurvivalWorlds"));
+                        "Claims.Expiration.AutomaticNatureRestoration.SurvivalWorlds"),
+                integer(expiration.get("UnusedClaimDays"), ClaimExpirationSettings.DEFAULT_UNUSED_CLAIM_DAYS,
+                        "Claims.Expiration.UnusedClaimDays"));
     }
 
     /** Reads {@code Claims.AllowTrappedInAdminClaims}: whether /trapped works in administrative claims. */

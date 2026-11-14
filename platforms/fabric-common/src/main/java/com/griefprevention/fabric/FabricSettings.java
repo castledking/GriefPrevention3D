@@ -269,7 +269,8 @@ final class FabricSettings
         return new ClaimExpirationSettings(0, 0, 0, 0,
                 ClaimExpirationSettings.DEFAULT_NEW_PLAYER_CLAIM_RADIUS,
                 ClaimExpirationSettings.DEFAULT_CHECK_RATE_SECONDS,
-                ClaimExpirationSettings.DEFAULT_AUTOMATIC_NATURE_RESTORATION_SURVIVAL_WORLDS);
+                ClaimExpirationSettings.DEFAULT_AUTOMATIC_NATURE_RESTORATION_SURVIVAL_WORLDS,
+                0);
     }
 
     /** {@code Claims.Expiration}: when the claims of players who stopped playing expire. */
