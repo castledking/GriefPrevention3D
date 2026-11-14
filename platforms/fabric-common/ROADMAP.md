@@ -141,7 +141,7 @@ design points for that work:
 
 - [ ] Buying and selling claim blocks and `/siege`.
 - [ ] Shaped (polygon) subdivision creation and shaped `/scrollresize` (rectangular `/scrollresize` is complete).
-- [ ] Chat-keyword educator for players who type "trapped" or "stuck" in chat without a slash (the `/trapped` command itself is complete).
+- [x] Chat-keyword educator for players who type "trapped" or "stuck" in chat without a slash (the `/trapped` command itself is complete).
 - [x] `Claims.Expiration.UnusedClaimDays` (small creative-world claims scored by the blocks placed in them, with auto-restore on expiration).
 - [x] `AutomaticNatureRestoration` for auto-cleaning claims after deletion/abandonment (`Claims.Expiration.AutomaticNatureRestoration.SurvivalWorlds`, immediate on delete/expire and delayed on abandon as on Paper).
 
