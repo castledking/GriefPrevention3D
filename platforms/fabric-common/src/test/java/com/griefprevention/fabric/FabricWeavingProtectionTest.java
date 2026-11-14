@@ -186,7 +186,8 @@ class FabricWeavingProtectionTest
     {
         WorldProtectionSettings d = WorldProtectionSettings.upstreamDefaults();
         return new WorldProtectionSettings(d.fireSpreads(), d.fireDestroys(), d.fireSpreadsInClaims(),
-                d.fireDamagesInClaims(), d.pistonMode(), d.endermenMoveBlocks(), d.creaturesTrampleCrops(),
+                d.fireDamagesInClaims(), d.pistonMode(), d.endermenMoveBlocks(), d.silverfishBreakBlocks(),
+                d.creaturesTrampleCrops(), d.rabbitsEatCrops(), d.ravagersBreakBlocks(), d.limitTreeGrowth(),
                 d.protectCreatures(), d.noCombatInPlayerClaims(), d.noCombatInAdminClaims(),
                 d.noCombatInAdminSubdivisions(), d.pvpToggleForClaims(), d.pvpToggleForSubdivisions(),
                 Map.of("world", mode));

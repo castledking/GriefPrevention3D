@@ -67,7 +67,11 @@ public final class WorldProtectionConfigCodec
                 bool(claims.get("FireDamagesInClaims"), false, "Claims.FireDamagesInClaims"),
                 pistonMode,
                 bool(root.get("EndermenMoveBlocks"), false, "EndermenMoveBlocks"),
+                bool(root.get("SilverfishBreakBlocks"), false, "SilverfishBreakBlocks"),
                 bool(root.get("CreaturesTrampleCrops"), false, "CreaturesTrampleCrops"),
+                bool(root.get("RabbitsEatCrops"), true, "RabbitsEatCrops"),
+                bool(claims.get("RavagersBreakBlocks"), true, "Claims.RavagersBreakBlocks"),
+                bool(root.get("LimitTreeGrowth"), false, "LimitTreeGrowth"),
                 bool(claims.get("ProtectCreatures"), true, "Claims.ProtectCreatures"),
                 // Paper defaults these to "no siege worlds"; the Fabric port has no sieges.
                 bool(protectPlayers.get("PlayerOwnedClaims"), true, "PvP.ProtectPlayersInLandClaims.PlayerOwnedClaims"),

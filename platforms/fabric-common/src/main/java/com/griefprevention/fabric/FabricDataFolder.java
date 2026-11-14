@@ -36,7 +36,10 @@ final class FabricDataFolder
               BlockSurfaceOtherExplosions: true
               PistonMovement: CLAIMS_ONLY
               EndermenMoveBlocks: false
+              SilverfishBreakBlocks: false
               CreaturesTrampleCrops: false
+              RabbitsEatCrops: true
+              LimitTreeGrowth: false
               PvP:
                 AllowContainerAccess: false
                 AllowRespawnAnchor: false
@@ -77,6 +80,7 @@ final class FabricDataFolder
                 FireSpreadsInClaims: false
                 FireDamagesInClaims: false
                 ProtectCreatures: true
+                RavagersBreakBlocks: true
                 PreventTheft: true
                 VehiclesRequireBuildTrust: false
                 PreventBlockPlaceClimbing: false
@@ -88,11 +92,6 @@ final class FabricDataFolder
                 TransferClaim:
                   Enabled: false
                   Price: 0.0
-              Economy:
-                ClaimBlocksEnabled: false
-                ClaimBlocksMaxBonus: 0
-                ClaimBlocksPurchaseCost: 1.0
-                ClaimBlocksSellValue: 0.5
                 PvPToggle:
                   Claim:
                     Enabled: false
@@ -110,6 +109,11 @@ final class FabricDataFolder
                     SurvivalWorlds: false
               Advanced:
                 ClaimExpirationCheckRate: 60
+              Economy:
+                ClaimBlocksEnabled: false
+                ClaimBlocksMaxBonus: 0
+                ClaimBlocksPurchaseCost: 1.0
+                ClaimBlocksSellValue: 0.5
               VisualizationGlow: false
               FireSpreads: false
               FireDestroys: false

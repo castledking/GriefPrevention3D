@@ -19,7 +19,11 @@ public final class WorldProtectionSettings
     private final boolean fireDamagesInClaims;
     private final @NotNull PistonMode pistonMode;
     private final boolean endermenMoveBlocks;
+    private final boolean silverfishBreakBlocks;
     private final boolean creaturesTrampleCrops;
+    private final boolean rabbitsEatCrops;
+    private final boolean ravagersBreakBlocks;
+    private final boolean limitTreeGrowth;
     private final boolean protectCreatures;
     private final boolean noCombatInPlayerClaims;
     private final boolean noCombatInAdminClaims;
@@ -35,7 +39,11 @@ public final class WorldProtectionSettings
             boolean fireDamagesInClaims,
             @NotNull PistonMode pistonMode,
             boolean endermenMoveBlocks,
+            boolean silverfishBreakBlocks,
             boolean creaturesTrampleCrops,
+            boolean rabbitsEatCrops,
+            boolean ravagersBreakBlocks,
+            boolean limitTreeGrowth,
             boolean protectCreatures,
             boolean noCombatInPlayerClaims,
             boolean noCombatInAdminClaims,
@@ -50,7 +58,11 @@ public final class WorldProtectionSettings
         this.fireDamagesInClaims = fireDamagesInClaims;
         this.pistonMode = pistonMode;
         this.endermenMoveBlocks = endermenMoveBlocks;
+        this.silverfishBreakBlocks = silverfishBreakBlocks;
         this.creaturesTrampleCrops = creaturesTrampleCrops;
+        this.rabbitsEatCrops = rabbitsEatCrops;
+        this.ravagersBreakBlocks = ravagersBreakBlocks;
+        this.limitTreeGrowth = limitTreeGrowth;
         this.protectCreatures = protectCreatures;
         this.noCombatInPlayerClaims = noCombatInPlayerClaims;
         this.noCombatInAdminClaims = noCombatInAdminClaims;
@@ -69,6 +81,10 @@ public final class WorldProtectionSettings
                 false,
                 PistonMode.CLAIMS_ONLY,
                 false,
+                false,
+                false,
+                true,
+                true,
                 false,
                 true,
                 true,
@@ -114,9 +130,33 @@ public final class WorldProtectionSettings
         return this.endermenMoveBlocks;
     }
 
+    /** {@code GriefPrevention.SilverfishBreakBlocks} */
+    public boolean silverfishBreakBlocks()
+    {
+        return this.silverfishBreakBlocks;
+    }
+
     public boolean creaturesTrampleCrops()
     {
         return this.creaturesTrampleCrops;
+    }
+
+    /** {@code GriefPrevention.RabbitsEatCrops} */
+    public boolean rabbitsEatCrops()
+    {
+        return this.rabbitsEatCrops;
+    }
+
+    /** {@code GriefPrevention.Claims.RavagersBreakBlocks} */
+    public boolean ravagersBreakBlocks()
+    {
+        return this.ravagersBreakBlocks;
+    }
+
+    /** {@code GriefPrevention.LimitTreeGrowth} */
+    public boolean limitTreeGrowth()
+    {
+        return this.limitTreeGrowth;
     }
 
     /** {@code GriefPrevention.Claims.ProtectCreatures}: whether claimed animals and pets are protected. */

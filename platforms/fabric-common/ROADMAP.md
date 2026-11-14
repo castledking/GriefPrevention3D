@@ -198,17 +198,17 @@ Also found while porting, and handled more strictly on Fabric:
   permission to edit the claim. `/claimtogglealerts` also covers the subdivisions of the player's
   claims, which Paper leaves as they were.
 
-### Still missing
+### Still missing / partial
 
-| Protection | Paper event | Likely Fabric hook |
-|-----------|-------------|--------------------|
-| Tree and structure growth into claims (`LimitTreeGrowth`) | `StructureGrowEvent` | sapling/feature placement mixin |
-| Nether portal creation over claims | `PortalCreateEvent` | portal shape mixin |
-| Silverfish, rabbits, ravagers, withers changing blocks | `EntityChangeBlockEvent` | per-mob goal mixins |
-| Mob melee on frames/stands/armor stands, cactus and other environmental damage | `EntityDamageEvent` | `hurtServer` mixins per class |
-| Other splash/lingering potion effects on claimed creatures and players (weaving is protected) | `PotionSplashEvent`, `AreaEffectCloudApplyEvent` | potion/cloud mixins |
-| Hoppers taking death loot, pet damage by environment, walking a sulfur cube out of a claim | various | various |
-| Fresh-spawn PvP immunity, siege, creative-world rules | various | — |
+| Protection | Paper event | Likely Fabric hook | Status |
+|-----------|-------------|--------------------|--------|
+| Tree and structure growth into claims (`LimitTreeGrowth`) | `StructureGrowEvent` | sapling/feature placement mixin | Config/default wired; enforcement hook still needed |
+| Nether portal creation over claims | `PortalCreateEvent` | portal shape mixin | Best-effort coarse `PortalShape` guard (no creating-player attribution yet) |
+| Silverfish, rabbits, ravagers, withers changing blocks | `EntityChangeBlockEvent` | per-mob goal mixins | Config/defaults wired; best-effort claim/global guards for ravager/wither/rabbit (mapping-dependent), silverfish claim-entry guard still incomplete |
+| Mob melee on frames/stands/armor stands, cactus and other environmental damage | `EntityDamageEvent` | `hurtServer` mixins per class | |
+| Other splash/lingering potion effects on claimed creatures and players (weaving is protected) | `PotionSplashEvent`, `AreaEffectCloudApplyEvent` | potion/cloud mixins | |
+| Hoppers taking death loot, pet damage by environment, walking a sulfur cube out of a claim | various | various | |
+| Fresh-spawn PvP immunity, siege, creative-world rules | various | — | siege intentionally excluded |
 
 Known difference: holding a block item while right-clicking a container asks for build trust on Fabric
 (the item might be placed); Paper only asks for container trust unless a block is actually placed.

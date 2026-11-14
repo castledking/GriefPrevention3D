@@ -352,6 +352,98 @@ public final class FabricWorldProtection
         return protection == null || protection.settings.world().endermenMoveBlocks();
     }
 
+    public static boolean maySilverfishBreakBlocks()
+    {
+        FabricWorldProtection protection = active;
+        return protection == null || protection.settings.world().silverfishBreakBlocks();
+    }
+
+    public static boolean mayRabbitsEatCrops()
+    {
+        FabricWorldProtection protection = active;
+        return protection == null || protection.settings.world().rabbitsEatCrops();
+    }
+
+    public static boolean mayRavagersBreakBlocks()
+    {
+        FabricWorldProtection protection = active;
+        return protection == null || protection.settings.world().ravagersBreakBlocks();
+    }
+
+    /** Wither body/skull block-breaking: never in claims, wilderness allowed. */
+    public static boolean mayWitherGrief(@NotNull Level level, @NotNull BlockPos pos)
+    {
+        FabricWorldProtection protection = active;
+        if (protection == null || !(level instanceof ServerLevel serverLevel) || !protection.applies(serverLevel))
+        {
+            return true;
+        }
+        return protection.claims.findClaimAt(serverLevel, pos) == null;
+    }
+
+    /** Silverfish entering blocks, rabbit crop eating, ravager path-breaking in claims. */
+    public static boolean mayMobChangeClaimedBlock(@NotNull Level level, @NotNull BlockPos pos)
+    {
+        FabricWorldProtection protection = active;
+        if (protection == null || !(level instanceof ServerLevel serverLevel) || !protection.applies(serverLevel))
+        {
+            return true;
+        }
+        return protection.claims.findClaimAt(serverLevel, pos) == null;
+    }
+
+    /**
+     * LimitTreeGrowth/structure growth: every changed block that lands in a different owner's claim
+     * (or in a claim when source is wilderness) is denied. Returns false to cancel whole growth.
+     */
+    public static boolean mayGrowIntoClaims(@NotNull ServerLevel level, @NotNull BlockPos source, @NotNull java.util.List<BlockPos> changed)
+    {
+        FabricWorldProtection protection = active;
+        if (protection == null || !protection.settings.world().limitTreeGrowth() || !protection.applies(level))
+        {
+            return true;
+        }
+        ClaimSnapshot sourceClaim = protection.claims.findClaimAt(level, source);
+        java.util.UUID sourceOwner = sourceClaim == null ? null : sourceClaim.ownerId();
+        String worldKey = protection.claims.worldKey(level);
+        for (BlockPos pos : changed)
+        {
+            ClaimSnapshot claim = protection.claims.findClaimAt(level, pos);
+            if (claim == null) continue;
+            if (sourceClaim == null || !java.util.Objects.equals(sourceOwner, claim.ownerId()))
+            {
+                return false;
+            }
+            // allow same-owner / within same root claim tree? keep conservative: same owner ok
+        }
+        return true;
+    }
+
+    /** Nether portal frame placement over claims requires build trust in every affected claim. */
+    public static boolean mayCreatePortal(@NotNull ServerLevel level, @NotNull java.util.List<BlockPos> blocks, @Nullable Entity creator)
+    {
+        FabricWorldProtection protection = active;
+        if (protection == null || !protection.applies(level)) return true;
+        for (BlockPos pos : blocks)
+        {
+            ClaimSnapshot claim = protection.claims.findClaimAt(level, pos);
+            if (claim == null) continue;
+            if (creator instanceof ServerPlayer player)
+            {
+                if (!protection.claims.allows(claim, player, ClaimTrustLevel.BUILD))
+                {
+                    protection.feedback.denied(player, claim, ClaimTrustLevel.BUILD);
+                    return false;
+                }
+            }
+            else
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
     // ---------------------------------------------------------------------------------------------
     // Entity damage
     // ---------------------------------------------------------------------------------------------

@@ -27,13 +27,17 @@
     "LivingEntityPotionMixin",
     "PistonBaseBlockMixin",
     "PlayerSweepAttackMixin",
+    "PortalShapeMixin",
     "ProjectileDispenseBehaviorMixin",
+    "RabbitRaidGardenGoalMixin",
     "RaidsMixin",
+    "RavagerMixin",
     "ServerExplosionMixin",
     "ServerGamePacketListenerImplMixin",
     "TeleportRandomlyConsumeEffectMixin",
     "ThrownEnderpearlMixin",
-    "WeavingMobEffectMixin"
+    "WeavingMobEffectMixin",
+    "WitherBossMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -177,14 +177,16 @@ class ProtectionPolicyTest
             boolean damagesInClaims)
     {
         return new WorldProtectionSettings(spreads, destroys, spreadsInClaims, damagesInClaims,
-                PistonMode.CLAIMS_ONLY, false, false, true, true, true, true, false, false,
+                PistonMode.CLAIMS_ONLY, false, false, false, true, true, false,
+                true, true, true, true, false, false,
                 Collections.emptyMap());
     }
 
     private static WorldProtectionSettings toggles(boolean claims, boolean subdivisions)
     {
         return new WorldProtectionSettings(false, false, false, false,
-                PistonMode.CLAIMS_ONLY, false, false, true, true, true, true, claims, subdivisions,
+                PistonMode.CLAIMS_ONLY, false, false, false, true, true, false,
+                true, true, true, true, claims, subdivisions,
                 Collections.emptyMap());
     }
 
