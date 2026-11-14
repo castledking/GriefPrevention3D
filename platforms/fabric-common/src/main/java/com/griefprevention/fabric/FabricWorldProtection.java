@@ -456,13 +456,13 @@ public final class FabricWorldProtection
     public static boolean mayDamage(@NotNull Entity target, @NotNull Level targetLevel, @NotNull DamageSource source)
     {
         Player attacker = source.getEntity() instanceof Player player ? player : null;
-        return mayDamage(target, targetLevel, attacker, source.getDirectEntity());
+        return mayDamage(target, targetLevel, attacker, source.getDirectEntity(), source);
     }
 
     /** The same rules for a player's melee attack, checked before the attack runs. */
     public static boolean mayAttack(@NotNull Entity target, @NotNull Level targetLevel, @NotNull Player attacker)
     {
-        return mayDamage(target, targetLevel, attacker, attacker);
+        return mayDamage(target, targetLevel, attacker, attacker, null);
     }
 
     /**
@@ -473,7 +473,8 @@ public final class FabricWorldProtection
             @NotNull Entity target,
             @NotNull Level targetLevel,
             @Nullable Player attacker,
-            @Nullable Entity direct)
+            @Nullable Entity direct,
+            @Nullable net.minecraft.world.damagesource.DamageSource damageSource)
     {
         FabricWorldProtection protection = active;
         if (protection == null || !(targetLevel instanceof ServerLevel level) || target instanceof Enemy)
@@ -533,6 +534,13 @@ public final class FabricWorldProtection
             {
                 return protection.claims.findClaimAt(level, target.blockPosition()) == null;
             }
+            // Protect tamed pets in claims from environmental/easy damage sources.
+            if (target instanceof TamableAnimal pet && pet.isTame()
+                    && protection.claims.findClaimAt(level, target.blockPosition()) != null
+                    && damageSource != null && protection.isEasyPetDamage(damageSource))
+            {
+                return false;
+            }
         }
         return true;
     }
@@ -584,6 +592,26 @@ public final class FabricWorldProtection
         boolean pvpToggled = document != null && document.pvpToggled();
         return PvpProtectionPolicy.isSafeZone(
                 this.settings.world(), claim, pvpEnabled, pvpToggled, this.claims::claimById);
+    }
+
+    private boolean isEasyPetDamage(@NotNull DamageSource source)
+    {
+        try
+        {
+            if (source.is(net.minecraft.tags.DamageTypeTags.IS_FIRE)
+                    || source.is(net.minecraft.tags.DamageTypeTags.IS_EXPLOSION)
+                    || source.is(net.minecraft.tags.DamageTypeTags.IS_FALL)
+                    || source.is(net.minecraft.tags.DamageTypeTags.IS_DROWNING)
+                    || source.is(net.minecraft.tags.DamageTypeTags.IS_FREEZING))
+            {
+                return true;
+            }
+        }
+        catch (Throwable ignored) {}
+        String msg = "";
+        try { msg = String.valueOf(source.getMsgId()); } catch (Throwable ignored) {}
+        return "cactus".equals(msg) || "sweetBerryBush".equals(msg) || "inWall".equals(msg) || "cramming".equals(msg)
+                || "lava".equals(msg) || "hotFloor".equals(msg) || "drown".equals(msg) || "fall".equals(msg);
     }
 
     private boolean requireTrust(
@@ -847,6 +875,59 @@ public final class FabricWorldProtection
         return allowed;
     }
 
+    /** Non-weaving splash/lingering effects: protect claimed creatures and PvP-safe players. */
+    public static boolean mayApplyPotionEffect(
+            @NotNull LivingEntity target,
+            @NotNull Level targetLevel,
+            @Nullable Entity source,
+            @NotNull net.minecraft.world.effect.MobEffectInstance effect)
+    {
+        FabricWorldProtection protection = active;
+        if (protection == null || !(targetLevel instanceof ServerLevel level) || !protection.applies(level))
+        {
+            return true;
+        }
+        if (effect.getEffect().equals(net.minecraft.world.effect.MobEffects.WEAVING)) return true;
+
+        Entity actor = source instanceof AreaEffectCloud cloud ? cloud.getOwner() : source;
+        if (actor instanceof Projectile projectile && projectile.getOwner() != null) actor = projectile.getOwner();
+        if (actor == target) return true;
+
+        boolean harmful = isNegativePotion(effect);
+        if (target instanceof Player defender)
+        {
+            if (!harmful) return true;
+            return !(actor instanceof Player attacker) || protection.mayFight(level, attacker, defender);
+        }
+        if (!(target instanceof Animal || target instanceof Villager)) return true;
+        if (!harmful) return true;
+
+        Entity responsible = actor;
+        boolean allowed = protection.weaving.mayApplyToCreature(
+                protection.claims.worldKey(level), point(target.blockPosition()),
+                responsible instanceof Player player
+                        ? (claim, trust) -> protection.claims.allows(claim, player, trust)
+                        : null,
+                source == null ? null : FabricPotionSources.origin(source));
+        if (!allowed && responsible instanceof Player player)
+        {
+            protection.requireTrust(level, target, player, ClaimTrustLevel.CONTAINER, true);
+        }
+        return allowed;
+    }
+
+    private static boolean isNegativePotion(@NotNull net.minecraft.world.effect.MobEffectInstance effect)
+    {
+        try
+        {
+            return !effect.getEffect().value().isBeneficial();
+        }
+        catch (Throwable ignored)
+        {
+            return true;
+        }
+    }
+
     public static void rememberDispensedProjectile(
             @NotNull Entity projectile,
             @NotNull ServerLevel level,
@@ -858,6 +939,28 @@ public final class FabricWorldProtection
             FabricPotionSources.remember(projectile,
                     new FabricPotionSources.Origin(protection.claims.worldKey(level), point(dispenser)));
         }
+    }
+
+    /**
+     * Hoppers: best-effort guard. Block item pickup in claims to prevent easy theft of death drops;
+     * cross-claim container transfer is not fully modelled yet.
+     */
+    public static boolean mayHopperInteract(@NotNull Level level, @NotNull BlockPos hopperPos, @Nullable BlockPos other)
+    {
+        FabricWorldProtection protection = active;
+        if (protection == null || !(level instanceof ServerLevel serverLevel) || !protection.applies(serverLevel))
+        {
+            return true;
+        }
+        ClaimSnapshot hopperClaim = protection.claims.findClaimAt(serverLevel, hopperPos);
+        if (other != null)
+        {
+            ClaimSnapshot otherClaim = protection.claims.findClaimAt(serverLevel, other);
+            if (hopperClaim == null) return otherClaim == null;
+            return otherClaim != null && java.util.Objects.equals(hopperClaim.id(), otherClaim.id());
+        }
+        // conservative: do not let hoppers pick up items in claims
+        return hopperClaim == null;
     }
 
     // ---------------------------------------------------------------------------------------------

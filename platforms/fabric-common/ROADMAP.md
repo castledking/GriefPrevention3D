@@ -205,10 +205,10 @@ Also found while porting, and handled more strictly on Fabric:
 | Tree and structure growth into claims (`LimitTreeGrowth`) | `StructureGrowEvent` | sapling/feature placement mixin | Config/default wired; enforcement hook still needed |
 | Nether portal creation over claims | `PortalCreateEvent` | portal shape mixin | Best-effort coarse `PortalShape` guard (no creating-player attribution yet) |
 | Silverfish, rabbits, ravagers, withers changing blocks | `EntityChangeBlockEvent` | per-mob goal mixins | Config/defaults wired; best-effort claim/global guards for ravager/wither/rabbit (mapping-dependent), silverfish claim-entry guard still incomplete |
-| Mob melee on frames/stands/armor stands, cactus and other environmental damage | `EntityDamageEvent` | `hurtServer` mixins per class | |
-| Other splash/lingering potion effects on claimed creatures and players (weaving is protected) | `PotionSplashEvent`, `AreaEffectCloudApplyEvent` | potion/cloud mixins | |
-| Hoppers taking death loot, pet damage by environment, walking a sulfur cube out of a claim | various | various | |
-| Fresh-spawn PvP immunity, siege, creative-world rules | various | — | siege intentionally excluded |
+| Mob melee on frames/stands/armor stands, cactus and other environmental damage | `EntityDamageEvent` | `hurtServer` mixins per class | Partial: cushions/build-protected entities already guarded; tamed pets in claims now protected from easy/environmental damage (best-effort sources) |
+| Other splash/lingering potion effects on claimed creatures and players (weaving is protected) | `PotionSplashEvent`, `AreaEffectCloudApplyEvent` | potion/cloud mixins | Partial: harmful splash/lingering effects blocked on claimed animals/villagers and in PvP-safe zones (best-effort); weaving protections retained |
+| Hoppers taking death loot, pet damage by environment, walking a sulfur cube out of a claim | various | various | Partial: conservative hopper item-pickup blocked in claims (mapping-dependent mixin), pet environmental damage reduced in claims; cross-claim hopper transfer and sulfur-cube movement edge cases still missing |
+| Fresh-spawn PvP immunity, siege, creative-world rules | various | — | Partial: creative-rules worlds deny wilderness building without a claim; other creative behaviors/fresh-spawn immunity still missing; siege intentionally excluded |
 
 Known difference: holding a block item while right-clicking a container asks for build trust on Fabric
 (the item might be placed); Paper only asks for container trust unless a block is actually placed.

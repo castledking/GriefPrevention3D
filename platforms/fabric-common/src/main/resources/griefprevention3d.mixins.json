@@ -19,6 +19,7 @@
     "FireBlockMixin",
     "FishingHookMixin",
     "FlowingFluidMixin",
+    "HopperBlockEntityMixin",
     "InventoryAccessor",
     "LavaFluidMixin",
     "LecternBlockEntityMixin",

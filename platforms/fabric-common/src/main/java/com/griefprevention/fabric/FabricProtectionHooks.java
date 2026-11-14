@@ -304,14 +304,21 @@ final class FabricProtectionHooks
             @NotNull BlockPos pos,
             @NotNull ClaimTrustLevel levelRequired)
     {
-        if (level.isClientSide() || !(level instanceof ServerLevel))
+        if (level.isClientSide() || !(level instanceof ServerLevel serverLevel))
         {
             return true;
         }
 
-        ClaimSnapshot claim = this.claims.findClaimAt((ServerLevel) level, pos);
+        ClaimSnapshot claim = this.claims.findClaimAt(serverLevel, pos);
         if (claim == null)
         {
+            if (levelRequired == ClaimTrustLevel.BUILD
+                    && this.settings.world().creativeRulesApply(this.claims.worldKey(serverLevel))
+                    && !this.claims.isIgnoringClaims(player.getUUID()))
+            {
+                this.feedback.send((ServerPlayer) player, FabricDenialFeedback.TextMode.ERROR, MessageKey.NO_BUILD_PERMISSION);
+                return false;
+            }
             return true;
         }
 

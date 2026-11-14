@@ -18,14 +18,20 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 abstract class LivingEntityPotionMixin
 {
     @Inject(method = "addEffect(Lnet/minecraft/world/effect/MobEffectInstance;Lnet/minecraft/world/entity/Entity;)Z",
-            at = @At("HEAD"), cancellable = true)
-    private void griefPrevention$protectFromWeaving(
+            at = @At("HEAD"), cancellable = true, require = 0)
+    private void griefPrevention$protectPotionEffects(
             MobEffectInstance effect, @Nullable Entity source, CallbackInfoReturnable<Boolean> callback)
     {
-        if (effect.getEffect().equals(MobEffects.WEAVING)
-                && (source instanceof AreaEffectCloud || FabricPotionSources.isPotionImpact())
-                && !FabricWorldProtection.mayApplyWeaving((LivingEntity) (Object) this,
-                        ((EntityAccessor) this).griefPrevention$getLevel(), source))
+        LivingEntity target = (LivingEntity) (Object) this;
+        boolean potionImpact = source instanceof AreaEffectCloud || FabricPotionSources.isPotionImpact();
+        if (effect.getEffect().equals(MobEffects.WEAVING) && potionImpact
+                && !FabricWorldProtection.mayApplyWeaving(target, ((EntityAccessor) this).griefPrevention$getLevel(), source))
+        {
+            callback.setReturnValue(false);
+            return;
+        }
+        if (potionImpact
+                && !FabricWorldProtection.mayApplyPotionEffect(target, ((EntityAccessor) this).griefPrevention$getLevel(), source, effect))
         {
             callback.setReturnValue(false);
         }
