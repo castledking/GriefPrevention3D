@@ -49,6 +49,16 @@ final class FabricSettings
     private volatile boolean raidTriggersRequireBuildTrust = true;
     private volatile boolean preventBlockPlaceClimbing;
     private volatile boolean vehiclesRequireBuildTrust;
+    private volatile boolean preventCushionMount;
+    private volatile boolean hoppersRequireBuildTrust;
+    boolean hoppersRequireBuildTrust() { return hoppersRequireBuildTrust; }
+    private volatile boolean protectFreshSpawns = true;
+    private volatile boolean lockDeathDropsPvp;
+    private volatile boolean lockDeathDropsNonPvp = true;
+    boolean preventCushionMount() { return preventCushionMount; }
+    boolean protectFreshSpawns() { return protectFreshSpawns; }
+    boolean lockDeathDrops(boolean pvp) { return pvp ? lockDeathDropsPvp : lockDeathDropsNonPvp; }
+
     private volatile @NotNull ClaimExpirationSettings expiration = ClaimExpirationSettings.upstreamDefaults();
     private volatile @NotNull EconomySettings economy = EconomySettings.upstreamDefaults();
     // Resolved on first use: registries are not guaranteed to be populated when the mod initializes.
@@ -60,6 +70,11 @@ final class FabricSettings
         this.configFile = dataFolder.resolve("config.yml");
         this.logger = logger;
         reload();
+    }
+
+    private boolean protectionSwitch(String contents, String section, String key, boolean fallback) {
+        try { return this.worldCodec.decodeSwitch(contents, section, key, fallback); }
+        catch (WorldProtectionConfigException e) { this.logger.error("Could not read protection switch {}.{}; using default.", section, key, e); return fallback; }
     }
 
     void reload()
@@ -218,6 +233,11 @@ final class FabricSettings
             loadedExpiration = disabledExpiration();
         }
 
+        this.hoppersRequireBuildTrust = protectionSwitch(contents, "Claims", "HoppersRequireBuildTrust", false);
+        this.preventCushionMount = protectionSwitch(contents, "Claims", "PreventCushionMount", false);
+        this.protectFreshSpawns = protectionSwitch(contents, "PvP", "ProtectFreshSpawns", true);
+        this.lockDeathDropsPvp = protectionSwitch(contents, "ProtectItemsDroppedOnDeath", "PvPWorlds", false);
+        this.lockDeathDropsNonPvp = protectionSwitch(contents, "ProtectItemsDroppedOnDeath", "NonPvPWorlds", true);
         this.tools = loadedTools;
         this.world = loadedWorld;
         this.blockUse = loadedBlockUse;

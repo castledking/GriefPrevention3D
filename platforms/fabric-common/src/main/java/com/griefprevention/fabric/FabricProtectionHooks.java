@@ -261,7 +261,7 @@ final class FabricProtectionHooks
     {
         // Frames and stands change what is on display; Paper treats that as building.
         // Cushions can be sat on by anyone, like on Paper with PreventCushionMount=false (the default).
-        if (FabricWorldProtection.isCushion(entity))
+        if (FabricWorldProtection.isCushion(entity) && !this.settings.preventCushionMount())
         {
             return InteractionResult.PASS;
         }

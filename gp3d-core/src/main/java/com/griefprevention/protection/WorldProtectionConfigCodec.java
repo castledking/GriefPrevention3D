@@ -162,6 +162,15 @@ public final class WorldProtectionConfigCodec
         return bool(claims.get("VehiclesRequireBuildTrust"), false, "Claims.VehiclesRequireBuildTrust");
     }
 
+    /** Reads an adapter protection switch using the same strict YAML validation as the shared settings. */
+    public synchronized boolean decodeSwitch(String input, String section, String key, boolean fallback) throws WorldProtectionConfigException {
+        Object loaded = load(input);
+        if (loaded == null) return fallback;
+        Map<String, Object> root = optionalMap(stringMap(loaded, "config root").get(ROOT), ROOT);
+        Map<String, Object> values = section.isEmpty() ? root : optionalMap(root.get(section), section);
+        return bool(values.get(key), fallback, section + "." + key);
+    }
+
     private @Nullable Object load(@NotNull String input) throws WorldProtectionConfigException
     {
         try

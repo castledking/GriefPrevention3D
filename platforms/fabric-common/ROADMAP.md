@@ -198,17 +198,21 @@ Also found while porting, and handled more strictly on Fabric:
   permission to edit the claim. `/claimtogglealerts` also covers the subdivisions of the player's
   claims, which Paper leaves as they were.
 
-### Still missing / partial
+### Additional protections
 
-| Protection | Paper event | Likely Fabric hook | Status |
-|-----------|-------------|--------------------|--------|
-| Tree and structure growth into claims (`LimitTreeGrowth`) | `StructureGrowEvent` | sapling/feature placement mixin | Config/default wired; enforcement hook still needed |
-| Nether portal creation over claims | `PortalCreateEvent` | portal shape mixin | Best-effort coarse `PortalShape` guard (no creating-player attribution yet) |
-| Silverfish, rabbits, ravagers, withers changing blocks | `EntityChangeBlockEvent` | per-mob goal mixins | Config/defaults wired; best-effort claim/global guards for ravager/wither/rabbit (mapping-dependent), silverfish claim-entry guard still incomplete |
-| Mob melee on frames/stands/armor stands, cactus and other environmental damage | `EntityDamageEvent` | `hurtServer` mixins per class | Partial: cushions/build-protected entities already guarded; tamed pets in claims now protected from easy/environmental damage (best-effort sources) |
-| Other splash/lingering potion effects on claimed creatures and players (weaving is protected) | `PotionSplashEvent`, `AreaEffectCloudApplyEvent` | potion/cloud mixins | Partial: harmful splash/lingering effects blocked on claimed animals/villagers and in PvP-safe zones (best-effort); weaving protections retained |
-| Hoppers taking death loot, pet damage by environment, walking a sulfur cube out of a claim | various | various | Partial: conservative hopper item-pickup blocked in claims (mapping-dependent mixin), pet environmental damage reduced in claims; cross-claim hopper transfer and sulfur-cube movement edge cases still missing |
-| Fresh-spawn PvP immunity, siege, creative-world rules | various | — | Partial: creative-rules worlds deny wilderness building without a claim; other creative behaviors/fresh-spawn immunity still missing; siege intentionally excluded |
+| Protection | Fabric enforcement |
+|-----------|--------------------|
+| Tree, mushroom and huge-fungus growth (`LimitTreeGrowth`) | Growth scopes on saplings, mushrooms and fungi check each placed block against the source claim's owner; wilderness growth cannot enter a claim. The scopes are restored after failures and nested growth. |
+| Nether portal creation | Portal-shape validation checks the actual width, height and axis. Item use retains the igniting player for build-trust checks. Portal travel retains the traveler, and generated portal frame/clearing operations check every affected block. |
+| Silverfish, rabbits, ravagers and withers changing blocks | Silverfish waking/merging and rabbit crop mutation respect the global switches. The common block-destruction hook checks ravagers and withers without optional per-mob injection points. Withers respect the global claimed-explosion switch and the claim's wither toggle. |
+| Mob melee and environmental damage | Damage hooks cover living entities, armor stands and block-attached decorations as well as melee/projectile entry points. Claimed tamed pets retain environmental protection; villagers can still be attacked by zombies/raiders. |
+| Splash and lingering potions | Duration effects and instant healing/harming are checked separately. Harmful effects respect creature trust and player PvP zones/immunity; jump boost and weaving also require permission on claimed creatures. |
+| Hoppers and death loot | Normal dropped-item collection works in claims. Reserved death drops cannot be collected by hoppers or hopper minecarts or destroyed by damage. `Claims.HoppersRequireBuildTrust` gates transfers across claim boundaries, including both halves of double chests. Death-drop ownership uses `ProtectItemsDroppedOnDeath.PvPWorlds` / `NonPvPWorlds`. |
+| Sulfur cube and cushion edges | Claimed sulfur cubes cannot be walked/pushed across an ownership boundary. `Claims.PreventCushionMount` optionally requires container trust to sit on a claimed cushion. |
+| Fresh-spawn PvP immunity | Empty-inventory joins and death respawns gain immunity with `PvP.ProtectFreshSpawns`; inventory acquisition, creative mode or `griefprevention.nopvpimmunity` ends/bypasses it. Immune players cannot attack or be attacked by other players. |
+| Creative worlds | Wilderness building, loose item/experience spawning and natural/breeding mob spawns are blocked. Allowed creature spawns require a claim and obey the root claim's entity allowance (one per 50 blocks, with admin/large-claim exemptions). Player placement of hoppers, beacons and spawners obeys the active-block allowance (one per 100 blocks, with staff bypass). |
+
+`/siege` remains intentionally excluded from the Fabric port.
 
 Known difference: holding a block item while right-clicking a container asks for build trust on Fabric
 (the item might be placed); Paper only asks for container trust unless a block is actually placed.

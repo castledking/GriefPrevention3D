@@ -380,7 +380,8 @@ public enum MessageKey
     CLAIM_EXPIRY_PLAYER_NO_CLAIMS("ClaimExpiryPlayerNoClaims", "{0} has no claims."),
     CLAIM_EXPIRY_PLAYER_NOT_FOUND("ClaimExpiryPlayerNotFound", "Could not find player {0}."),
     TRAPPED_CHAT_KEYWORD("TrappedChatKeyword", "trapped;stuck"),
-    TRAPPED_INSTRUCTIONS("TrappedInstructions", "Are you trapped in someone's land claim? Try the /trapped command."),
+    TOO_MANY_ACTIVE_BLOCKS_IN_CLAIM("TooManyActiveBlocksInClaim", "This claim is at its limit for active block types (hoppers, spawners, beacons...).  Either make it bigger, or remove other active blocks first."),
+    TRAPPED_INSTRUCTIONS("TrappedInstructions", "Are you trapped in someone's land claim?  Try the /trapped command."),
     HOW_TO_CLAIM_REGEX("HowToClaimRegex", "(^|.*\\W)how\\W.*\\W(claim|protect|lock)(\\W.*|$)"),
     CREATIVE_BASICS_VIDEO_2("CreativeBasicsVideo2", "Click for Land Claim Help: {0}"),
     RESTORE_NATURE_ACTIVATE(

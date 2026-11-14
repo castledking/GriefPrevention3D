@@ -99,6 +99,7 @@ public final class FabricWorldProtection
             @NotNull FabricClaimAlerts alerts)
     {
         active = new FabricWorldProtection(claims, settings, feedback, alerts);
+        net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> markFreshSpawn(handler.getPlayer()));
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -370,7 +371,7 @@ public final class FabricWorldProtection
         return protection == null || protection.settings.world().ravagersBreakBlocks();
     }
 
-    /** Wither body/skull block-breaking: never in claims, wilderness allowed. */
+    /** Wither block breaking follows the claim explosion flags and global block-explosion setting. */
     public static boolean mayWitherGrief(@NotNull Level level, @NotNull BlockPos pos)
     {
         FabricWorldProtection protection = active;
@@ -378,7 +379,7 @@ public final class FabricWorldProtection
         {
             return true;
         }
-        return protection.claims.findClaimAt(serverLevel, pos) == null;
+        return FabricExplosionProtection.mayWitherBreak(serverLevel, pos);
     }
 
     /** Silverfish entering blocks, rabbit crop eating, ravager path-breaking in claims. */
@@ -394,7 +395,7 @@ public final class FabricWorldProtection
 
     /**
      * LimitTreeGrowth/structure growth: every changed block that lands in a different owner's claim
-     * (or in a claim when source is wilderness) is denied. Returns false to cancel whole growth.
+     * (or in a claim when source is wilderness) is denied. The placement hook skips those blocks.
      */
     public static boolean mayGrowIntoClaims(@NotNull ServerLevel level, @NotNull BlockPos source, @NotNull java.util.List<BlockPos> changed)
     {
@@ -404,17 +405,15 @@ public final class FabricWorldProtection
             return true;
         }
         ClaimSnapshot sourceClaim = protection.claims.findClaimAt(level, source);
-        java.util.UUID sourceOwner = sourceClaim == null ? null : sourceClaim.ownerId();
-        String worldKey = protection.claims.worldKey(level);
+
         for (BlockPos pos : changed)
         {
             ClaimSnapshot claim = protection.claims.findClaimAt(level, pos);
             if (claim == null) continue;
-            if (sourceClaim == null || !java.util.Objects.equals(sourceOwner, claim.ownerId()))
+            if (sourceClaim == null || !protection.sameOwnerTree(sourceClaim, claim))
             {
                 return false;
             }
-            // allow same-owner / within same root claim tree? keep conservative: same owner ok
         }
         return true;
     }
@@ -568,6 +567,10 @@ public final class FabricWorldProtection
         {
             return true;
         }
+        if (freshImmune(attacker) || freshImmune(defender)) {
+            rateLimitedError(attacker, MessageKey.CANT_FIGHT_WHILE_IMMUNE);
+            return false;
+        }
         if (isSafeZone(this.claims.findClaimAt(level, attacker.blockPosition())))
         {
             rateLimitedError(attacker, MessageKey.CANT_FIGHT_WHILE_IMMUNE);
@@ -579,6 +582,81 @@ public final class FabricWorldProtection
             return false;
         }
         return true;
+    }
+
+    private static final java.util.Set<Player> FRESH = java.util.Collections.newSetFromMap(new java.util.WeakHashMap<>());
+    public static void markFreshSpawn(ServerPlayer player) {
+        FabricWorldProtection protection = active;
+        if (protection != null && protection.settings.protectFreshSpawns() && !player.getAbilities().instabuild
+                && !protection.claims.hasPermission(player, "griefprevention.nopvpimmunity", false)
+                && player.getInventory().isEmpty()) FRESH.add(player);
+    }
+    public static boolean freshImmune(Player player) {
+        FabricWorldProtection protection = active;
+        if (protection == null || !protection.settings.protectFreshSpawns() || !player.getInventory().isEmpty()
+                || player.getAbilities().instabuild || player instanceof ServerPlayer serverPlayer && protection.claims.hasPermission(serverPlayer, "griefprevention.nopvpimmunity", false)) {
+            FRESH.remove(player);
+            return false;
+        }
+        return FRESH.contains(player);
+    }
+    private static final java.util.Map<Entity, String> SPAWN_REASONS = new java.util.WeakHashMap<>();
+    public static void rememberSpawnReason(Mob mob, String reason) { SPAWN_REASONS.put(mob, reason); }
+    public static boolean maySpawn(ServerLevel level, Entity entity) {
+        FabricWorldProtection protection = active;
+        if (protection == null || !protection.applies(level)) return true;
+        if (protection.settings.world().creativeRulesApply(protection.claims.worldKey(level))) {
+            if (entity instanceof net.minecraft.world.entity.item.ItemEntity || entity instanceof net.minecraft.world.entity.ExperienceOrb) return false;
+            if (entity instanceof Mob || entity instanceof ArmorStand) {
+                ClaimSnapshot claim = protection.claims.findClaimAt(level, entity.blockPosition());
+                if (claim == null) return false;
+                String reason = SPAWN_REASONS.remove(entity);
+                String type = BuiltInRegistries.ENTITY_TYPE.getKey(entity.getType()).getPath();
+                if (!(entity instanceof ArmorStand) && !type.equals("iron_golem") && !type.equals("snow_golem")
+                        && !"SPAWN_ITEM_USE".equals(reason) && !"DISPENSER".equals(reason)) return false;
+                while (claim.parentId() != null) {
+                    ClaimSnapshot parent = protection.claims.claimById(claim.parentId());
+                    if (parent == null) break;
+                    claim = parent;
+                }
+                if (claim.ownerId() != null && claim.bounds().area() <= 10000) {
+                    var b = claim.bounds();
+                    final ClaimSnapshot root = claim;
+                    int count = level.getEntities(entity, new net.minecraft.world.phys.AABB(b.minX(), b.minY(), b.minZ(), b.maxX()+1.0, b.maxY()+1.0, b.maxZ()+1.0),
+                            other -> !(other instanceof Player) && root.bounds().contains(other.blockPosition().getX(), other.blockPosition().getY(), other.blockPosition().getZ(), !root.threeDimensional())).size();
+                    if (count >= b.area() / 50) return false;
+                }
+            }
+        }
+        var context = FabricMutationContext.current();
+        if (context != null && context.death() && context.actor() instanceof ServerPlayer player
+                && entity instanceof net.minecraft.world.entity.item.ItemEntity item
+                && protection.settings.lockDeathDrops(FabricVersionCompat.isPvpAllowed(level))) item.setTarget(player.getUUID());
+        return true;
+    }
+    public static boolean mayMoveSulfurCube(Entity entity, net.minecraft.world.phys.Vec3 movement) {
+        FabricWorldProtection protection = active;
+        if (protection == null || !isSulfurCube(entity) || !(((com.griefprevention.fabric.mixin.EntityAccessor)entity).griefPrevention$getLevel() instanceof ServerLevel level) || !protection.applies(level)) return true;
+        ClaimSnapshot from = protection.claims.findClaimAt(level, entity.blockPosition());
+        if (from == null) return true;
+        ClaimSnapshot to = protection.claims.findClaimAt(level, BlockPos.containing(entity.getX() + movement.x, entity.getY() + movement.y, entity.getZ() + movement.z));
+        return to != null && protection.sameOwnerTree(from, to);
+    }
+
+    private ClaimSnapshot rootClaim(ClaimSnapshot claim) {
+        while (claim.parentId() != null) {
+            ClaimSnapshot parent = this.claims.claimById(claim.parentId());
+            if (parent == null) break;
+            claim = parent;
+        }
+        return claim;
+    }
+
+    private boolean sameOwnerTree(ClaimSnapshot first, ClaimSnapshot second) {
+        ClaimSnapshot a = rootClaim(first);
+        ClaimSnapshot b = rootClaim(second);
+        return java.util.Objects.equals(a.id(), b.id())
+                || a.ownerId() != null && a.ownerId().equals(b.ownerId());
     }
 
     private boolean isSafeZone(@Nullable ClaimSnapshot claim)
@@ -900,7 +978,7 @@ public final class FabricWorldProtection
             return !(actor instanceof Player attacker) || protection.mayFight(level, attacker, defender);
         }
         if (!(target instanceof Animal || target instanceof Villager)) return true;
-        if (!harmful) return true;
+        if (!harmful && !effect.getEffect().equals(net.minecraft.world.effect.MobEffects.JUMP_BOOST)) return true;
 
         Entity responsible = actor;
         boolean allowed = protection.weaving.mayApplyToCreature(
@@ -941,26 +1019,95 @@ public final class FabricWorldProtection
         }
     }
 
-    /**
-     * Hoppers: best-effort guard. Block item pickup in claims to prevent easy theft of death drops;
-     * cross-claim container transfer is not fully modelled yet.
-     */
-    public static boolean mayHopperInteract(@NotNull Level level, @NotNull BlockPos hopperPos, @Nullable BlockPos other)
-    {
+    /** Paper limits hoppers, beacons and spawners to one per 100 claim blocks in creative worlds. */
+    public static boolean mayPlaceCreativeActive(Level level, BlockPos pos, BlockState state) {
         FabricWorldProtection protection = active;
-        if (protection == null || !(level instanceof ServerLevel serverLevel) || !protection.applies(serverLevel))
-        {
-            return true;
+        var context = FabricMutationContext.current();
+        if (protection == null || !(level instanceof ServerLevel server) || context == null || context.portal()
+                || !(context.actor() instanceof ServerPlayer player)
+                || protection.claims.hasPermission(player, FabricPermissionDefaults.ADMIN_CLAIMS)
+                || !protection.settings.world().creativeRulesApply(protection.claims.worldKey(server))
+                || !isCreativeActive(state) || isCreativeActive(level.getBlockState(pos))) return true;
+        ClaimSnapshot claim = protection.claims.findClaimAt(server, pos);
+        if (claim == null) return false;
+        while (claim.parentId() != null) {
+            ClaimSnapshot parent = protection.claims.claimById(claim.parentId());
+            if (parent == null) break;
+            claim = parent;
         }
-        ClaimSnapshot hopperClaim = protection.claims.findClaimAt(serverLevel, hopperPos);
-        if (other != null)
-        {
-            ClaimSnapshot otherClaim = protection.claims.findClaimAt(serverLevel, other);
-            if (hopperClaim == null) return otherClaim == null;
-            return otherClaim != null && java.util.Objects.equals(hopperClaim.id(), otherClaim.id());
+        var b = claim.bounds();
+        int count = 0;
+        for (int x = b.minX() >> 4; x <= b.maxX() >> 4; x++) {
+            for (int z = b.minZ() >> 4; z <= b.maxZ() >> 4; z++) {
+                var chunk = server.getChunkSource().getChunkNow(x, z);
+                if (chunk == null) continue;
+                for (var block : chunk.getBlockEntities().values()) {
+                    var at = block.getBlockPos();
+                    if (b.contains(at.getX(), at.getY(), at.getZ(), !claim.threeDimensional()) && isCreativeActive(block.getBlockState())) count++;
+                }
+            }
         }
-        // conservative: do not let hoppers pick up items in claims
-        return hopperClaim == null;
+        if (count < b.area() / 100) return true;
+        protection.rateLimitedError(player, MessageKey.TOO_MANY_ACTIVE_BLOCKS_IN_CLAIM);
+        return false;
+    }
+    private static boolean isCreativeActive(BlockState state) {
+        return state.is(net.minecraft.world.level.block.Blocks.HOPPER)
+                || state.is(net.minecraft.world.level.block.Blocks.BEACON)
+                || state.is(net.minecraft.world.level.block.Blocks.SPAWNER);
+    }
+
+    public static boolean mayScopedChange(Level level, BlockPos pos) {
+        var context = FabricMutationContext.current();
+        if (context == null) return true;
+        if (context.silverfish() && !maySilverfishBreakBlocks()) return false;
+        if (context.rabbit() && !mayRabbitsEatCrops()) return false;
+        if (context.growthOrigin() != null && level instanceof ServerLevel server)
+            return mayGrowIntoClaims(server, context.growthOrigin(), java.util.List.of(pos));
+        if (context.portal() && level instanceof ServerLevel server)
+            return mayCreatePortal(server, java.util.List.of(pos), context.actor());
+        return true;
+    }
+
+    public static boolean mayMobDestroy(Level level, BlockPos pos, Entity actor) {
+        if (!mayScopedChange(level, pos)) return false;
+        if (actor == null) return true;
+        String id = BuiltInRegistries.ENTITY_TYPE.getKey(actor.getType()).getPath();
+        if (id.equals("silverfish")) return maySilverfishBreakBlocks();
+        if (id.equals("rabbit")) return mayRabbitsEatCrops();
+        if (id.equals("ravager")) return mayRavagersBreakBlocks();
+        if (id.equals("wither")) return mayWitherGrief(level, pos);
+        return true;
+    }
+
+    private record ContainerLocation(ServerLevel level, BlockPos pos) {}
+    private static ContainerLocation containerLocation(net.minecraft.world.Container container) {
+        if (container instanceof net.minecraft.world.level.block.entity.BlockEntity block && block.getLevel() instanceof ServerLevel level)
+            return new ContainerLocation(level, block.getBlockPos());
+        if (container instanceof Entity entity && ((com.griefprevention.fabric.mixin.EntityAccessor)entity).griefPrevention$getLevel() instanceof ServerLevel level)
+            return new ContainerLocation(level, entity.blockPosition());
+        return null;
+    }
+    public static boolean mayTransferItems(net.minecraft.world.Container source, net.minecraft.world.Container destination) {
+        FabricWorldProtection protection = active;
+        if (protection == null || source == null || !protection.settings.hoppersRequireBuildTrust()) return true;
+        if (source instanceof net.minecraft.world.CompoundContainer) {
+            var halves = (com.griefprevention.fabric.mixin.CompoundContainerAccessor) source;
+            return mayTransferItems(halves.griefPrevention$first(), destination) && mayTransferItems(halves.griefPrevention$second(), destination);
+        }
+        if (destination instanceof net.minecraft.world.CompoundContainer) {
+            var halves = (com.griefprevention.fabric.mixin.CompoundContainerAccessor) destination;
+            return mayTransferItems(source, halves.griefPrevention$first()) && mayTransferItems(source, halves.griefPrevention$second());
+        }
+        ContainerLocation from = containerLocation(source), to = containerLocation(destination);
+        if (from == null || to == null || !protection.applies(from.level())) return true;
+        ClaimSnapshot a = protection.claims.findClaimAt(from.level(), from.pos());
+        ClaimSnapshot b = protection.claims.findClaimAt(to.level(), to.pos());
+        return a == null ? b == null : b != null && java.util.Objects.equals(a.id(), b.id());
+    }
+    public static boolean mayHopperPickup(net.minecraft.world.Container hopper, net.minecraft.world.entity.item.ItemEntity item) {
+        if (((com.griefprevention.fabric.mixin.ItemEntityAccessor)item).griefPrevention$getTarget() != null) return false;
+        return true;
     }
 
     // ---------------------------------------------------------------------------------------------

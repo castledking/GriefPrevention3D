@@ -501,6 +501,8 @@ for (target in fabricTargets) {
                 "--classpath", File(serverDir, "libraries").absolutePath,
                 // LuckPerms is optional and only touched after its API class is found.
                 "--optional", "net/luckperms/",
+                // EconomyCraft is discovered only when its mod is installed.
+                "--optional", "com/reazip/economycraft/",
                 "--optional", "org/jetbrains/annotations/"
             )
             nested.filter { it != "com/griefprevention/fabric/bootstrap/" }.forEach { arguments += listOf("--exclude", it) }

@@ -12,6 +12,18 @@ class WorldProtectionConfigCodecTest
     private final WorldProtectionConfigCodec codec = new WorldProtectionConfigCodec();
 
     @Test
+    void protectionSwitchesHonorNestedKeysAndRejectInvalidTypes() throws Exception {
+        String input = "GriefPrevention:\n  ProtectItemsDroppedOnDeath:\n    PvPWorlds: true\n    NonPvPWorlds: false\n  PvP:\n    ProtectFreshSpawns: false\n  Claims:\n    PreventCushionMount: true\n";
+        assertTrue(codec.decodeSwitch(input, "ProtectItemsDroppedOnDeath", "PvPWorlds", false));
+        assertFalse(codec.decodeSwitch(input, "ProtectItemsDroppedOnDeath", "NonPvPWorlds", true));
+        assertFalse(codec.decodeSwitch(input, "PvP", "ProtectFreshSpawns", true));
+        assertTrue(codec.decodeSwitch(input, "Claims", "PreventCushionMount", false));
+        assertTrue(codec.decodeSwitch("", "PvP", "ProtectFreshSpawns", true));
+        assertThrows(WorldProtectionConfigException.class, () -> codec.decodeSwitch(
+                "GriefPrevention:\n  Claims:\n    PreventCushionMount: sometimes\n", "Claims", "PreventCushionMount", false));
+    }
+
+    @Test
     void readsPaperKeys() throws Exception
     {
         WorldProtectionSettings settings = this.codec.decode(

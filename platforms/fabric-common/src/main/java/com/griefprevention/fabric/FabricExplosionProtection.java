@@ -63,6 +63,16 @@ public final class FabricExplosionProtection
         }
     }
 
+    public static boolean mayWitherBreak(ServerLevel level, BlockPos pos) {
+        FabricExplosionProtection protection = active;
+        if (protection == null) return false;
+        if (!protection.settings.blockLandClaimExplosions()) return true;
+        ClaimSnapshot claim = protection.claims.findClaimAt(level, pos);
+        if (claim == null || claim.id() == null) return true;
+        ClaimDocument document = protection.claims.documentFor(claim.id());
+        return document != null && document.witherExplosionsAllowed();
+    }
+
     public static @NotNull List<BlockPos> filterAffectedBlocks(
             @NotNull ServerLevel level,
             @Nullable Entity source,

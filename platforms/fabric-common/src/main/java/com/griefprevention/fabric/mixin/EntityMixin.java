@@ -31,4 +31,9 @@ abstract class EntityMixin
             callback.setReturnValue(false);
         }
     }
+    @org.spongepowered.asm.mixin.injection.ModifyVariable(method = "move", at = @At("HEAD"), argsOnly = true)
+    private net.minecraft.world.phys.Vec3 griefPrevention$cubeMovement(net.minecraft.world.phys.Vec3 movement) {
+        return FabricWorldProtection.mayMoveSulfurCube((Entity)(Object)this, movement) ? movement
+                : new net.minecraft.world.phys.Vec3(0, movement.y, 0);
+    }
 }
