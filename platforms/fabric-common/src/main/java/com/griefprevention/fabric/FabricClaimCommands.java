@@ -34,6 +34,7 @@ final class FabricClaimCommands
     private final FabricClaimModes modes;
     private final FabricClaimToolHooks tools;
     private final FabricFakeBlockVisualization visualization;
+    private final FabricRestoreNature restoreNature;
     private final Logger logger;
     /** The PvP change each player was last asked to confirm, as Paper's {@code pendingPvpToggle}. */
     private final Map<UUID, PendingPvpToggle> pendingPvpToggles = new ConcurrentHashMap<>();
@@ -45,6 +46,7 @@ final class FabricClaimCommands
             @NotNull FabricClaimModes modes,
             @NotNull FabricClaimToolHooks tools,
             @NotNull FabricFakeBlockVisualization visualization,
+            @NotNull FabricRestoreNature restoreNature,
             @NotNull Logger logger)
     {
         this.claims = claims;
@@ -53,6 +55,7 @@ final class FabricClaimCommands
         this.modes = modes;
         this.tools = tools;
         this.visualization = visualization;
+        this.restoreNature = restoreNature;
         this.logger = logger;
     }
 
@@ -302,6 +305,11 @@ final class FabricClaimCommands
         try
         {
             this.claims.deleteClaim(claim.id(), player);
+            if (shouldAutoRestoreOnAbandon(claim, (ServerLevel) player.level()))
+            {
+                sender.send(TextMode.WARNING, MessageKey.UNCLAIM_CLEANUP_WARNING);
+                this.restoreNature.restoreClaim((ServerLevel) player.level(), claim, 20L * 60L * 2L);
+            }
             int remaining = this.claims.claimBlockBalance(player.getUUID()).remaining();
             sender.send(TextMode.SUCCESS, MessageKey.ABANDON_SUCCESS, String.valueOf(remaining));
         }
@@ -328,13 +336,25 @@ final class FabricClaimCommands
             return true;
         }
 
+        boolean warned = false;
         try
         {
             for (ClaimSnapshot claim : owned)
             {
-                if (claim.id() != null)
+                if (claim.id() == null)
                 {
-                    this.claims.deleteClaim(claim.id(), player);
+                    continue;
+                }
+                this.claims.deleteClaim(claim.id(), player);
+                ServerLevel claimLevel = levelForClaim(sender.server(), claim);
+                if (claimLevel != null && shouldAutoRestoreOnAbandon(claim, claimLevel))
+                {
+                    if (!warned)
+                    {
+                        sender.send(TextMode.WARNING, MessageKey.UNCLAIM_CLEANUP_WARNING);
+                        warned = true;
+                    }
+                    this.restoreNature.restoreClaim(claimLevel, claim, 20L * 60L * 2L);
                 }
             }
             int remaining = this.claims.claimBlockBalance(player.getUUID()).remaining();
@@ -346,6 +366,30 @@ final class FabricClaimCommands
             sender.sendText(TextMode.ERROR, "Could not save claims after abandoning: " + exception.getMessage());
         }
         return true;
+    }
+
+    private boolean shouldAutoRestoreOnAbandon(@NotNull ClaimSnapshot claim, @NotNull ServerLevel level)
+    {
+        if (claim.adminClaim() || claim.parentId() != null)
+        {
+            return false;
+        }
+        String worldKey = this.claims.worldKey(level);
+        return this.settings.world().creativeRulesApply(worldKey)
+                || this.settings.expiration().automaticNatureRestorationSurvivalWorlds();
+    }
+
+    private @Nullable ServerLevel levelForClaim(@NotNull net.minecraft.server.MinecraftServer server, @NotNull ClaimSnapshot claim)
+    {
+        String worldKey = claim.worldKey();
+        for (ServerLevel level : server.getAllLevels())
+        {
+            if (this.claims.worldKey(level).equals(worldKey))
+            {
+                return level;
+            }
+        }
+        return null;
     }
 
     /** {@code /claimpvp [true|false|on|off] [confirm]}. */

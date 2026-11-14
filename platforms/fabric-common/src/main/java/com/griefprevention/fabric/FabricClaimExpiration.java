@@ -43,6 +43,7 @@ final class FabricClaimExpiration
     private final FabricClaimRepository claims;
     private final FabricSettings settings;
     private final FabricLastSeenStore lastSeen;
+    private final FabricRestoreNature restoreNature;
     private final Logger logger;
     /** Owners whose dontexpire lookup is still running, so a slow lookup is never started twice. */
     private final Set<UUID> pending = Collections.synchronizedSet(new HashSet<>());
@@ -55,11 +56,13 @@ final class FabricClaimExpiration
             @NotNull FabricClaimRepository claims,
             @NotNull FabricSettings settings,
             @NotNull FabricLastSeenStore lastSeen,
+            @NotNull FabricRestoreNature restoreNature,
             @NotNull Logger logger)
     {
         this.claims = claims;
         this.settings = settings;
         this.lastSeen = lastSeen;
+        this.restoreNature = restoreNature;
         this.logger = logger;
     }
 
@@ -163,6 +166,7 @@ final class FabricClaimExpiration
                 if (this.claims.deleteClaimAs(id, null, null) != null)
                 {
                     deleted++;
+                    autoRestoreOnExpiration(server, claim);
                     this.logger.info("Expired {}'s claim at {}.", ownerName, FabricClaimCommands.friendlyLocation(claim));
                 }
             }
@@ -184,6 +188,29 @@ final class FabricClaimExpiration
         {
             this.logger.info("{} of {}'s claims expired after {} days away.",
                     deleted, ownerName, this.settings.expiration().daysInactive());
+        }
+    }
+
+    private void autoRestoreOnExpiration(@NotNull MinecraftServer server, @NotNull ClaimSnapshot claim)
+    {
+        if (claim.adminClaim() || claim.parentId() != null)
+        {
+            return;
+        }
+        String worldKey = claim.worldKey();
+        boolean creative = this.settings.world().creativeRulesApply(worldKey);
+        boolean survivalRestore = this.settings.expiration().automaticNatureRestorationSurvivalWorlds();
+        if (!creative && !survivalRestore)
+        {
+            return;
+        }
+        for (ServerLevel level : server.getAllLevels())
+        {
+            if (this.claims.worldKey(level).equals(worldKey))
+            {
+                this.restoreNature.restoreClaim(level, claim, 0L);
+                return;
+            }
         }
     }
 

@@ -14,6 +14,7 @@ public final class ClaimExpirationSettings
     public static final int DEFAULT_EXCEPT_BONUS_CLAIM_BLOCKS = 5000;
     public static final int DEFAULT_NEW_PLAYER_CLAIM_RADIUS = 4;
     public static final int DEFAULT_CHECK_RATE_SECONDS = 60;
+    public static final boolean DEFAULT_AUTOMATIC_NATURE_RESTORATION_SURVIVAL_WORLDS = false;
 
     private final int chestClaimDays;
     private final int daysInactive;
@@ -21,6 +22,7 @@ public final class ClaimExpirationSettings
     private final int exceptWhenOwnerHasBonusClaimBlocks;
     private final int automaticNewPlayerClaimsRadius;
     private final int checkRateSeconds;
+    private final boolean automaticNatureRestorationSurvivalWorlds;
 
     /**
      * @param chestClaimDays {@code Claims.Expiration.ChestClaimDays}; 0 or less turns it off
@@ -28,7 +30,27 @@ public final class ClaimExpirationSettings
      * @param automaticNewPlayerClaimsRadius {@code Claims.AutomaticNewPlayerClaimsRadius}, which sizes a
      *        new-player claim; below 0 means there are none
      * @param checkRateSeconds {@code Advanced.ClaimExpirationCheckRate}: seconds between two owners' checks
+     * @param automaticNatureRestorationSurvivalWorlds {@code Claims.Expiration.AutomaticNatureRestoration.SurvivalWorlds}
      */
+    public ClaimExpirationSettings(
+            int chestClaimDays,
+            int daysInactive,
+            int exceptWhenOwnerHasTotalClaimBlocks,
+            int exceptWhenOwnerHasBonusClaimBlocks,
+            int automaticNewPlayerClaimsRadius,
+            int checkRateSeconds,
+            boolean automaticNatureRestorationSurvivalWorlds)
+    {
+        this.chestClaimDays = chestClaimDays;
+        this.daysInactive = daysInactive;
+        this.exceptWhenOwnerHasTotalClaimBlocks = exceptWhenOwnerHasTotalClaimBlocks;
+        this.exceptWhenOwnerHasBonusClaimBlocks = exceptWhenOwnerHasBonusClaimBlocks;
+        this.automaticNewPlayerClaimsRadius = automaticNewPlayerClaimsRadius;
+        this.checkRateSeconds = Math.max(1, checkRateSeconds);
+        this.automaticNatureRestorationSurvivalWorlds = automaticNatureRestorationSurvivalWorlds;
+    }
+
+    /** Backwards-compatible constructor without the automatic nature restoration flag. */
     public ClaimExpirationSettings(
             int chestClaimDays,
             int daysInactive,
@@ -37,12 +59,8 @@ public final class ClaimExpirationSettings
             int automaticNewPlayerClaimsRadius,
             int checkRateSeconds)
     {
-        this.chestClaimDays = chestClaimDays;
-        this.daysInactive = daysInactive;
-        this.exceptWhenOwnerHasTotalClaimBlocks = exceptWhenOwnerHasTotalClaimBlocks;
-        this.exceptWhenOwnerHasBonusClaimBlocks = exceptWhenOwnerHasBonusClaimBlocks;
-        this.automaticNewPlayerClaimsRadius = automaticNewPlayerClaimsRadius;
-        this.checkRateSeconds = Math.max(1, checkRateSeconds);
+        this(chestClaimDays, daysInactive, exceptWhenOwnerHasTotalClaimBlocks, exceptWhenOwnerHasBonusClaimBlocks,
+                automaticNewPlayerClaimsRadius, checkRateSeconds, DEFAULT_AUTOMATIC_NATURE_RESTORATION_SURVIVAL_WORLDS);
     }
 
     public static @NotNull ClaimExpirationSettings upstreamDefaults()
@@ -53,7 +71,8 @@ public final class ClaimExpirationSettings
                 DEFAULT_EXCEPT_TOTAL_CLAIM_BLOCKS,
                 DEFAULT_EXCEPT_BONUS_CLAIM_BLOCKS,
                 DEFAULT_NEW_PLAYER_CLAIM_RADIUS,
-                DEFAULT_CHECK_RATE_SECONDS);
+                DEFAULT_CHECK_RATE_SECONDS,
+                DEFAULT_AUTOMATIC_NATURE_RESTORATION_SURVIVAL_WORLDS);
     }
 
     public int chestClaimDays()
@@ -84,6 +103,11 @@ public final class ClaimExpirationSettings
     public int checkRateSeconds()
     {
         return this.checkRateSeconds;
+    }
+
+    public boolean automaticNatureRestorationSurvivalWorlds()
+    {
+        return this.automaticNatureRestorationSurvivalWorlds;
     }
 
     /** Whether any claim can expire at all. */

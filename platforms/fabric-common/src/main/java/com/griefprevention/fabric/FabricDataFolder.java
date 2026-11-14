@@ -96,10 +96,13 @@ final class FabricDataFolder
                 AutomaticNewPlayerClaimsRadius: 4
                 Expiration:
                   ChestClaimDays: 7
+                  UnusedClaimDays: 0
                   AllClaims:
                     DaysInactive: 60
                     ExceptWhenOwnerHasTotalClaimBlocks: 10000
                     ExceptWhenOwnerHasBonusClaimBlocks: 5000
+                  AutomaticNatureRestoration:
+                    SurvivalWorlds: false
               Advanced:
                 ClaimExpirationCheckRate: 60
               VisualizationGlow: false
@@ -115,6 +118,11 @@ final class FabricDataFolder
               SurvivalVideoURL: "&3&nbit.ly/mcgpuser&r"
               CreativeVideoURL: "&3&nbit.ly/mcgpcrea&r"
               SubdivisionVideoURL: "&3&nbit.ly/mcgpsub&r"
+              CreativeBasicsVideo2: "Click for Land Claim Help: {0}"
+              SurvivalBasicsVideo2: "Click for Land Claim Help: {0}"
+              TrappedChatKeyword: "trapped;stuck"
+              TrappedInstructions: "Are you trapped in someone's land claim? Try the /trapped command."
+              HowToClaimRegex: "(^|.*\\W)how\\W.*\\W(claim|protect|lock)(\\W.*|$)"
               BlockNotClaimed: "No one has claimed this block."
               BlockClaimed: "That block has been claimed by {0}."
               NoCreateClaimPermission: "You don't have permission to claim land."
@@ -209,6 +217,7 @@ final class FabricDataFolder
               ContinueBlockMath: " (-{0} blocks)"
               ClaimsListNoPermission: "You don't have permission to get information about another player's land claims."
               SuccessfulAbandon: "Claims abandoned.  You now have {0} available claim blocks."
+              UnclaimCleanupWarning: "The land you've unclaimed may be changed by other players or cleaned up by administrators.  If you've built something there you want to keep, you should reclaim it."
               DeleteTopLevelClaim: "To delete a subdivision, stand inside it.  Otherwise, use /abandontoplevelclaim to delete this claim and all subdivisions."
               ConfirmAbandonAllClaims: "Are you sure you want to abandon ALL of your claims?  Please confirm with /abandonallclaims confirm"
               YouHaveNoClaims: "You don't have any land claims."

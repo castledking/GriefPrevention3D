@@ -138,6 +138,7 @@ public enum MessageKey
             "ClaimsListNoPermission",
             "You don't have permission to get information about another player's land claims."),
     SUCCESSFUL_ABANDON("SuccessfulAbandon", "Claims abandoned.  You now have {0} available claim blocks."),
+    UNCLAIM_CLEANUP_WARNING("UnclaimCleanupWarning", "The land you've unclaimed may be changed by other players or cleaned up by administrators.  If you've built something there you want to keep, you should reclaim it."),
     DELETE_TOP_LEVEL_CLAIM(
             "DeleteTopLevelClaim",
             "To delete a subdivision, stand inside it.  Otherwise, use /abandontoplevelclaim to delete this claim and all subdivisions."),
@@ -368,6 +369,10 @@ public enum MessageKey
     CLAIM_EXPIRY_NO_CLAIM("ClaimExpiryNoClaim", "You are not standing in a claim."),
     CLAIM_EXPIRY_PLAYER_NO_CLAIMS("ClaimExpiryPlayerNoClaims", "{0} has no claims."),
     CLAIM_EXPIRY_PLAYER_NOT_FOUND("ClaimExpiryPlayerNotFound", "Could not find player {0}."),
+    TRAPPED_CHAT_KEYWORD("TrappedChatKeyword", "trapped;stuck"),
+    TRAPPED_INSTRUCTIONS("TrappedInstructions", "Are you trapped in someone's land claim? Try the /trapped command."),
+    HOW_TO_CLAIM_REGEX("HowToClaimRegex", "(^|.*\\W)how\\W.*\\W(claim|protect|lock)(\\W.*|$)"),
+    CREATIVE_BASICS_VIDEO_2("CreativeBasicsVideo2", "Click for Land Claim Help: {0}"),
     RESTORE_NATURE_ACTIVATE(
             "RestoreNatureActivate",
             "Ready to restore nature!  Right-click on a block to restore an area.  Use /basicclaims to exit."),

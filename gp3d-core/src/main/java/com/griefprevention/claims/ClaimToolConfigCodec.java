@@ -98,6 +98,8 @@ public final class ClaimToolConfigCodec
         Map<String, Object> expiration = optionalMap(claims.get("Expiration"), ROOT + ".Claims.Expiration");
         Map<String, Object> allClaims = optionalMap(
                 expiration.get("AllClaims"), ROOT + ".Claims.Expiration.AllClaims");
+        Map<String, Object> natureRestoration = optionalMap(
+                expiration.get("AutomaticNatureRestoration"), ROOT + ".Claims.Expiration.AutomaticNatureRestoration");
         Map<String, Object> advanced = optionalMap(root.get("Advanced"), ROOT + ".Advanced");
         return new ClaimExpirationSettings(
                 integer(expiration.get("ChestClaimDays"), ClaimExpirationSettings.DEFAULT_CHEST_CLAIM_DAYS,
@@ -114,7 +116,10 @@ public final class ClaimToolConfigCodec
                         ClaimExpirationSettings.DEFAULT_NEW_PLAYER_CLAIM_RADIUS,
                         "Claims.AutomaticNewPlayerClaimsRadius"),
                 integer(advanced.get("ClaimExpirationCheckRate"), ClaimExpirationSettings.DEFAULT_CHECK_RATE_SECONDS,
-                        "Advanced.ClaimExpirationCheckRate"));
+                        "Advanced.ClaimExpirationCheckRate"),
+                bool(natureRestoration.get("SurvivalWorlds"),
+                        ClaimExpirationSettings.DEFAULT_AUTOMATIC_NATURE_RESTORATION_SURVIVAL_WORLDS,
+                        "Claims.Expiration.AutomaticNatureRestoration.SurvivalWorlds"));
     }
 
     /** Reads {@code Claims.AllowTrappedInAdminClaims}: whether /trapped works in administrative claims. */

@@ -1,6 +1,7 @@
 package com.griefprevention.fabric;
 
 import com.griefprevention.claims.ClaimBounds;
+import com.griefprevention.claims.ClaimSnapshot;
 import com.griefprevention.fabric.FabricDenialFeedback.TextMode;
 import com.griefprevention.messages.MessageKey;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
@@ -72,6 +73,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Restore nature commands and shovel interactions, matching Paper's behavior:
@@ -218,6 +220,86 @@ final class FabricRestoreNature
     private static String[] tail(String[] args)
     {
         return args.length <= 1 ? new String[0] : Arrays.copyOfRange(args, 1, args.length);
+    }
+
+    /**
+     * Restores nature within a claim's bounds, as Paper does on abandonment, deletion or expiration.
+     * Administrative claims and very large claims are left alone.
+     *
+     * @param delayTicks ticks to wait before restoring; Paper uses 2 minutes after a player abandons
+     */
+    void restoreClaim(@NotNull ServerLevel level, @NotNull ClaimSnapshot claim, long delayTicks)
+    {
+        if (claim.adminClaim())
+        {
+            return;
+        }
+        ClaimBounds bounds = claim.bounds();
+        int width = bounds.xLength();
+        int height = bounds.zLength();
+        int area = bounds.area();
+        if (area > 10000 || width > 250 || height > 250)
+        {
+            return;
+        }
+        if (delayTicks > 0L)
+        {
+            java.util.concurrent.CompletableFuture.delayedExecutor(delayTicks * 50L, java.util.concurrent.TimeUnit.MILLISECONDS)
+                    .execute(() -> level.getServer().execute(() -> restoreArea(level, bounds, false, null)));
+        }
+        else
+        {
+            level.getServer().execute(() -> restoreArea(level, bounds, false, null));
+        }
+    }
+
+    private void restoreArea(
+            @NotNull ServerLevel level,
+            @NotNull ClaimBounds bounds,
+            boolean aggressive,
+            @Nullable ServerPlayer notify)
+    {
+        int minX = bounds.minX() - 1;
+        int maxX = bounds.maxX() + 1;
+        int minZ = bounds.minZ() - 1;
+        int maxZ = bounds.maxZ() + 1;
+        int minY = Math.max(level.getMinY(), level.getSeaLevel() - 15);
+        int maxY = level.getMaxY();
+
+        int sizeX = maxX - minX + 1;
+        int sizeY = Math.max(0, maxY - minY);
+        int sizeZ = maxZ - minZ + 1;
+        if (sizeX < 3 || sizeZ < 3 || sizeY <= 0)
+        {
+            return;
+        }
+
+        BlockState[][][] snapshots = new BlockState[sizeX][sizeY][sizeZ];
+        BlockPos.MutableBlockPos cursor = new BlockPos.MutableBlockPos();
+        for (int x = 0; x < sizeX; x++)
+        {
+            for (int z = 0; z < sizeZ; z++)
+            {
+                for (int y = 0; y < sizeY; y++)
+                {
+                    cursor.set(minX + x, minY + y, minZ + z);
+                    snapshots[x][y][z] = level.getBlockState(cursor);
+                }
+            }
+        }
+
+        BlockPos center = new BlockPos((minX + maxX) / 2, Math.min(maxY - 1, Math.max(minY, level.getSeaLevel())), (minZ + maxZ) / 2);
+        String biomeName = level.getBiome(center).unwrapKey().map(k -> k.identifier().getPath()).orElse("").toUpperCase(Locale.ROOT);
+        boolean isNether = level.dimension() == Level.NETHER;
+        boolean isEnd = level.dimension() == Level.END;
+
+        CompletableFuture.runAsync(() -> {
+            processSnapshots(snapshots, sizeX, sizeY, sizeZ, isNether, isEnd, biomeName, aggressive);
+        }).thenRun(() -> {
+            level.getServer().execute(() -> {
+                applyChanges(notify, level, center, snapshots, minX, minY, minZ, maxX, maxY, maxZ, sizeX, sizeY, sizeZ, aggressive);
+            });
+        });
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -487,7 +569,7 @@ final class FabricRestoreNature
     // ---------------------------------------------------------------------------------------------
 
     private void applyChanges(
-            @NotNull ServerPlayer player,
+            @Nullable ServerPlayer player,
             @NotNull ServerLevel level,
             @NotNull BlockPos clicked,
             BlockState[][][] snapshots,
@@ -534,9 +616,12 @@ final class FabricRestoreNature
 
         cleanupEntities(level, minX + 1, minY, minZ + 1, maxX - 1, maxY, maxZ - 1, aggressive);
 
-        ClaimBounds visualBounds = ClaimBounds.rectangle(minX + 1, minY, minZ + 1, maxX - 1, maxY, maxZ - 1);
-        this.visualization.visualizeRestoreArea(player, level, visualBounds, clicked);
-        this.feedback.send(player, TextMode.SUCCESS, MessageKey.RESTORE_NATURE_ACTIVATE);
+        if (player != null)
+        {
+            ClaimBounds visualBounds = ClaimBounds.rectangle(minX + 1, minY, minZ + 1, maxX - 1, maxY, maxZ - 1);
+            this.visualization.visualizeRestoreArea(player, level, visualBounds, clicked);
+            this.feedback.send(player, TextMode.SUCCESS, MessageKey.RESTORE_NATURE_ACTIVATE);
+        }
     }
 
     private void cleanupEntities(

@@ -29,6 +29,7 @@ final class FabricAdminClaimCommands
     private final FabricClaimRepository claims;
     private final FabricDenialFeedback feedback;
     private final FabricSettings settings;
+    private final FabricRestoreNature restoreNature;
     private final Logger logger;
     /** Players warned that the claim they are deleting has subdivisions, as Paper's {@code warnedAboutMajorDeletion}. */
     private final Set<UUID> warnedAboutMajorDeletion = ConcurrentHashMap.newKeySet();
@@ -37,11 +38,13 @@ final class FabricAdminClaimCommands
             @NotNull FabricClaimRepository claims,
             @NotNull FabricDenialFeedback feedback,
             @NotNull FabricSettings settings,
+            @NotNull FabricRestoreNature restoreNature,
             @NotNull Logger logger)
     {
         this.claims = claims;
         this.feedback = feedback;
         this.settings = settings;
+        this.restoreNature = restoreNature;
         this.logger = logger;
     }
 
@@ -174,6 +177,7 @@ final class FabricAdminClaimCommands
         {
             return saveFailed(sender, "deleting a claim", exception);
         }
+        autoRestoreOnDelete(claim, sender.server());
         this.warnedAboutMajorDeletion.remove(player.getUUID());
         sender.send(TextMode.SUCCESS, MessageKey.DELETE_SUCCESS);
         this.logger.info("{} deleted {}'s claim at {}.", sender.name(), owner, FabricClaimCommands.friendlyLocation(claim));
@@ -255,6 +259,7 @@ final class FabricAdminClaimCommands
                 {
                     // A staff deletion returns the owner's claim blocks in full: only abandoning costs any.
                     this.claims.deleteClaim(claim.id(), sender.player());
+                    autoRestoreOnDelete(claim, sender.server());
                 }
             }
             return true;
@@ -263,6 +268,29 @@ final class FabricAdminClaimCommands
         {
             saveFailed(sender, "deleting claims", exception);
             return false;
+        }
+    }
+
+    private void autoRestoreOnDelete(@NotNull ClaimSnapshot claim, @NotNull net.minecraft.server.MinecraftServer server)
+    {
+        if (claim.adminClaim() || claim.parentId() != null)
+        {
+            return;
+        }
+        String worldKey = claim.worldKey();
+        boolean creative = this.settings.world().creativeRulesApply(worldKey);
+        boolean survivalRestore = this.settings.expiration().automaticNatureRestorationSurvivalWorlds();
+        if (!creative && !survivalRestore)
+        {
+            return;
+        }
+        for (ServerLevel level : server.getAllLevels())
+        {
+            if (this.claims.worldKey(level).equals(worldKey))
+            {
+                this.restoreNature.restoreClaim(level, claim, 0L);
+                return;
+            }
         }
     }
 
