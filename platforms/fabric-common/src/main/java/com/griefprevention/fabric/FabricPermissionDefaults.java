@@ -54,6 +54,7 @@ final class FabricPermissionDefaults
     static final String TRAPPED = "griefprevention.trapped";
     static final String CLAIM_ALERTS = "griefprevention.claimalerts";
     static final String TOGGLE_CLAIM_ALERTS = "griefprevention.toggleclaimalerts";
+    static final String BUY_SELL_CLAIM_BLOCKS = "griefprevention.buysellclaimblocks";
     static final String WITHER_EXPLOSIONS = "griefprevention.witherexplosions";
     static final String GLOW = "griefprevention.glow";
     static final String DEBUG = "griefprevention.debug";
@@ -89,7 +90,7 @@ final class FabricPermissionDefaults
                 CLAIM_PVP, CLAIM_EXPLOSIONS, WITHER_EXPLOSIONS, GLOW, TRANSFER_CLAIM, EXTEND_CLAIM,
                 SHAPED_CLAIMS, SUBDIVIDE_CLAIMS,
                 SUBDIVIDE_CLAIMS_3D, RESTRICT_SUBCLAIM, SCROLL_RESIZE, TRAPPED, CLAIM_ALERTS,
-                TOGGLE_CLAIM_ALERTS))
+                TOGGLE_CLAIM_ALERTS, BUY_SELL_CLAIM_BLOCKS))
         {
             node(child, Default.TRUE, CLAIMS);
         }

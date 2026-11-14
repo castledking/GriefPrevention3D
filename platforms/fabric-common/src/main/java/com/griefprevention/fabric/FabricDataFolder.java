@@ -88,6 +88,11 @@ final class FabricDataFolder
                 TransferClaim:
                   Enabled: false
                   Price: 0.0
+              Economy:
+                ClaimBlocksEnabled: false
+                ClaimBlocksMaxBonus: 0
+                ClaimBlocksPurchaseCost: 1.0
+                ClaimBlocksSellValue: 0.5
                 PvPToggle:
                   Claim:
                     Enabled: false
@@ -257,7 +262,17 @@ final class FabricDataFolder
               ConfirmTransferClaimInstruction: "Type /transferclaim {0} confirm to confirm."
               TransferClaimSuccess: "Gave this claim to {0}."
               TransferClaimReceived: "{0} gave you their claim at {1}."
+              EconomyDisabled: "Economy features are disabled on this server."
               EconomyNoVault: "Economy support requires Vault plugin to be installed."
+              EconomyBuyBlocksConfirmation: "Purchased {0} claim blocks for {1}. You now have {2} claim blocks."
+              EconomySellBlocksConfirmation: "Sold {0} claim blocks for {1}. You now have {2} claim blocks."
+              EconomyNotEnoughMoney: "You don't have enough money. Cost: {0}, Your balance: {1}"
+              EconomyNotEnoughBlocks: "You don't have enough claim blocks to sell. Requested: {0}, Available: {1}"
+              EconomyBuyBlocksUsage: "Usage: /buyclaimblocks <amount>"
+              EconomySellBlocksUsage: "Usage: /sellclaimblocks <amount>"
+              EconomyInvalidAmount: "Please specify a valid positive number of blocks."
+              EconomyPurchaseCancelled: "Purchase cancelled."
+              MaxBonusReached: "Can't purchase {0} more claim blocks. The server has a limit of {1} bonus claim blocks."
               ExplosivesDisabled: "This claim is now protected from explosions.  Use /claimexplosions again to disable."
               ExplosivesEnabled: "This claim is now vulnerable to explosions.  Use /claimexplosions again to re-enable protections."
               WitherExplosionsEnabled: "This claim is now vulnerable to wither explosions.  Use /witherexplosions again to re-enable protections."

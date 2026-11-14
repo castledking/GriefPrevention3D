@@ -88,6 +88,7 @@ final class FabricCommandRegistrar
             @NotNull FabricPlayerRescue rescue,
             @NotNull FabricClaimExpiration expiration,
             @NotNull FabricRestoreNature restoreNature,
+            @NotNull FabricEconomyCommands economy,
             @NotNull Path aliasFile,
             @NotNull Logger logger)
     {
@@ -139,6 +140,8 @@ final class FabricCommandRegistrar
                 .standalone(claimCommands::toggleAllClaimAlerts, FabricPermissionDefaults.TOGGLE_CLAIM_ALERTS));
         // Paper registers this one outside alias.yml.
         claim.put("scrollresize", new Action(scrollResize::start, FabricPermissionDefaults.SCROLL_RESIZE));
+        claim.put("buyblocks", new Action(economy::buyClaimBlocks, FabricPermissionDefaults.BUY_SELL_CLAIM_BLOCKS));
+        claim.put("sellblocks", new Action(economy::sellClaimBlocks, FabricPermissionDefaults.BUY_SELL_CLAIM_BLOCKS));
         this.actions.put(CLAIM_ROOT, claim);
 
         Map<String, Action> admin = new LinkedHashMap<>();
@@ -248,6 +251,11 @@ final class FabricCommandRegistrar
                 "/%s", null, "rna");
         legacy("restorenaturefill", restoreNature::restoreFill, FabricPermissionDefaults.RESTORE_NATURE_AGGRESSIVE,
                 "/%s [radius]", (sender, previous) -> previous.length == 0 ? List.of("1", "2", "3", "4", "5", "10") : List.of(), "rnf");
+        legacy("buyclaimblocks", economy::buyClaimBlocks, FabricPermissionDefaults.BUY_SELL_CLAIM_BLOCKS,
+                "/%s <amount>", (sender, previous) -> previous.length == 0 ? List.of("10", "50", "100", "500", "1000") : List.of(),
+                "buyclaim");
+        legacy("sellclaimblocks", economy::sellClaimBlocks, FabricPermissionDefaults.BUY_SELL_CLAIM_BLOCKS,
+                "/%s <amount>", (sender, previous) -> previous.length == 0 ? List.of("10", "50", "100", "500", "1000") : List.of());
         legacy("gpreload", this::reload, FabricPermissionDefaults.RELOAD, "/%s", null);
         legacy("gpstatus", this::status, FabricPermissionDefaults.RELOAD, "/%s", null);
     }

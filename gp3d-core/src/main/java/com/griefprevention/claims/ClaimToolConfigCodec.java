@@ -36,6 +36,55 @@ public final class ClaimToolConfigCodec
         this.yaml = new Yaml(new SafeConstructor(options));
     }
 
+    /** Reads {@code GriefPrevention.Economy}, with Paper's defaults. */
+    public synchronized @NotNull EconomySettings decodeEconomy(@NotNull String input)
+            throws ClaimToolConfigException
+    {
+        final Object loaded;
+        try
+        {
+            loaded = this.yaml.load(input);
+        }
+        catch (YAMLException exception)
+        {
+            throw new ClaimToolConfigException("Invalid config YAML: " + exception.getMessage(), exception);
+        }
+        if (loaded == null)
+        {
+            return EconomySettings.upstreamDefaults();
+        }
+
+        Map<String, Object> root = optionalMap(stringMap(loaded, "config root").get(ROOT), ROOT);
+        Map<String, Object> economy = optionalMap(root.get("Economy"), ROOT + ".Economy");
+        double purchaseCost = decimal(economy.get("ClaimBlocksPurchaseCost"),
+                EconomySettings.DEFAULT_CLAIM_BLOCKS_PURCHASE_COST,
+                ROOT + ".Economy.ClaimBlocksPurchaseCost");
+        double sellValue = decimal(economy.get("ClaimBlocksSellValue"),
+                EconomySettings.DEFAULT_CLAIM_BLOCKS_SELL_VALUE,
+                ROOT + ".Economy.ClaimBlocksSellValue");
+        if (purchaseCost < 0.0 || Double.isNaN(purchaseCost) || Double.isInfinite(purchaseCost))
+        {
+            throw new ClaimToolConfigException(ROOT + ".Economy.ClaimBlocksPurchaseCost must not be negative.");
+        }
+        if (sellValue < 0.0 || Double.isNaN(sellValue) || Double.isInfinite(sellValue))
+        {
+            throw new ClaimToolConfigException(ROOT + ".Economy.ClaimBlocksSellValue must not be negative.");
+        }
+        int maxBonus = integer(economy.get("ClaimBlocksMaxBonus"),
+                EconomySettings.DEFAULT_CLAIM_BLOCKS_MAX_BONUS,
+                ROOT + ".Economy.ClaimBlocksMaxBonus");
+        if (maxBonus < 0)
+        {
+            maxBonus = 0;
+        }
+        return new EconomySettings(
+                bool(economy.get("ClaimBlocksEnabled"), EconomySettings.DEFAULT_CLAIM_BLOCKS_ENABLED,
+                        ROOT + ".Economy.ClaimBlocksEnabled"),
+                maxBonus,
+                purchaseCost,
+                sellValue);
+    }
+
     /** Reads {@code Claims.TransferClaim}, with Paper's defaults. */
     public synchronized @NotNull ClaimTransferSettings decodeTransfer(@NotNull String input)
             throws ClaimToolConfigException
@@ -228,6 +277,20 @@ public final class ClaimToolConfigCodec
             throw new ClaimToolConfigException(field + " must be a whole number.");
         }
         return (Integer) raw;
+    }
+
+    private static double decimal(@Nullable Object raw, double defaultValue, @NotNull String field)
+            throws ClaimToolConfigException
+    {
+        if (raw == null)
+        {
+            return defaultValue;
+        }
+        if (!(raw instanceof Number))
+        {
+            throw new ClaimToolConfigException(field + " must be a number.");
+        }
+        return ((Number) raw).doubleValue();
     }
 
     private static boolean bool(@Nullable Object raw, boolean defaultValue, @NotNull String field)

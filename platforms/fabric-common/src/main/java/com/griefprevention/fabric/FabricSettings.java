@@ -1,6 +1,7 @@
 package com.griefprevention.fabric;
 
 import com.griefprevention.claims.ClaimExpirationSettings;
+import com.griefprevention.claims.EconomySettings;
 import com.griefprevention.claims.ClaimToolConfigCodec;
 import com.griefprevention.claims.ClaimToolConfigException;
 import com.griefprevention.claims.ClaimToolSettings;
@@ -49,6 +50,7 @@ final class FabricSettings
     private volatile boolean preventBlockPlaceClimbing;
     private volatile boolean vehiclesRequireBuildTrust;
     private volatile @NotNull ClaimExpirationSettings expiration = ClaimExpirationSettings.upstreamDefaults();
+    private volatile @NotNull EconomySettings economy = EconomySettings.upstreamDefaults();
     // Resolved on first use: registries are not guaranteed to be populated when the mod initializes.
     private volatile @Nullable Item investigationTool;
     private volatile @Nullable Item modificationTool;
@@ -130,6 +132,18 @@ final class FabricSettings
             loadedTransfer = ClaimTransferSettings.upstreamDefaults();
         }
 
+        EconomySettings loadedEconomy;
+        try
+        {
+            loadedEconomy = this.codec.decodeEconomy(contents);
+        }
+        catch (ClaimToolConfigException exception)
+        {
+            this.logger.error("Could not read GriefPrevention.Economy from {}; buying and selling claim blocks stays off.",
+                    this.configFile, exception);
+            loadedEconomy = EconomySettings.upstreamDefaults();
+        }
+
         EnderPearlSettings loadedEnderPearls;
         try
         {
@@ -208,6 +222,7 @@ final class FabricSettings
         this.world = loadedWorld;
         this.blockUse = loadedBlockUse;
         this.transfer = loadedTransfer;
+        this.economy = loadedEconomy;
         this.enderPearls = loadedEnderPearls;
         this.allowTrappedInAdminClaims = loadedAllowTrappedInAdminClaims;
         this.raidTriggersRequireBuildTrust = loadedRaidTriggersRequireBuildTrust;
@@ -271,6 +286,14 @@ final class FabricSettings
                 ClaimExpirationSettings.DEFAULT_CHECK_RATE_SECONDS,
                 ClaimExpirationSettings.DEFAULT_AUTOMATIC_NATURE_RESTORATION_SURVIVAL_WORLDS,
                 0);
+    }
+
+
+
+    /** {@code GriefPrevention.Economy}: claim-block buy/sell settings (no economy provider on Fabric). */
+    @NotNull EconomySettings economy()
+    {
+        return this.economy;
     }
 
     /** {@code Claims.Expiration}: when the claims of players who stopped playing expire. */

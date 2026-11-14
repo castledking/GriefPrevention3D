@@ -139,7 +139,7 @@ design points for that work:
 
 ### Still missing
 
-- [ ] Buying and selling claim blocks and `/siege`.
+- [x] Buying and selling claim blocks (`/buyclaimblocks`, `/sellclaimblocks`, `/claim buyblocks|sellblocks`): `GriefPrevention.Economy.*` config, messages and `griefprevention.buysellclaimblocks` parity; Fabric has no Vault/economy provider so commands validate config/amounts and report `EconomyDisabled` or `EconomyNoVault` instead of performing transactions. `/siege` remains missing.
 - [ ] Shaped (polygon) subdivision creation and shaped `/scrollresize` (rectangular `/scrollresize` is complete).
 - [x] Chat-keyword educator for players who type "trapped" or "stuck" in chat without a slash (the `/trapped` command itself is complete).
 - [x] `Claims.Expiration.UnusedClaimDays` (small creative-world claims scored by the blocks placed in them, with auto-restore on expiration).

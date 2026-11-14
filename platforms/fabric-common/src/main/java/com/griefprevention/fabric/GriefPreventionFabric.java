@@ -67,6 +67,7 @@ public final class GriefPreventionFabric implements FabricPlatformAdapter
         claimCommands.register();
         FabricAdminClaimCommands staffCommands = new FabricAdminClaimCommands(claims, feedback, settings, restoreNature, LOGGER);
         staffCommands.register();
+        FabricEconomyCommands economyCommands = new FabricEconomyCommands(settings, claims.claimBlockService());
         new FabricCommandRegistrar(
                 claims,
                 messages,
@@ -80,6 +81,7 @@ public final class GriefPreventionFabric implements FabricPlatformAdapter
                 rescue,
                 expiration,
                 restoreNature,
+                economyCommands,
                 dataFolder.resolve("alias.yml"),
                 LOGGER
         ).register();
