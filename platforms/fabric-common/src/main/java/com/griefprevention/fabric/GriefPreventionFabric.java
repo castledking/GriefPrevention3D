@@ -35,6 +35,7 @@ public final class GriefPreventionFabric implements FabricPlatformAdapter
         FabricSettings settings = new FabricSettings(dataFolder, LOGGER);
         FabricDenialFeedback feedback = new FabricDenialFeedback(claims, messages);
         feedback.register();
+        new FabricChatEducator(messages, settings, claims, LOGGER).register();
         FabricClaimModes modes = new FabricClaimModes();
         modes.register();
         FabricLastSeenStore lastSeen = new FabricLastSeenStore(dataFolder, LOGGER);

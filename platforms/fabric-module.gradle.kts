@@ -16,6 +16,7 @@ extra["fabricApiModules"] = listOf(
     "fabric-command-api-v2",
     "fabric-events-interaction-v0",
     "fabric-lifecycle-events-v1",
+    "fabric-message-api-v1",
     "fabric-networking-api-v1"
 )
 
