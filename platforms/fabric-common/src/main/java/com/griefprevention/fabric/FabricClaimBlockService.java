@@ -729,4 +729,10 @@ final class FabricClaimBlockService
             this.document = document;
         }
     }
+
+    /** All current claim snapshots for balance calculations. */
+    @NotNull Collection<ClaimSnapshot> claimsSnapshotViewSafe(@NotNull FabricClaimRepository repository)
+    {
+        return repository.snapshots();
+    }
 }

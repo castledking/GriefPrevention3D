@@ -65,9 +65,10 @@ public final class GriefPreventionFabric implements FabricPlatformAdapter
         FabricClaimCommands claimCommands = new FabricClaimCommands(
                 claims, feedback, settings, modes, toolHooks, visualization, restoreNature, LOGGER);
         claimCommands.register();
-        FabricAdminClaimCommands staffCommands = new FabricAdminClaimCommands(claims, feedback, settings, restoreNature, LOGGER);
+        FabricEconomy economy = new FabricEconomy(LOGGER);
+        FabricAdminClaimCommands staffCommands = new FabricAdminClaimCommands(claims, feedback, settings, restoreNature, economy, LOGGER);
         staffCommands.register();
-        FabricEconomyCommands economyCommands = new FabricEconomyCommands(settings, claims.claimBlockService());
+        FabricEconomyCommands economyCommands = new FabricEconomyCommands(settings, claims.claimBlockService(), claims, economy, LOGGER);
         new FabricCommandRegistrar(
                 claims,
                 messages,

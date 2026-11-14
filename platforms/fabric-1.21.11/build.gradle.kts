@@ -34,6 +34,7 @@ dependencies {
     compileOnly("net.luckperms:api:5.5")
     // Bundled with Fabric Loader at runtime; the protection mixins use its wrap and local sugar.
     compileOnly("io.github.llamalad7:mixinextras-fabric:0.5.0")
+    compileOnly("maven.modrinth:economycraft:SE2dv1nX")
     compileOnly("org.jetbrains:annotations:26.0.2")
     testImplementation("org.junit.jupiter:junit-jupiter:5.12.1")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher:1.12.1")

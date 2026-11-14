@@ -31,6 +31,7 @@ version = rootProject.version
 repositories {
     mavenCentral()
     maven("https://maven.fabricmc.net/")
+    maven("https://api.modrinth.com/maven")
 }
 
 val generateAdapterIndex = tasks.register("generateFabricAdapterIndex") {

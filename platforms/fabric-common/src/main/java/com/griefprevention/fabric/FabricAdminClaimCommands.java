@@ -30,6 +30,7 @@ final class FabricAdminClaimCommands
     private final FabricDenialFeedback feedback;
     private final FabricSettings settings;
     private final FabricRestoreNature restoreNature;
+    private final FabricEconomy economy;
     private final Logger logger;
     /** Players warned that the claim they are deleting has subdivisions, as Paper's {@code warnedAboutMajorDeletion}. */
     private final Set<UUID> warnedAboutMajorDeletion = ConcurrentHashMap.newKeySet();
@@ -39,12 +40,14 @@ final class FabricAdminClaimCommands
             @NotNull FabricDenialFeedback feedback,
             @NotNull FabricSettings settings,
             @NotNull FabricRestoreNature restoreNature,
+            @NotNull FabricEconomy economy,
             @NotNull Logger logger)
     {
         this.claims = claims;
         this.feedback = feedback;
         this.settings = settings;
         this.restoreNature = restoreNature;
+        this.economy = economy;
         this.logger = logger;
     }
 
@@ -467,18 +470,38 @@ final class FabricAdminClaimCommands
             return true;
         }
 
-        // Fabric has no economy: a priced transfer is refused, as Paper refuses one without Vault.
-        double fee = sender.hasPermission(FabricPermissionDefaults.TRANSFER_CLAIM_FREE) ? 0.0 : transfer.price();
-        if (fee > 0.0)
+        double configuredFee = sender.hasPermission(FabricPermissionDefaults.TRANSFER_CLAIM_FREE) ? 0.0 : transfer.price();
+        long fee = FabricEconomyCommands.cost(1, configuredFee);
+        FabricEconomyProvider provider = fee > 0 ? this.economy.provider(sender.server()) : null;
+        if (fee > 0 && provider == null)
         {
             sender.sendError(MessageKey.ECONOMY_NO_VAULT);
             return true;
         }
         if (!confirmed)
         {
-            sender.send(TextMode.INSTRUCTION, MessageKey.CONFIRM_TRANSFER_CLAIM_NO_FEE, recipient.name());
+            if (fee > 0)
+            {
+                sender.sendText(TextMode.INSTRUCTION, "Do you want to give this claim to " + recipient.name()
+                        + " for " + provider.formatChat(fee) + "?");
+            }
+            else
+            {
+                sender.send(TextMode.INSTRUCTION, MessageKey.CONFIRM_TRANSFER_CLAIM_NO_FEE, recipient.name());
+            }
             sender.send(TextMode.INSTRUCTION, MessageKey.CONFIRM_TRANSFER_CLAIM_INSTRUCTION, recipient.name());
             return true;
+        }
+
+        if (fee > 0)
+        {
+            long balance = provider.balance(player);
+            if (balance < fee || !provider.withdraw(player, fee))
+            {
+                sender.send(TextMode.ERROR, MessageKey.ECONOMY_NOT_ENOUGH_MONEY,
+                        provider.formatChat(fee), provider.formatChat(balance));
+                return true;
+            }
         }
 
         try
@@ -487,6 +510,10 @@ final class FabricAdminClaimCommands
         }
         catch (IOException exception)
         {
+            if (fee > 0 && provider != null)
+            {
+                provider.deposit(player.getUUID(), fee);
+            }
             return saveFailed(sender, "giving a claim away", exception);
         }
         String location = FabricClaimCommands.friendlyLocation(claim);
@@ -496,7 +523,14 @@ final class FabricAdminClaimCommands
             this.feedback.send(onlineRecipient, TextMode.INFO, MessageKey.TRANSFER_CLAIM_RECEIVED,
                     FabricPlayerLookup.nameOf(player), location);
         }
-        this.logger.info("{} gave their claim at {} to {}.", sender.name(), location, recipient.name());
+        if (fee > 0 && provider != null)
+        {
+            this.logger.info("{} paid {} to give their claim at {} to {}.", sender.name(), provider.formatChat(fee), location, recipient.name());
+        }
+        else
+        {
+            this.logger.info("{} gave their claim at {} to {}.", sender.name(), location, recipient.name());
+        }
         return true;
     }
 
