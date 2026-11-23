@@ -469,6 +469,9 @@ public class GriefPrevention extends JavaPlugin {
         AddLogEntry(entry, CustomLogEntryTypes.Debug);
     }
 
+    // database configuration loaded from GriefPreventionData/database.properties (or legacy config.yml)
+    private DatabaseConfig databaseConfig = DatabaseConfig.disabled();
+
     // initializes well... everything
     public void onEnable() {
         instance = this;
@@ -481,14 +484,10 @@ public class GriefPrevention extends JavaPlugin {
         this.customLogger = new CustomLogger();
 
         // when datastore initializes, it loads player and claim data, and posts some stats to the log
-        String dbUrl = this.getConfig().getString("database.url", "");
-        String dbUser = this.getConfig().getString("database.username", "");
-        String dbPass = this.getConfig().getString("database.password", "");
-
-        // Initialize database if configured
-        if (!dbUrl.isEmpty()) {
+        // Initialize database if configured (supports MySQL/MariaDB/SQLite with Folia-safe pooling)
+        if (this.databaseConfig != null && this.databaseConfig.isEnabled()) {
             try {
-                DatabaseDataStore databaseStore = new DatabaseDataStore(dbUrl, dbUser, dbPass);
+                DatabaseDataStore databaseStore = new DatabaseDataStore(this.databaseConfig);
 
                 if (FlatFileDataStore.hasData()) {
                     GriefPrevention.AddLogEntry(
@@ -504,7 +503,7 @@ public class GriefPrevention extends JavaPlugin {
                 this.dataStore = databaseStore;
             } catch (Exception e) {
                 GriefPrevention.AddLogEntry(
-                    "Because there was a problem with the database, GriefPrevention will not function properly.  Either update the database config settings resolve the issue, or delete those lines from your config.yml so that GriefPrevention can use the file system to store data."
+                    "Because there was a problem with the database, GriefPrevention will not function properly.  Either update plugins/GriefPreventionData/database.properties to resolve the issue, or remove it so that GriefPrevention can use the file system to store data."
                 );
                 e.printStackTrace();
                 this.getServer().getPluginManager().disablePlugin(this);
@@ -852,6 +851,12 @@ public class GriefPrevention extends JavaPlugin {
     private void loadConfig() {
         // load the config if it exists
         FileConfiguration config = YamlConfiguration.loadConfiguration(new File(DataStore.configFilePath));
+        // load database settings before outConfig overwrites GriefPreventionData/config.yml
+        this.databaseConfig = DatabaseConfig.load(
+            new File(DataStore.dataLayerFolderPath),
+            config,
+            this.getConfig()
+        );
         // locale for message localization
         this.config_locale = config.getString("GriefPrevention.Locale", "en");
 
@@ -4414,19 +4419,23 @@ public class GriefPrevention extends JavaPlugin {
     }
 
     public void onDisable() {
-        // save data for any online players
-        @SuppressWarnings("unchecked")
-        Collection<Player> players = (Collection<Player>) this.getServer().getOnlinePlayers();
-        for (Player player : players) {
-            UUID playerID = player.getUniqueId();
-            PlayerData playerData = this.dataStore.getPlayerData(playerID);
-            this.dataStore.savePlayerDataSync(playerID, playerData);
+        if (this.dataStore != null) {
+            // save data for any online players
+            @SuppressWarnings("unchecked")
+            Collection<Player> players = (Collection<Player>) this.getServer().getOnlinePlayers();
+            for (Player player : players) {
+                UUID playerID = player.getUniqueId();
+                PlayerData playerData = this.dataStore.getPlayerData(playerID);
+                this.dataStore.savePlayerDataSync(playerID, playerData);
+            }
+
+            this.dataStore.close();
         }
 
-        this.dataStore.close();
-
         // dump any remaining unwritten log entries
-        this.customLogger.WriteEntries();
+        if (this.customLogger != null) {
+            this.customLogger.WriteEntries();
+        }
 
         Bukkit.getLogger().info("GriefPrevention disabled.");
     }

@@ -356,15 +356,20 @@ public boolean isIgnoringClaims()
         this.newlyAccruedClaimBlocks = 0;
     }
 
-    public int getBonusClaimBlocks()
+    public synchronized int getBonusClaimBlocks()
     {
         if (this.bonusClaimBlocks == null) this.loadDataFromSecondaryStorage();
         return bonusClaimBlocks;
     }
 
-    public void setBonusClaimBlocks(Integer bonusClaimBlocks)
+    public synchronized void setBonusClaimBlocks(Integer bonusClaimBlocks)
     {
         this.bonusClaimBlocks = bonusClaimBlocks;
+    }
+
+    synchronized boolean isStorageLoaded()
+    {
+        return this.accruedClaimBlocks != null && this.bonusClaimBlocks != null;
     }
 
     private void loadDataFromSecondaryStorage()
@@ -427,6 +432,11 @@ public boolean isIgnoringClaims()
             {
                 this.bonusClaimBlocks = 0;
             }
+        }
+
+        if (storageData != null)
+        {
+            this.glowEnabled = storageData.glowEnabled;
         }
     }
 

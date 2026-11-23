@@ -55,6 +55,15 @@ class DatabaseClaimSchemaTest
     }
 
     @Test
+    void bothStatementsCarryNeighborParityColumns()
+    {
+        assertTrue(createdColumns().contains("neighbors"));
+        assertTrue(insertedColumns().contains("neighbors"));
+        assertTrue(createdColumns().contains("allowallneighbors"));
+        assertTrue(insertedColumns().contains("allowallneighbors"));
+    }
+
+    @Test
     void storedListsRoundTripDenyIdentifiersWithSuffixesAndPermissionNodes()
     {
         // storageStringBuilder emits a trailing delimiter, so parsing has to drop the empty tail.

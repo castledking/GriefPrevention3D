@@ -2064,6 +2064,10 @@ public abstract class DataStore {
         this.overrideSavePlayerData(playerID, playerData);
 
         // save the ignore list
+        this.saveIgnoreList(playerID, playerData);
+    }
+
+    protected void saveIgnoreList(UUID playerID, PlayerData playerData) {
         if (playerData.ignoreListChanged) {
             StringBuilder fileContent = new StringBuilder();
             try {
@@ -2085,6 +2089,7 @@ public abstract class DataStore {
                 File playerDataFile = new File(playerDataFolderPath + File.separator + playerID + ".ignore");
                 byte[] bytes = fileContent.toString().trim().getBytes(StandardCharsets.UTF_8);
                 Files.write(bytes, playerDataFile);
+                playerData.ignoreListChanged = false;
             }
 
             // if any problem, log it

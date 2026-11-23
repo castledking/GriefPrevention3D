@@ -756,6 +756,18 @@ public class PlayerEventHandler implements Listener {
         }
     }
 
+    // Preload database-backed player claim blocks on the async login thread so Folia region
+    // threads never block on a MySQL round-trip when the player enters the world.
+    @EventHandler(priority = EventPriority.MONITOR)
+    void onAsyncPlayerPreLoginPreload(AsyncPlayerPreLoginEvent event) {
+        if (event.getLoginResult() != AsyncPlayerPreLoginEvent.Result.ALLOWED) {
+            return;
+        }
+        if (this.dataStore instanceof DatabaseDataStore) {
+            ((DatabaseDataStore) this.dataStore).preloadPlayerData(event.getUniqueId());
+        }
+    }
+
     // Offline-safe bypass check for the griefprevention.spam permission. We cannot
     // run Player#hasPermission during AsyncPlayerPreLoginEvent because there is no
     // Player yet, so fall back to the ops file.

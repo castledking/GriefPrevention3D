@@ -1,19 +1,19 @@
 /*
-	GriefPrevention Server Plugin for Minecraft
-	Copyright (C) 2012 Ryan Hamshire
+    GriefPrevention Server Plugin for Minecraft
+    Copyright (C) 2012 Ryan Hamshire
 
-	This program is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	(at your option) any later version.
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
 
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
 
-	You should have received a copy of the GNU General Public License
-	along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package me.ryanhamshire.GriefPrevention;
@@ -22,14 +22,14 @@ import com.griefprevention.geometry.OrthogonalPoint2i;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.OfflinePlayer;
 import org.bukkit.World;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -37,27 +37,94 @@ import java.sql.Statement;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Properties;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
-//manages data stored in the file system
+/**
+ * Folia-safe, pooled, transactional JDBC data store supporting MySQL, MariaDB, and SQLite.
+ *
+ * <p>All mutations capture immutable snapshots on the calling thread and execute asynchronously on
+ * an ordered background writer thread inside JDBC transactions so Folia region threads and global
+ * tick threads never block on network I/O. Concurrent reads (such as async player pre-login and
+ * background tasks) borrow dedicated connections from {@link DatabaseConnectionPool}.</p>
+ */
 public class DatabaseDataStore extends DataStore
 {
+    private static final String TABLE_CLAIM_DATA = "griefprevention_claimdata";
+    private static final String TABLE_PLAYER_DATA = "griefprevention_playerdata";
+    private static final String TABLE_NEXT_CLAIM_ID = "griefprevention_nextclaimid";
+    private static final String TABLE_SCHEMA_VERSION = "griefprevention_schemaversion";
 
-    @SuppressWarnings("unused")
-    private static final String SQL_UPDATE_CLAIM =
-            "UPDATE griefprevention_claimdata SET owner = ?, lessercorner = ?, greatercorner = ?, builders = ?, containers = ?, accessors = ?, managers = ?, inheritnothing = ?, inheritnothingfornewsubdivisions = ?, parentid = ?, expiration = ?, explosivesallowed = ?, witherexplosionsallowed = ? WHERE id = ?";
-    // A brand new database is stamped at the latest schema, which skips every versioned ALTER in
-    // initialize(). This has to list the full current column set or the first claim insert fails
+    // A brand new database is stamped at the latest schema, which skips every versioned migration
+    // in initialize(). This has to list the full current column set or the first claim insert fails
     // against columns that were never added.
     static final String SQL_CREATE_CLAIM_TABLE =
-            "CREATE TABLE IF NOT EXISTS griefprevention_claimdata (id INTEGER, owner VARCHAR(50), lessercorner VARCHAR(100), greatercorner VARCHAR(100), builders TEXT, containers TEXT, accessors TEXT, managers TEXT, denied TEXT, inheritnothing BOOLEAN, parentid INTEGER, expiration BIGINT, explosivesallowed BOOLEAN, inheritnothingfornewsubdivisions BOOLEAN, witherexplosionsallowed BOOLEAN, is3d BOOLEAN DEFAULT 0, shapecorners TEXT, modifieddate BIGINT DEFAULT 0, pvpenabled BOOLEAN DEFAULT 1, alertsenabled BOOLEAN DEFAULT 1, adminsubdivision BOOLEAN DEFAULT 0, pvptrusted TEXT, pvetrusted TEXT, pvptoggled BOOLEAN DEFAULT 0)";
+            "CREATE TABLE IF NOT EXISTS griefprevention_claimdata ("
+                    + "id BIGINT PRIMARY KEY, "
+                    + "owner VARCHAR(50), "
+                    + "lessercorner VARCHAR(100), "
+                    + "greatercorner VARCHAR(100), "
+                    + "builders TEXT, "
+                    + "containers TEXT, "
+                    + "accessors TEXT, "
+                    + "managers TEXT, "
+                    + "denied TEXT, "
+                    + "inheritnothing BOOLEAN, "
+                    + "parentid BIGINT, "
+                    + "expiration BIGINT, "
+                    + "explosivesallowed BOOLEAN, "
+                    + "inheritnothingfornewsubdivisions BOOLEAN, "
+                    + "witherexplosionsallowed BOOLEAN, "
+                    + "is3d BOOLEAN DEFAULT 0, "
+                    + "shapecorners TEXT, "
+                    + "modifieddate BIGINT DEFAULT 0, "
+                    + "pvpenabled BOOLEAN DEFAULT 1, "
+                    + "alertsenabled BOOLEAN DEFAULT 1, "
+                    + "adminsubdivision BOOLEAN DEFAULT 0, "
+                    + "pvptrusted TEXT, "
+                    + "pvetrusted TEXT, "
+                    + "pvptoggled BOOLEAN DEFAULT 0, "
+                    + "neighbors TEXT, "
+                    + "allowallneighbors BOOLEAN DEFAULT 0"
+                    + ")";
+
     static final String SQL_INSERT_CLAIM =
-            "INSERT INTO griefprevention_claimdata (id, owner, lessercorner, greatercorner, builders, containers, accessors, managers, denied, inheritnothing, inheritnothingfornewsubdivisions, parentid, expiration, explosivesallowed, witherexplosionsallowed, is3d, shapecorners, modifieddate, pvpenabled, alertsenabled, adminsubdivision, pvptrusted, pvetrusted, pvptoggled) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            "INSERT INTO griefprevention_claimdata ("
+                    + "id, owner, lessercorner, greatercorner, builders, containers, accessors, managers, denied, "
+                    + "inheritnothing, inheritnothingfornewsubdivisions, parentid, expiration, explosivesallowed, "
+                    + "witherexplosionsallowed, is3d, shapecorners, modifieddate, pvpenabled, alertsenabled, "
+                    + "adminsubdivision, pvptrusted, pvetrusted, pvptoggled, neighbors, allowallneighbors"
+                    + ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+    private static final String SQL_CREATE_PLAYER_TABLE =
+            "CREATE TABLE IF NOT EXISTS griefprevention_playerdata ("
+                    + "name VARCHAR(50) PRIMARY KEY, "
+                    + "lastlogin DATETIME, "
+                    + "accruedblocks INTEGER, "
+                    + "bonusblocks INTEGER, "
+                    + "glowenabled BOOLEAN DEFAULT 1"
+                    + ")";
+
+    private static final String SQL_CREATE_NEXT_CLAIM_ID_TABLE =
+            "CREATE TABLE IF NOT EXISTS griefprevention_nextclaimid (nextid BIGINT)";
+
+    private static final String SQL_CREATE_SCHEMA_VERSION_TABLE =
+            "CREATE TABLE IF NOT EXISTS griefprevention_schemaversion (version INTEGER)";
+
     private static final String SQL_DELETE_CLAIM =
             "DELETE FROM griefprevention_claimdata WHERE id = ?";
     private static final String SQL_SELECT_PLAYER_DATA =
@@ -65,7 +132,7 @@ public class DatabaseDataStore extends DataStore
     private static final String SQL_DELETE_PLAYER_DATA =
             "DELETE FROM griefprevention_playerdata WHERE name = ?";
     private static final String SQL_INSERT_PLAYER_DATA =
-            "INSERT INTO griefprevention_playerdata (name, lastlogin, accruedblocks, bonusblocks) VALUES (?, ?, ?, ?)";
+            "INSERT INTO griefprevention_playerdata (name, lastlogin, accruedblocks, bonusblocks, glowenabled) VALUES (?, ?, ?, ?, ?)";
     private static final String SQL_SET_NEXT_CLAIM_ID =
             "INSERT INTO griefprevention_nextclaimid VALUES (?)";
     private static final String SQL_DELETE_GROUP_DATA =
@@ -78,41 +145,192 @@ public class DatabaseDataStore extends DataStore
             "DELETE FROM griefprevention_schemaversion";
     private static final String SQL_SELECT_SCHEMA_VERSION =
             "SELECT * FROM griefprevention_schemaversion";
-    @SuppressWarnings("unused")
-    private static final String SQL_LOAD_CLAIM =
-            "SELECT * FROM griefprevention_claimdata WHERE id = ?";
-    private static final String SQL_UPDATE_SCHEMA_ADD_EXPIRATION =
-            "ALTER TABLE griefprevention_claimdata ADD COLUMN IF NOT EXISTS expiration BIGINT DEFAULT 0";
-    private static final String SQL_UPDATE_SCHEMA_ADD_EXPLOSIVES =
-            "ALTER TABLE griefprevention_claimdata ADD COLUMN IF NOT EXISTS explosivesallowed BOOLEAN DEFAULT 0";
-    private static final String SQL_UPDATE_SCHEMA_ADD_WITHER_EXPLOSIONS =
-            "ALTER TABLE griefprevention_claimdata ADD COLUMN IF NOT EXISTS witherexplosionsallowed BOOLEAN DEFAULT 0";
-    private static final String SQL_UPDATE_SCHEMA_ADD_IS3D =
-            "ALTER TABLE griefprevention_claimdata ADD COLUMN IF NOT EXISTS is3d BOOLEAN DEFAULT 0";
-    private static final String SQL_UPDATE_SCHEMA_ADD_SHAPECORNERS =
-            "ALTER TABLE griefprevention_claimdata ADD COLUMN IF NOT EXISTS shapecorners TEXT DEFAULT ''";
-    private static final String SQL_UPDATE_SCHEMA_ADD_MODIFIEDDATE =
-            "ALTER TABLE griefprevention_claimdata ADD COLUMN IF NOT EXISTS modifieddate BIGINT DEFAULT 0";
-    private static final String SQL_UPDATE_SCHEMA_ADD_PVPENABLED =
-            "ALTER TABLE griefprevention_claimdata ADD COLUMN IF NOT EXISTS pvpenabled BOOLEAN DEFAULT 1";
-    private static final String SQL_UPDATE_SCHEMA_ADD_ALERTSENABLED =
-            "ALTER TABLE griefprevention_claimdata ADD COLUMN IF NOT EXISTS alertsenabled BOOLEAN DEFAULT 1";
-    private static final String SQL_UPDATE_SCHEMA_ADD_ADMINSUBDIVISION =
-            "ALTER TABLE griefprevention_claimdata ADD COLUMN IF NOT EXISTS adminsubdivision BOOLEAN DEFAULT 0";
 
-    private Connection databaseConnection = null;
+    private static final class ClaimRecord
+    {
+        final long id;
+        final String owner;
+        final String lesserCorner;
+        final String greaterCorner;
+        final String builders;
+        final String containers;
+        final String accessors;
+        final String managers;
+        final String denied;
+        final boolean inheritNothing;
+        final boolean inheritNothingForNewSubdivisions;
+        final long parentId;
+        final long expirationDate;
+        final boolean explosivesAllowed;
+        final boolean witherExplosionsAllowed;
+        final boolean is3d;
+        final String shapeCorners;
+        final long modifiedDate;
+        final boolean pvpEnabled;
+        final boolean alertsEnabled;
+        final boolean adminSubdivision;
+        final String pvpTrusted;
+        final String pveTrusted;
+        final boolean pvpToggleSet;
+        final String neighbors;
+        final boolean allowAllNeighbors;
 
-    private final String databaseUrl;
-    private final String userName;
-    private final String password;
+        ClaimRecord(
+                long id,
+                String owner,
+                String lesserCorner,
+                String greaterCorner,
+                String builders,
+                String containers,
+                String accessors,
+                String managers,
+                String denied,
+                boolean inheritNothing,
+                boolean inheritNothingForNewSubdivisions,
+                long parentId,
+                long expirationDate,
+                boolean explosivesAllowed,
+                boolean witherExplosionsAllowed,
+                boolean is3d,
+                String shapeCorners,
+                long modifiedDate,
+                boolean pvpEnabled,
+                boolean alertsEnabled,
+                boolean adminSubdivision,
+                String pvpTrusted,
+                String pveTrusted,
+                boolean pvpToggleSet,
+                String neighbors,
+                boolean allowAllNeighbors)
+        {
+            this.id = id;
+            this.owner = owner;
+            this.lesserCorner = lesserCorner;
+            this.greaterCorner = greaterCorner;
+            this.builders = builders;
+            this.containers = containers;
+            this.accessors = accessors;
+            this.managers = managers;
+            this.denied = denied;
+            this.inheritNothing = inheritNothing;
+            this.inheritNothingForNewSubdivisions = inheritNothingForNewSubdivisions;
+            this.parentId = parentId;
+            this.expirationDate = expirationDate;
+            this.explosivesAllowed = explosivesAllowed;
+            this.witherExplosionsAllowed = witherExplosionsAllowed;
+            this.is3d = is3d;
+            this.shapeCorners = shapeCorners;
+            this.modifiedDate = modifiedDate;
+            this.pvpEnabled = pvpEnabled;
+            this.alertsEnabled = alertsEnabled;
+            this.adminSubdivision = adminSubdivision;
+            this.pvpTrusted = pvpTrusted;
+            this.pveTrusted = pveTrusted;
+            this.pvpToggleSet = pvpToggleSet;
+            this.neighbors = neighbors;
+            this.allowAllNeighbors = allowAllNeighbors;
+        }
+    }
+
+    private static final class PlayerRecord
+    {
+        final UUID playerId;
+        final long lastLoginMillis;
+        final int accruedBlocks;
+        final int bonusBlocks;
+        final boolean glowEnabled;
+
+        PlayerRecord(UUID playerId, long lastLoginMillis, int accruedBlocks, int bonusBlocks, boolean glowEnabled)
+        {
+            this.playerId = playerId;
+            this.lastLoginMillis = lastLoginMillis;
+            this.accruedBlocks = accruedBlocks;
+            this.bonusBlocks = bonusBlocks;
+            this.glowEnabled = glowEnabled;
+        }
+    }
+
+    private final @NotNull DatabaseConfig config;
+    private final @NotNull DatabaseConnectionPool connectionPool;
+
+    // Coalescing write queues so rapid mutations to the same claim/player/group collapse to one DB
+    // write and never stall a Folia region thread.
+    private final ConcurrentHashMap<Long, ClaimRecord> pendingClaimWrites = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<UUID, PlayerRecord> pendingPlayerWrites = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Integer> pendingGroupWrites = new ConcurrentHashMap<>();
+    private final AtomicReference<Long> pendingNextClaimId = new AtomicReference<>();
+
+    // Single ordered writer thread preserves causal ordering of creates, updates, and deletes
+    // without blocking Folia region threads or Bukkit's main thread.
+    private final ExecutorService writeExecutor = Executors.newSingleThreadExecutor(runnable -> {
+        Thread thread = new Thread(runnable, "GriefPrevention Database Writer");
+        thread.setDaemon(true);
+        return thread;
+    });
 
     DatabaseDataStore(String url, String userName, String password) throws Exception
     {
-        this.databaseUrl = url;
-        this.userName = userName;
-        this.password = password;
+        this(DatabaseConfig.of(url, userName, password), true);
+    }
 
-        this.initialize();
+    DatabaseDataStore(@NotNull DatabaseConfig config) throws Exception
+    {
+        this(config, true);
+    }
+
+    // Test seam allowing real JDBC schema/query/pool tests without a live Bukkit server.
+    DatabaseDataStore(@NotNull DatabaseConfig config, boolean loadServerState) throws Exception
+    {
+        this.config = config;
+        this.connectionPool = new DatabaseConnectionPool(config);
+
+        if (loadServerState)
+        {
+            this.initialize();
+        }
+        else
+        {
+            this.initializeSchemaOnly();
+        }
+    }
+
+    @NotNull DatabaseConnectionPool connectionPool()
+    {
+        return this.connectionPool;
+    }
+
+    void initializeSchemaOnly() throws Exception
+    {
+        try
+        {
+            this.connectionPool.verifyConnectivity();
+        }
+        catch (Exception e)
+        {
+            logEntry("ERROR: Unable to connect to database.  Check your database configuration settings.");
+            this.connectionPool.close();
+            this.writeExecutor.shutdownNow();
+            throw e;
+        }
+
+        try
+        {
+            boolean freshDatabase = this.connectionPool.withConnection(connection -> {
+                boolean isFresh = this.ensureSchema(connection);
+                this.loadNextClaimId(connection);
+                return isFresh;
+            });
+            if (freshDatabase)
+            {
+                this.setSchemaVersion(latestSchemaVersion);
+            }
+        }
+        catch (Exception e)
+        {
+            this.connectionPool.close();
+            this.writeExecutor.shutdownNow();
+            throw e;
+        }
     }
 
     @Override
@@ -120,486 +338,584 @@ public class DatabaseDataStore extends DataStore
     {
         try
         {
-            this.refreshDataConnection();
+            this.connectionPool.verifyConnectivity();
         }
         catch (Exception e2)
         {
-            GriefPrevention.AddLogEntry("ERROR: Unable to connect to database.  Check your config file settings.");
+            logEntry("ERROR: Unable to connect to database.  Check your database configuration settings.");
+            this.connectionPool.close();
+            this.writeExecutor.shutdownNow();
             throw e2;
         }
 
-        try (Statement statement = databaseConnection.createStatement())
+        try
         {
-            //ensure the data tables exist
-            statement.execute("CREATE TABLE IF NOT EXISTS griefprevention_nextclaimid (nextid INTEGER)");
-            statement.execute(SQL_CREATE_CLAIM_TABLE);
-            statement.execute("CREATE TABLE IF NOT EXISTS griefprevention_playerdata (name VARCHAR(50), lastlogin DATETIME, accruedblocks INTEGER, bonusblocks INTEGER)");
-            statement.execute("CREATE TABLE IF NOT EXISTS griefprevention_schemaversion (version INTEGER)");
-
-            // By making this run only for MySQL, we technically support SQLite too, as this is the only invalid
-            // SQL we use that SQLite does not support. Seeing as its only use is to update VERY old, existing, MySQL
-            // databases, this is of no concern.
-            if (databaseUrl.startsWith("jdbc:mysql://"))
-            {
-                statement.execute("ALTER TABLE griefprevention_claimdata MODIFY builders TEXT");
-                statement.execute("ALTER TABLE griefprevention_claimdata MODIFY containers TEXT");
-                statement.execute("ALTER TABLE griefprevention_claimdata MODIFY accessors TEXT");
-                statement.execute("ALTER TABLE griefprevention_claimdata MODIFY managers TEXT");
-            }
-
-            // Deny entries record trust a subdivision revoked, so an existing database that
-            // predates the column has to gain it before any claim is written. Checked against
-            // JDBC metadata rather than ADD COLUMN IF NOT EXISTS, which real MySQL rejects.
-            this.addClaimColumnIfMissing(statement, "denied", "TEXT");
-
-            //if the next claim id table is empty, this is a brand new database which will write using the latest schema
-            //otherwise, schema version is determined by schemaversion table (or =0 if table is empty, see getSchemaVersion())
-            ResultSet results = statement.executeQuery("SELECT * FROM griefprevention_nextclaimid");
-            if (!results.next())
+            boolean freshDatabase = this.connectionPool.withConnection(connection -> {
+                boolean isFresh = this.ensureSchema(connection);
+                this.loadGroupBonusBlocks(connection);
+                this.loadNextClaimId(connection);
+                return isFresh;
+            });
+            if (freshDatabase)
             {
                 this.setSchemaVersion(latestSchemaVersion);
+            }
+
+            ClaimLoadResult loadResult = this.connectionPool.withConnection(this::loadClaimsFromDatabase);
+
+            for (Claim claim : loadResult.claimsToRemove)
+            {
+                this.deleteClaimFromSecondaryStorage(claim);
+            }
+            if (loadResult.maxObservedId >= this.nextClaimID)
+            {
+                this.setNextClaimID(loadResult.maxObservedId + 1);
+            }
+
+            if (this.getSchemaVersion() <= 2)
+            {
+                this.connectionPool.withConnection(connection -> {
+                    try (Statement statement = connection.createStatement())
+                    {
+                        statement.execute("DELETE FROM " + TABLE_CLAIM_DATA + " WHERE id = -1");
+                    }
+                    return null;
+                });
             }
         }
         catch (Exception e3)
         {
-            GriefPrevention.AddLogEntry("ERROR: Unable to create the necessary database table.  Details:");
-            GriefPrevention.AddLogEntry(e3.getMessage());
+            logEntry("ERROR: Unable to initialize database storage.  Details:");
+            logEntry(String.valueOf(e3.getMessage()));
             e3.printStackTrace();
+            this.connectionPool.close();
+            this.writeExecutor.shutdownNow();
             throw e3;
-        }
-
-        //load group data into memory
-        Statement statement = databaseConnection.createStatement();
-        ResultSet results = statement.executeQuery("SELECT * FROM griefprevention_playerdata");
-
-        while (results.next())
-        {
-            String name = results.getString("name");
-
-            //ignore non-groups.  all group names start with a dollar sign.
-            if (!name.startsWith("$")) continue;
-
-            String groupName = name.substring(1);
-            if (groupName == null || groupName.isEmpty()) continue;  //defensive coding, avoid unlikely cases
-
-            int groupBonusBlocks = results.getInt("bonusblocks");
-
-            this.permissionToBonusBlocksMap.put(groupName, groupBonusBlocks);
-        }
-
-        //load next claim number into memory
-        results = statement.executeQuery("SELECT * FROM griefprevention_nextclaimid");
-
-        //if there's nothing yet, add it
-        if (!results.next())
-        {
-            statement.execute("INSERT INTO griefprevention_nextclaimid VALUES (0)");
-            this.nextClaimID = (long) 0;
-        }
-
-        //otherwise load it
-        else
-        {
-            this.nextClaimID = results.getLong("nextid");
-        }
-
-        if (this.getSchemaVersion() <= 2)
-        {
-            statement = this.databaseConnection.createStatement();
-            statement.execute("ALTER TABLE griefprevention_claimdata ADD inheritNothing BOOLEAN DEFAULT 0 AFTER managers");
-        }
-
-        if (this.getSchemaVersion() <= 3)
-        {
-            statement = this.databaseConnection.createStatement();
-            statement.execute(SQL_UPDATE_SCHEMA_ADD_EXPIRATION);
-        }
-
-        if (this.getSchemaVersion() <= 4)
-        {
-            statement = this.databaseConnection.createStatement();
-            statement.execute(SQL_UPDATE_SCHEMA_ADD_EXPLOSIVES);
-        }
-
-        if (this.getSchemaVersion() <= 5)
-        {
-            statement = this.databaseConnection.createStatement();
-            statement.execute("ALTER TABLE griefprevention_claimdata ADD inheritNothingForNewSubdivisions BOOLEAN DEFAULT 0 AFTER inheritNothing");
-        }
-
-        if (this.getSchemaVersion() <= 6)
-        {
-            statement = this.databaseConnection.createStatement();
-            statement.execute(SQL_UPDATE_SCHEMA_ADD_WITHER_EXPLOSIONS);
-        }
-
-        if (this.getSchemaVersion() <= 7)
-        {
-            statement = this.databaseConnection.createStatement();
-            statement.execute(SQL_UPDATE_SCHEMA_ADD_IS3D);
-        }
-
-        if (this.getSchemaVersion() <= 8)
-        {
-            statement = this.databaseConnection.createStatement();
-            statement.execute(SQL_UPDATE_SCHEMA_ADD_SHAPECORNERS);
-        }
-
-        if (this.getSchemaVersion() <= 9)
-        {
-            statement = this.databaseConnection.createStatement();
-            statement.execute(SQL_UPDATE_SCHEMA_ADD_MODIFIEDDATE);
-        }
-
-        if (this.getSchemaVersion() <= 10)
-        {
-            statement = this.databaseConnection.createStatement();
-            statement.execute(SQL_UPDATE_SCHEMA_ADD_PVPENABLED);
-        }
-
-        if (this.getSchemaVersion() <= 11)
-        {
-            statement = this.databaseConnection.createStatement();
-            statement.execute(SQL_UPDATE_SCHEMA_ADD_ALERTSENABLED);
-        }
-
-        if (this.getSchemaVersion() <= 12)
-        {
-            statement = this.databaseConnection.createStatement();
-            statement.execute(SQL_UPDATE_SCHEMA_ADD_ADMINSUBDIVISION);
-        }
-
-        if (this.getSchemaVersion() <= 13)
-        {
-            // Combat trust lists. Checked against JDBC metadata rather than ADD COLUMN IF NOT
-            // EXISTS, which real MySQL rejects (see the "denied" column above).
-            this.addClaimColumnIfMissing(statement, "pvptrusted", "TEXT");
-            this.addClaimColumnIfMissing(statement, "pvetrusted", "TEXT");
-        }
-
-        if (this.getSchemaVersion() <= 14)
-        {
-            // Marks claims whose PvP state was explicitly toggled (rather than left at default).
-            this.addClaimColumnIfMissing(statement, "pvptoggled", "BOOLEAN DEFAULT 0");
-        }
-
-        //load claims data into memory
-
-        results = statement.executeQuery("SELECT * FROM griefprevention_claimdata");
-
-        ArrayList<Claim> claimsToRemove = new ArrayList<>();
-        ArrayList<Claim> subdivisionsToLoad = new ArrayList<>();
-        List<World> validWorlds = Bukkit.getServer().getWorlds();
-
-        Long claimID = null;
-        while (results.next())
-        {
-            try
-            {
-                //problematic claims will be removed from secondary storage, and never added to in-memory data store
-                boolean removeClaim = false;
-
-                long parentId = results.getLong("parentid");
-                claimID = results.getLong("id");
-                boolean inheritNothing = results.getBoolean("inheritnothing");
-                boolean inheritNothingForNewSubdivisions = results.getBoolean("inheritnothingfornewsubdivisions");
-
-                //expiration date
-                long expirationDate = results.getLong("expiration");
-
-                Location lesserBoundaryCorner = null;
-                Location greaterBoundaryCorner = null;
-                String lesserCornerString = "(location not available)";
-                try
-                {
-                    lesserCornerString = results.getString("lessercorner");
-                    lesserBoundaryCorner = this.locationFromString(lesserCornerString, validWorlds);
-                    String greaterCornerString = results.getString("greatercorner");
-                    greaterBoundaryCorner = this.locationFromString(greaterCornerString, validWorlds);
-                }
-                catch (Exception e)
-                {
-                    if (e.getMessage() != null && e.getMessage().contains("World not found"))
-                    {
-                        GriefPrevention.AddLogEntry("Failed to load a claim (ID:" + claimID + ") because its world isn't loaded (yet?).  Please delete the claim or contact the GriefPrevention developer with information about which plugin(s) you're using to load or create worlds.  " + lesserCornerString);
-                        continue;
-                    }
-                    else
-                    {
-                        throw e;
-                    }
-                }
-
-                String ownerName = results.getString("owner");
-                UUID ownerID = null;
-                if (ownerName.isEmpty() || ownerName.startsWith("--"))
-                {
-                    ownerID = null;  //administrative land claim or subdivision
-                }
-                else
-                {
-                    try
-                    {
-                        ownerID = UUID.fromString(ownerName);
-                    }
-                    catch (Exception ex)
-                    {
-                        GriefPrevention.AddLogEntry("This owner entry is not a UUID: " + ownerName + ".");
-                        GriefPrevention.AddLogEntry("  Converted land claim to administrative @ " + lesserBoundaryCorner.toString());
-                    }
-                }
-
-                String buildersString = results.getString("builders");
-                List<String> builderNames = Arrays.asList(buildersString.split(";"));
-
-                String containersString = results.getString("containers");
-                List<String> containerNames = Arrays.asList(containersString.split(";"));
-
-                String accessorsString = results.getString("accessors");
-                List<String> accessorNames = Arrays.asList(accessorsString.split(";"));
-
-                String managersString = results.getString("managers");
-                List<String> managerNames = Arrays.asList(managersString.split(";"));
-
-                // Deny entries carry a trust-level suffix and may name a permission node, so they
-                // are stored verbatim rather than split into a plain name list.
-                List<String> deniedIdentifiers;
-                try {
-                    deniedIdentifiers = parseStorageList(results.getString("denied"));
-                } catch (SQLException e) {
-                    deniedIdentifiers = Collections.emptyList(); // Default if column doesn't exist
-                }
-                boolean explosivesAllowed = results.getBoolean("explosivesallowed");
-                boolean witherExplosionsAllowed = results.getBoolean("witherexplosionsallowed");
-                boolean is3d = results.getBoolean("is3d");
-                boolean pvpEnabled;
-                try {
-                    pvpEnabled = results.getBoolean("pvpenabled");
-                } catch (SQLException e) {
-                    pvpEnabled = true; // Default if column doesn't exist
-                }
-                boolean alertsEnabled;
-                try {
-                    alertsEnabled = results.getBoolean("alertsenabled");
-                } catch (SQLException e) {
-                    alertsEnabled = true; // Default if column doesn't exist
-                }
-                boolean adminSubdivision;
-                try {
-                    adminSubdivision = results.getBoolean("adminsubdivision");
-                } catch (SQLException e) {
-                    adminSubdivision = false; // Default if column doesn't exist
-                }
-                boolean pvpToggleSet;
-                try {
-                    pvpToggleSet = results.getBoolean("pvptoggled");
-                } catch (SQLException e) {
-                    pvpToggleSet = false; // Default if column doesn't exist
-                }
-                List<String> pvpTrusted;
-                try {
-                    pvpTrusted = parseStorageList(results.getString("pvptrusted"));
-                } catch (SQLException e) {
-                    pvpTrusted = Collections.emptyList(); // Default if column doesn't exist
-                }
-                List<String> pveTrusted;
-                try {
-                    pveTrusted = parseStorageList(results.getString("pvetrusted"));
-                } catch (SQLException e) {
-                    pveTrusted = Collections.emptyList(); // Default if column doesn't exist
-                }
-                String shapecornersStr = results.getString("shapecorners");
-                long modifiedDate = results.getLong("modifieddate");
-
-                Claim claim = new Claim(lesserBoundaryCorner, greaterBoundaryCorner, ownerID, builderNames, containerNames, accessorNames, managerNames, inheritNothing, claimID, is3d);
-                claim.setExpirationDate(expirationDate);
-                claim.areExplosivesAllowed = explosivesAllowed;
-                claim.areWitherExplosionsAllowed = witherExplosionsAllowed;
-                claim.restorePvpToggle(pvpEnabled, pvpToggleSet);
-                claim.alertsEnabled = alertsEnabled;
-                claim.setInheritNothingForNewSubdivisions(inheritNothingForNewSubdivisions);
-                claim.setShapedCorners(parseCornersFromDb(shapecornersStr));
-                claim.setAdminSubdivision(adminSubdivision);
-                claim.restoreDeniedPermissions(deniedIdentifiers);
-                for (String identifier : pvpTrusted)
-                {
-                    claim.addPvpTrust(identifier);
-                }
-                for (String identifier : pveTrusted)
-                {
-                    claim.addPveTrust(identifier);
-                }
-                if (modifiedDate > 0) claim.modifiedDate = new Date(modifiedDate);
-
-                if (removeClaim)
-                {
-                    claimsToRemove.add(claim);
-                }
-                else if (parentId == -1)
-                {
-                    //top level claim
-                    this.addClaim(claim, false);
-                }
-                else
-                {
-                    //subdivision
-                    subdivisionsToLoad.add(claim);
-                }
-            }
-            catch (SQLException e)
-            {
-                GriefPrevention.AddLogEntry("Unable to load a claim.  Details: " + e.getMessage() + " ... " + results);
-                e.printStackTrace();
-            }
-        }
-
-        //add subdivisions to their parent claims
-        for (Claim childClaim : subdivisionsToLoad)
-        {
-            //find top level claim parent
-            Claim topLevelClaim = this.getClaimAt(childClaim.getLesserBoundaryCorner(), true, null);
-
-            if (topLevelClaim == null)
-            {
-                claimsToRemove.add(childClaim);
-                GriefPrevention.AddLogEntry("Removing orphaned claim subdivision: " + childClaim.getLesserBoundaryCorner().toString());
-                continue;
-            }
-
-            //add this claim to the list of children of the current top level claim
-            childClaim.parent = topLevelClaim;
-            topLevelClaim.children.add(childClaim);
-            childClaim.inDataStore = true;
-        }
-
-        for (Claim claim : claimsToRemove)
-        {
-            this.deleteClaimFromSecondaryStorage(claim);
-        }
-
-        if (this.getSchemaVersion() <= 2)
-        {
-            this.refreshDataConnection();
-            statement = this.databaseConnection.createStatement();
-            statement.execute("DELETE FROM griefprevention_claimdata WHERE id = '-1'");
         }
 
         super.initialize();
     }
 
-    @Override
-    synchronized void writeClaimToStorage(Claim claim)  //see datastore.cs.  this will ALWAYS be a top level claim
+    private boolean ensureSchema(@NotNull Connection connection) throws SQLException
     {
-        try
+        try (Statement statement = connection.createStatement())
         {
-            this.refreshDataConnection();
+            statement.execute(SQL_CREATE_NEXT_CLAIM_ID_TABLE);
+            statement.execute(SQL_CREATE_CLAIM_TABLE);
+            statement.execute(SQL_CREATE_PLAYER_TABLE);
+            statement.execute(SQL_CREATE_SCHEMA_VERSION_TABLE);
 
-            //wipe out any existing data about this claim
-            this.deleteClaimFromSecondaryStorage(claim);
+            // Only needed to upgrade very old MySQL installations whose trust columns were VARCHAR.
+            if (this.config.isMySql())
+            {
+                statement.execute("ALTER TABLE " + TABLE_CLAIM_DATA + " MODIFY builders TEXT");
+                statement.execute("ALTER TABLE " + TABLE_CLAIM_DATA + " MODIFY containers TEXT");
+                statement.execute("ALTER TABLE " + TABLE_CLAIM_DATA + " MODIFY accessors TEXT");
+                statement.execute("ALTER TABLE " + TABLE_CLAIM_DATA + " MODIFY managers TEXT");
+            }
 
-            //write claim data to the database
-            this.writeClaimData(claim);
-        }
-        catch (SQLException e)
-        {
-            GriefPrevention.AddLogEntry("Unable to save data for claim at " + this.locationToString(claim.lesserBoundaryCorner) + ".  Details:");
-            GriefPrevention.AddLogEntry(e.getMessage());
+            // Ensure every column exists using JDBC metadata rather than MariaDB-only
+            // ADD COLUMN IF NOT EXISTS or MySQL-illegal TEXT DEFAULT ''.
+            this.addColumnIfMissing(connection, statement, TABLE_CLAIM_DATA, "denied", "TEXT");
+            this.addColumnIfMissing(connection, statement, TABLE_CLAIM_DATA, "inheritnothing", "BOOLEAN DEFAULT 0");
+            this.addColumnIfMissing(connection, statement, TABLE_CLAIM_DATA, "expiration", "BIGINT DEFAULT 0");
+            this.addColumnIfMissing(connection, statement, TABLE_CLAIM_DATA, "explosivesallowed", "BOOLEAN DEFAULT 0");
+            this.addColumnIfMissing(connection, statement, TABLE_CLAIM_DATA, "inheritnothingfornewsubdivisions", "BOOLEAN DEFAULT 0");
+            this.addColumnIfMissing(connection, statement, TABLE_CLAIM_DATA, "witherexplosionsallowed", "BOOLEAN DEFAULT 0");
+            this.addColumnIfMissing(connection, statement, TABLE_CLAIM_DATA, "is3d", "BOOLEAN DEFAULT 0");
+            this.addColumnIfMissing(connection, statement, TABLE_CLAIM_DATA, "shapecorners", "TEXT");
+            this.addColumnIfMissing(connection, statement, TABLE_CLAIM_DATA, "modifieddate", "BIGINT DEFAULT 0");
+            this.addColumnIfMissing(connection, statement, TABLE_CLAIM_DATA, "pvpenabled", "BOOLEAN DEFAULT 1");
+            this.addColumnIfMissing(connection, statement, TABLE_CLAIM_DATA, "alertsenabled", "BOOLEAN DEFAULT 1");
+            this.addColumnIfMissing(connection, statement, TABLE_CLAIM_DATA, "adminsubdivision", "BOOLEAN DEFAULT 0");
+            this.addColumnIfMissing(connection, statement, TABLE_CLAIM_DATA, "pvptrusted", "TEXT");
+            this.addColumnIfMissing(connection, statement, TABLE_CLAIM_DATA, "pvetrusted", "TEXT");
+            this.addColumnIfMissing(connection, statement, TABLE_CLAIM_DATA, "pvptoggled", "BOOLEAN DEFAULT 0");
+            this.addColumnIfMissing(connection, statement, TABLE_CLAIM_DATA, "neighbors", "TEXT");
+            this.addColumnIfMissing(connection, statement, TABLE_CLAIM_DATA, "allowallneighbors", "BOOLEAN DEFAULT 0");
+
+            this.addColumnIfMissing(connection, statement, TABLE_PLAYER_DATA, "glowenabled", "BOOLEAN DEFAULT 1");
+
+            // If nextclaimid is empty, this is a brand new database already at the latest schema.
+            try (ResultSet results = statement.executeQuery("SELECT * FROM " + TABLE_NEXT_CLAIM_ID))
+            {
+                return !results.next();
+            }
         }
     }
 
-    //actually writes claim data to the database
-    synchronized private void writeClaimData(Claim claim) throws SQLException
+    private void loadGroupBonusBlocks(@NotNull Connection connection) throws SQLException
+    {
+        try (Statement statement = connection.createStatement();
+             ResultSet results = statement.executeQuery("SELECT * FROM " + TABLE_PLAYER_DATA))
+        {
+            while (results.next())
+            {
+                String name = results.getString("name");
+                if (name == null || !name.startsWith("$")) continue;
+
+                String groupName = name.substring(1);
+                if (groupName.isEmpty()) continue;
+
+                int groupBonusBlocks = results.getInt("bonusblocks");
+                this.permissionToBonusBlocksMap.put(groupName, groupBonusBlocks);
+            }
+        }
+    }
+
+    private void loadNextClaimId(@NotNull Connection connection) throws SQLException
+    {
+        try (Statement statement = connection.createStatement();
+             ResultSet results = statement.executeQuery("SELECT * FROM " + TABLE_NEXT_CLAIM_ID))
+        {
+            if (!results.next())
+            {
+                statement.execute("INSERT INTO " + TABLE_NEXT_CLAIM_ID + " VALUES (0)");
+                this.nextClaimID = 0L;
+            }
+            else
+            {
+                this.nextClaimID = results.getLong("nextid");
+            }
+        }
+    }
+
+    private static final class ClaimLoadResult
+    {
+        final List<Claim> claimsToRemove;
+        final long maxObservedId;
+
+        ClaimLoadResult(List<Claim> claimsToRemove, long maxObservedId)
+        {
+            this.claimsToRemove = claimsToRemove;
+            this.maxObservedId = maxObservedId;
+        }
+    }
+
+    private @NotNull ClaimLoadResult loadClaimsFromDatabase(@NotNull Connection connection) throws SQLException
+    {
+        ArrayList<Claim> claimsToRemove = new ArrayList<>();
+        ArrayList<LoadedSubdivision> subdivisionsToLoad = new ArrayList<>();
+        Map<Long, Claim> loadedById = new HashMap<>();
+        List<World> validWorlds = Bukkit.getServer().getWorlds();
+        long maxObservedId = -1L;
+
+        try (Statement statement = connection.createStatement();
+             ResultSet results = statement.executeQuery("SELECT * FROM " + TABLE_CLAIM_DATA))
+        {
+            while (results.next())
+            {
+                try
+                {
+                    long parentId = results.getLong("parentid");
+                    long claimID = results.getLong("id");
+                    if (claimID > maxObservedId)
+                    {
+                        maxObservedId = claimID;
+                    }
+                    boolean inheritNothing = results.getBoolean("inheritnothing");
+                    boolean inheritNothingForNewSubdivisions = results.getBoolean("inheritnothingfornewsubdivisions");
+                    long expirationDate = results.getLong("expiration");
+
+                    Location lesserBoundaryCorner;
+                    Location greaterBoundaryCorner;
+                    String lesserCornerString = "(location not available)";
+                    try
+                    {
+                        lesserCornerString = results.getString("lessercorner");
+                        lesserBoundaryCorner = this.locationFromString(lesserCornerString, validWorlds);
+                        String greaterCornerString = results.getString("greatercorner");
+                        greaterBoundaryCorner = this.locationFromString(greaterCornerString, validWorlds);
+                    }
+                    catch (Exception e)
+                    {
+                        if (e.getMessage() != null && e.getMessage().contains("World not found"))
+                        {
+                            logEntry("Failed to load a claim (ID:" + claimID
+                                    + ") because its world isn't loaded (yet?).  Please delete the claim or contact the GriefPrevention developer with information about which plugin(s) you're using to load or create worlds.  "
+                                    + lesserCornerString);
+                            continue;
+                        }
+                        throw e;
+                    }
+
+                    String ownerName = results.getString("owner");
+                    UUID ownerID = null;
+                    if (ownerName != null && !ownerName.isEmpty() && !ownerName.startsWith("--"))
+                    {
+                        try
+                        {
+                            ownerID = UUID.fromString(ownerName);
+                        }
+                        catch (Exception ex)
+                        {
+                            logEntry("This owner entry is not a UUID: " + ownerName + ".");
+                            logEntry("  Converted land claim to administrative @ " + lesserBoundaryCorner.toString());
+                        }
+                    }
+
+                    List<String> builderNames = parseStorageList(results.getString("builders"));
+                    List<String> containerNames = parseStorageList(results.getString("containers"));
+                    List<String> accessorNames = parseStorageList(results.getString("accessors"));
+                    List<String> managerNames = parseStorageList(results.getString("managers"));
+                    List<String> deniedIdentifiers = readOptionalList(results, "denied");
+
+                    boolean explosivesAllowed = results.getBoolean("explosivesallowed");
+                    boolean witherExplosionsAllowed = results.getBoolean("witherexplosionsallowed");
+                    boolean is3d = results.getBoolean("is3d");
+                    boolean pvpEnabled = readOptionalBoolean(results, "pvpenabled", true);
+                    boolean alertsEnabled = readOptionalBoolean(results, "alertsenabled", true);
+                    boolean adminSubdivision = readOptionalBoolean(results, "adminsubdivision", false);
+                    boolean pvpToggleSet = readOptionalBoolean(results, "pvptoggled", false);
+                    List<String> pvpTrusted = readOptionalList(results, "pvptrusted");
+                    List<String> pveTrusted = readOptionalList(results, "pvetrusted");
+                    List<String> neighbors = readOptionalList(results, "neighbors");
+                    boolean allowAllNeighbors = readOptionalBoolean(results, "allowallneighbors", false);
+                    String shapeCornersStr = readOptionalString(results, "shapecorners");
+                    long modifiedDate = readOptionalLong(results, "modifieddate", 0L);
+
+                    Claim claim = new Claim(
+                            lesserBoundaryCorner,
+                            greaterBoundaryCorner,
+                            ownerID,
+                            builderNames,
+                            containerNames,
+                            accessorNames,
+                            managerNames,
+                            inheritNothing,
+                            claimID,
+                            is3d
+                    );
+                    claim.setExpirationDate(expirationDate);
+                    claim.areExplosivesAllowed = explosivesAllowed;
+                    claim.areWitherExplosionsAllowed = witherExplosionsAllowed;
+                    claim.restorePvpToggle(pvpEnabled, pvpToggleSet);
+                    claim.alertsEnabled = alertsEnabled;
+                    claim.setInheritNothingForNewSubdivisions(inheritNothingForNewSubdivisions);
+                    claim.setShapedCorners(parseCornersFromDb(shapeCornersStr));
+                    claim.setAdminSubdivision(adminSubdivision);
+                    claim.restoreDeniedPermissions(deniedIdentifiers);
+                    for (String identifier : pvpTrusted)
+                    {
+                        claim.addPvpTrust(identifier);
+                    }
+                    for (String identifier : pveTrusted)
+                    {
+                        claim.addPveTrust(identifier);
+                    }
+                    for (String neighbor : neighbors)
+                    {
+                        claim.addNeighbor(neighbor);
+                    }
+                    claim.allowAllNeighbors = allowAllNeighbors;
+                    if (modifiedDate > 0) claim.modifiedDate = new Date(modifiedDate);
+
+                    loadedById.put(claimID, claim);
+
+                    if (parentId == -1)
+                    {
+                        this.addClaim(claim, false);
+                    }
+                    else
+                    {
+                        subdivisionsToLoad.add(new LoadedSubdivision(claim, parentId));
+                    }
+                }
+                catch (SQLException e)
+                {
+                    logEntry("Unable to load a claim.  Details: " + e.getMessage());
+                    e.printStackTrace();
+                }
+                catch (Exception e)
+                {
+                    logEntry("Unable to load a claim.  Details: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            }
+        }
+
+        // Re-attach subdivisions by parentId first (preserving nested and 3D subdivision trees),
+        // falling back to spatial lookup for legacy rows.
+        for (LoadedSubdivision entry : subdivisionsToLoad)
+        {
+            Claim childClaim = entry.claim;
+            Claim parentClaim = loadedById.get(entry.parentId);
+            if (parentClaim == null || parentClaim == childClaim)
+            {
+                parentClaim = this.getClaimAt(childClaim.getLesserBoundaryCorner(), true, null);
+            }
+
+            if (parentClaim == null)
+            {
+                claimsToRemove.add(childClaim);
+                logEntry("Removing orphaned claim subdivision: " + childClaim.getLesserBoundaryCorner().toString());
+                continue;
+            }
+
+            childClaim.parent = parentClaim;
+            if (!parentClaim.children.contains(childClaim))
+            {
+                parentClaim.children.add(childClaim);
+            }
+            childClaim.inDataStore = true;
+            if (childClaim.id != null)
+            {
+                this.claimIDMap.put(childClaim.id, childClaim);
+            }
+        }
+
+        return new ClaimLoadResult(claimsToRemove, maxObservedId);
+    }
+
+    private static final class LoadedSubdivision
+    {
+        final Claim claim;
+        final long parentId;
+
+        LoadedSubdivision(Claim claim, long parentId)
+        {
+            this.claim = claim;
+            this.parentId = parentId;
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Claim persistence (Folia-safe async ordered writer with transactions)
+    // -------------------------------------------------------------------------
+
+    @Override
+    synchronized void writeClaimToStorage(Claim claim)
+    {
+        if (claim == null || claim.id == null) return;
+
+        // Snapshot mutable Claim state on the calling thread (e.g. Folia region thread), then
+        // execute JDBC I/O asynchronously so the tick thread never stalls.
+        ClaimRecord record = this.snapshotClaim(claim);
+        this.pendingClaimWrites.put(record.id, record);
+        this.submitWrite(() -> this.flushClaimWrite(record.id));
+    }
+
+    @Override
+    synchronized public void saveClaims(Collection<Claim> claims)
+    {
+        if (claims == null || claims.isEmpty()) return;
+
+        List<Long> batchIds = new ArrayList<>(claims.size());
+        for (Claim claim : claims)
+        {
+            if (claim == null) continue;
+            this.assignClaimID(claim);
+            ClaimRecord record = this.snapshotClaim(claim);
+            this.pendingClaimWrites.put(record.id, record);
+            batchIds.add(record.id);
+        }
+
+        if (!batchIds.isEmpty())
+        {
+            this.submitWrite(() -> this.flushClaimBatch(batchIds));
+        }
+    }
+
+    private void flushClaimWrite(long claimId)
+    {
+        ClaimRecord record = this.pendingClaimWrites.remove(claimId);
+        if (record == null) return;
+
+        this.persistClaimRecords(Collections.singletonList(record));
+    }
+
+    private void flushClaimBatch(@NotNull List<Long> claimIds)
+    {
+        Map<Long, ClaimRecord> toWrite = new LinkedHashMap<>();
+        for (Long claimId : claimIds)
+        {
+            ClaimRecord record = this.pendingClaimWrites.remove(claimId);
+            if (record != null)
+            {
+                toWrite.put(claimId, record);
+            }
+        }
+        if (!toWrite.isEmpty())
+        {
+            this.persistClaimRecords(toWrite.values());
+        }
+    }
+
+    private void persistClaimRecords(@NotNull Collection<ClaimRecord> records)
+    {
+        try
+        {
+            this.connectionPool.withTransaction(connection -> {
+                try (PreparedStatement deleteStmt = connection.prepareStatement(SQL_DELETE_CLAIM);
+                     PreparedStatement insertStmt = connection.prepareStatement(SQL_INSERT_CLAIM))
+                {
+                    for (ClaimRecord record : records)
+                    {
+                        deleteStmt.setLong(1, record.id);
+                        deleteStmt.addBatch();
+
+                        bindClaimInsert(insertStmt, record);
+                        insertStmt.addBatch();
+                    }
+                    deleteStmt.executeBatch();
+                    insertStmt.executeBatch();
+                }
+            });
+        }
+        catch (SQLException e)
+        {
+            logEntry("Unable to save claim batch (" + records.size() + " claim(s)).  Details:");
+            logEntry(String.valueOf(e.getMessage()));
+        }
+    }
+
+    private static void bindClaimInsert(@NotNull PreparedStatement insertStmt, @NotNull ClaimRecord record)
+            throws SQLException
+    {
+        insertStmt.setLong(1, record.id);
+        insertStmt.setString(2, record.owner);
+        insertStmt.setString(3, record.lesserCorner);
+        insertStmt.setString(4, record.greaterCorner);
+        insertStmt.setString(5, record.builders);
+        insertStmt.setString(6, record.containers);
+        insertStmt.setString(7, record.accessors);
+        insertStmt.setString(8, record.managers);
+        insertStmt.setString(9, record.denied);
+        insertStmt.setBoolean(10, record.inheritNothing);
+        insertStmt.setBoolean(11, record.inheritNothingForNewSubdivisions);
+        insertStmt.setLong(12, record.parentId);
+        insertStmt.setLong(13, record.expirationDate);
+        insertStmt.setBoolean(14, record.explosivesAllowed);
+        insertStmt.setBoolean(15, record.witherExplosionsAllowed);
+        insertStmt.setBoolean(16, record.is3d);
+        insertStmt.setString(17, record.shapeCorners);
+        insertStmt.setLong(18, record.modifiedDate);
+        insertStmt.setBoolean(19, record.pvpEnabled);
+        insertStmt.setBoolean(20, record.alertsEnabled);
+        insertStmt.setBoolean(21, record.adminSubdivision);
+        insertStmt.setString(22, record.pvpTrusted);
+        insertStmt.setString(23, record.pveTrusted);
+        insertStmt.setBoolean(24, record.pvpToggleSet);
+        insertStmt.setString(25, record.neighbors);
+        insertStmt.setBoolean(26, record.allowAllNeighbors);
+    }
+
+    private @NotNull ClaimRecord snapshotClaim(@NotNull Claim claim)
     {
         String lesserCornerString = this.locationToString(claim.getLesserBoundaryCorner());
         String greaterCornerString = this.locationToString(claim.getGreaterBoundaryCorner());
-        String owner = "";
-        if (claim.ownerID != null) owner = claim.ownerID.toString();
+        String owner = claim.ownerID != null ? claim.ownerID.toString() : "";
 
         ArrayList<String> builders = new ArrayList<>();
         ArrayList<String> containers = new ArrayList<>();
         ArrayList<String> accessors = new ArrayList<>();
         ArrayList<String> managers = new ArrayList<>();
-
         claim.getPermissions(builders, containers, accessors, managers);
 
-        String buildersString = this.storageStringBuilder(builders);
-        String containersString = this.storageStringBuilder(containers);
-        String accessorsString = this.storageStringBuilder(accessors);
-        String managersString = this.storageStringBuilder(managers);
+        String buildersString = storageStringBuilder(builders);
+        String containersString = storageStringBuilder(containers);
+        String accessorsString = storageStringBuilder(accessors);
+        String managersString = storageStringBuilder(managers);
         // Revoked inherited trust is stored as a deny entry, not as missing trust, so it has to be
         // written alongside the grant lists or a reload hands that trust back.
-        String deniedString = this.storageStringBuilder(
-                new ArrayList<>(claim.getTrustSnapshot().deniedIdentifiers())
-        );
-        boolean inheritNothing = claim.getSubclaimRestrictions();
-        boolean inheritNothingForNewSubdivisions = claim.getInheritNothingForNewSubdivisions();
-        long parentId = claim.parent == null ? -1 : claim.parent.id;
-        long expirationDate = claim.getExpirationDate();
-        boolean explosivesAllowed = claim.areExplosivesAllowed;
-        boolean witherExplosionsAllowed = claim.areWitherExplosionsAllowed;
-        boolean is3d = claim.is3D();
-        boolean pvpEnabled = claim.pvpEnabled;
-        String shapecorners = serializeCornersForDb(claim);
+        String deniedString = storageStringBuilder(new ArrayList<>(claim.getTrustSnapshot().deniedIdentifiers()));
+        String pvpTrustedString = storageStringBuilder(new ArrayList<>(claim.getPvpTrustedIdentifiers()));
+        String pveTrustedString = storageStringBuilder(new ArrayList<>(claim.getPveTrustedIdentifiers()));
+        String neighborsString = storageStringBuilder(claim.getManualNeighbors());
+
+        long parentId = (claim.parent == null || claim.parent.id == null) ? -1L : claim.parent.id;
         long modifiedDate = claim.modifiedDate != null ? claim.modifiedDate.getTime() : System.currentTimeMillis();
 
-        try (PreparedStatement insertStmt = this.databaseConnection.prepareStatement(SQL_INSERT_CLAIM))
-        {
-
-            insertStmt.setLong(1, claim.id);
-            insertStmt.setString(2, owner);
-            insertStmt.setString(3, lesserCornerString);
-            insertStmt.setString(4, greaterCornerString);
-            insertStmt.setString(5, buildersString);
-            insertStmt.setString(6, containersString);
-            insertStmt.setString(7, accessorsString);
-            insertStmt.setString(8, managersString);
-            insertStmt.setString(9, deniedString);
-            insertStmt.setBoolean(10, inheritNothing);
-            insertStmt.setBoolean(11, inheritNothingForNewSubdivisions);
-            insertStmt.setLong(12, parentId);
-            insertStmt.setLong(13, expirationDate);
-            insertStmt.setBoolean(14, explosivesAllowed);
-            insertStmt.setBoolean(15, witherExplosionsAllowed);
-            insertStmt.setBoolean(16, is3d);
-            insertStmt.setString(17, shapecorners);
-            insertStmt.setLong(18, modifiedDate);
-            insertStmt.setBoolean(19, pvpEnabled);
-            insertStmt.setBoolean(20, claim.alertsEnabled);
-            insertStmt.setBoolean(21, claim.isAdminSubdivision());
-            insertStmt.setString(22, this.storageStringBuilder(new ArrayList<>(claim.getPvpTrustedIdentifiers())));
-            insertStmt.setString(23, this.storageStringBuilder(new ArrayList<>(claim.getPveTrustedIdentifiers())));
-            insertStmt.setBoolean(24, claim.pvpToggleSet);
-            insertStmt.executeUpdate();
-        }
-        catch (SQLException e)
-        {
-            GriefPrevention.AddLogEntry("Unable to save data for claim at " + this.locationToString(claim.lesserBoundaryCorner) + ".  Details:");
-            GriefPrevention.AddLogEntry(e.getMessage());
-        }
+        return new ClaimRecord(
+                claim.id,
+                owner,
+                lesserCornerString,
+                greaterCornerString,
+                buildersString,
+                containersString,
+                accessorsString,
+                managersString,
+                deniedString,
+                claim.getSubclaimRestrictions(),
+                claim.getInheritNothingForNewSubdivisions(),
+                parentId,
+                claim.getExpirationDate(),
+                claim.areExplosivesAllowed,
+                claim.areWitherExplosionsAllowed,
+                claim.is3D(),
+                serializeCornersForDb(claim),
+                modifiedDate,
+                claim.pvpEnabled,
+                claim.alertsEnabled,
+                claim.isAdminSubdivision(),
+                pvpTrustedString,
+                pveTrustedString,
+                claim.pvpToggleSet,
+                neighborsString,
+                claim.allowAllNeighbors
+        );
     }
 
-    //deletes a claim from the database
     @Override
     synchronized void deleteClaimFromSecondaryStorage(Claim claim)
     {
-        boolean debugEnabled = GriefPrevention.instance.config_logs_debugEnabled;
-        
-        try (PreparedStatement deleteStmnt = this.databaseConnection.prepareStatement(SQL_DELETE_CLAIM))
+        if (claim == null || claim.id == null) return;
+
+        final long claimId = claim.id;
+        final String claimType = claim.parent != null ? "subdivision" : "claim";
+        final boolean debugEnabled = GriefPrevention.instance != null && GriefPrevention.instance.config_logs_debugEnabled;
+
+        // Drop any queued write for this claim so it cannot recreate a deleted row.
+        this.pendingClaimWrites.remove(claimId);
+
+        this.submitWrite(() -> this.deleteClaimNow(claimId, claimType, debugEnabled));
+    }
+
+    private void deleteClaimNow(long claimId, @NotNull String claimType, boolean debugEnabled)
+    {
+        try
         {
-            deleteStmnt.setLong(1, claim.id);
-            int rowsAffected = deleteStmnt.executeUpdate();
-            
-            if (debugEnabled) {
-                String claimType = claim.parent != null ? "subdivision" : "claim";
-                GriefPrevention.AddLogEntry("[DEBUG] Database: Deleted " + claimType + " " + claim.id 
-                    + " from database (rows affected: " + rowsAffected + ")", CustomLogEntryTypes.Debug, true);
+            int rowsAffected = this.connectionPool.withConnection(connection -> {
+                try (PreparedStatement deleteStmt = connection.prepareStatement(SQL_DELETE_CLAIM))
+                {
+                    deleteStmt.setLong(1, claimId);
+                    return deleteStmt.executeUpdate();
+                }
+            });
+
+            if (debugEnabled)
+            {
+                GriefPrevention.AddLogEntry(
+                        "[DEBUG] Database: Deleted " + claimType + " " + claimId
+                                + " from database (rows affected: " + rowsAffected + ")",
+                        CustomLogEntryTypes.Debug,
+                        true
+                );
             }
         }
         catch (SQLException e)
         {
-            GriefPrevention.AddLogEntry("Unable to delete data for claim " + claim.id + ".  Details:");
-            GriefPrevention.AddLogEntry(e.getMessage());
+            logEntry("Unable to delete data for claim " + claimId + ".  Details:");
+            logEntry(String.valueOf(e.getMessage()));
             e.printStackTrace();
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Player data persistence (Folia-safe preload + pooled reads + ordered async writes)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Preloads a player's persisted claim blocks into memory from an async thread (such as
+     * {@code AsyncPlayerPreLoginEvent}) so Folia region threads never stall on database reads when
+     * the player joins.
+     */
+    void preloadPlayerData(@NotNull UUID playerID)
+    {
+        PlayerData playerData = this.getPlayerData(playerID);
+        if (!playerData.isStorageLoaded())
+        {
+            playerData.getAccruedClaimBlocks();
         }
     }
 
@@ -609,82 +925,171 @@ public class DatabaseDataStore extends DataStore
         PlayerData playerData = new PlayerData();
         playerData.playerID = playerID;
 
-        try (PreparedStatement selectStmnt = this.databaseConnection.prepareStatement(SQL_SELECT_PLAYER_DATA))
+        if (playerID == null)
         {
-            selectStmnt.setString(1, playerID.toString());
-            ResultSet results = selectStmnt.executeQuery();
+            return playerData;
+        }
 
-            //if data for this player exists, use it
-            if (results.next())
-            {
-                playerData.setAccruedClaimBlocks(results.getInt("accruedblocks"));
-                playerData.setBonusClaimBlocks(results.getInt("bonusblocks"));
-            }
+        // If an async write for this player is still queued, serve that latest snapshot directly
+        // so a rapid quit-and-rejoin never observes stale database values.
+        PlayerRecord pending = this.pendingPlayerWrites.get(playerID);
+        if (pending != null)
+        {
+            playerData.setAccruedClaimBlocks(pending.accruedBlocks);
+            playerData.setBonusClaimBlocks(pending.bonusBlocks);
+            playerData.glowEnabled = pending.glowEnabled;
+            return playerData;
+        }
+
+        try
+        {
+            this.connectionPool.withConnection(connection -> {
+                try (PreparedStatement selectStmt = connection.prepareStatement(SQL_SELECT_PLAYER_DATA))
+                {
+                    selectStmt.setString(1, playerID.toString());
+                    try (ResultSet results = selectStmt.executeQuery())
+                    {
+                        if (results.next())
+                        {
+                            playerData.setAccruedClaimBlocks(results.getInt("accruedblocks"));
+                            playerData.setBonusClaimBlocks(results.getInt("bonusblocks"));
+                            playerData.glowEnabled = readOptionalBoolean(results, "glowenabled", true);
+                        }
+                    }
+                }
+                return null;
+            });
         }
         catch (SQLException e)
         {
-            // Flag this PlayerData as having failed to load. Callers must NOT
-            // treat a failed read as "this player has no saved data" — that
-            // would let a transient connection failure (e.g. wait_timeout,
-            // EOFException) silently overwrite a player's real claim blocks
-            // with defaults on logout. See upstream issues #2589 / #666.
+            // Flag this PlayerData as having failed to load. Callers must NOT treat a failed read
+            // as "this player has no saved data" — that would let a transient connection failure
+            // silently overwrite a player's real claim blocks with defaults on logout (#2589 / #666).
             playerData.loadFailedFromStorage = true;
             StringWriter errors = new StringWriter();
             e.printStackTrace(new PrintWriter(errors));
-            GriefPrevention.AddLogEntry(playerID + " " + errors, CustomLogEntryTypes.Exception);
-            GriefPrevention.AddLogEntry(
-                    "Failed to load player data for " + playerID + " from the database. Saves for this session will be skipped to protect existing data.",
-                    CustomLogEntryTypes.Exception, false);
+            logException(playerID + " " + errors);
+            logException(
+                    "Failed to load player data for " + playerID
+                            + " from the database. Saves for this session will be skipped to protect existing data."
+            );
         }
 
         return playerData;
     }
 
-    //saves changes to player data.  MUST be called after you're done making changes, otherwise a reload will lose them
     @Override
-    public void overrideSavePlayerData(UUID playerID, PlayerData playerData)
+    public void savePlayerData(UUID playerID, PlayerData playerData)
     {
-        //never save data for the "administrative" account.  an empty string for player name indicates administrative account
-        if (playerID == null) return;
+        if (playerID == null || playerData == null) return;
 
-        // Refuse to save a PlayerData that failed to load. Otherwise we would
-        // be writing default zeros over the player's real accrued/bonus blocks.
-        if (playerData != null && playerData.loadFailedFromStorage)
+        if (playerData.loadFailedFromStorage)
         {
-            GriefPrevention.AddLogEntry(
-                    "Refusing to save PlayerData for " + playerID + " because the most recent storage read failed. The on-disk record is being preserved.",
-                    CustomLogEntryTypes.Exception, false);
+            logException(
+                    "Refusing to save PlayerData for " + playerID
+                            + " because the most recent storage read failed. The stored record is being preserved."
+            );
             return;
         }
 
-        this.savePlayerData(playerID.toString(), playerData);
+        // If already loaded, capture an immutable snapshot on the calling thread and coalesce onto
+        // the ordered writer thread instead of spawning an unbounded SavePlayerDataThread.
+        if (playerData.isStorageLoaded())
+        {
+            PlayerRecord record = snapshotPlayer(playerID, playerData);
+            this.pendingPlayerWrites.put(playerID, record);
+            this.submitWrite(() -> {
+                this.flushPlayerWrite(playerID);
+                this.saveIgnoreList(playerID, playerData);
+            });
+        }
+        else
+        {
+            // Not yet loaded: load and save asynchronously off the Folia region thread.
+            this.submitWrite(() -> {
+                playerData.getAccruedClaimBlocks();
+                if (playerData.loadFailedFromStorage) return;
+                PlayerRecord record = snapshotPlayer(playerID, playerData);
+                this.pendingPlayerWrites.remove(playerID);
+                this.persistPlayerRecord(record);
+                this.saveIgnoreList(playerID, playerData);
+            });
+        }
     }
 
-    private void savePlayerData(String playerID, PlayerData playerData)
+    // Synchronous player save path (called by savePlayerDataSync on shutdown and during migration).
+    @Override
+    public void overrideSavePlayerData(UUID playerID, PlayerData playerData)
     {
-        try (PreparedStatement deleteStmnt = this.databaseConnection.prepareStatement(SQL_DELETE_PLAYER_DATA);
-             PreparedStatement insertStmnt = this.databaseConnection.prepareStatement(SQL_INSERT_PLAYER_DATA))
+        if (playerID == null || playerData == null) return;
+
+        if (playerData.loadFailedFromStorage)
         {
-            OfflinePlayer player = Bukkit.getOfflinePlayer(UUID.fromString(playerID));
+            logException(
+                    "Refusing to save PlayerData for " + playerID
+                            + " because the most recent storage read failed. The stored record is being preserved."
+            );
+            return;
+        }
 
-            SimpleDateFormat sqlFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            String dateString = sqlFormat.format(new Date(player.getLastPlayed()));
-            deleteStmnt.setString(1, playerID);
-            deleteStmnt.executeUpdate();
+        PlayerRecord record = snapshotPlayer(playerID, playerData);
+        this.pendingPlayerWrites.remove(playerID);
+        this.persistPlayerRecord(record);
+    }
 
-            insertStmnt.setString(1, playerID);
-            insertStmnt.setString(2, dateString);
-            insertStmnt.setInt(3, playerData.getAccruedClaimBlocks());
-            insertStmnt.setInt(4, playerData.getBonusClaimBlocks());
-            insertStmnt.executeUpdate();
+    private void flushPlayerWrite(@NotNull UUID playerID)
+    {
+        PlayerRecord record = this.pendingPlayerWrites.remove(playerID);
+        if (record == null) return;
+        this.persistPlayerRecord(record);
+    }
+
+    private void persistPlayerRecord(@NotNull PlayerRecord record)
+    {
+        String dateString = formatSqlDateTime(record.lastLoginMillis);
+        String playerIdText = record.playerId.toString();
+
+        try
+        {
+            this.connectionPool.withTransaction(connection -> {
+                try (PreparedStatement deleteStmt = connection.prepareStatement(SQL_DELETE_PLAYER_DATA);
+                     PreparedStatement insertStmt = connection.prepareStatement(SQL_INSERT_PLAYER_DATA))
+                {
+                    deleteStmt.setString(1, playerIdText);
+                    deleteStmt.executeUpdate();
+
+                    insertStmt.setString(1, playerIdText);
+                    insertStmt.setString(2, dateString);
+                    insertStmt.setInt(3, record.accruedBlocks);
+                    insertStmt.setInt(4, record.bonusBlocks);
+                    insertStmt.setBoolean(5, record.glowEnabled);
+                    insertStmt.executeUpdate();
+                }
+            });
         }
         catch (SQLException e)
         {
             StringWriter errors = new StringWriter();
             e.printStackTrace(new PrintWriter(errors));
-            GriefPrevention.AddLogEntry(playerID + " " + errors, CustomLogEntryTypes.Exception);
+            logException(playerIdText + " " + errors);
         }
     }
+
+    private static @NotNull PlayerRecord snapshotPlayer(@NotNull UUID playerID, @NotNull PlayerData playerData)
+    {
+        long lastLogin = playerData.lastSpawn > 0 ? playerData.lastSpawn : System.currentTimeMillis();
+        return new PlayerRecord(
+                playerID,
+                lastLogin,
+                playerData.getAccruedClaimBlocks(),
+                playerData.getBonusClaimBlocks(),
+                playerData.glowEnabled
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // Next claim ID, group bonus blocks, schema version
+    // -------------------------------------------------------------------------
 
     @Override
     synchronized void incrementNextClaimID()
@@ -692,113 +1097,104 @@ public class DatabaseDataStore extends DataStore
         this.setNextClaimID(this.nextClaimID + 1);
     }
 
-    //sets the next claim ID.  used by incrementNextClaimID() above, and also while migrating data from a flat file data store
     synchronized void setNextClaimID(long nextID)
     {
         this.nextClaimID = nextID;
+        this.pendingNextClaimId.set(nextID);
+        this.submitWrite(this::flushNextClaimId);
+    }
 
-        try (PreparedStatement deleteStmnt = this.databaseConnection.prepareStatement(SQL_DELETE_NEXT_CLAIM_ID);
-             PreparedStatement insertStmnt = this.databaseConnection.prepareStatement(SQL_SET_NEXT_CLAIM_ID))
+    private void flushNextClaimId()
+    {
+        Long nextID = this.pendingNextClaimId.getAndSet(null);
+        if (nextID == null) return;
+
+        try
         {
-            deleteStmnt.execute();
-            insertStmnt.setLong(1, nextID);
-            insertStmnt.executeUpdate();
+            this.connectionPool.withTransaction(connection -> {
+                try (PreparedStatement deleteStmt = connection.prepareStatement(SQL_DELETE_NEXT_CLAIM_ID);
+                     PreparedStatement insertStmt = connection.prepareStatement(SQL_SET_NEXT_CLAIM_ID))
+                {
+                    deleteStmt.executeUpdate();
+                    insertStmt.setLong(1, nextID);
+                    insertStmt.executeUpdate();
+                }
+            });
         }
         catch (SQLException e)
         {
-            GriefPrevention.AddLogEntry("Unable to set next claim ID to " + nextID + ".  Details:");
-            GriefPrevention.AddLogEntry(e.getMessage());
+            logEntry("Unable to set next claim ID to " + nextID + ".  Details:");
+            logEntry(String.valueOf(e.getMessage()));
         }
     }
 
-    //updates the database with a group's bonus blocks
     @Override
     synchronized void saveGroupBonusBlocks(String groupName, int currentValue)
     {
-        //group bonus blocks are stored in the player data table, with player name = $groupName
-        try (PreparedStatement deleteStmnt = this.databaseConnection.prepareStatement(SQL_DELETE_GROUP_DATA);
-             PreparedStatement insertStmnt = this.databaseConnection.prepareStatement(SQL_INSERT_PLAYER_DATA))
-        {
-            SimpleDateFormat sqlFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            String dateString = sqlFormat.format(new Date());
-            deleteStmnt.setString(1, '$' + groupName);
-            deleteStmnt.executeUpdate();
+        if (groupName == null) return;
 
-            insertStmnt.setString(1, '$' + groupName);
-            insertStmnt.setString(2, dateString);
-            insertStmnt.setInt(3, 0);
-            insertStmnt.setInt(4, currentValue);
-            insertStmnt.executeUpdate();
+        this.pendingGroupWrites.put(groupName, currentValue);
+        this.submitWrite(() -> this.flushGroupWrite(groupName));
+    }
+
+    private void flushGroupWrite(@NotNull String groupName)
+    {
+        Integer currentValue = this.pendingGroupWrites.remove(groupName);
+        if (currentValue == null) return;
+
+        String dateString = formatSqlDateTime(System.currentTimeMillis());
+        try
+        {
+            this.connectionPool.withTransaction(connection -> {
+                try (PreparedStatement deleteStmt = connection.prepareStatement(SQL_DELETE_GROUP_DATA);
+                     PreparedStatement insertStmt = connection.prepareStatement(SQL_INSERT_PLAYER_DATA))
+                {
+                    deleteStmt.setString(1, '$' + groupName);
+                    deleteStmt.executeUpdate();
+
+                    insertStmt.setString(1, '$' + groupName);
+                    insertStmt.setString(2, dateString);
+                    insertStmt.setInt(3, 0);
+                    insertStmt.setInt(4, currentValue);
+                    insertStmt.setBoolean(5, true);
+                    insertStmt.executeUpdate();
+                }
+            });
         }
         catch (SQLException e)
         {
-            GriefPrevention.AddLogEntry("Unable to save data for group " + groupName + ".  Details:");
-            GriefPrevention.AddLogEntry(e.getMessage());
-        }
-    }
-
-    @Override
-    synchronized void close()
-    {
-        if (this.databaseConnection != null)
-        {
-            try
-            {
-                if (!this.databaseConnection.isClosed())
-                {
-                    this.databaseConnection.close();
-                }
-            }
-            catch (SQLException e) {}
-        }
-
-        this.databaseConnection = null;
-    }
-
-    private synchronized void refreshDataConnection() throws SQLException
-    {
-        if (this.databaseConnection == null || !this.databaseConnection.isValid(3))
-        {
-            if (this.databaseConnection != null && !this.databaseConnection.isClosed())
-            {
-                this.databaseConnection.close();
-            }
-
-            //set username/pass properties
-            Properties connectionProps = new Properties();
-            connectionProps.put("user", this.userName);
-            connectionProps.put("password", this.password);
-            connectionProps.put("autoReconnect", "true");
-            connectionProps.put("maxReconnects", String.valueOf(Integer.MAX_VALUE));
-
-            //establish connection
-            this.databaseConnection = DriverManager.getConnection(this.databaseUrl, connectionProps);
+            logEntry("Unable to save data for group " + groupName + ".  Details:");
+            logEntry(String.valueOf(e.getMessage()));
         }
     }
 
     @Override
     protected int getSchemaVersionFromStorage()
     {
-        try (PreparedStatement selectStmnt = this.databaseConnection.prepareStatement(SQL_SELECT_SCHEMA_VERSION))
+        try
         {
-            ResultSet results = selectStmnt.executeQuery();
-
-            //if there's nothing yet, assume 0 and add it
-            if (!results.next())
+            Integer stored = this.connectionPool.withConnection(connection -> {
+                try (PreparedStatement selectStmt = connection.prepareStatement(SQL_SELECT_SCHEMA_VERSION);
+                     ResultSet results = selectStmt.executeQuery())
+                {
+                    if (!results.next())
+                    {
+                        return null;
+                    }
+                    return results.getInt("version");
+                }
+            });
+            if (stored == null)
             {
                 this.setSchemaVersion(0);
                 return 0;
             }
-            //otherwise return the value that's in the table
-            else
-            {
-                return results.getInt("version");
-            }
+            return stored;
         }
         catch (SQLException e)
         {
-            GriefPrevention.AddLogEntry("Unable to retrieve schema version from database.  Details:");
-            GriefPrevention.AddLogEntry(e.getMessage());
+            logEntry("Unable to retrieve schema version from database.  Details:");
+            logEntry(String.valueOf(e.getMessage()));
             e.printStackTrace();
             return 0;
         }
@@ -807,22 +1203,122 @@ public class DatabaseDataStore extends DataStore
     @Override
     protected void updateSchemaVersionInStorage(int versionToSet)
     {
-        try (PreparedStatement deleteStmnt = this.databaseConnection.prepareStatement(SQL_DELETE_SCHEMA_VERSION);
-             PreparedStatement insertStmnt = this.databaseConnection.prepareStatement(SQL_INSERT_SCHEMA_VERSION))
+        try
         {
-            deleteStmnt.execute();
-
-            insertStmnt.setInt(1, versionToSet);
-            insertStmnt.executeUpdate();
+            this.connectionPool.withTransaction(connection -> {
+                try (PreparedStatement deleteStmt = connection.prepareStatement(SQL_DELETE_SCHEMA_VERSION);
+                     PreparedStatement insertStmt = connection.prepareStatement(SQL_INSERT_SCHEMA_VERSION))
+                {
+                    deleteStmt.executeUpdate();
+                    insertStmt.setInt(1, versionToSet);
+                    insertStmt.executeUpdate();
+                }
+            });
         }
         catch (SQLException e)
         {
-            GriefPrevention.AddLogEntry("Unable to set next schema version to " + versionToSet + ".  Details:");
-            GriefPrevention.AddLogEntry(e.getMessage());
+            logEntry("Unable to set schema version to " + versionToSet + ".  Details:");
+            logEntry(String.valueOf(e.getMessage()));
         }
     }
 
-    private String serializeCornersForDb(Claim claim)
+    // -------------------------------------------------------------------------
+    // Async queue & shutdown lifecycle
+    // -------------------------------------------------------------------------
+
+    private void submitWrite(@NotNull Runnable task)
+    {
+        try
+        {
+            this.writeExecutor.execute(task);
+        }
+        catch (RejectedExecutionException e)
+        {
+            // Writer is shut down (server stopping) — execute synchronously so nothing is lost.
+            task.run();
+        }
+    }
+
+    /**
+     * Waits for all queued background writes to finish and flushes any remaining coalesced records.
+     * Used after flat-file migration and during shutdown.
+     */
+    void flushPendingWrites()
+    {
+        if (!this.writeExecutor.isShutdown())
+        {
+            try
+            {
+                Future<?> barrier = this.writeExecutor.submit(() -> { });
+                barrier.get(30, TimeUnit.SECONDS);
+            }
+            catch (RejectedExecutionException ignored)
+            {
+                // Executor shut down concurrently — drain directly below.
+            }
+            catch (Exception e)
+            {
+                if (e instanceof InterruptedException)
+                {
+                    Thread.currentThread().interrupt();
+                }
+                logEntry("Timed out or interrupted while flushing database write queue: " + e.getMessage());
+            }
+        }
+
+        this.drainCoalescedMaps();
+    }
+
+    private void drainCoalescedMaps()
+    {
+        List<Long> remainingClaims = new ArrayList<>(this.pendingClaimWrites.keySet());
+        if (!remainingClaims.isEmpty())
+        {
+            this.flushClaimBatch(remainingClaims);
+        }
+        for (UUID playerId : new ArrayList<>(this.pendingPlayerWrites.keySet()))
+        {
+            this.flushPlayerWrite(playerId);
+        }
+        for (String group : new ArrayList<>(this.pendingGroupWrites.keySet()))
+        {
+            this.flushGroupWrite(group);
+        }
+        this.flushNextClaimId();
+    }
+
+    @Override
+    synchronized void close()
+    {
+        this.writeExecutor.shutdown();
+        try
+        {
+            if (!this.writeExecutor.awaitTermination(30, TimeUnit.SECONDS))
+            {
+                this.writeExecutor.shutdownNow();
+            }
+        }
+        catch (InterruptedException e)
+        {
+            this.writeExecutor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+
+        this.drainCoalescedMaps();
+        this.connectionPool.close();
+    }
+
+    // -------------------------------------------------------------------------
+    // Helpers
+    // -------------------------------------------------------------------------
+
+    private static String formatSqlDateTime(long epochMillis)
+    {
+        SimpleDateFormat sqlFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ROOT);
+        return sqlFormat.format(new Date(epochMillis));
+    }
+
+    private static String serializeCornersForDb(@NotNull Claim claim)
     {
         List<OrthogonalPoint2i> corners = claim.getShapedCorners();
         if (corners == null || corners.isEmpty())
@@ -832,13 +1328,13 @@ public class DatabaseDataStore extends DataStore
         StringBuilder sb = new StringBuilder();
         for (OrthogonalPoint2i corner : corners)
         {
-            if (sb.length() > 0) sb.append(";");
-            sb.append(corner.x()).append(",").append(corner.z());
+            if (sb.length() > 0) sb.append(';');
+            sb.append(corner.x()).append(',').append(corner.z());
         }
         return sb.toString();
     }
 
-    private List<OrthogonalPoint2i> parseCornersFromDb(String serialized)
+    static List<OrthogonalPoint2i> parseCornersFromDb(@Nullable String serialized)
     {
         if (serialized == null || serialized.isEmpty())
         {
@@ -854,57 +1350,117 @@ public class DatabaseDataStore extends DataStore
         return corners;
     }
 
-    /**
-     * Concats an array to a string divided with the ; sign
-     *
-     * @param input Arraylist with strings to concat
-     * @return String with all values from input array
-     */
-    private String storageStringBuilder(ArrayList<String> input)
+    private static String storageStringBuilder(@NotNull Collection<String> input)
     {
-        String output = "";
+        if (input.isEmpty()) return "";
+        StringBuilder output = new StringBuilder();
         for (String string : input)
         {
-            output += string + ";";
+            if (string != null && !string.isEmpty())
+            {
+                output.append(string).append(';');
+            }
         }
-        return output;
+        return output.toString();
     }
 
     /**
-     * Adds a claim data column when the connected database does not already have it.
+     * Adds a column to {@code tableName} when the connected database does not already have it.
      *
-     * <p>Uses JDBC metadata instead of {@code ADD COLUMN IF NOT EXISTS} so the statement stays
-     * portable across MySQL, MariaDB, and SQLite.
-     *
-     * @param statement an open statement on the claim database
-     * @param columnName the column to ensure exists
-     * @param columnDefinition the SQL type to create the column with
+     * <p>Uses catalog-scoped JDBC metadata instead of MariaDB-only {@code ADD COLUMN IF NOT EXISTS}
+     * so the statement stays portable across MySQL 5.7/8.0/8.4, MariaDB, SQLite, and H2, and never
+     * matches identically named tables in sibling databases on the same MySQL server.</p>
      */
-    private void addClaimColumnIfMissing(Statement statement, String columnName, String columnDefinition)
-            throws SQLException
+    private void addColumnIfMissing(
+            @NotNull Connection connection,
+            @NotNull Statement statement,
+            @NotNull String tableName,
+            @NotNull String columnName,
+            @NotNull String columnDefinition) throws SQLException
     {
-        if (this.claimDataColumnExists(columnName)) return;
+        if (columnExists(connection, tableName, columnName)) return;
 
         statement.execute(
-                "ALTER TABLE griefprevention_claimdata ADD COLUMN " + columnName + " " + columnDefinition
+                "ALTER TABLE " + tableName + " ADD COLUMN " + columnName + " " + columnDefinition
         );
     }
 
-    private boolean claimDataColumnExists(String columnName) throws SQLException
+    static boolean columnExists(@NotNull Connection connection, @NotNull String tableName, @NotNull String columnName)
+            throws SQLException
     {
-        DatabaseMetaData metaData = this.databaseConnection.getMetaData();
-        // Identifier casing varies per driver, so check both stored forms before giving up.
-        for (String table : new String[] {"griefprevention_claimdata", "GRIEFPREVENTION_CLAIMDATA"})
+        DatabaseMetaData metaData = connection.getMetaData();
+        String catalog = null;
+        try
         {
-            for (String column : new String[] {columnName, columnName.toUpperCase(Locale.ROOT)})
+            catalog = connection.getCatalog();
+        }
+        catch (SQLException | AbstractMethodError ignored) {}
+
+        String[] tableCandidates = {tableName, tableName.toUpperCase(Locale.ROOT)};
+        String[] columnCandidates = {columnName, columnName.toUpperCase(Locale.ROOT)};
+        for (String table : tableCandidates)
+        {
+            for (String column : columnCandidates)
             {
-                try (ResultSet columns = metaData.getColumns(null, null, table, column))
+                try (ResultSet columns = metaData.getColumns(catalog, null, table, column))
                 {
                     if (columns.next()) return true;
                 }
             }
         }
         return false;
+    }
+
+    private static boolean readOptionalBoolean(@NotNull ResultSet results, @NotNull String column, boolean fallback)
+    {
+        try
+        {
+            Object value = results.getObject(column);
+            if (value == null) return fallback;
+            return results.getBoolean(column);
+        }
+        catch (SQLException e)
+        {
+            return fallback;
+        }
+    }
+
+    private static long readOptionalLong(@NotNull ResultSet results, @NotNull String column, long fallback)
+    {
+        try
+        {
+            Object value = results.getObject(column);
+            if (value == null) return fallback;
+            return results.getLong(column);
+        }
+        catch (SQLException e)
+        {
+            return fallback;
+        }
+    }
+
+    private static @Nullable String readOptionalString(@NotNull ResultSet results, @NotNull String column)
+    {
+        try
+        {
+            return results.getString(column);
+        }
+        catch (SQLException e)
+        {
+            return null;
+        }
+    }
+
+    private static @NotNull List<String> readOptionalList(@NotNull ResultSet results, @NotNull String column)
+    {
+        try
+        {
+            return parseStorageList(results.getString(column));
+        }
+        catch (SQLException e)
+        {
+            return Collections.emptyList();
+        }
     }
 
     /**
@@ -922,4 +1478,19 @@ public class DatabaseDataStore extends DataStore
         return values;
     }
 
+    private static void logEntry(@NotNull String message)
+    {
+        if (GriefPrevention.instance != null)
+        {
+            GriefPrevention.AddLogEntry(message);
+        }
+    }
+
+    private static void logException(@NotNull String message)
+    {
+        if (GriefPrevention.instance != null)
+        {
+            GriefPrevention.AddLogEntry(message, CustomLogEntryTypes.Exception, false);
+        }
+    }
 }

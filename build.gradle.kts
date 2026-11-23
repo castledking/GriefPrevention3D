@@ -121,6 +121,7 @@ dependencies {
     testImplementation("org.mockito:mockito-junit-jupiter:5.16.0")
     testImplementation("org.mockito:mockito-inline:5.2.0")
     testImplementation("org.jetbrains:annotations:26.0.2")
+    testRuntimeOnly("com.h2database:h2:2.2.224")
 
     gpFlagsCompatCompileClasspath("org.purpurmc.purpur:purpur-api:1.21.11-R0.1-SNAPSHOT")
     gpFlagsCompatCompileClasspath("com.gmail.nossr50.mcMMO:mcMMO:2.1.227") {

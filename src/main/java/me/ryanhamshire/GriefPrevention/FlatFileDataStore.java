@@ -1142,14 +1142,10 @@ public class FlatFileDataStore extends DataStore
         //the claim data folder is renamed at the end of this, so don't leave writes queued against it
         this.flushPendingClaimWrites();
 
-        //migrate claims
+        //migrate claims (including nested subdivisions)
         for (Claim claim : this.claims)
         {
-            databaseStore.addClaim(claim, true);
-            for (Claim child : claim.children)
-            {
-                databaseStore.addClaim(child, true);
-            }
+            migrateClaimTree(databaseStore, claim);
         }
 
         //migrate groups
@@ -1158,24 +1154,27 @@ public class FlatFileDataStore extends DataStore
             databaseStore.saveGroupBonusBlocks(groupEntry.getKey(), groupEntry.getValue());
         }
 
-        //migrate players
+        //migrate players synchronously so we don't spawn a thread per player file
         File playerDataFolder = new File(playerDataFolderPath);
         File[] files = playerDataFolder.listFiles();
-        for (File file : files)
+        if (files != null)
         {
-            if (!file.isFile()) continue;  //avoids folders
-            if (file.isHidden()) continue; //avoid hidden files, which are likely not created by GriefPrevention
+            for (File file : files)
+            {
+                if (!file.isFile()) continue;  //avoids folders
+                if (file.isHidden()) continue; //avoid hidden files, which are likely not created by GriefPrevention
 
-            //all group data files start with a dollar sign.  ignoring those, already handled above
-            if (file.getName().startsWith("$")) continue;
+                //all group data files start with a dollar sign.  ignoring those, already handled above
+                if (file.getName().startsWith("$")) continue;
 
-            //ignore special files
-            if (file.getName().startsWith("_")) continue;
-            if (file.getName().endsWith(".ignore")) continue;
+                //ignore special files
+                if (file.getName().startsWith("_")) continue;
+                if (file.getName().endsWith(".ignore")) continue;
 
-            UUID playerID = UUID.fromString(file.getName());
-            databaseStore.savePlayerData(playerID, this.getPlayerData(playerID));
-            this.clearCachedPlayerData(playerID);
+                UUID playerID = UUID.fromString(file.getName());
+                databaseStore.savePlayerDataSync(playerID, this.getPlayerData(playerID));
+                this.clearCachedPlayerData(playerID);
+            }
         }
 
         //migrate next claim ID
@@ -1183,6 +1182,9 @@ public class FlatFileDataStore extends DataStore
         {
             databaseStore.setNextClaimID(this.nextClaimID);
         }
+
+        //ensure every migrated record is committed before backing up the flat-file folders
+        databaseStore.flushPendingWrites();
 
         //rename player and claim data folders so the migration won't run again
         int i = 0;
@@ -1209,6 +1211,15 @@ public class FlatFileDataStore extends DataStore
         GriefPrevention.AddLogEntry("Backed your file system data up to " + claimsBackupFolder.getName() + " and " + playersBackupFolder.getName() + ".");
         GriefPrevention.AddLogEntry("If your migration encountered any problems, you can restore those data with a quick copy/paste.");
         GriefPrevention.AddLogEntry("When you're satisfied that all your data have been safely migrated, consider deleting those folders.");
+    }
+
+    private void migrateClaimTree(DatabaseDataStore databaseStore, Claim claim)
+    {
+        databaseStore.addClaim(claim, true);
+        for (Claim child : claim.children)
+        {
+            migrateClaimTree(databaseStore, child);
+        }
     }
 
     @Override
