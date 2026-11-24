@@ -24,6 +24,7 @@ val adapterTag = extra["fabricAdapterTag"] as String
 val minecraftRange = extra["fabricMinecraftRange"] as String
 val javaVersion = extra["fabricJavaVersion"] as Int
 val commonDir = rootProject.file("platforms/fabric-common")
+val fabricLoaderDir = rootProject.file("platforms/fabric-loader")
 
 group = rootProject.group
 version = rootProject.version
@@ -58,6 +59,7 @@ val generateAdapterIndex = tasks.register("generateFabricAdapterIndex") {
 the<SourceSetContainer>().apply {
     named("main") {
         java.srcDir(commonDir.resolve("src/main/java"))
+        java.srcDir(fabricLoaderDir.resolve("src/main/java"))
         resources.srcDir(commonDir.resolve("src/main/resources"))
         resources.srcDir(generateAdapterIndex)
     }

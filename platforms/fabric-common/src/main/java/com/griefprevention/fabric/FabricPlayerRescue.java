@@ -5,8 +5,6 @@ import com.griefprevention.claims.ClaimSnapshot;
 import com.griefprevention.claims.ClaimTrustLevel;
 import com.griefprevention.fabric.FabricDenialFeedback.TextMode;
 import com.griefprevention.messages.MessageKey;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -57,9 +55,10 @@ final class FabricPlayerRescue
 
     void register()
     {
-        ServerTickEvents.END_SERVER_TICK.register(this::rescueDue);
-        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) ->
-                this.pending.remove(handler.getPlayer().getUUID()));
+        ModPlatform platform = ModPlatform.current();
+        platform.onEndServerTick(this::rescueDue);
+        platform.onPlayerDisconnect((player, server) ->
+                this.pending.remove(player.getUUID()));
     }
 
     /** {@code /trapped} and {@code /claim trapped}. */

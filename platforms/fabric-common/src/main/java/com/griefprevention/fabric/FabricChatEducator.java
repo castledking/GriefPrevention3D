@@ -1,9 +1,7 @@
 package com.griefprevention.fabric;
 
 import com.griefprevention.messages.MessageKey;
-import net.fabricmc.fabric.api.message.v1.ServerMessageEvents;
 import net.minecraft.ChatFormatting;
-import net.minecraft.network.chat.PlayerChatMessage;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.NotNull;
@@ -40,18 +38,7 @@ final class FabricChatEducator
 
     void register()
     {
-        ServerMessageEvents.CHAT_MESSAGE.register(this::onChatMessage);
-    }
-
-    private void onChatMessage(@NotNull PlayerChatMessage message, @NotNull ServerPlayer sender,
-            net.minecraft.network.chat.ChatType.Bound params)
-    {
-        String raw = message.signedContent();
-        if (raw == null || raw.isEmpty())
-        {
-            raw = message.decoratedContent().getString();
-        }
-        onChat(sender, raw == null ? "" : raw);
+        ModPlatform.current().onChatMessage(this::onChat);
     }
 
     void onChat(@NotNull ServerPlayer player, @NotNull String rawMessage)

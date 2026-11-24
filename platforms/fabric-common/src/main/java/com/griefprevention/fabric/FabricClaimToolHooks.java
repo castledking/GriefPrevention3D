@@ -21,10 +21,6 @@ import com.griefprevention.geometry.OrthogonalPoint2i;
 import com.griefprevention.geometry.OrthogonalPolygon;
 import com.griefprevention.fabric.FabricDenialFeedback.TextMode;
 import com.griefprevention.messages.MessageKey;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.event.player.UseBlockCallback;
-import net.fabricmc.fabric.api.event.player.UseItemCallback;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
@@ -107,12 +103,13 @@ final class FabricClaimToolHooks
 
     void register()
     {
-        UseBlockCallback.EVENT.register((player, level, hand, hitResult) ->
+        ModPlatform platform = ModPlatform.current();
+        platform.onUseBlock((player, level, hand, hitResult) ->
                 onUseBlock(player, level, hand, hitResult));
-        UseItemCallback.EVENT.register(this::onUseItem);
-        ServerTickEvents.END_SERVER_TICK.register(this::trackModificationTool);
-        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
-            UUID playerId = handler.getPlayer().getUUID();
+        platform.onUseItem(this::onUseItem);
+        platform.onEndServerTick(this::trackModificationTool);
+        platform.onPlayerDisconnect((player, server) -> {
+            UUID playerId = player.getUUID();
             this.sessions.remove(playerId);
             this.editorSessions.remove(playerId);
             this.modificationToolEquippedAt.remove(playerId);

@@ -13,13 +13,10 @@ import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import com.mojang.brigadier.suggestion.Suggestions;
 import com.mojang.brigadier.suggestion.SuggestionsBuilder;
 import com.mojang.brigadier.tree.CommandNode;
-import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
-import net.fabricmc.fabric.api.event.Event;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.NotNull;
@@ -53,8 +50,6 @@ import java.util.concurrent.CompletableFuture;
 final class FabricCommandRegistrar
 {
     private static final String ARGUMENTS = "args";
-    private static final Identifier AFTER_OTHER_MODS =
-            Identifier.fromNamespaceAndPath(GriefPreventionFabric.MOD_ID, "after_other_mods");
     private static final String CLAIM_ROOT = "claim";
     private static final String ADMIN_ROOT = "aclaim";
     private static final String HELP = "help";
@@ -263,10 +258,7 @@ final class FabricCommandRegistrar
     void register()
     {
         this.commands = buildCommands(loadAliases());
-        // Registering after other mods lets install() see their commands and step aside, instead of
-        // another mod merging its command into a GriefPrevention name such as /create.
-        CommandRegistrationCallback.EVENT.addPhaseOrdering(Event.DEFAULT_PHASE, AFTER_OTHER_MODS);
-        CommandRegistrationCallback.EVENT.register(AFTER_OTHER_MODS, (dispatcher, buildContext, selection) -> {
+        ModPlatform.current().onRegisterCommands(dispatcher -> {
             // A datapack reload builds a new dispatcher, and registration starts over with it.
             this.dispatcher = dispatcher;
             this.registeredLabels.clear();
@@ -770,10 +762,10 @@ final class FabricCommandRegistrar
         }
     }
 
-    /** Tells the sender a Paper command has not been ported to Fabric yet. */
+    /** Tells the sender a Paper command has not been ported to this mod loader yet. */
     static void sendUnavailable(@NotNull FabricCommandSender sender)
     {
-        sender.sendText(TextMode.ERROR, "That command isn't available on Fabric yet.");
+        sender.sendText(TextMode.ERROR, "That command isn't available on " + ModPlatform.currentLoaderName() + " yet.");
     }
 
     private static @NotNull List<String> onlinePlayers(@NotNull FabricCommandSender sender)
@@ -834,7 +826,7 @@ final class FabricCommandRegistrar
         {
             return true;
         }
-        sender.sendText(TextMode.INFO, "GriefPrevention3D Fabric claims: " + this.claims.claimCount()
+        sender.sendText(TextMode.INFO, "GriefPrevention3D " + ModPlatform.currentLoaderName() + " claims: " + this.claims.claimCount()
                 + " loaded from " + this.claims.dataFolder());
         return true;
     }

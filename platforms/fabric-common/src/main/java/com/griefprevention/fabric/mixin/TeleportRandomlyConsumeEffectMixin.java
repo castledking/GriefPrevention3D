@@ -5,6 +5,7 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.consume_effects.TeleportRandomlyConsumeEffect;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -63,6 +64,32 @@ abstract class TeleportRandomlyConsumeEffectMixin
         double fromY = entity.getY();
         double fromZ = entity.getZ();
         if (!original.call(entity, x, y, z, particles, avoid))
+        {
+            return false;
+        }
+        return FabricWorldProtection.mayChorusLand(entity, fromX, fromY, fromZ);
+    }
+
+    @Group(name = "griefPrevention$chorus", min = 1, max = 1)
+    @WrapOperation(
+            method = "apply",
+            at = @At(value = "INVOKE",
+                    target = "Lnet/minecraft/world/entity/LivingEntity;randomTeleport(DDDZLnet/minecraft/world/item/ItemStack;)Z",
+                    remap = false),
+            require = 0)
+    private boolean griefPrevention$keepChorusOutOfClaimsNeoForge(
+            LivingEntity entity,
+            double x,
+            double y,
+            double z,
+            boolean particles,
+            ItemStack stack,
+            Operation<Boolean> original)
+    {
+        double fromX = entity.getX();
+        double fromY = entity.getY();
+        double fromZ = entity.getZ();
+        if (!original.call(entity, x, y, z, particles, stack))
         {
             return false;
         }

@@ -5,12 +5,6 @@ import com.griefprevention.claims.ClaimTrustLevel;
 import com.griefprevention.messages.MessageKey;
 import com.griefprevention.protection.BlockUseKind;
 import com.griefprevention.fabric.FabricWorldProtection;
-import net.fabricmc.fabric.api.event.player.AttackBlockCallback;
-import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
-import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
-import net.fabricmc.fabric.api.event.player.UseBlockCallback;
-import net.fabricmc.fabric.api.event.player.UseEntityCallback;
-import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
@@ -112,27 +106,28 @@ final class FabricProtectionHooks
 
     void register()
     {
-        PlayerBlockBreakEvents.BEFORE.register((level, player, pos, state, blockEntity) ->
+        ModPlatform platform = ModPlatform.current();
+        platform.onBlockBreakBefore((level, player, pos, state, blockEntity) ->
                 canUseClaim(level, player, pos, ClaimTrustLevel.BUILD));
 
-        UseBlockCallback.EVENT.register((player, level, hand, hitResult) ->
+        platform.onUseBlock((player, level, hand, hitResult) ->
                 handleBlockUse(player, level, hand, hitResult));
 
         // Hitting a dragon egg teleports it, which Paper treats as building.
-        AttackBlockCallback.EVENT.register((player, level, hand, pos, direction) ->
+        platform.onAttackBlock((player, level, hand, pos, direction) ->
                 !(level.getBlockState(pos).getBlock() instanceof DragonEggBlock)
                         || canUseClaim(level, player, pos, ClaimTrustLevel.BUILD)
                         ? InteractionResult.PASS
                         : InteractionResult.FAIL);
 
-        UseItemCallback.EVENT.register(this::handleItemUse);
+        platform.onUseItem(this::handleItemUse);
 
-        AttackEntityCallback.EVENT.register((player, level, hand, entity, hitResult) ->
+        platform.onAttackEntity((player, level, hand, entity, hitResult) ->
                 level.isClientSide() || FabricWorldProtection.mayAttack(entity, level, player)
                         ? InteractionResult.PASS
                         : InteractionResult.FAIL);
 
-        UseEntityCallback.EVENT.register((player, level, hand, entity, hitResult) ->
+        platform.onUseEntity((player, level, hand, entity, hitResult) ->
                 handleEntityUse(player, level, hand, entity));
     }
 

@@ -1,12 +1,6 @@
 package com.griefprevention.fabric;
 
 import com.mojang.math.Transformation;
-import net.fabricmc.loader.api.FabricLoader;
-import net.fabricmc.loader.api.MappingResolver;
-import net.fabricmc.loader.api.ModContainer;
-import net.fabricmc.loader.api.Version;
-import net.fabricmc.loader.api.VersionParsingException;
-import net.fabricmc.loader.api.metadata.version.VersionPredicate;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.server.MinecraftServer;
@@ -160,30 +154,26 @@ final class FabricVersionCompat
         /** @return the earlier calls on releases before 1.21.11, otherwise null */
         private static @Nullable Legacy resolve()
         {
-            Version version = FabricLoader.getInstance().getModContainer("minecraft")
-                    .map(ModContainer::getMetadata)
-                    .map(metadata -> metadata.getVersion())
-                    .orElse(null);
-            if (version == null || !before1_21_11(version))
+            ModPlatform platform = ModPlatform.currentOrNull();
+            if (platform == null || !platform.isBefore1_21_11())
             {
                 return null;
             }
 
-            MappingResolver mappings = FabricLoader.getInstance().getMappingResolver();
             MethodHandles.Lookup lookup = MethodHandles.publicLookup();
             try
             {
                 // Player#hasPermissions(int), CommandSourceStack#hasPermission(int), MinecraftServer#isPvpAllowed()
                 MethodHandle player = lookup.findVirtual(Player.class,
-                                mappings.mapMethodName("intermediary", "net.minecraft.class_1657", "method_64475", "(I)Z"),
+                                platform.mapIntermediaryMethod("net.minecraft.class_1657", "method_64475", "(I)Z", "hasPermissions"),
                                 MethodType.methodType(boolean.class, int.class))
                         .asType(MethodType.methodType(boolean.class, Player.class, int.class));
                 MethodHandle source = lookup.findVirtual(CommandSourceStack.class,
-                                mappings.mapMethodName("intermediary", "net.minecraft.class_2168", "method_9259", "(I)Z"),
+                                platform.mapIntermediaryMethod("net.minecraft.class_2168", "method_9259", "(I)Z", "hasPermission"),
                                 MethodType.methodType(boolean.class, int.class))
                         .asType(MethodType.methodType(boolean.class, CommandSourceStack.class, int.class));
                 MethodHandle pvp = lookup.findVirtual(MinecraftServer.class,
-                                mappings.mapMethodName("intermediary", "net.minecraft.server.MinecraftServer", "method_3852", "()Z"),
+                                platform.mapIntermediaryMethod("net.minecraft.server.MinecraftServer", "method_3852", "()Z", "isPvpAllowed"),
                                 MethodType.methodType(boolean.class))
                         .asType(MethodType.methodType(boolean.class, MinecraftServer.class));
                 return new Legacy(player, source, pvp);
@@ -191,19 +181,7 @@ final class FabricVersionCompat
             catch (NoSuchMethodException | IllegalAccessException missing)
             {
                 throw new IllegalStateException("GriefPrevention3D does not support Minecraft "
-                        + version.getFriendlyString() + ": " + missing.getMessage(), missing);
-            }
-        }
-
-        private static boolean before1_21_11(@NotNull Version version)
-        {
-            try
-            {
-                return VersionPredicate.parse("<1.21.11-").test(version);
-            }
-            catch (VersionParsingException unreadable)
-            {
-                throw new IllegalStateException(unreadable);
+                        + platform.minecraftVersion() + ": " + missing.getMessage(), missing);
             }
         }
 

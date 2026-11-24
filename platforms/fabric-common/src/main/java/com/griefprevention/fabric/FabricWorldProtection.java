@@ -99,7 +99,7 @@ public final class FabricWorldProtection
             @NotNull FabricClaimAlerts alerts)
     {
         active = new FabricWorldProtection(claims, settings, feedback, alerts);
-        net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> markFreshSpawn(handler.getPlayer()));
+        ModPlatform.current().onPlayerJoin((player, server) -> markFreshSpawn(player));
     }
 
     // ---------------------------------------------------------------------------------------------

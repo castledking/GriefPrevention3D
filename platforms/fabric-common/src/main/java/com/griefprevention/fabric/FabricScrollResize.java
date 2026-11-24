@@ -8,13 +8,6 @@ import com.griefprevention.claims.editor.ScrollResizeGeometry.Face;
 import com.griefprevention.fabric.FabricDenialFeedback.TextMode;
 import com.griefprevention.fabric.mixin.InventoryAccessor;
 import com.griefprevention.messages.MessageKey;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.event.player.AttackBlockCallback;
-import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
-import net.fabricmc.fabric.api.event.player.UseBlockCallback;
-import net.fabricmc.fabric.api.event.player.UseEntityCallback;
-import net.fabricmc.fabric.api.event.player.UseItemCallback;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.protocol.game.ClientboundSetHeldSlotPacket;
 import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
@@ -101,14 +94,15 @@ public final class FabricScrollResize
     void register()
     {
         active = this;
-        ServerTickEvents.END_SERVER_TICK.register(this::tick);
-        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) ->
-                this.sessions.remove(handler.getPlayer().getUUID()));
-        AttackBlockCallback.EVENT.register((player, level, hand, pos, direction) -> cancelOnAttack(player));
-        AttackEntityCallback.EVENT.register((player, level, hand, entity, hit) -> cancelOnAttack(player));
-        UseBlockCallback.EVENT.register((player, level, hand, hit) -> confirmOnUse(player, hand));
-        UseItemCallback.EVENT.register((player, level, hand) -> confirmOnUse(player, hand));
-        UseEntityCallback.EVENT.register((player, level, hand, entity, hit) -> confirmOnUse(player, hand));
+        ModPlatform platform = ModPlatform.current();
+        platform.onEndServerTick(this::tick);
+        platform.onPlayerDisconnect((player, server) ->
+                this.sessions.remove(player.getUUID()));
+        platform.onAttackBlock((player, level, hand, pos, direction) -> cancelOnAttack(player));
+        platform.onAttackEntity((player, level, hand, entity, hit) -> cancelOnAttack(player));
+        platform.onUseBlock((player, level, hand, hit) -> confirmOnUse(player, hand));
+        platform.onUseItem((player, level, hand) -> confirmOnUse(player, hand));
+        platform.onUseEntity((player, level, hand, entity, hit) -> confirmOnUse(player, hand));
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -262,7 +256,7 @@ public final class FabricScrollResize
         }
         if (claim.bounds().isShaped())
         {
-            sender.sendText(TextMode.ERROR, "Shaped claims can't be scroll-resized on Fabric yet.");
+            sender.sendText(TextMode.ERROR, "Shaped claims can't be scroll-resized on " + ModPlatform.currentLoaderName() + " yet.");
             return true;
         }
 

@@ -4,7 +4,6 @@ import com.griefprevention.claims.ClaimSnapshot;
 import com.griefprevention.claims.ClaimTransferSettings;
 import com.griefprevention.fabric.FabricDenialFeedback.TextMode;
 import com.griefprevention.messages.MessageKey;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.NotNull;
@@ -53,8 +52,8 @@ final class FabricAdminClaimCommands
 
     void register()
     {
-        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
-            UUID playerId = handler.getPlayer().getUUID();
+        ModPlatform.current().onPlayerDisconnect((player, server) -> {
+            UUID playerId = player.getUUID();
             this.claims.stopIgnoringClaims(playerId);
             this.warnedAboutMajorDeletion.remove(playerId);
         });

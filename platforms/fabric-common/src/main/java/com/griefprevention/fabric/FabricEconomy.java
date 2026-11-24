@@ -1,7 +1,6 @@
 package com.griefprevention.fabric;
 
 import com.reazip.economycraft.api.v1.EconomyCraftApi;
-import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.NotNull;
@@ -25,7 +24,7 @@ final class FabricEconomy
 
     @Nullable FabricEconomyProvider provider(@NotNull MinecraftServer server)
     {
-        if (FabricLoader.getInstance().isModLoaded(ECONOMYCRAFT_MOD_ID))
+        if (ModPlatform.current().isModLoaded(ECONOMYCRAFT_MOD_ID))
         {
             try
             {

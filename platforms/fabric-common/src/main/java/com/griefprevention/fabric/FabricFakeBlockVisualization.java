@@ -5,11 +5,6 @@ import com.griefprevention.claims.ClaimSnapshot;
 import com.griefprevention.geometry.OrthogonalEdge2i;
 import com.griefprevention.geometry.OrthogonalPoint2i;
 import com.griefprevention.geometry.OrthogonalPolygon;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.event.player.AttackBlockCallback;
-import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionResult;
@@ -73,38 +68,39 @@ final class FabricFakeBlockVisualization
 
     void register()
     {
-        ServerLifecycleEvents.SERVER_STARTED.register(started -> this.server = started);
-        ServerLifecycleEvents.SERVER_STOPPED.register(stopped -> {
+        ModPlatform platform = ModPlatform.current();
+        platform.onServerStarted(started -> this.server = started);
+        platform.onServerStopped(stopped -> {
             this.server = null;
             this.activeVisualizations.clear();
         });
-        ServerTickEvents.END_SERVER_TICK.register(this::expireVisualizations);
-        ServerPlayConnectionEvents.DISCONNECT.register((handler, disconnected) ->
-                this.activeVisualizations.remove(handler.getPlayer().getUUID()));
-        AttackBlockCallback.EVENT.register((player, level, hand, pos, direction) -> {
+        platform.onEndServerTick(this::expireVisualizations);
+        platform.onPlayerDisconnect((player, disconnected) ->
+                this.activeVisualizations.remove(player.getUUID()));
+        platform.onAttackBlock((player, level, hand, pos, direction) -> {
             if (player instanceof ServerPlayer serverPlayer && handleBlockAttack(serverPlayer, pos))
             {
                 return InteractionResult.SUCCESS;
             }
             return InteractionResult.PASS;
         });
-        PlayerBlockBreakEvents.AFTER.register((world, player, pos, state, blockEntity) -> {
+        platform.onBlockBreakAfter((world, player, pos, state, blockEntity) -> {
             if (player instanceof ServerPlayer)
             {
                 handleBlockBreak((ServerPlayer) player, pos);
             }
         });
-        PlayerBlockBreakEvents.CANCELED.register((world, player, pos, state, blockEntity) -> {
+        platform.onBlockBreakCanceled((world, player, pos, state, blockEntity) -> {
             if (player instanceof ServerPlayer)
             {
                 resendBrokenVisual((ServerPlayer) player, pos);
             }
         });
 
-        ClaimCreatedCallback.EVENT.register((claim, player) -> refreshWhere(active -> overviewCovers(active, claim)));
-        ClaimModifiedCallback.EVENT.register((previous, updated, player) -> refreshWhere(active ->
+        platform.onClaimCreated((claim, player) -> refreshWhere(active -> overviewCovers(active, claim)));
+        platform.onClaimModified((previous, updated, player) -> refreshWhere(active ->
                 active.claimIds.contains(updated.id()) || overviewCovers(active, updated)));
-        ClaimDeletedCallback.EVENT.register((claim, player) -> refreshWhere(active ->
+        platform.onClaimDeleted((claim, player) -> refreshWhere(active ->
                 active.claimIds.contains(claim.id())));
     }
 

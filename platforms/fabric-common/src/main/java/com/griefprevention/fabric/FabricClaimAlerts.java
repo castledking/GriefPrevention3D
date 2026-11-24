@@ -4,8 +4,6 @@ import com.griefprevention.claims.ClaimFlag;
 import com.griefprevention.claims.ClaimSnapshot;
 import com.griefprevention.fabric.FabricDenialFeedback.TextMode;
 import com.griefprevention.protection.BoundaryViolationAlerts;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
@@ -33,9 +31,10 @@ final class FabricClaimAlerts
 
     void register()
     {
-        ServerTickEvents.END_SERVER_TICK.register(this::deliver);
-        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) ->
-                this.alerts.forget(handler.getPlayer().getUUID()));
+        ModPlatform platform = ModPlatform.current();
+        platform.onEndServerTick(this::deliver);
+        platform.onPlayerDisconnect((player, server) ->
+                this.alerts.forget(player.getUUID()));
     }
 
     /**

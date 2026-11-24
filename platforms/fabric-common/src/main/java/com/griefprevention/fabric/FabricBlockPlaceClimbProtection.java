@@ -7,7 +7,6 @@ import com.griefprevention.protection.BlockPlaceClimbTracker;
 import com.griefprevention.protection.BlockPlaceClimbTracker.Box;
 import com.griefprevention.protection.BlockPlaceClimbTracker.Position;
 import com.griefprevention.protection.BlockPoint;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -47,7 +46,7 @@ public final class FabricBlockPlaceClimbProtection
     static void install(FabricClaimRepository claims, FabricSettings settings)
     {
         active = new FabricBlockPlaceClimbProtection(claims, settings);
-        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> clear(handler.getPlayer()));
+        ModPlatform.current().onPlayerDisconnect((player, server) -> clear(player));
     }
 
     static void deniedPlacement(Player actor, ServerLevel level, InteractionHand hand, BlockHitResult hit)

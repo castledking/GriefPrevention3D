@@ -2,9 +2,6 @@ package com.griefprevention.fabric;
 
 import com.griefprevention.claims.ClaimBlockAccrual;
 import com.griefprevention.claims.ClaimBlockSettings;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.NotNull;
@@ -40,25 +37,26 @@ final class FabricClaimBlockAccrual
 
     void register()
     {
+        ModPlatform platform = ModPlatform.current();
         if (this.scheduledAtStartup)
         {
-            ServerTickEvents.END_SERVER_TICK.register(this::onEndServerTick);
+            platform.onEndServerTick(this::onEndServerTick);
             this.logger.info(
-                    "Fabric playtime claim-block accrual scheduled every 10 minutes at {} blocks/hour.",
+                    "{} playtime claim-block accrual scheduled every 10 minutes at {} blocks/hour.",
+                    platform.loaderName(),
                     this.claimBlocks.settings().blocksAccruedPerHour()
             );
         }
         else
         {
-            this.logger.info("Fabric playtime claim-block accrual is disabled at startup.");
+            this.logger.info("{} playtime claim-block accrual is disabled at startup.", platform.loaderName());
         }
 
-        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
-            ServerPlayer player = handler.getPlayer();
+        platform.onPlayerDisconnect((player, server) -> {
             this.lastCheckPositions.remove(player.getUUID());
             flush(player.getUUID(), "disconnect");
         });
-        ServerLifecycleEvents.SERVER_STOPPING.register(server -> flushAll("server shutdown"));
+        platform.onServerStopping(server -> flushAll("server shutdown"));
     }
 
     private void onEndServerTick(@NotNull MinecraftServer server)

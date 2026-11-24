@@ -1,6 +1,5 @@
 package com.griefprevention.fabric;
 
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.NotNull;
 
@@ -46,8 +45,8 @@ final class FabricClaimModes
 
     void register()
     {
-        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) ->
-                this.modes.remove(handler.getPlayer().getUUID()));
+        ModPlatform.current().onPlayerDisconnect((player, server) ->
+                this.modes.remove(player.getUUID()));
     }
 
     @NotNull Mode mode(@NotNull UUID playerId)

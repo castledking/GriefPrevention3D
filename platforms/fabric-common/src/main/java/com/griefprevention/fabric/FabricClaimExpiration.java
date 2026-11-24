@@ -5,7 +5,6 @@ import com.griefprevention.claims.ClaimExpirationSettings;
 import com.griefprevention.claims.ClaimSnapshot;
 import com.griefprevention.fabric.FabricDenialFeedback.TextMode;
 import com.griefprevention.messages.MessageKey;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -68,7 +67,7 @@ final class FabricClaimExpiration
 
     void register()
     {
-        ServerTickEvents.END_SERVER_TICK.register(this::onTick);
+        ModPlatform.current().onEndServerTick(this::onTick);
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -175,7 +174,7 @@ final class FabricClaimExpiration
             for (ClaimSnapshot claim : assessment.claims)
             {
                 Long id = claim.id();
-                if (id == null || !ClaimExpirationCallback.EVENT.invoker().allowExpiration(claim))
+                if (id == null || !ModPlatform.fireClaimExpirationIfInstalled(claim))
                 {
                     continue;
                 }
@@ -210,7 +209,7 @@ final class FabricClaimExpiration
         for (ClaimSnapshot claim : expiring)
         {
             Long id = claim.id();
-            if (id == null || !ClaimExpirationCallback.EVENT.invoker().allowExpiration(claim))
+            if (id == null || !ModPlatform.fireClaimExpirationIfInstalled(claim))
             {
                 continue;
             }

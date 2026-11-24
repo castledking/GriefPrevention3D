@@ -1,8 +1,5 @@
 package com.griefprevention.fabric;
 
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
-import net.fabricmc.fabric.api.event.lifecycle.v1.ServerTickEvents;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.NotNull;
@@ -51,19 +48,20 @@ final class FabricLastSeenStore
 
     void register()
     {
-        ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
-                record(handler.getPlayer().getUUID(), System.currentTimeMillis()));
-        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) ->
-                record(handler.getPlayer().getUUID(), System.currentTimeMillis()));
-        ServerTickEvents.END_SERVER_TICK.register(server -> {
+        ModPlatform platform = ModPlatform.current();
+        platform.onPlayerJoin((player, server) ->
+                record(player.getUUID(), System.currentTimeMillis()));
+        platform.onPlayerDisconnect((player, server) ->
+                record(player.getUUID(), System.currentTimeMillis()));
+        platform.onEndServerTick(server -> {
             if (++this.ticks % FLUSH_INTERVAL_TICKS == 0)
             {
                 flush();
             }
         });
-        ServerLifecycleEvents.SERVER_STOPPING.register(this::recordOnlinePlayersAndFlush);
+        platform.onServerStopping(this::recordOnlinePlayersAndFlush);
         // Players are disconnected after SERVER_STOPPING; keep the times of those leaves too.
-        ServerLifecycleEvents.SERVER_STOPPED.register(server -> flush());
+        platform.onServerStopped(server -> flush());
     }
 
     /**

@@ -74,9 +74,10 @@ final class FabricClaimBlockService
             this.settings = settings;
             this.groupBonusBlocks = Collections.unmodifiableMap(loadedGroupBonuses);
             this.logger.info(
-                    "Loaded Fabric claim-block accounting with {} initial blocks, {} blocks/hour up to {}, "
+                    "Loaded {} claim-block accounting with {} initial blocks, {} blocks/hour up to {}, "
                             + "a {}-claim limit, an abandon return ratio of {}, and {} permission-group "
                             + "bonuses via {}.",
+                    ModPlatform.currentLoaderName(),
                     this.settings.initialBlocks(),
                     this.settings.blocksAccruedPerHour(),
                     this.settings.maximumAccruedClaimBlocks(),
@@ -89,7 +90,7 @@ final class FabricClaimBlockService
         catch (IOException | ClaimBlockConfigException exception)
         {
             throw new IllegalStateException(
-                    "Could not safely activate Fabric claim-block accounting from " + this.dataFolder + ".",
+                    "Could not safely activate " + ModPlatform.currentLoaderName() + " claim-block accounting from " + this.dataFolder + ".",
                     exception
             );
         }

@@ -15,6 +15,7 @@ import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Group;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
 import java.util.List;
@@ -27,11 +28,33 @@ abstract class ServerExplosionMixin
     @Shadow @Final private Explosion.BlockInteraction blockInteraction;
 
     /** Explosions never hurt what a claim protects: its creatures, frames, stands and vehicles. */
+    @Group(name = "griefPrevention$explosionHurt", min = 1, max = 1)
     @WrapOperation(
             method = "hurtEntities",
             at = @At(value = "INVOKE",
-                    target = "Lnet/minecraft/world/entity/Entity;hurtServer(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/damagesource/DamageSource;F)Z"))
+                    target = "Lnet/minecraft/world/entity/Entity;hurtServer(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/damagesource/DamageSource;F)Z"),
+            require = 0)
     private boolean griefPrevention$protectClaimedEntities(
+            Entity entity,
+            ServerLevel hurtLevel,
+            DamageSource damageSource,
+            float amount,
+            Operation<Boolean> original)
+    {
+        return FabricWorldProtection.mayExplosionDamage(hurtLevel, entity)
+                && original.call(entity, hurtLevel, damageSource, amount);
+    }
+
+    // NeoForge overloads hurtEntities(List<BlockPos>) and delegates vanilla hurtEntities() to it.
+    @Group(name = "griefPrevention$explosionHurt", min = 1, max = 1)
+    @WrapOperation(
+            method = "hurtEntities(Ljava/util/List;)V",
+            at = @At(value = "INVOKE",
+                    target = "Lnet/minecraft/world/entity/Entity;hurtServer(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/damagesource/DamageSource;F)Z",
+                    remap = false),
+            remap = false,
+            require = 0)
+    private boolean griefPrevention$protectClaimedEntitiesNeoForge(
             Entity entity,
             ServerLevel hurtLevel,
             DamageSource damageSource,

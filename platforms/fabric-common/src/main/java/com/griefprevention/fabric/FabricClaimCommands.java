@@ -7,7 +7,6 @@ import com.griefprevention.claims.ClaimTrustLevel;
 import com.griefprevention.fabric.FabricDenialFeedback.TextMode;
 import com.griefprevention.messages.MessageKey;
 import com.griefprevention.protection.WorldProtectionSettings;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import org.jetbrains.annotations.NotNull;
@@ -61,8 +60,8 @@ final class FabricClaimCommands
 
     void register()
     {
-        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) ->
-                this.pendingPvpToggles.remove(handler.getPlayer().getUUID()));
+        ModPlatform.current().onPlayerDisconnect((player, server) ->
+                this.pendingPvpToggles.remove(player.getUUID()));
     }
 
     /**

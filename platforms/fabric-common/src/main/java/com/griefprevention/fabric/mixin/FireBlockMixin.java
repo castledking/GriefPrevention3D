@@ -8,6 +8,7 @@ import com.llamalad7.mixinextras.sugar.Local;
 import com.llamalad7.mixinextras.sugar.Share;
 import com.llamalad7.mixinextras.sugar.ref.LocalBooleanRef;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.Level;
@@ -16,6 +17,7 @@ import net.minecraft.world.level.block.FireBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Group;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
@@ -27,10 +29,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(FireBlock.class)
 abstract class FireBlockMixin
 {
+    @Group(name = "griefPrevention$checkBurnOut", min = 1)
     @WrapOperation(
             method = "tick",
             at = @At(value = "INVOKE",
-                    target = "Lnet/minecraft/world/level/block/FireBlock;checkBurnOut(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;ILnet/minecraft/util/RandomSource;I)V"))
+                    target = "Lnet/minecraft/world/level/block/FireBlock;checkBurnOut(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;ILnet/minecraft/util/RandomSource;I)V"),
+            require = 0)
     private void griefPrevention$protectBurningBlocks(
             FireBlock fire,
             Level level,
@@ -46,6 +50,37 @@ abstract class FireBlockMixin
         if (verdict == FireVerdict.ALLOW)
         {
             original.call(fire, level, burning, chance, random, age);
+        }
+        else if (verdict == FireVerdict.DENY_AND_EXTINGUISH)
+        {
+            extinguish.set(true);
+        }
+    }
+
+    // NeoForge patches FireBlock#checkBurnOut to also take the Direction face being burned.
+    @Group(name = "griefPrevention$checkBurnOut", min = 1)
+    @WrapOperation(
+            method = "tick",
+            at = @At(value = "INVOKE",
+                    target = "Lnet/minecraft/world/level/block/FireBlock;checkBurnOut(Lnet/minecraft/world/level/Level;Lnet/minecraft/core/BlockPos;ILnet/minecraft/util/RandomSource;ILnet/minecraft/core/Direction;)V",
+                    remap = false),
+            require = 0)
+    private void griefPrevention$protectBurningBlocksNeoForge(
+            FireBlock fire,
+            Level level,
+            BlockPos burning,
+            int chance,
+            RandomSource random,
+            int age,
+            Direction face,
+            Operation<Void> original,
+            @Local(argsOnly = true) BlockPos firePos,
+            @Share("extinguish") LocalBooleanRef extinguish)
+    {
+        FireVerdict verdict = FabricWorldProtection.mayBurn(level, burning, firePos);
+        if (verdict == FireVerdict.ALLOW)
+        {
+            original.call(fire, level, burning, chance, random, age, face);
         }
         else if (verdict == FireVerdict.DENY_AND_EXTINGUISH)
         {

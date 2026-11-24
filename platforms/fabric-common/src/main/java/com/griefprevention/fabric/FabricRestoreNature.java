@@ -4,7 +4,6 @@ import com.griefprevention.claims.ClaimBounds;
 import com.griefprevention.claims.ClaimSnapshot;
 import com.griefprevention.fabric.FabricDenialFeedback.TextMode;
 import com.griefprevention.messages.MessageKey;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -121,8 +120,8 @@ final class FabricRestoreNature
 
     void register()
     {
-        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) ->
-                clear(handler.getPlayer().getUUID()));
+        ModPlatform.current().onPlayerDisconnect((player, server) ->
+                clear(player.getUUID()));
     }
 
     void clear(@NotNull UUID playerId)

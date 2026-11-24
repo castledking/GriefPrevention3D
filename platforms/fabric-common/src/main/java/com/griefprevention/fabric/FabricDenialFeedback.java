@@ -6,7 +6,6 @@ import com.griefprevention.claims.ClaimTrustLevel;
 import com.griefprevention.messages.LegacyText;
 import com.griefprevention.messages.MessageKey;
 import com.griefprevention.messages.MessageRateLimiter;
-import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
@@ -39,8 +38,7 @@ final class FabricDenialFeedback
 
     void register()
     {
-        ServerPlayConnectionEvents.DISCONNECT.register((handler, server) -> {
-            ServerPlayer player = handler.getPlayer();
+        ModPlatform.current().onPlayerDisconnect((player, server) -> {
             if (player != null)
             {
                 this.rateLimiter.forget(player.getUUID());

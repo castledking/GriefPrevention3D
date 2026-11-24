@@ -79,7 +79,7 @@ public final class FabricClaimRepository implements ClaimRepository
             this.documentsByClaimId.put(document.snapshot().id(), document);
         }
         this.nextClaimId = loaded.nextClaimId();
-        logger.info("Loaded {} native Fabric claims from {}.", loaded.snapshots().size(), this.dataFolder);
+        logger.info("Loaded {} native {} claims from {}.", loaded.snapshots().size(), ModPlatform.currentLoaderName(), this.dataFolder);
         return loaded.snapshots().size();
     }
 
@@ -223,7 +223,7 @@ public final class FabricClaimRepository implements ClaimRepository
             this.nextClaimId = previousNextClaimId;
             throw e;
         }
-        ClaimCreatedCallback.EVENT.invoker().onClaimCreated(snapshot, player);
+        ModPlatform.fireClaimCreatedIfInstalled(snapshot, player);
         return CreateClaimResult.created(snapshot, remainingAfter);
     }
 
@@ -295,7 +295,7 @@ public final class FabricClaimRepository implements ClaimRepository
                 existingDocument.withSnapshot(updated, System.currentTimeMillis())
         );
         replaceAndSave(documents);
-        ClaimModifiedCallback.EVENT.invoker().onClaimModified(existing, updated, player);
+        ModPlatform.fireClaimModifiedIfInstalled(existing, updated, player);
         return UpdateClaimResult.updated(updated, remainingAfter);
     }
 
@@ -420,7 +420,7 @@ public final class FabricClaimRepository implements ClaimRepository
                 throw playerDataFailure;
             }
         }
-        ClaimDeletedCallback.EVENT.invoker().onClaimDeleted(claim, player);
+        ModPlatform.fireClaimDeletedIfInstalled(claim, player);
         return claim;
     }
 
@@ -461,7 +461,7 @@ public final class FabricClaimRepository implements ClaimRepository
         }
         replaceAndSave(documents);
         ClaimSnapshot updated = this.claimIndex.get(claimId);
-        ClaimTransferredCallback.EVENT.invoker().onClaimTransferred(updated, newOwnerId, actor);
+        ModPlatform.fireClaimTransferredIfInstalled(updated, newOwnerId, actor);
         return updated;
     }
 
@@ -698,7 +698,7 @@ public final class FabricClaimRepository implements ClaimRepository
             this.nextClaimId = previousNextClaimId;
             throw e;
         }
-        ClaimCreatedCallback.EVENT.invoker().onClaimCreated(snapshot, player);
+        ModPlatform.fireClaimCreatedIfInstalled(snapshot, player);
         return SubdivisionResult.created(snapshot);
     }
 
@@ -1144,7 +1144,7 @@ public final class FabricClaimRepository implements ClaimRepository
         this.claimIndex.rebuild(snapshots);
         this.documentsByClaimId.clear();
         this.documentsByClaimId.putAll(byId);
-        this.logger.info("Saved {} native Fabric claims to {}.", snapshots.size(), this.dataFolder);
+        this.logger.info("Saved {} native {} claims to {}.", snapshots.size(), ModPlatform.currentLoaderName(), this.dataFolder);
     }
 
     private @NotNull List<ClaimDocument> mutableDocuments()

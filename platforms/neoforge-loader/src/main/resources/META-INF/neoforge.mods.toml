@@ -1,0 +1,29 @@
+modLoader="javafml"
+loaderVersion="[4,)"
+license="GPL-3.0-or-later"
+issueTrackerURL="https://github.com/castledking/GriefPrevention3D/issues"
+
+[[mods]]
+modId="griefprevention3d"
+version="${version}"
+displayName="GriefPrevention3D"
+authors="castledking, RoboMWM, BigScary"
+displayURL="https://castled.codes"
+description='''Native NeoForge adapter for GriefPrevention3D claim protection.'''
+displayTest="IGNORE_ALL_VERSION"
+
+${mixinsBlock}
+
+[[dependencies.griefprevention3d]]
+    modId="neoforge"
+    type="required"
+    versionRange="${neoforgeRange}"
+    ordering="NONE"
+    side="SERVER"
+
+[[dependencies.griefprevention3d]]
+    modId="minecraft"
+    type="required"
+    versionRange="${minecraftRange}"
+    ordering="NONE"
+    side="SERVER"

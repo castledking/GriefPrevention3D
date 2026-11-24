@@ -19,7 +19,7 @@ final class FabricPermissions
                     false,
                     FabricPermissions.class.getClassLoader()
             );
-            logger.info("LuckPerms API detected; Fabric permission integration is enabled.");
+            logger.info("LuckPerms API detected; {} permission integration is enabled.", ModPlatform.currentLoaderName());
             return new LuckPermsPermissionResolver();
         }
         catch (ClassNotFoundException | LinkageError ignored)

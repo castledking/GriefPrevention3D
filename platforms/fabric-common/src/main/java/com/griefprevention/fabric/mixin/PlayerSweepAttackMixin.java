@@ -57,6 +57,26 @@ abstract class PlayerSweepAttackMixin
         return FabricWorldProtection.mayDamage(swept, level, source) && original.call(swept, level, source, amount);
     }
 
+    // NeoForge overloads doSweepAttack with an extra AABB sweep-box parameter and delegates the
+    // vanilla 4-argument method to it.
+    @Group(name = "griefPrevention$sweep", min = 1, max = 1)
+    @WrapOperation(
+            method = "doSweepAttack(Lnet/minecraft/world/entity/Entity;FLnet/minecraft/world/damagesource/DamageSource;FLnet/minecraft/world/phys/AABB;)V",
+            at = @At(value = "INVOKE",
+                    target = "Lnet/minecraft/world/entity/LivingEntity;hurtServer(Lnet/minecraft/server/level/ServerLevel;Lnet/minecraft/world/damagesource/DamageSource;F)Z",
+                    remap = false),
+            remap = false,
+            require = 0)
+    private boolean griefPrevention$protectSweptEntitiesOnNeoForge(
+            LivingEntity swept,
+            ServerLevel level,
+            DamageSource source,
+            float amount,
+            Operation<Boolean> original)
+    {
+        return FabricWorldProtection.mayDamage(swept, level, source) && original.call(swept, level, source, amount);
+    }
+
     /** Up to 1.21.4 a swept entity is knocked back before it is hurt; the attack's own target passes. */
     @WrapOperation(
             method = "attack",
