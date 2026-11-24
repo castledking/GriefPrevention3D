@@ -38,6 +38,18 @@ public class ClaimExtendEvent extends ClaimChangeEvent
     }
 
     /**
+     * Get the resulting {@link Claim} after modification.
+     *
+     * @return the resulting {@code Claim}
+     * @deprecated Use {@link #getTo() getTo} instead.
+     */
+    @Deprecated
+    public @NotNull Claim getClaim()
+    {
+        return getTo();
+    }
+
+    /**
      * Get the new lowest depth that the {@link Claim} will encompass in the Y axis.
      *
      * @return the new depth

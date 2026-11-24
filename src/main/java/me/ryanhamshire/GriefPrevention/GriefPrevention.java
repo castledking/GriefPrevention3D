@@ -51,6 +51,7 @@ import com.griefprevention.geometry.OrthogonalPolygon;
 import com.griefprevention.platform.PlatformDetection;
 import com.griefprevention.platform.knockback.KnockbackProtectionListener;
 import com.griefprevention.protection.InteractionProtectionHandler;
+import com.griefprevention.protection.ProtectionHelper;
 import com.griefprevention.visualization.BoundaryVisualization;
 import com.griefprevention.visualization.VisualizationStyleRegistry;
 import com.griefprevention.visualization.VisualizationType;
@@ -110,6 +111,7 @@ import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.entity.AnimalTamer;
 import org.bukkit.entity.Player;
+import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
@@ -4787,6 +4789,68 @@ public class GriefPrevention extends JavaPlugin {
         if (!this.config_creativeWorldsExist) return false;
 
         return this.config_claims_worldModes.get(location.getWorld()) == ClaimsMode.Creative;
+    }
+
+    /**
+     * @deprecated use
+     *             {@link ProtectionHelper#checkPermission(Player, Location, ClaimPermission, org.bukkit.event.Event)}
+     */
+    @Deprecated
+    public @Nullable String allowBuild(Player player, Location location) {
+        return this.allowBuild(player, location, location.getBlock().getType());
+    }
+
+    /**
+     * @deprecated use
+     *             {@link ProtectionHelper#checkPermission(Player, Location, ClaimPermission, org.bukkit.event.Event)}
+     */
+    @Deprecated
+    public @Nullable String allowBuild(Player player, Location location, Material material) {
+        if (!GriefPrevention.instance.claimsEnabledForWorld(location.getWorld())) return null;
+
+        ItemStack placed = CompatUtil.createItemStack(material);
+
+        Block block = location.getBlock();
+        Supplier<String> result = ProtectionHelper.checkPermission(
+            player,
+            location,
+            ClaimPermission.Build,
+            CompatUtil.createBlockPlaceEvent(block, block.getState(), block, placed, player, true)
+        );
+        return result == null ? null : result.get();
+    }
+
+    /**
+     * @deprecated use
+     *             {@link ProtectionHelper#checkPermission(Player, Location, ClaimPermission, org.bukkit.event.Event)}
+     */
+    @Deprecated
+    public @Nullable String allowBreak(Player player, Block block, Location location) {
+        return this.allowBreak(player, block, location, new BlockBreakEvent(block, player));
+    }
+
+    /**
+     * @deprecated use
+     *             {@link ProtectionHelper#checkPermission(Player, Location, ClaimPermission, org.bukkit.event.Event)}
+     */
+    @Deprecated
+    public @Nullable String allowBreak(
+        Player player,
+        Material material,
+        Location location,
+        BlockBreakEvent breakEvent
+    ) {
+        return this.allowBreak(player, location.getBlock(), location, breakEvent);
+    }
+
+    /**
+     * @deprecated use
+     *             {@link ProtectionHelper#checkPermission(Player, Location, ClaimPermission, org.bukkit.event.Event)}
+     */
+    @Deprecated
+    public @Nullable String allowBreak(Player player, Block block, Location location, BlockBreakEvent breakEvent) {
+        Supplier<String> result = ProtectionHelper.checkPermission(player, location, ClaimPermission.Build, breakEvent);
+        return result == null ? null : result.get();
     }
 
     public int getSeaLevel(World world) {

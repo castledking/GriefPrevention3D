@@ -64,6 +64,18 @@ public class PlayerKickBanEvent extends PlayerEvent implements Cancellable
         return ban;
     }
 
+    /**
+     * Get whether the {@link Player} will also be banned.
+     *
+     * @deprecated use {@link #isBan()}
+     * @return whether the target will be banned
+     */
+    @Deprecated
+    public boolean getBan()
+    {
+        return this.isBan();
+    }
+
     // Listenable event requirements
     private static final HandlerList HANDLERS = new HandlerList();
 
