@@ -186,7 +186,7 @@ For usage instructions, see the official [GriefPrevention documentation](https:/
 - [📖 Documentation](https://r.griefprevention.com/docs) - Learn how GriefPrevention works. Contains answers to most questions.
 - [Issue Tracker](https://github.com/castledking/GriefPrevention3D/issues) - Report problems or bugs on the issue tracker. Check if someone else reported your issue before posting.
 - [GitHub Discussions](https://github.com/castledking/GriefPrevention3D/discussions) - New ideas, feature requests, or other general discussions.
-- [Discord Community](https://discord.com/invite/pCKdCX6nYr)
+- [Discord Community](https://discord.gg/D6CeVTtJpF)
 
 ## Original Plugin
 This is a fork of [GriefPrevention](https://www.spigotmc.org/resources/griefprevention.1884/) by RoboMWM.
