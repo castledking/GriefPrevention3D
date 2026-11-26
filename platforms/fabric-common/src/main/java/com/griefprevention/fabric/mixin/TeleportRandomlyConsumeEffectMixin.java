@@ -95,4 +95,22 @@ abstract class TeleportRandomlyConsumeEffectMixin
         }
         return FabricWorldProtection.mayChorusLand(entity, fromX, fromY, fromZ);
     }
+
+    @Group(name = "griefPrevention$chorus", min = 1, max = 1)
+    @WrapOperation(
+            method = "apply",
+            at = @At(value = "INVOKE",
+                    target = "Lnet/minecraft/world/entity/LivingEntity;randomTeleport(DDDZLnet/minecraft/tags/TagKey;Lnet/minecraft/world/item/ItemStack;)Z",
+                    remap = false),
+            require = 0)
+    private boolean griefPrevention$keepChorusOutOfClaimsNeoForgeAvoiding(
+            LivingEntity entity, double x, double y, double z, boolean particles,
+            TagKey<?> avoid, ItemStack stack, Operation<Boolean> original)
+    {
+        double fromX = entity.getX();
+        double fromY = entity.getY();
+        double fromZ = entity.getZ();
+        if (!original.call(entity, x, y, z, particles, avoid, stack)) return false;
+        return FabricWorldProtection.mayChorusLand(entity, fromX, fromY, fromZ);
+    }
 }

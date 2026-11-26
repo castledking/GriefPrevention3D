@@ -247,20 +247,33 @@ final class NeoForgeModPlatform implements ModPlatform
     @Override
     public void onUseEntity(@NotNull UseEntityListener listener)
     {
-        NeoForge.EVENT_BUS.addListener((PlayerInteractEvent.EntityInteractSpecific event) -> {
-            EntityHitResult hit = new EntityHitResult(
-                    event.getTarget(), event.getTarget().position().add(event.getLocalPos()));
+        try
+        {
+            Class.forName("net.neoforged.neoforge.event.entity.player.PlayerInteractEvent$EntityInteractSpecific");
+            registerSpecificEntityUse(listener);
+        }
+        catch (ClassNotFoundException ignored)
+        {
+            // Newer NeoForge combines both entity interaction events.
+        }
+        NeoForge.EVENT_BUS.addListener((PlayerInteractEvent.EntityInteract event) -> {
             InteractionResult result = listener.onUseEntity(
-                    event.getEntity(), event.getLevel(), event.getHand(), event.getTarget(), hit);
+                    event.getEntity(), event.getLevel(), event.getHand(), event.getTarget(), null);
             if (result != InteractionResult.PASS)
             {
                 event.setCanceled(true);
                 event.setCancellationResult(result);
             }
         });
-        NeoForge.EVENT_BUS.addListener((PlayerInteractEvent.EntityInteract event) -> {
+    }
+
+    private void registerSpecificEntityUse(@NotNull UseEntityListener listener)
+    {
+        NeoForge.EVENT_BUS.addListener((PlayerInteractEvent.EntityInteractSpecific event) -> {
+            EntityHitResult hit = new EntityHitResult(
+                    event.getTarget(), event.getTarget().position().add(event.getLocalPos()));
             InteractionResult result = listener.onUseEntity(
-                    event.getEntity(), event.getLevel(), event.getHand(), event.getTarget(), null);
+                    event.getEntity(), event.getLevel(), event.getHand(), event.getTarget(), hit);
             if (result != InteractionResult.PASS)
             {
                 event.setCanceled(true);
