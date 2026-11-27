@@ -18,6 +18,7 @@ evaluationDependsOn(":fabric-26.1")
 evaluationDependsOn(":fabric-linkage-check")
 evaluationDependsOn(":neoforge-bootstrap")
 evaluationDependsOn(":neoforge-1.21.11")
+evaluationDependsOn(":neoforge-1.21.10")
 evaluationDependsOn(":neoforge-26.1")
 
 val toolchains = the<JavaToolchainService>()
@@ -89,6 +90,15 @@ val neoforgeAdapters = listOf(
         "com.griefprevention.neoforge.mc1_21_11",
         "griefprevention3d-neoforge-mc1_21_11.mixins.json",
         21
+    ),
+    // The 1.21.11 adapter remapped to 1.21.10's Mojang names; see platforms/neoforge-1.21.10.
+    UniversalNeoForgeAdapter(
+        "mc1_21_10",
+        providers.gradleProperty("neoforgeLegacyMinecraftRange").get(),
+        providers.gradleProperty("neoforgeLegacyLoaderRange").get(),
+        "com.griefprevention.neoforge.mc1_21_10",
+        "griefprevention3d-neoforge-mc1_21_10.mixins.json",
+        21
     )
 )
 
@@ -142,6 +152,7 @@ val fabric1211RemapJar = project(":fabric-1.21.11").tasks.named<AbstractArchiveT
 val fabric26AdapterJar = project(":fabric-26.1").tasks.named<AbstractArchiveTask>("universalAdapterJar")
 val neoforgeBootstrapJar = project(":neoforge-bootstrap").tasks.named<Jar>("jar")
 val neoforge1211AdapterJar = project(":neoforge-1.21.11").tasks.named<AbstractArchiveTask>("universalAdapterJar")
+val neoforge12110AdapterJar = project(":neoforge-1.21.10").tasks.named<AbstractArchiveTask>("universalAdapterJar")
 val neoforge26AdapterJar = project(":neoforge-26.1").tasks.named<AbstractArchiveTask>("universalAdapterJar")
 val fabricModTemplate = rootProject.file("platforms/fabric-common/src/main/resources/fabric.mod.json")
 val neoforgeModTemplate = rootProject.file("platforms/neoforge-loader/src/main/resources/META-INF/neoforge.mods.toml")
@@ -238,6 +249,7 @@ val universalJar = tasks.register<Jar>("universalJar") {
         fabric26AdapterJar,
         neoforgeBootstrapJar,
         neoforge1211AdapterJar,
+        neoforge12110AdapterJar,
         neoforge26AdapterJar,
         generateUniversalFabricMetadata,
         generateUniversalNeoForgeMetadata
@@ -270,6 +282,9 @@ val universalJar = tasks.register<Jar>("universalJar") {
     from(neoforge1211AdapterJar.flatMap { it.archiveFile }.map { zipTree(it.asFile) }) {
         exclude("META-INF/MANIFEST.MF")
     }
+    from(neoforge12110AdapterJar.flatMap { it.archiveFile }.map { zipTree(it.asFile) }) {
+        exclude("META-INF/MANIFEST.MF")
+    }
     from(neoforge26AdapterJar.flatMap { it.archiveFile }.map { zipTree(it.asFile) }) {
         exclude("META-INF/MANIFEST.MF")
     }
@@ -288,6 +303,7 @@ val checkUniversalJar = tasks.register("checkUniversalJar") {
     inputs.file(fabric26AdapterJar.flatMap { it.archiveFile })
     inputs.file(neoforgeBootstrapJar.flatMap { it.archiveFile })
     inputs.file(neoforge1211AdapterJar.flatMap { it.archiveFile })
+    inputs.file(neoforge12110AdapterJar.flatMap { it.archiveFile })
     inputs.file(neoforge26AdapterJar.flatMap { it.archiveFile })
 
     doLast {
@@ -473,6 +489,9 @@ val checkUniversalJar = tasks.register("checkUniversalJar") {
                 requireIdentical(source, universal) { it.endsWith(".class") }
             }
             ZipFile(neoforge1211AdapterJar.get().archiveFile.get().asFile).use { source ->
+                requireIdentical(source, universal) { it != "META-INF/MANIFEST.MF" }
+            }
+            ZipFile(neoforge12110AdapterJar.get().archiveFile.get().asFile).use { source ->
                 requireIdentical(source, universal) { it != "META-INF/MANIFEST.MF" }
             }
             ZipFile(neoforge26AdapterJar.get().archiveFile.get().asFile).use { source ->
@@ -676,10 +695,202 @@ val checkFabricLinkage = tasks.register("checkFabricLinkage") {
     dependsOn(linkageTasks)
 }
 
+// Every NeoForge release the jar claims, each with the newest NeoForge build for it. NeoForge runs
+// Minecraft under Mojang's names, so each adapter is proven against the names of every release it
+// serves: booted in a real server, then linkage-checked against that server's patched Minecraft.
+// 1.21.2, 26.1 and 26.1.1 are absent: NeoForge only shipped early betas for them, which the adapters
+// do not claim (see gradle.properties).
+class NeoForgeTarget(val minecraft: String, val neoforge: String, val java: Int, val adapter: String) {
+    val taskSuffix get() = minecraft.replace('.', '_')
+}
+
+val neoforgeTargets = listOf(
+    NeoForgeTarget("1.21.3", "21.3.100", 21, "mc1_21_10"),
+    NeoForgeTarget("1.21.4", "21.4.161", 21, "mc1_21_10"),
+    NeoForgeTarget("1.21.5", "21.5.101", 21, "mc1_21_10"),
+    NeoForgeTarget("1.21.6", "21.6.20-beta", 21, "mc1_21_10"),
+    NeoForgeTarget("1.21.7", "21.7.25-beta", 21, "mc1_21_10"),
+    NeoForgeTarget("1.21.8", "21.8.57", 21, "mc1_21_10"),
+    NeoForgeTarget("1.21.9", "21.9.16-beta", 21, "mc1_21_10"),
+    NeoForgeTarget("1.21.10", "21.10.64", 21, "mc1_21_10"),
+    NeoForgeTarget("1.21.11", "21.11.48", 21, "mc1_21_11"),
+    NeoForgeTarget("26.1.2", "26.1.2.130", 25, "mc26_1"),
+    NeoForgeTarget("26.2", "26.2.0.95", 25, "mc26_1"),
+    NeoForgeTarget("26.3", "26.3.0.118", 25, "mc26_1")
+)
+
+fun neoforgeAdapterFor(tag: String) = neoforgeAdapters.single { it.tag == tag }
+
+// NeoForge servers are installed once per release into the Gradle cache by the official NeoForge
+// installer, as operators install them. NeoForge checks the EULA before it loads mods, so unlike the
+// Fabric smoke the server starts fully, on a small flat world, and is stopped from its console.
+val neoforgeServersRoot = File(gradle.gradleUserHomeDir, "caches/griefprevention3d/neoforge-servers")
+val neoforgeBootTasks = mutableListOf<TaskProvider<*>>()
+val neoforgeLinkageTasks = mutableListOf<TaskProvider<*>>()
+
+for (target in neoforgeTargets) {
+    val adapter = neoforgeAdapterFor(target.adapter)
+    val serverDir = File(neoforgeServersRoot, "${target.minecraft}-${target.neoforge}")
+    val launcher = toolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(target.java)) }
+    val argsFile = "libraries/net/neoforged/neoforge/${target.neoforge}/unix_args.txt"
+
+    val boot = tasks.register("checkNeoForgeBoot_${target.taskSuffix}") {
+        group = "verification"
+        description = "Boots the universal jar in a NeoForge ${target.neoforge} (Minecraft ${target.minecraft}) server."
+        dependsOn(universalJar)
+        inputs.file(universalJar.flatMap { it.archiveFile })
+        outputs.upToDateWhen { false }
+
+        doLast {
+            val javaExecutable = launcher.get().executablePath.asFile.absolutePath
+            serverDir.mkdirs()
+            if (!File(serverDir, argsFile).isFile) {
+                val installer = File(serverDir, "installer.jar")
+                val url = "https://maven.neoforged.net/releases/net/neoforged/neoforge/${target.neoforge}/" +
+                    "neoforge-${target.neoforge}-installer.jar"
+                val partial = File(serverDir, "installer.jar.part")
+                URI(url).toURL().openStream().use { input -> Files.copy(input, partial.toPath(), StandardCopyOption.REPLACE_EXISTING) }
+                Files.move(partial.toPath(), installer.toPath(), StandardCopyOption.REPLACE_EXISTING)
+                val install = ProcessBuilder(javaExecutable, "-jar", installer.name, "--installServer", ".")
+                    .directory(serverDir).redirectErrorStream(true).start()
+                val installLog = install.inputStream.bufferedReader().readText()
+                if (install.waitFor() != 0 || !File(serverDir, argsFile).isFile) {
+                    throw GradleException("NeoForge ${target.neoforge} server install failed.\n$installLog")
+                }
+            }
+            for (transient in listOf("mods", "config", "defaultconfigs", "plugins", "logs", "world", "crash-reports")) {
+                File(serverDir, transient).deleteRecursively()
+            }
+            val mods = File(serverDir, "mods").apply { mkdirs() }
+            universalJar.get().archiveFile.get().asFile.copyTo(File(mods, "GriefPrevention3D.jar"))
+            File(serverDir, "eula.txt").writeText("eula=true\n")
+            val port = java.net.ServerSocket(0).use { it.localPort }
+            File(serverDir, "server.properties").writeText(
+                "level-type=minecraft\\:flat\ngenerate-structures=false\nonline-mode=false\nserver-port=$port\n"
+            )
+
+            val process = ProcessBuilder(javaExecutable, "-Dgriefprevention3d.verifyMixins=true", "@$argsFile", "nogui")
+                .directory(serverDir).redirectErrorStream(true).start()
+            // A server that neither finishes starting nor fails is stopped rather than left running.
+            val watchdog = Thread {
+                try {
+                    if (!process.waitFor(10, java.util.concurrent.TimeUnit.MINUTES)) {
+                        process.destroyForcibly()
+                    }
+                } catch (ignored: InterruptedException) {
+                }
+            }.apply { isDaemon = true; start() }
+            val log = StringBuilder()
+            var stopping = false
+            process.inputStream.bufferedReader().forEachLine { line ->
+                log.appendLine(line)
+                if (!stopping && line.contains("Done (")) {
+                    stopping = true
+                    runCatching {
+                        process.outputStream.write("stop\n".toByteArray())
+                        process.outputStream.flush()
+                    }
+                }
+            }
+            val exitCode = process.waitFor()
+            watchdog.interrupt()
+
+            // Netty probes its macOS-only kqueue transport from a log4j appender on some releases.
+            val text = log.lineSequence().filterNot { it.contains("io.netty.channel.kqueue") }.joinToString("\n")
+            val required = listOf(
+                "griefprevention3d",
+                "GriefPrevention3D NeoForge adapter loaded with native protection hooks.",
+                "GriefPrevention3D verified ",
+                "for ${adapter.tag} (${adapter.minecraftRange})",
+                "Done ("
+            ).filterNot(text::contains)
+            val failures = listOf(
+                "Failed to create mod instance",
+                "Failed to start the minecraft server",
+                "Mixin apply failed",
+                "MixinApplyError",
+                "InvalidMixinException",
+                "NoSuchMethodError",
+                "NoSuchFieldError",
+                "NoClassDefFoundError",
+                "IllegalClassLoadError",
+                "Error loading class"
+            ).filter(text::contains)
+            if (exitCode != 0 || !stopping || required.isNotEmpty() || failures.isNotEmpty()) {
+                throw GradleException(
+                    "NeoForge ${target.minecraft} boot smoke failed (exit $exitCode). " +
+                        "Missing markers: $required; failure markers: $failures\n$text"
+                )
+            }
+            logger.lifecycle("NeoForge ${target.minecraft} booted the universal jar with the ${adapter.tag} adapter.")
+        }
+    }
+    neoforgeBootTasks += boot
+
+    neoforgeLinkageTasks += tasks.register<JavaExec>("checkNeoForgeLinkage_${target.taskSuffix}") {
+        group = "verification"
+        description = "Resolves every Minecraft and NeoForge reference of the ${adapter.tag} adapter on ${target.minecraft}."
+        // The boot smoke installs the server this resolves against.
+        dependsOn(boot, linkageTool.tasks.named("classes"))
+        mustRunAfter(boot)
+        javaLauncher.set(launcher)
+        classpath = linkageTool.the<SourceSetContainer>()["main"].runtimeClasspath
+        mainClass.set("com.griefprevention.fabric.linkage.FabricLinkageCheck")
+
+        doFirst {
+            val libraries = File(serverDir, "libraries")
+            // The installer writes Minecraft patched by NeoForge beside the vanilla jars it came from;
+            // the first copy of a class wins, so the patched jar leads the classpath.
+            val patched = libraries.walkTopDown()
+                .filter { it.isFile && it.extension == "jar" && it.invariantSeparatorsPath.contains("/net/neoforged/") }
+                .sortedBy { it.path }
+                .firstOrNull { jar -> ZipFile(jar).use { it.getEntry("net/minecraft/server/MinecraftServer.class") != null } }
+                ?: throw GradleException("NeoForge ${target.minecraft} server was not installed at $serverDir.")
+            val arguments = mutableListOf(
+                "--label", "NeoForge ${target.minecraft}",
+                "--jar", universalJar.get().archiveFile.get().asFile.absolutePath,
+                "--package", adapter.rootPath,
+                "--package", "com/griefprevention/neoforge/bootstrap/",
+                "--classpath", patched.absolutePath,
+                "--classpath", libraries.absolutePath,
+                // NeoForge 26.2 merged this event into EntityInteract; it is only used once found.
+                "--optional", "net/neoforged/neoforge/event/entity/player/PlayerInteractEvent\$EntityInteractSpecific",
+                "--optional", "net/luckperms/",
+                "--optional", "com/reazip/economycraft/",
+                "--optional", "org/jetbrains/annotations/"
+            )
+            if (adapter.tag == "mc1_21_10") {
+                // Calls 1.21.11 introduced, which FabricVersionCompat never loads before it.
+                arguments += listOf("--exclude", adapter.rootPath + "FabricVersionCompat\$Modern")
+            }
+            args(arguments)
+        }
+    }
+}
+
+val checkNeoForgeBoot = tasks.register("checkNeoForgeBoot") {
+    group = "verification"
+    description = "Boots the universal jar on every supported NeoForge release."
+    dependsOn(neoforgeBootTasks)
+}
+
+val checkNeoForgeLinkage = tasks.register("checkNeoForgeLinkage") {
+    group = "verification"
+    description = "Linkage-checks each NeoForge adapter against every release it claims."
+    dependsOn(neoforgeLinkageTasks)
+}
+
 val checkUniversal = tasks.register("checkUniversal") {
     group = "verification"
-    description = "Runs universal-jar structure, legacy isolation, Fabric boot and linkage checks."
-    dependsOn(checkUniversalJar, checkUniversalLegacyClassLoading, checkFabricBoot, checkFabricLinkage)
+    description = "Runs universal-jar structure, legacy isolation, Fabric and NeoForge boot and linkage checks."
+    dependsOn(
+        checkUniversalJar,
+        checkUniversalLegacyClassLoading,
+        checkFabricBoot,
+        checkFabricLinkage,
+        checkNeoForgeBoot,
+        checkNeoForgeLinkage
+    )
 }
 
 tasks.named("assemble") {

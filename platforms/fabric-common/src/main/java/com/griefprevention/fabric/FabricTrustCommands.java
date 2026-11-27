@@ -419,7 +419,7 @@ final class FabricTrustCommands
 
     private @Nullable ClaimSnapshot claimAt(@NotNull ServerPlayer player)
     {
-        return this.claims.findClaimAt((ServerLevel) player.level(), player.blockPosition());
+        return this.claims.findClaimAt(FabricVersionCompat.level(player), player.blockPosition());
     }
 
     /**

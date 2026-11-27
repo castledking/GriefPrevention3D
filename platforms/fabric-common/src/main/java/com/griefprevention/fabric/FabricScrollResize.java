@@ -152,7 +152,7 @@ public final class FabricScrollResize
     /** Packets are first seen on the network thread; vanilla hands them to the server thread after. */
     private static boolean onServerThread(@NotNull ServerPlayer player)
     {
-        MinecraftServer server = player.level().getServer();
+        MinecraftServer server = FabricVersionCompat.level(player).getServer();
         return server != null && server.isSameThread();
     }
 
@@ -218,7 +218,7 @@ public final class FabricScrollResize
             return true;
         }
 
-        ServerLevel level = (ServerLevel) player.level();
+        ServerLevel level = FabricVersionCompat.level(player);
         this.sessions.remove(player.getUUID());
 
         // A claim selected by right-clicking one of its corners limits the session to the sides there.
@@ -366,7 +366,7 @@ public final class FabricScrollResize
     private void restoreOutline(@NotNull ServerPlayer player, @NotNull Session session)
     {
         ClaimSnapshot claim = this.claims.claimById(session.claimId);
-        if (claim != null && player.level() == session.level)
+        if (claim != null && FabricVersionCompat.level(player) == session.level)
         {
             this.visualization.visualizeClaim(player, session.level, claim, eyeBlock(player));
         }
@@ -421,7 +421,7 @@ public final class FabricScrollResize
                 this.sessions.remove(entry.getKey());
                 continue;
             }
-            if (!player.isAlive() || player.level() != session.level
+            if (!player.isAlive() || FabricVersionCompat.level(player) != session.level
                     || !this.settings.isModificationTool(player.getMainHandItem()))
             {
                 cancel(player, session, MessageKey.SCROLL_RESIZE_CANCELLED);

@@ -83,7 +83,7 @@ final class FabricClaimBlockAccrual
         );
         boolean detectedIdle = isIdle(
                 player.isPassenger(),
-                !player.level().getFluidState(player.blockPosition()).isEmpty(),
+                !FabricVersionCompat.level(player).getFluidState(player.blockPosition()).isEmpty(),
                 previous,
                 current,
                 thresholdSquared
@@ -191,7 +191,7 @@ final class FabricClaimBlockAccrual
         private static @NotNull PlayerPosition from(@NotNull ServerPlayer player)
         {
             return new PlayerPosition(
-                    player.level().dimension().identifier().toString(),
+                    FabricVersionCompat.level(player).dimension().identifier().toString(),
                     player.getX(),
                     player.getY(),
                     player.getZ()

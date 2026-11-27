@@ -50,41 +50,48 @@ final class NeoForgeAdapters
         return new Selection(minecraftVersion, adapters, selected);
     }
 
+    /**
+     * Reads the running Minecraft version from FML, which moved it between the releases served:
+     * FML 10 (NeoForge 21.9 and later) keeps it on the {@code FMLLoader.getCurrent()} instance,
+     * earlier FML on the static {@code FMLLoader.versionInfo()}. Both are reached reflectively so
+     * that neither shape is linked against a loader that lacks it.
+     */
     static String detectMinecraftVersion()
+    {
+        String version = versionInfoMcVersion(invoke(invoke(FMLLoader.class, null, "getCurrent"), "getVersionInfo"));
+        if (version == null)
+        {
+            version = versionInfoMcVersion(invoke(FMLLoader.class, null, "versionInfo"));
+        }
+        if (version == null)
+        {
+            throw new IllegalStateException("GriefPrevention3D could not determine the running Minecraft version on NeoForge.");
+        }
+        return version;
+    }
+
+    private static String versionInfoMcVersion(Object versionInfo)
+    {
+        Object version = invoke(versionInfo, "mcVersion");
+        return version == null || version.toString().isEmpty() ? null : version.toString();
+    }
+
+    private static Object invoke(Object target, String method)
+    {
+        return target == null ? null : invoke(target.getClass(), target, method);
+    }
+
+    private static Object invoke(Class<?> owner, Object target, String method)
     {
         try
         {
-            FMLLoader loader = FMLLoader.getCurrent();
-            if (loader != null && loader.getVersionInfo() != null)
-            {
-                String version = loader.getVersionInfo().mcVersion();
-                if (version != null && !version.isEmpty())
-                {
-                    return version;
-                }
-            }
+            Method found = owner.getMethod(method);
+            return found.invoke(target);
         }
-        catch (Throwable ignored)
+        catch (ReflectiveOperationException | RuntimeException absent)
         {
-            // Fall through to older NeoForge 21.x static FMLLoader.versionInfo() lookup.
+            return null;
         }
-
-        try
-        {
-            Method versionInfo = FMLLoader.class.getMethod("versionInfo");
-            Object info = versionInfo.invoke(null);
-            if (info != null)
-            {
-                Object version = info.getClass().getMethod("mcVersion").invoke(info);
-                if (version != null && !version.toString().isEmpty())
-                {
-                    return version.toString();
-                }
-            }
-        }
-        catch (Throwable ignored) {}
-
-        throw new IllegalStateException("GriefPrevention3D could not determine the running Minecraft version on NeoForge.");
     }
 
     static final class Selection

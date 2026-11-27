@@ -282,7 +282,7 @@ final class FabricClaimToolHooks
         }
 
         long now = System.currentTimeMillis();
-        MinecraftServer server = player.level().getServer();
+        MinecraftServer server = FabricVersionCompat.level(player).getServer();
         Long seen = server != null && server.getPlayerList().getPlayer(ownerId) != null
                 ? Long.valueOf(now)
                 : this.lastSeen.lastSeen(ownerId);
@@ -954,7 +954,7 @@ final class FabricClaimToolHooks
     {
         ClaimToolSession session = this.sessions.get(player.getUUID());
         if (session == null || session.mode != SessionMode.RESIZE
-                || !session.worldKey.equals(this.claims.worldKey((ServerLevel) player.level())))
+                || !session.worldKey.equals(this.claims.worldKey(FabricVersionCompat.level(player))))
         {
             return null;
         }
@@ -969,7 +969,7 @@ final class FabricClaimToolHooks
         {
             return this.claims.claimById(selection.claimId());
         }
-        ClaimSnapshot current = this.claims.findClaimAt((ServerLevel) player.level(), player.blockPosition());
+        ClaimSnapshot current = this.claims.findClaimAt(FabricVersionCompat.level(player), player.blockPosition());
         if (current != null)
         {
             return current;
@@ -983,7 +983,7 @@ final class FabricClaimToolHooks
     /** Applies the shared {@code /extendclaim} geometry to the nib-selected or current claim. */
     boolean extendClaim(@NotNull ServerPlayer player, int amount)
     {
-        ServerLevel level = (ServerLevel) player.level();
+        ServerLevel level = FabricVersionCompat.level(player);
         if (!this.settings.tools().claimsEnabled(this.claims.worldKey(level)))
         {
             this.feedback.sendError(player, MessageKey.CLAIMS_DISABLED_WORLD);
@@ -1188,7 +1188,7 @@ final class FabricClaimToolHooks
             this.logger.warn("Could not read the claim-block balance of {}.", player.getUUID(), exception);
         }
 
-        ServerLevel level = (ServerLevel) player.level();
+        ServerLevel level = FabricVersionCompat.level(player);
         ClaimSnapshot standingIn = this.claims.findClaimAt(level, player.blockPosition());
         if (standingIn != null && canModify(player, standingIn))
         {

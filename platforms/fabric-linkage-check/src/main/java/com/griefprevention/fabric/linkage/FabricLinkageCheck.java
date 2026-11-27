@@ -39,7 +39,8 @@ import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
 
 /**
- * Proves the classes of one Fabric adapter link against one Minecraft release.
+ * Proves the classes of one Fabric adapter link against one Minecraft release. NeoForge adapters
+ * are checked the same way, against the NeoForge server's patched Minecraft and libraries.
  *
  * <p>The JVM links lazily. A field or method a newer release removed only fails, with
  * {@code NoSuchFieldError} or {@code NoSuchMethodError}, when the code path first runs, which can be
@@ -994,6 +995,13 @@ public final class FabricLinkageCheck
     /** Class bytes from jars, nested jars, library directories and the running JDK. */
     static final class ClassPool
     {
+        /** Fabric nests jars under META-INF/jars/, NeoForge under META-INF/jarjar/. */
+        private static boolean isNestedJar(String entryName)
+        {
+            return (entryName.startsWith("META-INF/jars/") || entryName.startsWith("META-INF/jarjar/"))
+                    && entryName.endsWith(".jar");
+        }
+
         private final Map<String, byte[]> bytesByName = new HashMap<>();
         private final Map<String, Path> sourceByName = new HashMap<>();
         private final Map<Path, List<String>> namesBySource = new HashMap<>();
@@ -1029,7 +1037,7 @@ public final class FabricLinkageCheck
                 {
                     ZipEntry entry = entries.nextElement();
                     String entryName = entry.getName();
-                    if (entryName.startsWith("META-INF/jars/") && entryName.endsWith(".jar"))
+                    if (isNestedJar(entryName))
                     {
                         try (InputStream nested = zip.getInputStream(entry))
                         {
@@ -1062,7 +1070,7 @@ public final class FabricLinkageCheck
                 while ((entry = zip.getNextEntry()) != null)
                 {
                     String entryName = entry.getName();
-                    if (entryName.startsWith("META-INF/jars/") && entryName.endsWith(".jar"))
+                    if (isNestedJar(entryName))
                     {
                         addNested(outer, new java.io.ByteArrayInputStream(readAll(zip)));
                     }

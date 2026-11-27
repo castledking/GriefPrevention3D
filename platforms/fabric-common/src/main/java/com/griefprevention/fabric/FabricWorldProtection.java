@@ -803,7 +803,7 @@ public final class FabricWorldProtection
         {
             return true;
         }
-        ServerLevel level = (ServerLevel) player.level();
+        ServerLevel level = FabricVersionCompat.level(player);
         if (!protection.applies(level))
         {
             return true;
@@ -843,7 +843,7 @@ public final class FabricWorldProtection
         {
             return true;
         }
-        ServerLevel level = (ServerLevel) player.level();
+        ServerLevel level = FabricVersionCompat.level(player);
         if (!protection.applies(level))
         {
             return true;
@@ -978,7 +978,8 @@ public final class FabricWorldProtection
             return !(actor instanceof Player attacker) || protection.mayFight(level, attacker, defender);
         }
         if (!(target instanceof Animal || target instanceof Villager)) return true;
-        if (!harmful && !effect.getEffect().equals(net.minecraft.world.effect.MobEffects.JUMP_BOOST)) return true;
+        // By id: the MobEffects field was JUMP before 1.21.5 and JUMP_BOOST after.
+        if (!harmful && !effect.getEffect().is(Identifier.withDefaultNamespace("jump_boost"))) return true;
 
         Entity responsible = actor;
         boolean allowed = protection.weaving.mayApplyToCreature(
@@ -1169,7 +1170,7 @@ public final class FabricWorldProtection
             return true;
         }
 
-        ServerLevel level = (ServerLevel) player.level();
+        ServerLevel level = FabricVersionCompat.level(player);
         if (!protection.applies(level))
         {
             return true;

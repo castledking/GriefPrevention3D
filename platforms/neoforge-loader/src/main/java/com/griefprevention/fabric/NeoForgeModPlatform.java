@@ -1,18 +1,17 @@
 package com.griefprevention.fabric;
 
 import com.griefprevention.claims.ClaimSnapshot;
+import com.griefprevention.neoforge.bootstrap.NeoForgeRuntime;
 import com.mojang.brigadier.CommandDispatcher;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.Direction;
 import net.minecraft.server.MinecraftServer;
-import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.phys.EntityHitResult;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.fml.ModList;
-import net.neoforged.fml.loading.FMLLoader;
 import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
@@ -74,19 +73,15 @@ final class NeoForgeModPlatform implements ModPlatform
     @Override
     public @Nullable String minecraftVersion()
     {
-        FMLLoader loader = FMLLoader.getCurrentOrNull();
-        if (loader != null && loader.getVersionInfo() != null)
-        {
-            return loader.getVersionInfo().mcVersion();
-        }
-        return null;
+        return NeoForgeRuntime.minecraftVersion();
     }
 
     @Override
     public boolean isBefore1_21_11()
     {
-        // Both bundled NeoForge adapters target 1.21.11 and 26.1+, where modern APIs exist.
-        return false;
+        // The 1.21.10 adapter, remapped from 1.21.11's, serves 1.21.3 through 1.21.10; there
+        // FabricVersionCompat calls the earlier methods by their Mojang names.
+        return NeoForgeRuntime.isBefore("1.21.11");
     }
 
     @Override
@@ -127,9 +122,9 @@ final class NeoForgeModPlatform implements ModPlatform
     public void onPlayerJoin(@NotNull BiConsumer<ServerPlayer, MinecraftServer> listener)
     {
         NeoForge.EVENT_BUS.addListener((PlayerEvent.PlayerLoggedInEvent event) -> {
-            if (event.getEntity() instanceof ServerPlayer player && player.level() instanceof ServerLevel level)
+            if (event.getEntity() instanceof ServerPlayer player)
             {
-                listener.accept(player, level.getServer());
+                listener.accept(player, FabricVersionCompat.level(player).getServer());
             }
         });
     }
@@ -138,9 +133,9 @@ final class NeoForgeModPlatform implements ModPlatform
     public void onPlayerDisconnect(@NotNull BiConsumer<ServerPlayer, MinecraftServer> listener)
     {
         NeoForge.EVENT_BUS.addListener((PlayerEvent.PlayerLoggedOutEvent event) -> {
-            if (event.getEntity() instanceof ServerPlayer player && player.level() instanceof ServerLevel level)
+            if (event.getEntity() instanceof ServerPlayer player)
             {
-                listener.accept(player, level.getServer());
+                listener.accept(player, FabricVersionCompat.level(player).getServer());
             }
         });
     }

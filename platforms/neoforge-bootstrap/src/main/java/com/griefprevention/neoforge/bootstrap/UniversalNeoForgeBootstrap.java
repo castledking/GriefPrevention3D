@@ -8,7 +8,7 @@ import java.util.List;
 
 /**
  * Single NeoForge mod entrypoint that dispatches to the bundled adapter matching the running
- * Minecraft version (1.21.11 or 26.1–26.3).
+ * Minecraft version (1.21.3–1.21.10, 1.21.11 or 26.1.2–26.3).
  */
 @Mod(UniversalNeoForgeBootstrap.MOD_ID)
 public final class UniversalNeoForgeBootstrap

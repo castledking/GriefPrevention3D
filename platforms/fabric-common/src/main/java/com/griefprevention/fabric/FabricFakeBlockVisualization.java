@@ -280,7 +280,7 @@ final class FabricFakeBlockVisualization
                 continue;
             }
             ServerPlayer player = current.getPlayerList().getPlayer(entry.getKey());
-            if (player == null || player.level() != active.level)
+            if (player == null || FabricVersionCompat.level(player) != active.level)
             {
                 this.activeVisualizations.remove(entry.getKey());
                 continue;
@@ -380,7 +380,7 @@ final class FabricFakeBlockVisualization
     private boolean handleBlockAttack(@NotNull ServerPlayer player, @NotNull BlockPos pos)
     {
         ActiveVisualization active = this.activeVisualizations.get(player.getUUID());
-        if (active == null || player.level() != active.level)
+        if (active == null || FabricVersionCompat.level(player) != active.level)
         {
             return false;
         }
@@ -407,7 +407,7 @@ final class FabricFakeBlockVisualization
     private void handleBlockBreak(@NotNull ServerPlayer player, @NotNull BlockPos pos)
     {
         ActiveVisualization active = this.activeVisualizations.get(player.getUUID());
-        if (active == null || player.level() != active.level)
+        if (active == null || FabricVersionCompat.level(player) != active.level)
         {
             return;
         }
@@ -433,7 +433,7 @@ final class FabricFakeBlockVisualization
     private void resendBrokenVisual(@NotNull ServerPlayer player, @NotNull BlockPos pos)
     {
         ActiveVisualization active = this.activeVisualizations.get(player.getUUID());
-        if (active == null || player.level() != active.level)
+        if (active == null || FabricVersionCompat.level(player) != active.level)
         {
             return;
         }
@@ -483,7 +483,7 @@ final class FabricFakeBlockVisualization
         {
             FabricGlowingDisplays.remove(player, active.glowIds.values().stream().mapToInt(Integer::intValue).toArray());
         }
-        if (player.level() != active.level)
+        if (FabricVersionCompat.level(player) != active.level)
         {
             return;
         }
@@ -499,7 +499,7 @@ final class FabricFakeBlockVisualization
 
     private static void resend(@NotNull ServerPlayer player, @NotNull ActiveVisualization active)
     {
-        if (player.level() != active.level)
+        if (FabricVersionCompat.level(player) != active.level)
         {
             return;
         }

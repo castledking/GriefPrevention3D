@@ -80,7 +80,7 @@ final class FabricClaimCommands
             return false;
         }
 
-        ServerLevel level = (ServerLevel) player.level();
+        ServerLevel level = FabricVersionCompat.level(player);
         if (!this.settings.tools().claimsEnabled(this.claims.worldKey(level)))
         {
             sender.sendError(MessageKey.CLAIMS_DISABLED_WORLD);
@@ -284,7 +284,7 @@ final class FabricClaimCommands
             return true;
         }
 
-        ClaimSnapshot claim = this.claims.findClaimAt((ServerLevel) player.level(), player.blockPosition());
+        ClaimSnapshot claim = this.claims.findClaimAt(FabricVersionCompat.level(player), player.blockPosition());
         if (claim == null || claim.id() == null)
         {
             sender.sendError(MessageKey.BLOCK_NOT_CLAIMED);
@@ -304,10 +304,10 @@ final class FabricClaimCommands
         try
         {
             this.claims.deleteClaim(claim.id(), player);
-            if (shouldAutoRestoreOnAbandon(claim, (ServerLevel) player.level()))
+            if (shouldAutoRestoreOnAbandon(claim, FabricVersionCompat.level(player)))
             {
                 sender.send(TextMode.WARNING, MessageKey.UNCLAIM_CLEANUP_WARNING);
-                this.restoreNature.restoreClaim((ServerLevel) player.level(), claim, 20L * 60L * 2L);
+                this.restoreNature.restoreClaim(FabricVersionCompat.level(player), claim, 20L * 60L * 2L);
             }
             int remaining = this.claims.claimBlockBalance(player.getUUID()).remaining();
             sender.send(TextMode.SUCCESS, MessageKey.ABANDON_SUCCESS, String.valueOf(remaining));
@@ -415,7 +415,7 @@ final class FabricClaimCommands
             return true;
         }
 
-        ClaimSnapshot claim = this.claims.findClaimAt((ServerLevel) player.level(), player.blockPosition());
+        ClaimSnapshot claim = this.claims.findClaimAt(FabricVersionCompat.level(player), player.blockPosition());
         if (claim == null || claim.id() == null)
         {
             sender.sendError(MessageKey.NOT_YOUR_CLAIM);
@@ -511,7 +511,7 @@ final class FabricClaimCommands
             return true;
         }
         // The confirmation only counts in the claim it was asked for, as on Paper.
-        ClaimSnapshot claim = this.claims.findClaimAt((ServerLevel) player.level(), player.blockPosition());
+        ClaimSnapshot claim = this.claims.findClaimAt(FabricVersionCompat.level(player), player.blockPosition());
         if (claim == null || claim.id() == null || claim.id() != pending.claimId)
         {
             sender.sendError(MessageKey.PENDING_PVP_TOGGLE_EXPIRED);
@@ -618,7 +618,7 @@ final class FabricClaimCommands
         this.tools.clearSelection(player);
         this.modes.set(player.getUUID(), FabricClaimModes.Mode.SHAPED);
         sender.send(TextMode.INSTRUCTION, MessageKey.SHAPED_CLAIMS_MODE);
-        int found = this.visualization.visualizeNearbyClaims(player, (ServerLevel) player.level());
+        int found = this.visualization.visualizeNearbyClaims(player, FabricVersionCompat.level(player));
         if (found > 0)
         {
             sender.send(TextMode.INFO, MessageKey.SHOW_NEARBY_CLAIMS, String.valueOf(found));
@@ -668,7 +668,7 @@ final class FabricClaimCommands
             return false;
         }
 
-        ClaimSnapshot claim = this.claims.findClaimAt((ServerLevel) player.level(), player.blockPosition());
+        ClaimSnapshot claim = this.claims.findClaimAt(FabricVersionCompat.level(player), player.blockPosition());
         if (claim == null || claim.id() == null)
         {
             sender.sendError(MessageKey.STAND_IN_SUBCLAIM);
@@ -883,7 +883,7 @@ final class FabricClaimCommands
             return true;
         }
 
-        ClaimSnapshot claim = this.claims.findClaimAt((ServerLevel) player.level(), player.blockPosition());
+        ClaimSnapshot claim = this.claims.findClaimAt(FabricVersionCompat.level(player), player.blockPosition());
         if (claim == null || claim.id() == null)
         {
             sender.sendError(MessageKey.DELETE_CLAIM_MISSING);
@@ -949,7 +949,7 @@ final class FabricClaimCommands
             return true;
         }
 
-        ClaimSnapshot claim = this.claims.findClaimAt((ServerLevel) player.level(), player.blockPosition());
+        ClaimSnapshot claim = this.claims.findClaimAt(FabricVersionCompat.level(player), player.blockPosition());
         Boolean requested = alertsSwitch(args);
         if (claim == null || claim.id() == null || (args.length > 0 && requested == null))
         {
@@ -1004,7 +1004,7 @@ final class FabricClaimCommands
         }
         else
         {
-            ClaimSnapshot current = this.claims.findClaimAt((ServerLevel) player.level(), player.blockPosition());
+            ClaimSnapshot current = this.claims.findClaimAt(FabricVersionCompat.level(player), player.blockPosition());
             enable = current != null && current.id() != null
                     && !Boolean.TRUE.equals(this.claims.flag(current.id(), ClaimFlag.ALERTS));
         }

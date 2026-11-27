@@ -75,7 +75,7 @@ final class FabricPlayerRescue
             return true;
         }
 
-        ServerLevel level = (ServerLevel) player.level();
+        ServerLevel level = FabricVersionCompat.level(player);
         ClaimSnapshot claim = this.claims.findClaimAt(level, player.blockPosition());
         if (claim == null || this.claims.allows(claim, player, ClaimTrustLevel.BUILD))
         {
@@ -120,7 +120,7 @@ final class FabricPlayerRescue
 
     private void rescue(@NotNull ServerPlayer player, @NotNull Rescue rescue)
     {
-        if (player.level() != rescue.level || positionOf(player).distanceTo(rescue.from) > MAXIMUM_DRIFT)
+        if (FabricVersionCompat.level(player) != rescue.level || positionOf(player).distanceTo(rescue.from) > MAXIMUM_DRIFT)
         {
             this.feedback.sendError(player, MessageKey.RESCUE_ABORTED_MOVED);
             return;

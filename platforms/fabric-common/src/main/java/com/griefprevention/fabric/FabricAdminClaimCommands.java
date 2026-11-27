@@ -603,7 +603,7 @@ final class FabricAdminClaimCommands
 
     private @Nullable ClaimSnapshot claimHere(@NotNull ServerPlayer player)
     {
-        ClaimSnapshot claim = this.claims.findClaimAt((ServerLevel) player.level(), player.blockPosition());
+        ClaimSnapshot claim = this.claims.findClaimAt(FabricVersionCompat.level(player), player.blockPosition());
         return claim == null || claim.id() == null ? null : claim;
     }
 

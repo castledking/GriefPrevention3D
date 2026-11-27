@@ -40,11 +40,17 @@ if (providers.gradleProperty("jitpack").orElse("false").get() != "true") {
     include("fabric-linkage-check")
     project(":fabric-linkage-check").projectDir = file("platforms/fabric-linkage-check")
 
+    include("neoforge-remap")
+    project(":neoforge-remap").projectDir = file("platforms/neoforge-remap")
+
     include("neoforge-bootstrap")
     project(":neoforge-bootstrap").projectDir = file("platforms/neoforge-bootstrap")
 
     include("neoforge-1.21.11")
     project(":neoforge-1.21.11").projectDir = file("platforms/neoforge-1.21.11")
+
+    include("neoforge-1.21.10")
+    project(":neoforge-1.21.10").projectDir = file("platforms/neoforge-1.21.10")
 
     include("neoforge-26.1")
     project(":neoforge-26.1").projectDir = file("platforms/neoforge-26.1")

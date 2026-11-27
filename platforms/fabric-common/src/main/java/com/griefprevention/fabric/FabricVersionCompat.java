@@ -1,10 +1,12 @@
 package com.griefprevention.fabric;
 
+import com.griefprevention.fabric.mixin.EntityAccessor;
 import com.mojang.math.Transformation;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -62,6 +64,20 @@ final class FabricVersionCompat
     {
         Legacy legacy = LEGACY;
         return legacy == null ? Modern.isPvpAllowed(level) : legacy.serverIsPvpAllowed(level.getServer());
+    }
+
+    /**
+     * The player's level, read from the {@code Entity.level} field, whose name has held in both
+     * Mojang's names and intermediary on every release.
+     *
+     * <p>No accessor method does: {@code ServerPlayer#serverLevel()} became {@code level()} under
+     * Mojang's names in 1.21.6, which NeoForge runs under and serves 1.21.3 through 1.21.10 from one
+     * adapter remapped to 1.21.10's names; and {@code Entity#level()} moved to an interface in 1.21.9,
+     * changing the intermediary name Fabric calls it by.
+     */
+    static @NotNull ServerLevel level(@NotNull ServerPlayer player)
+    {
+        return (ServerLevel) ((EntityAccessor) player).griefPrevention$getLevel();
     }
 
     /** {@code new Transformation(...)}, whose parameters became read-only joml views in 1.21.11. */

@@ -149,7 +149,7 @@ final class FabricDenialFeedback
             return this.messages.format(MessageKey.OWNER_NAME_FOR_ADMIN_CLAIMS);
         }
 
-        MinecraftServer server = viewer.level().getServer();
+        MinecraftServer server = FabricVersionCompat.level(viewer).getServer();
         // Only local data is consulted; a profile fetch would block the tick.
         String known = server == null ? null : FabricPlayerLookup.knownName(server, ownerId);
         return known != null ? known : ownerId.toString();

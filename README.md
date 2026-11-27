@@ -103,7 +103,7 @@ Stop _responding_ to grief and prevent it instead. GriefPrevention stops grief b
   Use this command to toggle wither explosions inside your claim.
 ####
 - **Fabric & NeoForge Support**
-  GriefPrevention3D builds ship as a single universal JAR for Spigot/Paper/Purpur/Folia, Fabric (1.21.2 – latest, requires Fabric API), and NeoForge (1.21.11 and 26.1 – latest, server-side only with no extra required dependencies). View the progress [here](https://github.com/castledking/GriefPrevention3D/blob/master/platforms/fabric-common/ROADMAP.md)
+  GriefPrevention3D builds ship as a single universal JAR for Spigot/Paper/Purpur/Folia, Fabric (1.21.2 – latest, requires Fabric API), and NeoForge (1.21.3 – 1.21.11 and 26.1.2 – latest, server-side only with no extra required dependencies). View the progress [here](https://github.com/castledking/GriefPrevention3D/blob/master/platforms/fabric-common/ROADMAP.md)
 ####
 ### Subtle Changes
   - **Per-Player Locale**: Enabled by default. Players receive messages in their client language when a translation is available, falling back to English. See [Supported Languages](#supported-languages) for the full list. Disable with `PerPlayerLocale: false` in config.yml.
@@ -171,7 +171,7 @@ the link from their own language file.
 ## Supported Platforms: NeoForge, Fabric, Spigot, Paper, Purpur, and Folia.
 ### GriefPrevention3D targets and supports 1.8 - latest available version for Bukkit/Spigot/Paper/Purpur/Folia servers.
 ### Fabric support covers 1.21.2 - latest (requires Fabric API).
-### NeoForge support covers 1.21.11 and 26.1 - latest (server-side only).
+### NeoForge support covers 1.21.3 - 1.21.11 and 26.1.2 - latest (server-side only).
 
 ## Download
 ### [⬇ Download the GriefPrevention3D.jar plugin here.](https://github.com/castledking/GriefPrevention3D/releases)

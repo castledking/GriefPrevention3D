@@ -296,7 +296,7 @@ final class FabricClaimExpiration
             {
                 return true;
             }
-            ClaimSnapshot claim = topLevel(this.claims.findClaimAt((ServerLevel) player.level(), player.blockPosition()));
+            ClaimSnapshot claim = topLevel(this.claims.findClaimAt(FabricVersionCompat.level(player), player.blockPosition()));
             if (claim == null)
             {
                 sender.sendError(MessageKey.CLAIM_EXPIRY_NO_CLAIM);

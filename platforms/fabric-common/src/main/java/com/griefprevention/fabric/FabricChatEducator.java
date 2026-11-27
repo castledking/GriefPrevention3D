@@ -60,7 +60,7 @@ final class FabricChatEducator
         {
             return;
         }
-        ServerLevel level = (ServerLevel) player.level();
+        ServerLevel level = FabricVersionCompat.level(player);
         String worldKey = this.claims.worldKey(level);
         boolean creative = this.settings.world().creativeRulesApply(worldKey);
         if (creative)
